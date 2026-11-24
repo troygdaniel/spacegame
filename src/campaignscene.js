@@ -20,7 +20,7 @@ const CAMP_LOOK = {
   patrol: campArtLook('patrol', 'patrol'), miner: campArtLook('miner', 'miner'), // the neutral ships: a pale police hull with a teal stripe, an industrial miner
   raider: { tex: 'raider', scale: 1 }, drone: { tex: 'drone', scale: 1 }, gunship: { tex: 'gunship', scale: 1 }, mother: { tex: 'reaver', scale: 2.6, tint: 0xc9a0ff }, tower: { tex: 'gunship', scale: 1.6, tint: 0xff9a3a }
 };
-const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff }; // the colour of a pirate's shot (amber: not the aliens' red, not the guns' pale yellow) and of a neutral patrol's (cyan), as the textures 'shot-pirate' and 'shot-neutral' (campShotTextures)
+const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff, earth: 0x6dff9c }; // the colour of a pirate's shot (amber: not the aliens' red), of a neutral patrol's (cyan) and of the Earth side's (green: the cruiser's turrets and the three pilots; the wing's green of the Tab map, CAMPMAP.color.wing), as the textures 'shot-pirate', 'shot-neutral' and 'shot-earth' (campShotTextures); an alien's stays the game's red 'ebullet', and the Long Haul keeps its own 'bullet'
 function campShotTextures(scene) { // made once, 14 by 4 like the game's own bullet
   Object.keys(CAMP_SHOT).forEach(k => { const key = 'shot-' + k; if (scene.textures.exists(key)) return; const g = scene.make.graphics({ x: 0, y: 0, add: false }); g.fillStyle(CAMP_SHOT[k], 1); g.fillRect(0, 0, 14, 4); g.generateTexture(key, 14, 4); g.destroy(); });
 }
@@ -61,7 +61,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
     const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
     spaceBackdrop(this, true);
-    campShotTextures(this); // the pirates' and the neutrals' shots
+    campShotTextures(this); // the pirates', the neutrals' and the Earth side's shots
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
     this.pickZoom = null; // the zoom a target sub-list took and the one to give back (src/camppickdraw.js)
@@ -89,6 +89,7 @@ class Campaign extends Phaser.Scene {
     this.hud = { earth: mid(14, 14, '#9fe9ff'), wave: mid(6, 14, '#ffd37a'), mother: t(W / 2 - 150, this.hudBelow, 14, '#ff9ec0'),
       obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); // the bars' animation: only the power list's rows draw bars now (src/camphud.js; the three gauges are gone, card space-game-layout-hud)
+    this.msp = null; // the missiles in flight, the turrets' ring and mounts: made on the first frame (syncRockets), new for each battle (the old bottom-left count text was the flag)
     if (typeof campCruiserHudMake === 'function') Object.assign(this.hud, campCruiserHudMake(this, uiFont)); // the cruiser's status at the top left, over the S CRUISER title: SHIELD and HULL bars and the ORE line (src/campcruiserhud.js; card space-game-layout-cruiser): five texts in the HUD, so a result card hides them with the rest
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.repair = mid(80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
@@ -305,6 +306,7 @@ class Campaign extends Phaser.Scene {
     if (campKeyCodes('help').indexOf(c) >= 0) { this.openKeys(); return; } // H: every key, on one page
     if (campKeyIs('tune', c)) { if (typeof this.openTune === 'function') this.openTune(); return; } // N: the tuning panel (src/camptunedraw.js), over the battle, which waits
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
+    if (campKeyIs('reload', c) && (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)) return; // R with a modifier is the browser's (Shift+R: the dev reload); plain R builds missiles (card space-game-missiles-cost-ore)
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
@@ -495,8 +497,8 @@ class Campaign extends Phaser.Scene {
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
       const kb = typeof campZoomShotScale === 'function' && this.cameras && this.cameras.main ? campZoomShotScale(this.cameras.main.zoom) : 1; // thicker when the view is far out (src/campzoom.js)
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'bullet' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
-      if (b.beam) im.setTint(0x7fe9ff); else if (b.pd) im.setTint(0xffd37a); else im.clearTint(); // the turrets' shots are amber; the beam tech's are cyan, long and go through
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'shot-earth' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
+      if (b.beam) im.setTint(0x7fe9ff); else im.clearTint(); // the Earth side's shots (turrets and pilots) are green as they are, no tint; the beam tech's keep their cyan tint (on the green, a teal), long and go through
     });
   }
   // the bays of the cruiser: dimly lit in the picture, and bright while the wing leaves (the launch tubes, at the front of the pods) and while it comes home (the landing bays, at the back): the order to launch or recall can be seen on the ship
@@ -517,12 +519,11 @@ class Campaign extends Phaser.Scene {
       });
     });
   }
-  // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
+  // the missiles in flight (a body, a flame and a trail of smoke) and the turrets (a faint ring of how far they reach, four mounts that flash when one fires)
   syncRockets(ms) {
     const C = this.camp, c = C.carrier, k = CAMP.missile, seen = {}, play = this.mode === 'play';
-    if (!this.hud.missiles) { // made the first time: the missiles in flight, the turrets' reach ring and mounts, the magazine count (bottom left, above the key line)
+    if (!this.msp) { // made the first time: the missiles in flight, the turrets' reach ring and mounts (the magazine count is the status block's now: src/campcruiserhud.js, card space-game-missiles-cost-ore)
       this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
-      this.hud.missiles = this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - CAMP.tdisp.count, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     }
     C.rockets.forEach(m => {
       const ux = Math.cos(m.rot), uy = Math.sin(m.rot);
@@ -547,8 +548,6 @@ class Campaign extends Phaser.Scene {
         if (tu.target) mg.lineStyle(hot ? M.width[1] : M.width[0], hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]), tu.y + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]));
       });
     }
-    this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
-      + (C.missiles < k.magazine && C.reloadAt ? '    ' + uiText('camp.ui.missilenext', { s: Math.max(0, Math.ceil((C.reloadAt - C.t) / 1000)) }) : ''));
   }
   // the lines of text at the top centre (CAMP.hud.text, src/camphud.js campHudFlow), the wave and the goal first: a line with nothing to say gives its place back, so the ones that have something stand together; Earth's bar goes under its line. this.hudBelow is where the column ends (the mothership and the rival stand under it)
   flowHud(bar) {
