@@ -59,9 +59,9 @@ const CAMP_TUNE = {
     { id: 'peekzoom', group: 'time', root: 'CAMP', path: 'peek.zoom', min: 0.2, max: 1.6, step: 0.05, unit: 'x', when: 'now' },       // the least zoom a peek is made at (a readable ship)
     { id: 'wavetime', group: 'time', root: 'CAMP', path: 'time.waves', min: 0.25, max: 3, step: 0.05, unit: 'x', when: 'now' },
     { id: 'startzoom', group: 'time', root: 'CAMPZOOM', path: 'view.startPresses', min: 0, max: 12, step: 1, unit: 'presses', when: 'next' },
-    // the ships on the screen (card space-game-ships-bigger): the least size a ship is drawn at when the view is out; only the picture, nothing in the fight
+    // the ships on the screen (card space-game-ships-bigger): the least size a ship is drawn at when the view is out, a fighter's in px and the capital ships' as a multiple of it; only the picture, nothing in the fight
     { id: 'leastfighter', group: 'view', root: 'CAMPZOOM', path: 'view.leastSmall', min: 4, max: 60, step: 1, unit: 'px', when: 'now' },     // a fighter's least length on the screen (22 px long at close zoom); the ships between it and the cruiser grow in proportion
-    { id: 'leastcruiser', group: 'view', root: 'CAMPZOOM', path: 'view.leastBig', min: 10, max: 150, step: 2, unit: 'px', when: 'now' },    // the cruiser's, and every capital ship's (98 px long at close zoom)
+    { id: 'leastclass', group: 'view', root: 'CAMPZOOM', path: 'view.leastClass', min: 1, max: 8, step: 0.25, unit: 'x', when: 'now' },    // the cruiser's and every capital ship's least size as a multiple of a fighter's (card space-game-ships-bigger-proportions: at least 3, so the cruiser still reads as the big ship); 1 keeps no proportion
     // the ore
     { id: 'orerock', group: 'ore', root: 'CAMP', path: 'ore.rock', min: 5, max: 100, step: 5, unit: 'ore', when: 'next' },
     { id: 'miningrate', group: 'ore', root: 'CAMP', path: 'laser.dps', min: 1, max: 60, step: 1, unit: 'a second', when: 'now' },
