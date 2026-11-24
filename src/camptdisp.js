@@ -32,7 +32,7 @@ function campTdispPostInfo(C, e) {
 }
 function campTdispOrder(C, verb) {
   const r = typeof campSelOrder === 'function' ? campSelOrder(C, verb, 'key', true) : null, k = typeof CAMP_KEYS === 'object' ? ((CAMP_KEYS.order || CAMP_KEYS[verb] || {}).k || '') : ''; // W is the one order key (CAMP_KEYS.order, cards space-game-keys2-orders and space-game-keys4-onekey); before that, the verb's own
-  return { verb, key: Array.isArray(k) ? String(k[0] || '') : String(k || ''), label: uiText('camp.tdisp.key.' + verb), ok: !!(r && r.ok) };
+  return { verb, key: Array.isArray(k) ? String(k[0] || '') : String(k || ''), label: uiText('camp.tdisp.key.' + verb), ok: !!(r && r.ok), code: r && !r.ok && r.code ? String(r.code) : '' }; // code: why the order cannot be given (campNo's: nofighters, launching, nofoe, ...), '' when it can
 }
 const campTcornerKeyCap = id => { const v = typeof CAMP_KEYS === 'object' && CAMP_KEYS[id] ? CAMP_KEYS[id].k : ''; return Array.isArray(v) ? String(v[0] || '') : String(v || ''); }; // a key of the table, as its chip says it
 function campTcornerKeys(which) { return (which === 'host' ? [campTcornerKeyCap('hostiles')] : [campTcornerKeyCap('friendlies')]).filter(Boolean); } // the key chips in a corner's title: ] for the hostiles, [ for the friendlies, from the key table (src/data_controls.js)
