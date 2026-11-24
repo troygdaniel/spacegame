@@ -198,6 +198,12 @@ const CAMP = {
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
     verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
   },
+  peek: {                                  // a pick that is off the screen glides the camera to it, holds, and glides back by itself (card space-game-pick-peek; Troy, 24 Nov 2026; src/campselzoom.js). All three are on the N panel (the `time` group)
+    hold: 1500,                            // ms the camera stays on the picked ship once it is there
+    glide: 400,                            // ms each way: out to the ship and back to the cruiser (eased, by time, so the same at any frame rate)
+    zoom: 0.8,                             // the zoom a peek needs at least, so the ship is readable (a player already zoomed in farther keeps his); the zoom he had is given back after
+    view: { left: 40, right: 40, top: 90, bottom: 80 } // px of the screen's edge a pick must be inside to count as ON the screen: clear of the edge, the status block above and the key line below
+  },
   click: {                                 // the mouse on the flight view (card space-game-click-target; src/campclick.js)
     hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
   },

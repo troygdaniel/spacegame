@@ -1,6 +1,6 @@
 // ---------- Campaign: click a ship in the flight view (card space-game-click-target; Troy, 24 Nov 2026) ----------
 // Troy: "allow me to select a target by clicking it on the flight view, as I zoom out", and the right click is the order key. The picks are the keys' (src/camptarget.js): an enemy or a ship you protect is THE target held
-// (one at a time), a pilot is WHO. The click makes the same pick the key would, so the squares, the corner boxes and the zoom (src/campselzoom.js: out only, and a ship on the screen needs none) are the same.
+// (one at a time), a pilot is WHO. The click makes the same pick the key would, so the squares, the corner boxes and the peek (src/campselzoom.js: a ship off the screen is glided to and back, one on the screen moves nothing) are the same.
 //   left click     on an enemy: it is the target held ([ ] \ do that); on a ship you protect: it is the target held (the enemy let go); on one of your pilots: that pilot is who (Q); on empty space: nothing
 //   right click    on an enemy or a ship you protect: it is held, and the order key is pressed through the lists' door (src/camppanel.js): the pilots attack it or guard it, with the key's own answer and refusals;
 //                  on one of your pilots: that pilot is who and no order is given (none fits your own ship); on empty space: the order key alone, which orders what is held (nothing held: form up on the cruiser)
