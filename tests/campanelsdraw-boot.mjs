@@ -1,8 +1,8 @@
-// not in the smoke: a boot of the Campaign's order lists (the fleet list Q at the left with its part W, the ship list P at the right with its parts O I U; a part's key opens it directly; nothing is drawn until one is opened) with a real keyboard, run by hand (one Chrome, muted, through the test lock; cards one-list-keys and list-shortcuts). The game switches Q's and P's lists off (cards space-game-q-selects-all, space-game-p-opens-power) and the walk switches them on in the page, as the node suites do; the stance lists, the squads' own lists and the Escorts row are gone (cards space-game-fighter-squads, squad-tint, bracket-select-orders)
+// not in the smoke: a boot of the Campaign's order lists (the fleet list Q at the left with its part W, the ship list P at the right with its parts O I U; a part's key opens it directly; nothing is drawn until one is opened) with a real keyboard, run by hand (one Chrome, muted, through the test lock; cards one-list-keys and list-shortcuts). The game switches these lists off (Q: card space-game-q-selects-all; P and its parts: space-game-p-opens-power, keys2-select; W and the rest: keys-orders, keys2-cruiser; the S cruiser list is the game's own now) and the walk switches the old ones on in the page, as the node suites do; the stance lists, the squads' own lists and the Escorts row are gone (cards space-game-fighter-squads, squad-tint, bracket-select-orders). Keys of the key rounds that this walk meets: A D pick WHO, [ ] and the backslash the enemy, O P the friendlies (the old lists shadow them while they are on), E the one order, S the view back on the cruiser, X clears; the pilots start OUT beside the cruiser, so Launch is a greyed row
 // The rules are tests/campanels.mjs, tests/campanelsdraw.mjs, tests/campanelsui.mjs, tests/camptarget.mjs and tests/camppanelkeys.mjs (plain Node). This boots the Campaign once and the title once and does what Troy does: no list on the screen at the
 // first frame (nothing; the target is the target display's now), Q and the highlight, the key caps on the rows that open a part, W and Enter launch the wing, P the ship list, W straight to the all-squads list, Left back to the fleet list, O and a pip of power
-// (the list stays open), a refused order leaves the list open, ] S X the hostile target (a hostile is put in reach: the first
-// minute of 1.1 has none) and A D the friend, the strip, H and the page of every key, and H on the title. The list a row is in is read from campKeyVia in the page and its place there from campPanelList, never a letter or a number written here; the words are read from the game (uiText, the key table).
+// (the list stays open), a refused order leaves the list open, ] X the hostile target (a hostile is put in reach: the first
+// minute of 1.1 has none), the strip, H and the page of every key, and H on the title. The list a row is in is read from campKeyVia in the page and its place there from campPanelList, never a letter or a number written here; the words are read from the game (uiText, the key table).
 //   node tests/campanelsdraw-boot.mjs         pictures go to the folder in KEYS_SHOTS (default ~/dev/spacegame-night/shots/hands-*.png), never into the repository
 // Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -27,7 +27,7 @@ async function campaign() {
   try {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
     await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-  await t.ev(`(() => { campFleetListSet(true); campShipListSet(true); ${SC}.hud.keys.setText(campKeyLine()); return 1; })()`); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power); on here, as the node suites do
+  await t.ev(`(() => { campFleetListSet(true); campShipListSet(true); ${SC}.hud.keys.setText(campKeyLine()); return 1; })()`); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power; the squads list, the autopilot, power and dock keys went with the key rounds); on here, as the node suites do (with them on, P and O open the ship and power lists before they pick friendlies, and S has no list: it only puts the view on the cruiser)
     for (let i = 0; i < 8 && (await j(`${SC}.mode`)) !== 'play'; i++) { await press(t, 'Enter'); await t.run(300); } // the story card, then the briefing: Enter until the battle is on
     check('the battle is on', (await j(`${SC}.mode`)) === 'play');
     await t.run(400);
@@ -52,21 +52,23 @@ async function campaign() {
     const drawnAs = id => j(`campPanelRows(${SC}.camp, ${JSON.stringify(id)}).map(r => r.label + (r.more ? '  >' : ''))`); // a row as it is drawn: its words, and an arrow when it opens a part
     const shownCaps = () => j(`${PL}.rows.filter(r => r.name.visible).map(r => r.cap.visible ? r.cap.text : '')`);
     const rowLabel = row => j(`campKeyRow(${JSON.stringify(row)}).label`);
+    const launchedNow = () => j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`); // the pilots start out beside the cruiser (card space-game-keys-orders): three are launched before the first key, so a check compares with this, never with zero
+    let wing0 = 0;
     const foot = (text, k) => j(`uiText(${JSON.stringify(text)}, { key: ${JSON.stringify(k)} })`); // the foot's key line as the game says it
     const fits = () => j(`(() => { const K = CAMPPANELS_LOOK, rows = ${PL}.rows.filter(r => r.name.visible), cap = rows.some(r => r.cap.visible) ? K.cap.w + K.cap.gap : 0; return rows.every(r => 14 + cap + r.name.width + 8 + r.suffix.width + 12 <= K.box.w); })()`);
     check('nothing is drawn until a list\'s key is pressed: no list is open, no heading and no row is on the screen', (await isOpen()) === '' && (await j(`!${PL}.title.visible && ${PL}.rows.every(r => !r.name.visible && !r.suffix.visible && !r.cap.visible) && !${PL}.keys.visible`)) === true);
     check('with no list open and nothing picked the bottom right corner is empty: the target display is not there (the radar and the target\'s line are gone)', (await j(`!${SC}.hud.tdisp || (!${SC}.hud.tdisp.id && !${SC}.hud.tdisp.pic.visible)`)) === true);
     await snap(t, 'start');
-    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (W is the all-squads list's key), and a digit is no key at all
-    const rot0 = await j(`${SC}.camp.carrier.rot`);
+    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (A steps WHO, W is the all-squads list's key here), and a digit is no key at all
+    const rot0 = await j(`${SC}.camp.carrier.rot`); wing0 = await launchedNow();
     await press(t, 'KeyA', 400); await press(t, 'KeyW', 400);
     const wOpen = await isOpen(), wTitle = await j(`${PL}.title.visible && ${PL}.title.text`);
     await press(t, 'KeyW', 400); const wShut = await isOpen();
     await press(t, 'KeyD', 400); await press(t, 'KeyS', 400);
-    check('W A S D do not fly the cruiser: no turn, no thrust (A and D step the friend and S picks the nearest threat: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
+    check('W A S D do not fly the cruiser: no turn, no thrust (A and D step WHO and S puts the view on the cruiser: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
     check('W is the all-squads list\'s key: it opens that list directly (headed W   ALL SQUADS), and W again closes it', wOpen === 'squads' && wTitle === (await j(`(() => { const p = campKeyList('squads'); return p.key + '   ' + p.title; })()`)) && wTitle === 'W   ALL SQUADS' && wShut === '', wOpen + ' | ' + wTitle + ' | ' + wShut);
     await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'KeyG', 20); await press(t, 'KeyZ', 20); await press(t, 'KeyY', 20); await press(t, 'KeyV', 20); await t.run(300);
-    check('a digit or a letter that is no key of the table (1 2 G Z Y V) does nothing in flight: nothing launched, no list opened', (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) === 0 && (await isOpen()) === '');
+    check('a digit or a letter that is no key of the table (1 2 G Z Y V) does nothing in flight: nothing launched (the pilots were out already), no list opened', (await launchedNow()) === wing0 && (await isOpen()) === '');
     await press(t, 'ArrowRight', 500);
     check('the Right arrow turns the cruiser', (await j(`${SC}.camp.carrier.rot`)) - rot0 > 0.05);
     await press(t, 'ArrowUp', 500);
@@ -92,8 +94,10 @@ async function campaign() {
     check('Up from the first row goes round to the last, and the list scrolls to keep it on the screen', (await j(`${P}.at`)) === fleetLabels.length - 1 && (await j(`${P}.top`)) === Math.max(0, fleetLabels.length - show) && (await j(`${HI}.name.text`)) === fleetLabels[fleetLabels.length - 1]);
     await press(t, 'Escape', 20); await t.run(200);
     check('Esc closes the list and does not pause the battle', (await isOpen()) === '' && (await j(`${SC}.mode`)) === 'play' && (await j(`${PL}.title.visible`)) === false);
-    check('W, Enter on "Launch the wing" (the top of the all-squads list): the wing launches and the list closes', (await wayTo('launch')).list === 'squads' && (await order('launch')) === true && (await j(`${SC}.camp.launchQ.length + ${SC}.camp.launched`)) >= 1 && (await isOpen()) === '');
-    await t.run(6000);
+    // the pilots start out beside the cruiser (card space-game-keys-orders), so the top row of the all-squads list is greyed from the first second: Enter on it is refused, launches nothing and leaves the list open (the row itself stays for a bay that has ships)
+    const launchRow = await j(`campPanelRows(${SC}.camp, 'squads').find(r => r.id === 'launch')`), launched1 = await launchedNow();
+    check('W, Enter on "Launch the wing" (the top of the all-squads list) with the wing already out: the row is grey, Enter refuses, nothing launches and the list stays open', (await wayTo('launch')).list === 'squads' && !!launchRow && launchRow.ok === false && (await goTo('launch')) === true && (await press(t, 'Enter', 20), await t.run(300), await launchedNow()) === launched1 && (await isOpen()) === 'squads', JSON.stringify(launchRow));
+    await press(t, 'Escape', 20); await t.run(200);
     // P: the ship list; only one list is open at a time
     await press(t, 'KeyQ', 20); await press(t, 'KeyP', 20); await t.run(300);
     const shipLabels = await drawnAs('ship');
@@ -161,7 +165,7 @@ async function campaign() {
       check('an order that is refused leaves the list open and says why at its foot (O, Down to "Fly to the target", Enter with no target)', (await order('target')) === true && (await isOpen()) === 'nav' && (await j(`${PL}.more.text`)).toLowerCase() === String(why).toLowerCase() && !(await j(`${SC}.camp.nav`)), await j(`${PL}.more.text`));
       await press(t, 'Escape', 20); await t.run(200);
     } else console.log('  note the refused-order check was skipped: a target was picked by the game');
-    // a hostile put in reach: ] picks it with no list open (D steps the friend now), the bracket is drawn, the target's line names it
+    // a hostile put in reach: ] picks it with no list open (D steps WHO, O and P the friendlies: with the old lists on they open lists), the bracket is drawn, the target's line names it
     const spawned = await j(`(() => { const C = ${SC}.camp, c = C.carrier, u = campSpawn(C, 'raider', c.x + 500, c.y - 200); return !!u; })()`).catch(() => false);
     if (spawned) {
       await press(t, 'BracketRight', 20); await t.run(300);
@@ -170,7 +174,7 @@ async function campaign() {
       await press(t, 'KeyX', 20); await t.run(300);
       check('X clears it, and the display is gone: the corner is empty', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.hud.tdisp.pic.visible`)) === false);
     }
-    // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the game's, Esc closes it and does not pause; the period is the voice key of the scene
+    // the strip: the slash opens it (the chat key is stubbed: the strip needs one), the keys typed in it are not the game's, Esc closes it and does not pause; hold to speak has no key (CAMP_VOICE is off)
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
     await press(t, 'Slash', 40); await t.run(300);
     check('/ opens the command strip: its input has the focus', (await j(`document.activeElement && document.activeElement.tagName`)) === 'INPUT');
