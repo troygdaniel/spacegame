@@ -27,9 +27,9 @@ function campGauges(C) {
   const c = C.carrier, P = C.power, K = CAMP.power, fx = campPowerFx(C), G = CAMP_GAUGE.colors;
   const smax = campShieldMax(C), sf = smax > 0 ? C.shield / smax : 0;
   const sp = Math.hypot(c.vx || 0, c.vy || 0), scale = CAMP.carrier.speed * Math.max.apply(null, K.engines.speed), top = CAMP.carrier.speed * fx.speed; // the dial runs to the top speed at the most engine power; the tick is the top speed at the power now
-  const lf = campLaserFrac(C), emer = C.t < P.until;
+  const lf = campLaserFrac(C);
   return [
-    { id: 'shields', key: campKeyVar('keyshields'), label: uiText('camp.gauge.shields'), frac: Math.max(0, Math.min(1, sf)), big: String(Math.max(0, Math.round(C.shield))), color: emer ? 0xffffff : G.shields, warn: sf < K.low.shield, tick: null, pips: P.p[1] },
+    { id: 'shields', key: campKeyVar('keyshields'), label: uiText('camp.gauge.shields'), frac: Math.max(0, Math.min(1, sf)), big: String(Math.max(0, Math.round(C.shield))), color: G.shields, warn: sf < K.low.shield, tick: null, pips: P.p[1] },
     { id: 'speed', key: campKeyVar('keyengines'), label: uiText('camp.gauge.speed'), frac: Math.max(0, Math.min(1, sp / scale)), big: String(Math.round(sp)), color: sp > top * 1.02 ? 0xffb454 : G.speed, warn: false, tick: top / scale, pips: P.p[2] },
     { id: 'lasers', key: campKeyVar('keyweapons'), label: uiText('camp.gauge.lasers'), frac: lf, big: String(Math.round(lf * 100)), color: G.lasers, warn: lf < CAMP.tank.low, tick: null, pips: P.p[0] }
   ];
@@ -134,11 +134,11 @@ function campGaugesMake(sc, uiFontFn) {
 function campGaugesVisible(T, on) { if (!T) return; ['n', 'l', 'k'].forEach(k => (T[k] || []).forEach(t => t && t.setVisible && t.setVisible(on))); ['hull', 'hullN'].forEach(k => T[k] && T[k].setVisible && T[k].setVisible(on)); }
 // every frame: the dials, the bars, the hull bar, and the words on them
 function campGaugesPaint(g, T, C, A, now, hi) { // hi: the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the power list: it gets a bright frame in its own colour (card space-game-power-presets), or -1 / none
-  const Z = campHudGeom(), D = campGauges(C), HB = campHullBar(C), emer = C.t < C.power.until;
+  const Z = campHudGeom(), D = campGauges(C), HB = campHullBar(C);
   const order = CAMP_DIAL_PIPS; // the pips of the shields, the engines, the weapons: the order of the dials
   Z.cells.forEach((cell, i) => {
     const d = D[i]; campDialDraw(g, cell, d, now);
-    if (CAMP.power.on) campBarDraw(g, cell, A.shown[order[i]], A.flash[order[i]], i === 0 && emer ? 0xffffff : d.color); // the bar of power segments: only while the pips are on (CAMP.power.on; card space-game-power-removed: plain dials)
+    if (CAMP.power.on) campBarDraw(g, cell, A.shown[order[i]], A.flash[order[i]], d.color); // the bar of power segments: only while the pips are on (CAMP.power.on; card space-game-power-removed: plain dials)
     if (T && T.n) { T.n[i].setText(d.big).setColor(d.warn ? '#ff4d6d' : '#ffffff'); T.l[i].setText(d.label); T.k[i].setText(d.key); }
   });
   if (CAMP.power.on && hi >= 0 && hi <= 2 && Z.cells[hi]) { // the dial and its bar of the highlighted row of the power list: one frame round both, and a line down to the list that opens under the gauges (drawn before the hull bar, which is over it)

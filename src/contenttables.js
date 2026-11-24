@@ -438,7 +438,6 @@ const UI_TEXT = {
   'camp.say.powerengines': 'Power to engines.',
   'camp.say.balance': 'Power balanced.',
   'camp.say.emergency': 'Emergency shields!',
-  'camp.say.emergencyend': 'Emergency shields off.',
   'camp.say.shieldlow': 'Shields are low, pilot.',
   'camp.say.enginelow': 'Engines are low on power, pilot.',
   'camp.no.powermax': 'That system is at full power.',

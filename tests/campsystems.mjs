@@ -43,7 +43,7 @@ sec('A', () => {
   check('A  more pips is better: shorter intervals, reloads and recharges, a bigger cap, more regeneration, speed, thrust and turn', dec(rows.delay) && dec(rows.reload) && dec(rows.blink) && inc(rows.cap) && inc(rows.regen) && inc(rows.speed) && inc(rows.accel) && inc(rows.turn));
   check('A  and strictly different at 0, 1, 3 and 4 pips from 2 (a pip always matters), the shields\' regeneration too: none at 0, slow at 2, fast at 4', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => [0, 1, 3, 4].every(i => rows[k][i] !== 1)) && [0, 1, 2, 3, 4].every(i => i === 0 || rows.regen[i] > rows.regen[i - 1]) && rows.regen[4] >= 3 * rows.regen[2]);
   check('A  zero pips is weak, never dead: the turrets still fire, the shield is not nothing, the carrier still moves (every factor is above 0 and a time is at most 2 times)', rows.delay[0] <= 2 && rows.reload[0] <= 2 && rows.blink[0] <= 2 && rows.cap[0] >= 0.25 && rows.speed[0] >= 0.5 && rows.accel[0] >= 0.5 && rows.turn[0] >= 0.5);
-  check('A  the emergency is data too: 4 pips to shields, 10 s, a 40 s cooldown', P.emergency.shields === 4 && P.emergency.ms === 10000 && P.emergency.cooldown === 40000);
+  check('A  the old emergency (4 pips to shields for 10 s) is gone from the table with the lock that went with it (card space-game-power-removed): the emergency is CAMP.emergency now, a refill for ore', P.emergency === undefined && typeof CAMP_EMERGENCY_GONE === 'undefined' && J('[typeof CAMP.emergency, "until" in campPowerNew(), "at" in campPowerNew()].join()') === 'object,false,false');
 });
 
 sec('B', () => {

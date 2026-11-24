@@ -69,7 +69,6 @@ const CAMP = {
                accel: [0.7, 0.85, 1, 1.15, 1.3],    // x the thrust
                turn: [0.8, 0.9, 1, 1.1, 1.2],       // x how fast the nose turns
                blink: [1.5, 1.25, 1, 0.8, 0.6] },   // x the warp blink's recharge
-    emergency: { shields: 4, ms: 10000, cooldown: 40000 }, // emergency shields: 4 pips to shields (the other two get 1 each) for ms, ready again cooldown ms after it started
     low: { shield: 0.3, rearm: 0.6, engines: 1 }           // the computer says so when the shield is under 30 percent of its cap (and again after it has been over 60), or when the engines are set to 1 pip or less
   },
   emergency: {                             // EMERGENCY SHIELDS (card space-game-keys2-cruiser; Troy, 23 Nov 2026): a row of the cruiser list (S) that fills the shield at once. ORCH's numbers, both on the N panel (the `ship` group)
@@ -1138,13 +1137,13 @@ function campSchedule(C) {
 }
 
 // ---------- the ship's systems: power to weapons, shields and engines (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems") ----------
-// C.power = { p: [w, s, e] (the pips in use now), base: [w, s, e] (the setting: what the player chose, what is saved), at: the clock when the last emergency began, until: when it ends (0: none), lowS, lowE }.
+// C.power = { p: [w, s, e] (the pips in use now), base: [w, s, e] (the setting: what the player chose, what is saved), lowS, lowE }. (The emergency shields are not a power setting any more: campEmergency, src/campmend.js.)
 // The pips are a budget of CAMP.power.budget (6), each system 0 to 4; the table CAMP.power says what a pip does, and at 2 / 2 / 2 every factor is 1: the numbers of before, to the bit.
 //   campPowerFx(C)             the factors now: { delay, reload, cap, regen, speed, accel, turn, blink }     campShieldMax(C)  the shield's cap in points    campBlinkCooldown(C)  ms     campReload(C)  ms
-//   campOrder(C, 'power', 'shields' | 'shields:weapons')   a pip to shields, from the system with the most or the one named;  'balance' is 2 / 2 / 2;  'emergency' is 1 / 4 / 1 for 10 s, ready again 40 s after it began
-//   campPowerStep(C, dt)       each tick: the emergency's end, the shield held to its cap and mended by the shields' power, the low lines;      campPowerLoad() / campPowerSave(p)  the setting in this browser
+//   campOrder(C, 'power', 'shields' | 'shields:weapons')   a pip to shields, from the system with the most or the one named;  'balance' is 2 / 2 / 2
+//   campPowerStep(C, dt)       each tick: the shield held to its cap and mended by the shields' power, the low lines;      campPowerLoad() / campPowerSave(p)  the setting in this browser
 const campPowerOk = a => Array.isArray(a) && a.length === 3 && a.every(v => Number.isInteger(v) && v >= 0 && v <= CAMP.power.max) && a[0] + a[1] + a[2] === CAMP.power.budget;
-function campPowerNew(pips) { const p = CAMP.power.on && campPowerOk(pips) ? pips.slice() : CAMP.power.start.slice(); return { p, base: p.slice(), at: -1e9, until: 0, lowS: false, lowE: false }; }
+function campPowerNew(pips) { const p = CAMP.power.on && campPowerOk(pips) ? pips.slice() : CAMP.power.start.slice(); return { p, base: p.slice(), lowS: false, lowE: false }; }
 function campPowerFx(C) {
   const K = CAMP.power, p = C && C.power && C.power.p ? C.power.p : K.start;
   return { delay: K.weapons.delay[p[0]], reload: K.weapons.reload[p[0]], cap: K.shields.cap[p[1]], regen: K.shields.regen[p[1]], speed: K.engines.speed[p[2]], accel: K.engines.accel[p[2]], turn: K.engines.turn[p[2]], blink: K.engines.blink[p[2]] };
@@ -1157,17 +1156,8 @@ const campReload = C => CAMP.missile.reload * campPowerFx(C).reload;
 const campPowerSys = w => /^(?:weapons?|guns?|turrets?)$/.test(w) ? 0 : /^shields?$/.test(w) ? 1 : /^(?:engines?|thrusters?|drives?)$/.test(w) ? 2 : -1;
 const CAMP_POWER_NAMES = ['weapons', 'shields', 'engines'];
 function campPowerDo(C, name, arg, dry) {
-  const P = C.power, K = CAMP.power, on = C.t < P.until; // on: an emergency is running
-  if (!K.on && name !== 'emergency') return campNo('powerwhat'); // the pips are off (CAMP.power.on): nothing moves them. The emergency is left as it was for the card that replaces it (space-game-keys2-cruiser: the S list's Emergency shields)
-  if (name === 'emergency') {
-    if (on) return campNo('locked');
-    const left = P.at + K.emergency.cooldown - C.t; if (left > 0) return campNo('cooling', { s: Math.ceil(left / 1000) });
-    if (dry) return campYes('emergency');
-    const rest = K.budget - K.emergency.shields; P.at = C.t; P.until = C.t + K.emergency.ms; P.p = [Math.floor(rest / 2), K.emergency.shields, Math.ceil(rest / 2)]; C.orders.emergency++;
-    C.events.push({ type: 'power', p: P.p.slice() });
-    return campYes('emergency');
-  }
-  if (on) return campNo('locked');
+  const P = C.power, K = CAMP.power;
+  if (!K.on) return campNo('powerwhat'); // the pips are off (CAMP.power.on): nothing moves them. (The emergency shields are not a power setting any more: campEmergency, src/campmend.js, card space-game-keys2-cruiser)
   if (name === 'balance') { if (!dry) { P.base = K.start.slice(); P.p = K.start.slice(); C.orders.balance++; C.events.push({ type: 'power', p: P.p.slice() }); } return campYes('balance'); }
   const m = /^([a-z]+)(?::([a-z]+))?$/.exec(String(arg == null ? '' : arg).toLowerCase().trim()), to = m ? campPowerSys(m[1]) : -1, chosen = m && m[2] ? campPowerSys(m[2]) : -1;
   if (to < 0 || (m[2] && chosen < 0) || chosen === to) return campNo('powerwhat');
@@ -1180,7 +1170,6 @@ function campPowerDo(C, name, arg, dry) {
 }
 function campPowerStep(C, dt) {
   const P = C.power, K = CAMP.power; if (!P) return;
-  if (P.until && C.t >= P.until) { P.until = 0; P.p = P.base.slice(); campSay(C, 'camp.say.emergencyend'); } // the emergency is over: back to what it was
   const fx = campPowerFx(C), max = CAMP.carrier.shield * fx.cap;
   if (C.shield > max) C.shield = max; // a smaller cap takes the shield down to it; a bigger one does not fill it
   if (fx.regen > 0 && C.shield < max && C.t - (C.shieldHitAt === undefined ? -1e9 : C.shieldHitAt) >= K.shields.regenDelay) C.shield = Math.min(max, C.shield + fx.regen * dt);
