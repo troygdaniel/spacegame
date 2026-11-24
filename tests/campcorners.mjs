@@ -1,4 +1,4 @@
-// smoke: the two target corners: [ ] HOSTILES top right and O P FRIENDLIES bottom right (the rule: which corner holds the one target, the name beside the title, NO HOSTILES and NO FRIENDLIES when empty)
+// smoke: the two target corners: ] HOSTILES top right and [ FRIENDLIES bottom right (the rule: which corner holds the one target, the name beside the title, NO HOSTILES and NO FRIENDLIES when empty)
 // Card space-game-layout-targets (Troy, 24 Nov 2026: four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the selection is written beside the title and never fades;
 // still ONE target held at a time). src/camptdisp.js campTcornerHold is the rule (no Phaser); the registration and the details are src/camptcorner.js, the picture src/camptcornerscene.js, the rest the corner panel; the words are camp.tdisp.corner.* (content/text/camptdisp.md).
 //   A. the titles and the chips: from the key table; HOSTILES and FRIENDLIES while there is something to pick
@@ -8,7 +8,7 @@
 //   E. one target: picking one side lets the other go; X lets both go; the held name follows the pick
 //   F. an order's list: the ship it is on is in the details of its side, with no name beside the title (nothing is held)
 //   G. the registered corners (src/camptcorner.js on the corner panel src/campcorner.js): where they sit, their chips, title and selection; the details open on the corner's keys and by themselves when the target changes, fade, and the title stays
-//   H. the details' items: the picture row, HULL, SHIELD (or no shield), what it does, the E chip (Attack, Guard); an outpost: its type and distance and the Guard chip
+//   H. the details' items: the picture row, HULL, SHIELD (or no shield), what it does, the W chip (Attack, Guard); an outpost: its type and distance and the Guard chip
 //   I. the scene half on a stand-in (src/camptcornerscene.js): the picture, its frame in the side's colour, the type and the distance beside it, steady when nothing changes, gone when the details fade or a card is in front
 // Run: node tests/campcorners.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -28,9 +28,9 @@ g.run(`
 console.log('A. the titles and the chips');
 {
   g.run('__new(); window.R1 = __foe("raider", 900, 0);');
-  check('the hostiles corner: the chips are the key table\'s last and next enemy keys, the title is HOSTILES', JSON.stringify(J('HC().keys')) === JSON.stringify(['[', ']']) && J('HC().title') === 'HOSTILES', JSON.stringify(J('HC()')));
-  check('the friendlies corner: the chips are the friendly keys (O P), the title is FRIENDLIES', JSON.stringify(J('FC().keys')) === JSON.stringify(['O', 'P']) && J('FC().title') === 'FRIENDLIES', JSON.stringify(J('FC()')));
-  check('the chips follow the key table (a key moved there moves here)', (() => { g.run(`window.__k = [CAMP_KEYS.flast.k, CAMP_KEYS.fnext.k]; CAMP_KEYS.flast.k = 'N'; CAMP_KEYS.fnext.k = 'M';`); const a = J('FC().keys'); g.run(`CAMP_KEYS.flast.k = __k[0]; CAMP_KEYS.fnext.k = __k[1];`); return JSON.stringify(a) === JSON.stringify(['N', 'M']); })());
+  check('the hostiles corner: the chip is the key table\'s enemy key (hostiles), the title is HOSTILES', JSON.stringify(J('HC().keys')) === JSON.stringify([']']) && J('HC().title') === 'HOSTILES', JSON.stringify(J('HC()')));
+  check('the friendlies corner: the chip is the friendly key ([), the title is FRIENDLIES', JSON.stringify(J('FC().keys')) === JSON.stringify(['[']) && J('FC().title') === 'FRIENDLIES', JSON.stringify(J('FC()')));
+  check('the chips follow the key table (a key moved there moves here)', (() => { g.run(`window.__k = CAMP_KEYS.friendlies.k; CAMP_KEYS.friendlies.k = 'N';`); const a = J('FC().keys'); g.run(`CAMP_KEYS.friendlies.k = __k;`); return JSON.stringify(a) === JSON.stringify(['N']); })());
   check('with something picked nowhere: no name beside either title, nothing held', J('HC().name') === '' && J('FC().name') === '' && J('HC().held') === false && J('FC().held') === false);
   check('no cruiser (a world that has not begun): both corners are empty and say nothing', J('campTcornerHold(null, null, 0, "host").title') === '' && J('campTcornerHold({}, null, 0, "fri").empty') === true);
 }
@@ -105,7 +105,7 @@ console.log('G. the registered corners');
 {
   g.run('__new(); __look(); window.R1 = __foe("raider", 900, 0);');
   check('the two corners are registered where Troy put them: HOSTILES top right, FRIENDLIES bottom right', J('campCornerDef("hostiles").at') === 'tr' && J('campCornerDef("friendlies").at') === 'br');
-  check('the panel gives their chips from the key table: [ ] and O P, in that order', JSON.stringify(J('NOW("hostiles").chips')) === JSON.stringify(['[', ']']) && JSON.stringify(J('NOW("friendlies").chips')) === JSON.stringify(['O', 'P']));
+  check('the panel gives their chips from the key table: ] for the hostiles and [ for the friendlies', JSON.stringify(J('NOW("hostiles").chips')) === JSON.stringify([']']) && JSON.stringify(J('NOW("friendlies").chips')) === JSON.stringify(['[']));
   check('the titles: HOSTILES and FRIENDLIES, no selection, details closed', J('NOW("hostiles").title') === 'HOSTILES' && J('NOW("friendlies").title') === 'FRIENDLIES' && J('NOW("hostiles").selection') === '' && J('NOW("hostiles").items.length') === 0 && J('NOW("hostiles").open') === 0);
   g.run('campCornerKey(C, "BracketRight");');
   check('a bracket key opens the details of HOSTILES alone (the panel opens every corner that has the key), but with nothing held there is nothing to show', J('NOW("hostiles").open') === 1 && J('NOW("friendlies").open') === 0 && J('NOW("hostiles").items.length') === 0);
@@ -123,7 +123,7 @@ console.log('G. the registered corners');
   g.run('campPicksClear(C); C.tgt = ""; C.t += 9000;');
   check('X lets it go: both selections are empty; the titles stay', J('NOW("hostiles").selection') === '' && J('NOW("friendlies").selection') === '' && J('NOW("hostiles").title') === 'HOSTILES');
   g.run('C.ships.filter(u => u.team === "alien").forEach(u => { u.hp = 0; });');
-  check('the last hostile gone: the title of the corner is NO HOSTILES', J('NOW("hostiles").title') === 'NO HOSTILES' && J('NOW("hostiles").chips.length') === 2);
+  check('the last hostile gone: the title of the corner is NO HOSTILES', J('NOW("hostiles").title') === 'NO HOSTILES' && J('NOW("hostiles").chips.length') === 1);
 }
 
 console.log('H. the details');
@@ -136,14 +136,14 @@ console.log('H. the details');
   check('HULL is the ship\'s hull (now / max, its share, a colour of the charge table)', it[1].name === 'HULL' && it[1].num === J('Math.ceil(R1.hp) + " / " + Math.round(R1.maxHp)') && it[1].share === 1 && it[1].color === J('CAMP.charge.color[campChargeBand(1)]'));
   check('no shield: a line that says so, grey', it[2].kind === 'text' && it[2].text === 'no shield' && it[2].ink === '#7f95a8');
   check('the line of what it is doing is in the side\'s ink', it[3].text === J('campTdispDoing(C, R1)') && it[3].ink === J('CAMP.tdisp.ink.hostile'));
-  check('the order chip is E Attack, from the key table; bright (ok) when the order can be given', it[4].cap === 'E' && it[4].label === 'Attack' && it[4].ok === J('campTdispOrder(C, "attack").ok'));
+  check('the order chip is W Attack, from the key table; bright (ok) when the order can be given', it[4].cap === 'W' && it[4].label === 'Attack' && it[4].ok === J('campTdispOrder(C, "attack").ok'));
   g.run('R1.hp = R1.maxHp / 4;');
   check('the hull follows the ship', J('NOW("hostiles").items[1].share') === 0.25);
   g.run('window.RV = campSpawn(C, "pirateleader", C.carrier.x + 1200, C.carrier.y); C.tgt = RV.id;');
   check('the rival has a shield bar of its own (the cyan), not the line', J('NOW("hostiles").items[2].kind') === 'bar' && J('NOW("hostiles").items[2].name') === 'SHIELD' && J('NOW("hostiles").items[2].color') === 0x7fe9ff);
   g.run('campFriStep(C, 1);');
   const f = J('NOW("friendlies").items');
-  check('a friendly ship held: the same rows, in the friendly\'s ink, with E Guard', f[0].kind === 'pic' && f[0].side === 'friend' && f[f.length - 1].kind === 'key' && f[f.length - 1].label === 'Guard' && f[f.length - 1].cap === 'E', JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
+  check('a friendly ship held: the same rows, in the friendly\'s ink, with W Guard', f[0].kind === 'pic' && f[0].side === 'friend' && f[f.length - 1].kind === 'key' && f[f.length - 1].label === 'Guard' && f[f.length - 1].cap === 'W', JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
   g.run(`campFriHold(C, 'place:luna');`);
   const p = J('NOW("friendlies").items');
   check('an outpost held (a click on the Tab map): its type and its distance as lines, no picture, no bars, and the Guard chip', JSON.stringify(p.map(i => i.kind)) === JSON.stringify(['text', 'text', 'key']) && p[0].text === 'Friendly post' && /km$/.test(p[1].text) && p[2].label === 'Guard', JSON.stringify(p));

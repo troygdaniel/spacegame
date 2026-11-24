@@ -55,7 +55,7 @@ const goTo = async row => { // the list open with the highlight on the row (not 
 const noRow = async row => {
   if (row === 'launch') { await j(`(() => { const C = ${SC}.camp; return campWing(C).length + C.launchQ.length < 3 ? campOrder(C, 'launch', '', 'strip') : null; })()`); return true; }
   if (row === 'recall') { await j(`campOrder(${SC}.camp, 'recall', '', 'strip')`); return true; }
-  if (row === 'attack') { const k = await j(`[campKeyCodes('near')[0] || '', campKeyCodes('engage')[0] || '']`); if (!k[0] || !k[1]) return false; await shut(); await keyOn(k[0]); await keyOn(k[1]); return true; }
+  if (row === 'attack') { const k = await j(`[campKeyCodes('near')[0] || '', campKeyCodes('order')[0] || '']`); if (!k[0] || !k[1]) return false; await shut(); await keyOn(k[0]); await keyOn(k[1]); return true; }
   return false;
 };
 const shut = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); }; // every list closed (Esc goes back one step; it is pressed only while a list is open, so it never pauses)
@@ -233,7 +233,7 @@ try {
     await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
     // a hostile put in reach (staged): ] picks it with no list open (the next enemy: the brackets are the enemies' keys, read from the key table), the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
-    await keyOn(await j(`campKeyCodes('next')[0]`)); await t.run(400); note('] (the next enemy)', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
+    await keyOn(await j(`campKeyCodes('hostiles')[0]`)); await t.run(400); note('] (the next enemy)', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
     await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
     await keyOn('KeyX'); await t.run(200);
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');
