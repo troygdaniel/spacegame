@@ -3,7 +3,7 @@
 // autopilot beside the convoy, (the fork of 1.1 was cut: card space-game-cut-lane-fork; its steps below find no lane rows and no hold, and do nothing), convoy orders, power moved in the rival's phases, missiles, the map zoomed all the way out.
 // Every key comes from the key table (CAMP_PANELS for the order lists and their rows, CAMP_KEYS for the direct keys, the Campaign group of CONTROLS for the rest), never a letter of its own, so the walk survives a remap of the keys.
 // The old lists stay switched off, as in the game (the key rounds of 23 Nov 2026: cards space-game-keys-orders to space-game-keys3-select). An order is given as a player gives it now: a row of the cruiser list (Q, then the row's digit: Fly to the goal,
-// Mine ore, Emergency shields), or E, the one order key (card space-game-keys5-qwe; it was W) (the backslash picks the nearest enemy and E sends the pilots at it; with nothing held E forms them up on the cruiser: there is no X, [ is pressed past its last ship). The launch needs no key (the pilots start out); the convoy's orders and the dock have no key
+// Mine ore, Emergency shields), or E, the one order key (card space-game-keys5-qwe; it was W) (the backslash picks the nearest enemy and E sends the pilots at it; W then 5 forms them up on the cruiser: there is no X). The launch needs no key (the pilots start out); the convoy's orders and the dock have no key
 // and no row while their lists are off: they are given as the strip gives them, and a note says so. A pilot's call is answered with Up, Down and Enter.
 //   node tests/huntfleet-boot.mjs --mission 1 [--ending win|lose] [--secs 420] [--lane short|long] [--nobrief] [--idle 90] [--noscout] [--killleader] [--dock0]
 // --dock0: the first thing a player does is dock at the base the HUD offers (the dock list's dock row), read the ready room's pages (build, repair), and undock
@@ -62,16 +62,16 @@ try {
   const closeLists = async () => { for (let n = 0; n < 6 && (await listOpen()); n++) await key(K.esc); }; // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): until every list is closed (it pauses only when none is open)
   // An order as a player gives it in the game NOW (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select; the old lists, fleet, all squads, ship, power, autopilot, are switched off and this walk leaves them off):
   //   a row of the cruiser list (Q: Fly to the goal, Fly to the target, Mine ore, Emergency shields ...): the key of the list the row is in, Down to the row, Enter, read from the table as before
-  //   E, the one order key (card space-game-keys5-qwe; it was W): an enemy picked, the pilots attack it (the caller picks it: the backslash); nothing picked ([ pressed past its last ship to the empty stop: there is no X), they form up on the cruiser; a friendly picked ([), they guard it
+  //   E, the one order key (card space-game-keys5-qwe; it was W): an enemy picked, the pilots attack it (the caller picks it: the backslash); a friendly picked ([), they guard it. Form up on the cruiser is the fleet pick's fifth row (W, then 5): there is no X and no empty stop
   //   no key and no row at all: the launch (the pilots start the mission out), and the convoy's orders and the dock while the table has no keyed row for them: given as the order the strip's words give, and said so in a note
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
-  const KEYED = { attack: () => [K.order], fguard: () => [NONE, K.order], escort: () => [NONE, K.friendlies, K.order] }; // NONE: nothing held first (there is no clear key: noTarget below)
+  const KEYED = { attack: () => [K.order], fguard: () => [K.who, 'Digit' + FORMUP], escort: () => [FRIEND, K.order] }; // form up is the fleet pick's fifth row (W, 5: an order to who at once, the held target stays); FRIEND: a friendly held first (aFriend below)
   const WORDS = { ctuck: ['convoy', 'tuck in'], crun: ['convoy', 'run for it'], chold: ['convoy', 'hold here'], ccarry: ['convoy', 'carry on'], dock: ['dock', ''] };
   const ALIAS = { burn: 'goal' }; // the fast burn rows have no way in: Fly to the goal burns by itself on a long clear leg (card space-game-keys2-cruiser)
   let lastSay = '';
-  const NONE = 'none', WHO_DIGIT = { red: 1, green: 2, yellow: 3, all: 4 }; // the fleet pick's digits (card space-game-keys5-qwe): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots
+  const FRIEND = 'friend', FORMUP = 5, WHO_DIGIT = { red: 1, green: 2, yellow: 3, all: 4 }; // the fleet pick's digits (card space-game-keys5-qwe): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots, 5 Form up on me
   const who = async squad => { const want = squad === 'all' ? 'all' : 'pilot:' + squad, sel = () => j(`${S}.camp.sel || 'all'`); if ((await sel()) === want) return true; if (!K.who) return false; await closeLists(); await key(K.who); if ((await listOpen()) === 'fleet') await key('Digit' + WHO_DIGIT[squad]); await closeLists(); return (await sel()) === want; }; // WHO takes the order (C.sel): W opens the fleet pick (a numbered list), then the digit picks; W alone only opens it; a digit that is refused (a lost pilot) leaves the pick open: it is closed
-  const noTarget = async wait => { for (let i = 0; i < 24 && (await j(`!!(${S}.camp.tgt || ${S}.camp.fsel)`)); i++) await key(K.friendlies, wait); return !(await j(`!!(${S}.camp.tgt || ${S}.camp.fsel)`)); }; // nothing held: X is gone (card space-game-keys5-qwe); each of the two cycles has an empty stop after its last ship, so [ is pressed until neither an enemy nor a friendly is held
+  const aFriend = async wait => { if (!(await j(`!!${S}.camp.fsel`))) await key(K.friendlies, wait); return j(`!!${S}.camp.fsel`); }; // a friendly held: [ picks one when none is (it lets an enemy go: one target); nothing clears and the cycles have no empty stop (card space-game-keys5-qwe: X is gone)
   const press = async (id, wait = 50) => { // an order: a direct key, the order key, or a row of a list (the key of the list it is in, Down to the row, Enter)
     lastSay = '';
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys
@@ -88,7 +88,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
       if (!K.who || !K.order) { note(`(no key for ${id}: the table has none)`); return false; }
       await closeLists(); const got = await who(one[1]); if (got) await key(K.order, wait); else note(`(${one[1]} is not a stop of the who key now: lost, or none of that squad)`); await who('all'); return got;
     }
-    if (KEYED[id]) { await who('all'); const ks = KEYED[id](); if (ks.some(c => !c)) { note(`(no key for ${id}: the table has none)`); return false; } await closeLists(); for (const c of ks) { if (c === NONE) await noTarget(wait); else await key(c, wait); } return true; }
+    if (KEYED[id]) { await who('all'); const ks = KEYED[id](); if (ks.some(c => !c)) { note(`(no key for ${id}: the table has none)`); return false; } await closeLists(); for (const c of ks) { if (c === FRIEND) await aFriend(wait); else await key(c, wait); } await closeLists(); return true; }
     const way = await wayTo(id);
     if (!way && WORDS[id]) { // no keyed row in this mission's lists: the order itself, as the strip gives it
       const r = await j(`campOrder(${S}.camp, ${JSON.stringify(WORDS[id][0])}, ${JSON.stringify(WORDS[id][1])}, 'strip')`); lastSay = (r && r.say) || '';
