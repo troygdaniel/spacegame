@@ -4,6 +4,7 @@
 //   campPanelPowerHi(s)      the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the open power list, else -1: the scene frames that gauge A row is its words in plain language and, at the right, a word or two of the live state, or the reason it cannot be done now (the row is grey);
 // a row that opens a part of the list shows that part's KEY in a cap at its left and an arrow at its right; the highlighted row has a bright bar; the one in force (a stance, a convoy order) is marked.
 // A list longer than CAMP_PANELS.show rows scrolls with the highlight, and says how many rows are below. The foot of the list names its keys (Up Down, Enter, Left back, Esc), read from the key table.
+// A CORNER LIST (the cruiser's: `corner: 'tl'` in the table, card space-game-layout-cruiser) opens right under its corner's title row (src/campcorner.js) with no heading and no 1 / 7 counter: the corner's title is above it; a caption band returns only while it picks a target.
 // The target (A D S X, with no list open) is shown by the target display in the bottom right corner (src/camptdispscene.js), which took over the target's line that was here (card space-game-target-display).
 // The words are the table's (CAMP_PANELS in src/data_controls.js), so a row or a list added by data is drawn without a line of code. The scene calls these:
 //   campPanelsInstall(s)       once, in create: s.pn is the state (campPanelNew), s.pnl the objects (made once, shown and moved after that); the pointer is listened for and given back when the scene shuts down
