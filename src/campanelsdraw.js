@@ -51,6 +51,7 @@ function campPanelsPaint(s, now) {
   const K = CAMPPANELS_LOOK, B = K.box, C = s.camp, on = campPanelsOn(s), g = L.g;
   g.clear(); L.objs.forEach(o => { if (o !== g) o.setVisible(false); });
   if (!on) { if (campPanelOpen(P) && s.mode !== 'play') campPanelClose(P); L.live = -1e9; return; }
+  const fa = campPanelFade(P, now); // a list that fades (the cruiser's) dims, then closes, when nothing touches it (card space-game-keys2-cruiser)
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def) { L.live = -1e9; L.key = ''; return; }
   const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + (P.pick ? 'p' + P.pick.sel + ':' + P.pick.at + ':' + P.pick.top : '') + ':' + (P.trail || []).join() + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too: a power row stays open, and its pips are right at once; so is the target sub-list's highlight)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second
@@ -83,6 +84,7 @@ function campPanelsPaint(s, now) {
   const cur = V.rows[V.at], F = G.foot; // the foot: the highlighted row's full state (or its reason), what is off the screen, and the keys
   L.more.setVisible(true).setPosition(F.x + 12, F.y + 10).setText(cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : '')).setColor(cur && !cur.ok ? K.rowInk.why : '#9fbdd1');
   L.keys.setVisible(true).setPosition(F.x + 12, F.y + 30).setText(uiText(V.keys, { key: def.key })); // the foot's words are the model's: Esc closes a list its own key opened, goes back from one a row opened, and from a target sub-list
+  L.objs.forEach(o => { if (o && o.setAlpha) o.setAlpha(fa); }); // the fade: the whole list, its words and its bars, at one opacity
 }
 
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
@@ -98,6 +100,7 @@ function campPanelsClick(s, px, py) {
   const def = campPanelDef(campPanelOpen(P)); if (!def) return false;
   const V = campPanelView(P, s.camp); if (!V) return false; // the rows on the screen: the list's, or the candidates of a target sub-list
   const G = campPanelsGeometry(def, V.total), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
+  P.touch = now; // a click on the list is a touch: it does not fade while it is used (campPanelFade)
   let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
   if (P.pick) { // a candidate: highlighted and chosen, the order is given at it
     const pk = P.pick, items = campPickSync(s.camp, pk), it = i >= 0 ? items[pk.top + i] : null; if (!it) return true;
