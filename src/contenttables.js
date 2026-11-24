@@ -821,6 +821,7 @@ const UI_TEXT = {
   'camp.corner.hostiles': 'HOSTILES',
   'camp.corner.friendlies': 'FRIENDLIES',
   'camp.corner.bay': 'in the bay',
+  'camp.corner.lost': 'lost',
   'camp.corner.attack': 'Attack {name}',
   'camp.corner.guard': 'Guard {name}',
   'camp.corner.formup': 'Form up',

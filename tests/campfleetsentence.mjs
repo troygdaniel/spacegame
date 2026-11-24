@@ -1,4 +1,4 @@
-// smoke: the Q FLEET row reads as one line that never fades: who, the W chip, the order and the target (card space-game-fleet-sentence); grey with its reason when the order cannot be given; the W chip is not in the details on the right
+// smoke: the W FLEET row reads as one line that never fades: who, the E chip, the order and the target (cards space-game-fleet-sentence and space-game-keys5-corners); grey with its reason when the order cannot be given; the E chip is not in the details on the right
 // Troy, 24 Nov 2026: "The order has no permanent home: the W chip lives in details that fade. Make the Q FLEET corner read as one line that never fades: who, the W chip, the order and the target. Examples: Q Kara, W Attack Raider 9; Q All pilots, W Guard Transport;
 // W Form up with nothing held. Grey the W part with its reason when the order cannot be given. Remove the W chip from the fading details on the right. Fit inside the corner (cut a long name short). NO to showing the backslash and X keys on screen."
 //   A  the line (campFleetLine, pure): who, the order key, the order and the target, in each state: all pilots or one, an enemy held, a friendly held, nothing held (form up)
@@ -35,14 +35,14 @@ g.run(`
 console.log('A. the line');
 g.run('__new();');
 check('FLEET registers a line (campFleetLine), and the other corners do not', J('campCornerDef("fleet").line === campFleetLine') && J('CAMP_CORNERS.filter(d => d.line).map(d => d.id).join()') === 'fleet');
-check('nothing held, all pilots: Q All pilots  W Form up (the order key bright)', J('LINE()[0].key') === 'who' && J('LINE()[1].text') === 'All pilots' && J('LINE()[2].key') === 'order' && J('LINE()[2].ok') === true && J('LINE()[3].text') === 'Form up', J('JSON.stringify(LINE())'));
+check('nothing held, all pilots: W All pilots  E Form up (the order key bright)', J('LINE()[0].key') === 'who' && J('LINE()[1].text') === 'All pilots' && J('LINE()[2].key') === 'order' && J('LINE()[2].ok') === true && J('LINE()[3].text') === 'Form up', J('JSON.stringify(LINE())'));
 g.run('C.sel = "pilot:green";');
-check('one pilot picked: his name is the first word (Q Kara)', J('LINE()[1].text') === 'Kara' && J('LINE()[1].bold') === true);
+check('one pilot picked: his call sign and name are the first word (W Red 2 Kara)', J('LINE()[1].text') === 'Red 2 Kara' && J('LINE()[1].bold') === true);
 g.run('C.sel = "all"; window.R1 = __foe("raider", 900, 0); campTgtStep(C, 1);');
 check('an enemy held: W Attack and its name (the one the HOSTILES corner holds)', J('LINE()[3].text') === 'Attack ' + J('campHeldNow(C).name') && J('campHeldNow(C).kind') === 'hostile' && J('LINE()[2].ok') === true, J('__text()'));
 g.run('campFriStep(C, 1);');
 check('a friendly held: W Guard and its name (Transport)', J('LINE()[3].text') === 'Guard ' + J('campHeldNow(C).name') && J('campHeldNow(C).kind') !== 'hostile' && /^Guard \S+/.test(J('LINE()[3].text')), J('__text()'));
-check('the words are content (camp.corner.attack, .guard, .formup), the keys are the table\'s (who, order)', J(`uiText('camp.corner.attack', { name: 'X' })`) === 'Attack X' && J(`uiText('camp.corner.guard', { name: 'X' })`) === 'Guard X' && J(`uiText('camp.corner.formup')`) === 'Form up' && J('campCornerCap("who") + campCornerCap("order")') === 'QW');
+check('the words are content (camp.corner.attack, .guard, .formup), the keys are the table\'s (who, order)', J(`uiText('camp.corner.attack', { name: 'X' })`) === 'Attack X' && J(`uiText('camp.corner.guard', { name: 'X' })`) === 'Guard X' && J(`uiText('camp.corner.formup')`) === 'Form up' && J('campCornerCap("who") + campCornerCap("order")') === 'WE');
 g.run('campTgtStep(C, 1);');
 check('the one target: an enemy picked after a friendly takes the friendly\'s place in the line', J('campHeldNow(C).kind') === 'hostile' && /^Attack /.test(J('LINE()[3].text')));
 
@@ -65,7 +65,7 @@ console.log('C. the layout');
   const T = J('CAMP.corner.title'), w = J('CAMP.corner.w');
   const seg = (name, ok) => `[{ key: 'who' }, { text: 'All pilots', bold: true, size: 14 }, { key: 'order', ok: ${ok} }, { text: ${JSON.stringify(name)}, size: 13, fit: true }]`;
   const L = J(`campCornerLineLayout(${seg('Guard Transport', true)}, __T0, __m)`);
-  check('the chip Q is at the frame\'s inner left edge, then All pilots after a gap, then the chip W, then the order: left to right', L.chips[0].x === 18 + T.pad && L.words[0].x === 18 + T.pad + T.chipW + T.gap && L.chips[1].x === L.words[0].x + 'All pilots'.length * 8 + T.gap && L.words[1].x === L.chips[1].x + T.chipW + T.gap, JSON.stringify(L));
+  check('the chip W is at the frame\'s inner left edge, then All pilots after a gap, then the chip E, then the order: left to right', L.chips[0].x === 18 + T.pad && L.words[0].x === 18 + T.pad + T.chipW + T.gap && L.chips[1].x === L.words[0].x + 'All pilots'.length * 8 + T.gap && L.words[1].x === L.chips[1].x + T.chipW + T.gap, JSON.stringify(L));
   check('Guard Transport fits the corner (to its inner right edge) at the width the table gives', L.words[1].text === 'Guard Transport' && L.words[1].x + 'Guard Transport'.length * 7 <= 18 + w - T.pad, JSON.stringify(L.words));
   const Lg = J(`campCornerLineLayout(${seg('Guard Transport', false)}, __T0, __m)`);
   check('a grey order key is the same chip with ok false', Lg.chips[1].ok === false && L.chips[1].ok === true && Lg.chips[0].ok === true);
@@ -85,12 +85,12 @@ g.run('__new(); __scene(); campTcornerLook(P, 0); campCornerSync(S, 0);');
 {
   const shown = () => J('S.objs.filter(o => o.vis).map(o => o.text)');
   const sh = shown();
-  check('closed: the line is drawn: the chips Q and W, All pilots and Form up; FLEET and the selection are not', ['Q', 'W', 'All pilots', 'Form up'].every(t => sh.includes(t)) && !sh.includes('FLEET'), JSON.stringify(sh));
-  check('the chips and the words stand left to right in the row: Q, All pilots, W, Form up', (() => { const f = J('S.hud.corner.fleet'); const xs = [f.chips[0].x, f.words[0].x, f.chips[1].x, f.words[1].x]; return xs.every((x, i) => !i || x > xs[i - 1]); })());
+  check('closed: the line is drawn: the chips W and E, All pilots and Form up; FLEET and the selection are not', ['W', 'E', 'All pilots', 'Form up'].every(t => sh.includes(t)) && !sh.includes('FLEET'), JSON.stringify(sh));
+  check('the chips and the words stand left to right in the row: W, All pilots, E, Form up', (() => { const f = J('S.hud.corner.fleet'); const xs = [f.chips[0].x, f.words[0].x, f.chips[1].x, f.words[1].x]; return xs.every((x, i) => !i || x > xs[i - 1]); })());
   check('every part of the line is inside the frame (the right edge too)', (() => { const at = J('CAMP.corner.at.bl'), w = J('CAMP.corner.w'), f = J('S.hud.corner.fleet'); return f.words.every(o => o.x >= at.x && o.x + o.width <= at.x + w) && f.chips[1].x + 11 <= at.x + w; })());
   g.run('C.t += 60000; campCornerSync(S, 0);');
   const later = shown();
-  check('a minute later, with the details long closed: the line is still there, at full strength', ['Q', 'W', 'All pilots', 'Form up'].every(t => later.includes(t)) && J('S.hud.corner.fleet.words.every(o => o.alpha === 1)'));
+  check('a minute later, with the details long closed: the line is still there, at full strength', ['W', 'E', 'All pilots', 'Form up'].every(t => later.includes(t)) && J('S.hud.corner.fleet.words.every(o => o.alpha === 1)'));
   g.run('C.ships.filter(u => u.kind === "fighter").forEach(u => { u.hp = 0; u.gone = true; }); S.hud.corner.fleet.g.log = []; campCornerSync(S, 0);');
   check('the order cannot be given: the line says why, in the grey ink, and the chip W is drawn grey (the fill 0x2a3b4c)', J('S.objs.filter(o => o.vis).map(o => o.text)').includes('Form up, none out') && J('S.hud.corner.fleet.words[1].style.color') === '#7f95a8' && J('S.hud.corner.fleet.g.log.some(l => l[0] === "fillStyle" && l[1] === 0x2a3b4c)') && J('S.hud.corner.fleet.chips[1].style.color') === '#9fb4c4');
   g.run('S.mode = "map"; campCornerSync(S, 0);');
@@ -104,7 +104,7 @@ console.log('E. no backslash and no X');
 {
   g.run('__new(); __scene(); window.R1 = __foe("raider", 900, 0); campTgtStep(C, 1); campTcornerLook(P, 0); campCornerKey(C, "KeyQ"); campCornerKey(C, "BracketRight"); campCornerKey(C, "BracketLeft"); campCornerSync(S, 0);');
   const chips = J('Object.keys(S.hud.corner).map(id => S.hud.corner[id].chips.filter(c => c.vis).map(c => c.text))').flat();
-  check('the chips on the screen are Q, W, [, ] and S: no backslash, no X', ['\\', 'X'].every(k => !chips.includes(k)) && ['Q', 'W', '[', ']', 'S'].every(k => chips.includes(k)), JSON.stringify(chips));
+  check('the chips on the screen are W, E, [, ] and Q (the cruiser\'s): no backslash, no X, no S', ['\\', 'X', 'S'].every(k => !chips.includes(k)) && ['W', 'E', '[', ']', 'Q'].every(k => chips.includes(k)), JSON.stringify(chips));
   check('and no line of text in the corners names them', !J('S.objs.filter(o => o.vis).map(o => o.text)').some(t => /(^|\s)(\\|X)(\s|$)/.test(t)));
   check('the corner code never writes the nearest-threat or the clear key', !/CAMP_KEYS\.(near|clear)|campCornerCap\('(near|clear)'\)|key: '(near|clear)'/.test(['src/campcorner.js', 'src/camptcorner.js', 'src/campcornerscene.js', 'src/camptcornerscene.js'].map(src).join('\n')));
 }
