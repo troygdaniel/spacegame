@@ -110,7 +110,7 @@ function campPanelKey(P, C, code, now) {
     campSelAll(C); res.sel = C.sel || ''; res.tgt = C.tgt || ''; res.fsel = C.fsel || ''; return res;
   }
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('next', code) ? 'next' : campKeyIs('last', code) ? 'last' : campKeyIs('wnext', code) ? 'wnext' : campKeyIs('wlast', code) ? 'wlast' : campKeyIs('fnext', code) ? 'fnext' : campKeyIs('flast', code) ? 'flast' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
-  if (tk) { // [ ] the enemy, \ the nearest threat, A D who, , . the friendly, X all of it (src/camptarget.js: the three picks)
+  if (tk) { // [ ] the enemy, \ the nearest threat, A D who, O P the friendly, X all of it (src/camptarget.js: the three picks)
     res.used = true; res.fleet = true; if (!C) return res;
     if (tk === 'clear') { campPicksClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'wnext' || tk === 'wlast') campSelStep(C, tk === 'wnext' ? 1 : -1); else if (tk === 'fnext' || tk === 'flast') campFriStep(C, tk === 'fnext' ? 1 : -1); else campTgtStep(C, tk === 'next' ? 1 : -1);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
@@ -154,7 +154,7 @@ function campPanelRun(C, row, how, item) {
     const sl = campSelRowFor(C, row.sel); if (sl.code && campWing(C, 'fighter').length) return campNo(sl.code); // no fighters out: the order's own refusal first
     return campSelOrder(C, row.sel === 'hostile' ? 'attack' : 'guard', how || 'key');
   }
-  if (item && row.pick === 'enemy') C.tgt = item.id; // the hostile that was chosen is THE target now: the attack below goes at it, and P fly to the target and Enter a missile follow it
+  if (item && row.pick === 'enemy') { C.tgt = item.id; C.fsel = ''; } // the hostile that was chosen is THE target now (the one target: the friendly is let go): the attack below goes at it, and Fly to the target and Enter a missile follow it
   else if (item && row.pick === 'escort') return campWingOrder(C, row.wing ? row.wing[0] : 'fighters', 'escort', item.id, how || 'key'); // the squads (or the one squad of the row) go to the ship that was chosen (a convoy ship or a miner)
   else if (item && row.pick === 'guard') return campWingOrder(C, row.wing[0], 'guard', item.id, how || 'key'); // the squad guards the ship or outpost that was chosen, in formation beside it (src/campwing.js campWingGuardStep ends it when the ship is lost or safe)
   else if (row.pick === 'guard') { const dry = campWingOrder(C, row.wing[0], 'guard', null, how || 'key', true); return dry.ok ? campNo('noguard') : dry; } // Guard the target with nothing to guard: refused in words, never the carrier by a side door

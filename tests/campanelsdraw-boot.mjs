@@ -175,10 +175,10 @@ async function campaign() {
     await press(t, 'Slash', 40); await t.run(300);
     check('/ opens the command strip: its input has the focus', (await j(`document.activeElement && document.activeElement.tagName`)) === 'INPUT');
     await press(t, 'KeyD', 40); await press(t, 'KeyQ', 40); await t.run(100);
-    check('the keys typed in the strip are the strip\'s, not the game\'s: D picks no friend and no target, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === '' && (await isOpen()) === '');
+    check('the keys typed in the strip are the strip\'s, not the game\'s: D picks no pilot and no target, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await isOpen()) === '');
     await press(t, 'Escape', 40); await t.run(300);
     check('Esc closes the strip and does not pause the battle', (await j(`document.activeElement && document.activeElement.tagName`)) !== 'INPUT' && (await j(`${SC}.mode`)) === 'play');
-    check('the voice key of the Campaign is the period: the listener follows the scene', (await j(`(() => { listenKeysSync(game); return [LISTEN.code, LISTEN.cap].join(); })()`)) === 'Period,.');
+    check('hold to speak is off in the Campaign (CAMP_VOICE, card space-game-keys-select): the listener has no key there and follows the scene', (await j(`(() => { listenKeysSync(game); return [LISTEN.code === undefined, LISTEN.cap].join(); })()`)) === 'true,');
     await press(t, 'KeyQ', 20); await t.run(200); await press(t, 'KeyH'); await t.run(200);
     check('H opens the page of every key, the battle waits, and the open list is closed', (await j(`${SC}.ck && ${SC}.ck.open`)) === true && (await j(`${SC}.mode`)) === 'pause' && (await isOpen()) === '');
     await snap(t, 'page');

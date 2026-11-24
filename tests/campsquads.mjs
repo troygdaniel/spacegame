@@ -128,7 +128,7 @@ console.log('D. the keys and the lists');
   g.run('campPanelClose(__PP);');
   const old = ['KeyE', 'KeyR', 'KeyT'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('E, R and T open no list any more: they give an order (or are refused in words) and the panel stays shut', old === ',,', old);
-  check('the key line, the H page and the hints say the keys (Q Fleet  W All with the old switches on), read from the table: the three order keys are direct keys, in the texts as {keyattack} {keyguard} {keyrecall} who as {keywlast} {keywnext} and the friendlies\' as {keyflast} {keyfnext}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyattack', 'keyguard', 'keyrecall', 'keywlast', 'keywnext', 'keyflast', 'keyfnext', 'keylast', 'keynext'].map(campKeyVar).join('')`) === 'EGRAD,.[]');
+  check('the key line, the H page and the hints say the keys (Q Fleet  W All with the old switches on), read from the table: the three order keys are direct keys, in the texts as {keyattack} {keyguard} {keyrecall} who as {keywlast} {keywnext} and the friendlies\' as {keyflast} {keyfnext}', J('campPanelKeyLine()') === 'Q Fleet  W All    P Ship  O Power  I Autopilot  U Dock' && J('campPanelKeyRows().slice(0, 2).map(r => r.k[0]).join("")') === 'QW' && J(`campKeyVar('squadskey')`) === 'W' && J(`['keyattack', 'keyguard', 'keyrecall', 'keywlast', 'keywnext', 'keyflast', 'keyfnext', 'keylast', 'keynext'].map(campKeyVar).join('')`) === 'EGRADOP[]');
 }
 
 console.log('E. the words');

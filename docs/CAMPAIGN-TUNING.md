@@ -24,7 +24,7 @@ A bot, a tool or a test turns the kit on in code with `campDebugSet(true)` (off 
 | `7` | lose this level |
 | `` ` `` | god mode on and off: the carrier takes no damage and Earth's shield does not fall |
 
-The brackets, the backslash and the comma are the player's selection keys now (card `space-game-keys-select` moved win and lose to `6` and `7`). They are listed in one small line on the pause screen (`campDebugLine`). The rows are the data table `CAMP_DEBUG` at the top of `src/campdebug.js`: change a key there, one line.
+The brackets and the backslash are the player's selection keys now (card `space-game-keys-select` moved win and lose to `6` and `7`). They are listed in one small line on the pause screen (`campDebugLine`). The rows are the data table `CAMP_DEBUG` at the top of `src/campdebug.js`: change a key there, one line.
 
 ## The tuning panel (card `space-game-tuning-panel`; Troy, 22 Nov 2026)
 
