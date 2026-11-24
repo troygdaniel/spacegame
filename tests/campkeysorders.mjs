@@ -103,7 +103,7 @@ sec('E. Q is the cruiser list; the W list is off', () => {
   g.run('PP = campPanelNew();');
   const w = J(`__k('KeyW')`), u = J(`__k('KeyU')`);
   check('W and U open nothing', !w.used && !u.used && J('campPanelOpen(PP)') === '', JSON.stringify([w, u]));
-  check('the key line names Q Cruiser, P Power and O Autopilot, and neither W nor U', /Q Cruiser/.test(J('campPanelKeyLine()')) && /P Power/.test(J('campPanelKeyLine()')) && !/\bW \w|\bU \w/.test(J('campPanelKeyLine()')), J('campPanelKeyLine()'));
+  check('the key line names Q Cruiser alone (the power and autopilot lists have no key now: O and P are the friendlies\'), and neither W nor U', /Q Cruiser/.test(J('campPanelKeyLine()')) && !/\bP Power|\bO Autopilot/.test(J('campPanelKeyLine()')) && !/\bW \w|\bU \w/.test(J('campPanelKeyLine()')), J('campPanelKeyLine()'));
   check('the dock list is reached from the cruiser list: its way in is Q (a hint reads it from the table)', J(`campKeyOpens('yard')`) === 'Q' && J(`campKeyPath('yard')`) === 'Q, Dock and repair' && J(`campKeyOpens('squads')`) === '', J(`campKeyPath('yard')`));
   g.run('campFleetListSet(true);');
   const old = J(`(() => { PP = campPanelNew(); __k('KeyW'); const a = campPanelOpen(PP); PP = campPanelNew(); __k('KeyU'); const b = campPanelOpen(PP); PP = campPanelNew(); __k('KeyQ'); return [a, b, campPanelOpen(PP)]; })()`);
