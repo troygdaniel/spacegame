@@ -66,6 +66,24 @@ console.log('B. the pick');
   check('a lone mark: the first click sets it, the second flies there (as a place always did)', J('t1') === 'alien:' + J('Z2.id') && J('m1') === false && J('m2') === 'alien:' + J('Z2.id'), J('[t1, m1, m2]').join());
 }
 
+console.log('B2. a click on an outpost or a planet holds it as the one target (card space-game-keys3-select)');
+{
+  g.run(`window.C = __new(11); window.A = campSpawn(C, 'raider', -300, 1500); A.nextShot = 1e9; window.S = __scx(C); campMapOpen(S); S.mp.dirty = true; campMapPaint(S, 0); campMapPaint(S, 400);
+    window.PV = campMapPoint(S.mp.fit, CAMPMAP.frame, 2700, -1500); window.PA = campMapPoint(S.mp.fit, CAMPMAP.frame, -300, 1500);`);
+  g.run(`campTgtNearest(C); window.t0 = C.tgt; campMapClick(S, PV.x, PV.y); window.sv = S.mp.setId; window.nv = !!C.nav; window.fv = C.fsel; window.tv = C.tgt;`);
+  check('a click on an outpost (Vesta) sets it as the map always did (marked, no flight) AND holds it: C.fsel is the place, campHeldNow says friendly with the place in post', J('t0') !== '' && J('sv') === 'place:vesta' && J('nv') === false && J('fv') === 'place:vesta' && J('campHeldNow(C).kind') === 'friendly' && J('campHeldNow(C).post.id') === 'place:vesta' && J('campHeldNow(C).unit') === null, J('[sv, fv, tv]').join());
+  check('with an enemy held that click lets the enemy go: one target, C.tgt is empty', J('tv') === '' && J('C.tgt') === '' && J('campHeldNow(C).kind') === 'friendly');
+  check('Fly to the target flies to the place held: campHeldRow is the map\'s row of that place', J('campHeldRow(C).id') === 'place:vesta' && J('campHeldRow(C).kind') === 'place');
+  g.run(`campMapClick(S, PV.x, PV.y);`);
+  check('the second click on the same place flies there, as before, and keeps it held', J('C.nav && C.nav.id') === 'place:vesta' && J('C.fsel') === 'place:vesta' && J('campHeldNow(C).post.id') === 'place:vesta');
+  g.run(`campNavClear(C, 'clear'); C.fsel = ''; S.mp.setId = ''; S.mp.lastClick = null; S.mp.dirty = true; campMapPaint(S, 800); campMapClick(S, PA.x - 1, PA.y);`);
+  check('a click on an enemy mark holds no place: C.fsel stays empty and the map sets the raider as before', J('S.mp.setId') === 'alien:' + J('A.id') && J('C.fsel') === '' && J('campHeldNow(C)') === null);
+  g.run(`C.pickups.push({ id: 'chunk-91', kind: 'chunk', x: 1400, y: 900, ore: 20, born: C.t }); S.mp.setId = ''; S.mp.lastClick = null; S.mp.dirty = true; campMapPaint(S, 1200); window.PO = campMapPoint(S.mp.fit, CAMPMAP.frame, 1400, 900); campMapClick(S, PO.x, PO.y);`);
+  check('a click on an ore mark holds no place either', J('S.mp.setId') === 'pickup:chunk-91' && J('C.fsel') === '' && J('campHeldNow(C)') === null);
+  g.run(`C.fsel = 'place:vesta'; C.tgt = ''; S.mp.setId = ''; S.mp.lastClick = null; S.mp.dirty = true; campMapPaint(S, 1600); campMapClick(S, PA.x - 1, PA.y);`);
+  check('a click on an enemy mark leaves a place already held held (no key of the map picks an enemy: [ ] \\ do)', J('C.fsel') === 'place:vesta' && J('C.tgt') === '' && J('campHeldNow(C).kind') === 'friendly');
+}
+
 console.log('C. the stand-off');
 {
   const K = 'CAMP.nav';

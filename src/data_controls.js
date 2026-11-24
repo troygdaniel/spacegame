@@ -21,7 +21,7 @@
 // In an open list Up and Down move the highlight, Enter gives the order (the list closes when the order is taken; a power row leaves it open, to be given again), Left goes back to the list it is a part of, the list's own key closes it.
 // Esc goes back ONE STEP, to where you came from (card space-game-order-target-pick): a target sub-list to its list, a list a row of Q or P opened back to Q or P, a list its own key opened (Q W P O U, and I with the ship list on) is closed; with nothing open, Esc pauses.
 // The battle runs at its own speed while a list is open (card space-game-no-command-slowdown). NO KEY IS REUSED IN FLIGHT: each of Q W and P O U (and I with the ship list on) opens one list and means nothing else. The direct keys are only:
-//   Arrows fly (Up thrust, Left and Right turn, Down brake)   Space the turrets   Enter a missile at the target (only while no list is open)   A D WHO takes the order (all three pilots, the default, then Wedge, Kara, Apollo)   [ ] the last or next ENEMY (the target), \ the nearest threat   O P the last or next FRIENDLY (a ship or outpost you protect; only ONE target is held, the friendly or the enemy)   Q all three pilots at once (until the Q list returns: card space-game-keys-orders)   S the view back to the cruiser   X clears the enemy and the friendly and puts WHO back on all three   E the pilots attack the selected enemy   R guard the selected friendly   T recall (a selected pilot takes the order alone, else all three do)
+//   Arrows fly (Up thrust, Left and Right turn, Down brake)   Space the turrets   Enter a missile at the target (only while no list is open)   Q W WHO takes the order (all three pilots, the default, then Wedge, Kara, Apollo)   [ ] the last or next ENEMY (the target), \ the nearest threat   O P the last or next FRIENDLY (a ship you protect; a click on an outpost or planet of the map holds that place; only ONE target is held, the friendly or the enemy)   S the view back to the cruiser   X clears the enemy and the friendly and puts WHO back on all three   E the pilots attack the selected enemy   R guard the selected friendly   T recall (a selected pilot takes the order alone, else all three do)
 //   J K L a pip of power to the shields, the engines, the weapons (the POWER list has Balance as a row)   Tab the map   - = zoom, S resets it   H keys   M mute   Esc pause (when no list is open)   / types an order   (hold to speak is OFF: CAMP_VOICE)
 // The arrows and Enter belong to whatever list is open: a list of these first, else the ship (fly, missile). (No pop-up takes them: card space-game-no-pilot-popups, Troy, 23 Nov 2026.)
 // A row that can never be used in this mission (the blink without its tech, the dock where there is no outpost, the CONVOY part's row in Q with no convoy) is left out (its `when`). A row that cannot be used NOW stays, greyed, with the reason beside it.
@@ -31,7 +31,7 @@
 //   row:    { id, order, arg, wing, fly, burn, blink, open, stay, when, label, help }   order is a campOrder name (src/campaign.js: the words the strip and the voice use; arg goes with it); wing: [group, verb] is an order to one part of the wing
 //           (campWingOrder, src/campwing.js: a squad or 'fighters'; Attack goes at the target); fly: 'objective' or 'target' is the autopilot (src/campnav.js), burn: 1 makes it a fast burn; blink: 1 is the warp blink; open: '<list id>' opens that part's list;
 //           pick: 'enemy' | 'escort' | 'field' | 'guard' | 'ward' makes it a row that needs a target: one candidate is taken at once, several open a sub-list of them, Esc goes back (src/camppick.js, card space-game-order-target-pick);
-//           sel: 'hostile' | 'friend' makes it a row that acts on what is SELECTED already ([ ] S the hostile, A D the friend: src/camptarget.js campSelOrder, the rule of E R T): it names it ("Attack Raider 3"), gives the order at once, and is grey with a hint while none is picked (card space-game-w-uses-selection);
+//           sel: 'hostile' | 'friend' makes it a row that acts on what is SELECTED already ([ ] S the hostile, O P the friend: src/camptarget.js campSelOrder, the rule of E R T): it names it ("Attack Raider 3"), gives the order at once, and is grey with a hint while none is picked (card space-game-w-uses-selection);
 //           stay: 1 leaves the list open after the order (a pip of power: it is given again and again); when: 'convoy' | 'blink' | 'outpost' leaves the row out of a mission that can never use it (campPanelWhen, src/camppanel.js);
 //           label is the row's words in the list, help its line for a hint. A row's id is its own in the whole table (a hint finds the row, and the list it is in, by it)
 // the rows of the DOCK AND REPAIR list (U), from a table (card space-game-ship-shortcuts-o-power made it one; card space-game-repair-with-ore, Troy, 22 Nov 2026, swapped the Build rows for Repair rows: nothing builds ships any more).
@@ -52,6 +52,9 @@ const CAMP_FLEET_LIST = false;
 // THE SWITCH FOR P'S SHIP LIST (card space-game-p-opens-power; Troy, 23 Nov 2026: "P should just open the power list"). false: the SHIP list is off and so, by key, are the POWER and AUTOPILOT lists (card space-game-keys2-select, Troy, 23 Nov 2026: O and P are the friendlies' keys now; other cards remove the two lists): no key opens any of them, nothing goes back to it (Left from a part does nothing, the foot does not offer it), and the key line, the H page and the hints do not name it. The warp blink row, which only the ship list had, is the last row of the POWER list meanwhile.
 // true: P opens the SHIP list as before, O opens power, I the autopilot (these keys shadow the friendlies' O and P), and the blink row is the ship list's last row again. campShipListSet(on) is the one place that moves all of it (the keys, the `off` mark, the parts' `parent`, the blink row); the tests of the list's code call it with true.
 const CAMP_SHIP_LIST = false;
+// THE SWITCH FOR POWER MANAGEMENT (card space-game-power-removed; Troy, 23 Nov 2026: "he never uses it"). false: no power list (no key opens it), no J K L, no pips on the gauges, no "power to shields" or "balance" words, and every system runs at the balanced 2 / 2 / 2
+// (CAMP.power.on is false: src/campaign.js). true: all of it as it was. campPowerSet(on) is the one place that moves all of it; the tests of the pips switch it on first and say so.
+const CAMP_POWER = false;
 // THE SWITCH FOR HOLD TO SPEAK (card space-game-keys-select; Troy, 23 Nov 2026, through ORCH: "disable voice orders for now"). false: no key is bound to it (the period is the friendlies' now), the floating key cap is not drawn, the key line, the H page and the hints do not name it. Typing an order (/) is untouched, and the code (src/listen.js) stays.
 // true: the voice has a key again. campVoiceSet(on, key) is the one place that moves it; the card that brings the voice back says which key (a { k, codes } like the other entries of CAMP_KEYS): nothing picks one here.
 const CAMP_VOICE = false;
@@ -64,7 +67,8 @@ const CAMP_PANELS = {
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
     { id: 'cruiser', side: 'left', key: 'S', code: 'KeyS', fades: 1, title: 'CRUISER ORDERS', tab: 'Cruiser', name: 'the cruiser list', rows: [ // card space-game-keys2-cruiser (Troy, 23 Nov 2026): S puts the view on the cruiser AND opens its list (it was Q's); the list fades after CAMP_PANELS.anim.idle ms untouched (fades: 1). Its rows in the game, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, and the Warp blink with its tech: campCruiserWire moves the first two in from the autopilot list and the last two in from the power or ship list (the old lists are switched off, not removed). Card space-game-keys-orders: the Mine row comes from the all-squads list (campSquadsListSet)
-      { id: 'gdock', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' }
+      { id: 'srepair', order: 'repair', cost: 'hull', off: 1, label: 'Repair hull', help: 'Mend the hull for ore, anywhere' }, // card space-game-keys3-repair (Troy, 23 Nov 2026): the S list's own repair, the ore repair of the dock list's Repair the hull (60 ore for a whole hull, mended over 8 s: CAMP.mend), a row only in the game (campCruiserWire: `off` otherwise)
+      { id: 'gdock', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' } // the row that opens the dock list: switched off in the game (`off`, campCruiserWire), not deleted: Dock at the outpost is a row of the S list and Repair hull its own, the dock list has no way in
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },
@@ -121,13 +125,13 @@ const CAMP_KEYS = {
   up: { k: 'Up', codes: ['ArrowUp'] }, down: { k: 'Down', codes: ['ArrowDown'] }, pick: { k: 'Enter', codes: ['Enter', 'NumpadEnter'] }, // in an open list (Q, P, a pilot's call): move the highlight, give the order
   map: { k: 'Tab', codes: ['Tab'] },                                                   // open and close the map (src/campmap.js CAMPMAP.key says the same)
   next: { k: ']', codes: ['BracketRight'] }, last: { k: '[', codes: ['BracketLeft'] }, // the next and the last HOSTILE (the target; card space-game-bracket-select-orders: the brackets are the hostiles' keys)
-  wnext: { k: 'D', codes: ['KeyD'] }, wlast: { k: 'A', codes: ['KeyA'] },             // WHO takes the order (card space-game-keys-select; C.sel): all three pilots first, the default, then Wedge, Kara, Apollo, round
-  fnext: { k: 'P', codes: ['KeyP'] }, flast: { k: 'O', codes: ['KeyO'] },             // the next and the last FRIENDLY: the ships and outposts you protect (C.fsel; card space-game-keys2-select moved them from the comma and the period). Only ONE target is held: a friendly replaces the enemy and the other way round. While the ship list is ON (the old world, CAMP_SHIP_LIST) P and O open its lists first, as they did
-  all: { k: '', codes: [] },                                                          // Q picked all three pilots (card space-game-q-selects-all); A and D's first stop is that now (the default), and Q opens the cruiser list (card space-game-keys-orders). No key: campSelAll stays for the code and the tests
+  wnext: { k: 'W', codes: ['KeyW'] }, wlast: { k: 'Q', codes: ['KeyQ'] },             // WHO takes the order (card space-game-keys-select; C.sel): all three pilots first, the default, then Wedge, Kara, Apollo, round. Q and W since card space-game-keys3-select (they were A and D, which are free): with the old fleet list ON (CAMP_FLEET_LIST) Q and W open its lists first
+  fnext: { k: 'P', codes: ['KeyP'] }, flast: { k: 'O', codes: ['KeyO'] },             // the next and the last FRIENDLY: the SHIPS you protect (the transport, a miner, a hauler: no planet or outpost is in this cycle since card space-game-keys3-select; a click on one on the map holds it) (C.fsel; card space-game-keys2-select moved them from the comma and the period). Only ONE target is held: a friendly replaces the enemy and the other way round. While the ship list is ON (the old world, CAMP_SHIP_LIST) P and O open its lists first, as they did
+  all: { k: '', codes: [] },                                                          // Q picked all three pilots (card space-game-q-selects-all); Q and W's first stop is that now (the default), and Q opens the cruiser list (card space-game-keys-orders). No key: campSelAll stays for the code and the tests
   near: { k: '\\', codes: ['Backslash'] }, clear: { k: 'X', codes: ['KeyX'] },         // the nearest threat (the tune kit's win moved off the backslash); clear the enemy and the friendly and put WHO back on all pilots (in the map: clear the trip)
   engage: { k: 'E', codes: ['KeyE'] },                                                // the one order key (card space-game-keys2-orders, Troy, 23 Nov 2026): WHO does the fitting thing for what is picked (src/camptarget.js campSelOrder 'engage'): an enemy picked, attack it; a friendly, guard it; nothing, form up on the cruiser. G and R are free: there is no recall (the pilots stay out; a badly hurt one returns by itself: src/camprepair.js). An order to a pilot in the bay launches it. T is free
   attack: { k: 'E', codes: [] }, guard: { k: 'E', codes: [] },                       // only the letter the two target boxes' key lines read (src/camptdisp.js campTdispOrder reads CAMP_KEYS[verb].k until card space-game-keys2-panels moves it to engage and deletes these two): no code, so they take no key and G is free
-  shields: { k: 'J', codes: ['KeyJ'], sys: 'shields' }, engines: { k: 'K', codes: ['KeyK'], sys: 'engines' }, weapons: { k: 'L', codes: ['KeyL'], sys: 'weapons' }, // the ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; the semicolon (balance, 2 / 2 / 2) is gone: Balance is a row of the POWER list and an order for the strip (card space-game-keys-select)
+  shields: { k: '', codes: [], sys: 'shields' }, engines: { k: '', codes: [], sys: 'engines' }, weapons: { k: '', codes: [], sys: 'weapons' }, // OFF (card space-game-power-removed, Troy, 23 Nov 2026: "he never uses it"): J K L gave a pip to the shields, the engines, the weapons; no key now (CAMP.power.on is false). The ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; the semicolon (balance, 2 / 2 / 2) is gone: Balance is a row of the POWER list and an order for the strip (card space-game-keys-select)
   zoomin: { k: '=', codes: ['Equal', 'NumpadAdd'] }, zoomout: { k: '-', codes: ['Minus', 'NumpadSubtract'] }, zoomreset: { k: 'S', codes: ['KeyS'] }, // src/campzoom.js reads these codes; S resets the zoom AND brings the view back to the cruiser (it was Backspace; card space-game-keys-select)
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '', codes: [] },                    // type an order; hold to speak one is OFF (CAMP_VOICE: no key; campVoiceSet gives it one when it comes back). src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign
   help: { k: 'H', codes: ['KeyH'] }, mute: { k: 'M', codes: ['KeyM'] }, pause: { k: 'Esc', codes: ['Escape'] },
@@ -155,7 +159,8 @@ function campSquadsListSet(on) { // the switch for the W list (the all-squads li
 function campCruiserWire() {
   const L = CAMP_PANELS.panels, cr = L.find(x => x.id === 'cruiser'), nv = L.find(x => x.id === 'nav'), pw = L.find(x => x.id === 'power'), sh = L.find(x => x.id === 'ship'); if (!cr) return;
   const mine = !campFleetOn && !campShipOn, take = id => { for (const p of L) { const i = p.rows.findIndex(r => r.id === id); if (i >= 0) return p.rows.splice(i, 1)[0]; } return null; };
-  const goal = take('goal'), target = take('target'), emer = take('emergency'), blink = take('blink');
+  const goal = take('goal'), target = take('target'), emer = take('emergency'), blink = take('blink'), dock = take('dock'), yard = L.find(x => x.id === 'yard'); // the dock row of the dock list is the cruiser list's too, in the game (card space-game-keys3-repair: Dock and repair is switched off, Repair hull and Dock at the outpost are the S list's rows)
+  { const sr = cr.rows.find(r => r.id === 'srepair'), gd = cr.rows.find(r => r.id === 'gdock'); if (sr) { if (mine) delete sr.off; else sr.off = 1; } if (gd) { if (mine) gd.off = 1; else delete gd.off; } if (dock) { if (mine) cr.rows.splice(Math.max(0, cr.rows.findIndex(r => r.id === 'srepair')), 0, dock); else if (yard) yard.rows.unshift(dock); } }
   if (goal) { if (mine) goal.fast = 'auto'; else delete goal.fast; }
   const at = mine ? cr : nv; if (at) { if (target) at.rows.unshift(target); if (goal) at.rows.unshift(goal); } else { if (goal) cr.rows.unshift(goal); if (target) cr.rows.splice(goal ? 1 : 0, 0, target); }
   const eto = mine ? cr : pw || cr; if (emer) eto.rows.push(emer);
@@ -189,14 +194,30 @@ function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The sh
   campListsWire(); // the warp blink's row too (campCruiserWire): the ship list's last row with the ship list on, else the cruiser list's, else the power list's
   return on;
 }
+const CAMP_POWER_KEYS = { shields: { k: 'J', codes: ['KeyJ'] }, engines: { k: 'K', codes: ['KeyK'] }, weapons: { k: 'L', codes: ['KeyL'] } }; // the direct keys of the pips, kept for the switch
+const CAMP_POWER_ROW = { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' };   // and their row on the H page
+let campPowerOn = CAMP_POWER;
+function campPowerSet(on) { // the switch (CAMP_POWER): the power list and its key, J K L, their row on the H page, the gauges' bars and keys, and CAMP.power.on (the rules: pips moved by nothing while it is false) move together
+  campPowerOn = !!on; if (typeof CAMP === 'object' && CAMP && CAMP.power) CAMP.power.on = campPowerOn;
+  Object.keys(CAMP_POWER_KEYS).forEach(id => { const K = CAMP_KEYS[id]; if (K) { K.k = campPowerOn ? CAMP_POWER_KEYS[id].k : ''; K.codes = campPowerOn ? CAMP_POWER_KEYS[id].codes.slice() : []; } });
+  if (typeof CAMP_GAUGE === 'object' && CAMP_GAUGE && typeof campPowerKeys === 'function') CAMP_GAUGE.keys = campPowerKeys(); // the gauges' direct keys follow
+  const pw = CAMP_PANELS.panels.find(x => x.id === 'power'); if (pw) { pw.off = !campPowerOn; campShipListSet(campShipOn); if (!campPowerOn) { pw.key = ''; pw.code = ''; } } // the power list: its key is the ship switch's (campShipListSet), none while it is off
+  let C = null; try { C = CONTROLS; } catch (e) { C = null; } // the H page's tables: not made yet when this first runs
+  const g = C ? C.find(x => x.id === 'campaign') : null; if (g) {
+    const i = g.rows.findIndex(x => x.sub === 'POWER' && x.k.join() === 'J,K,L'); if (i >= 0) g.rows.splice(i, 1);
+    if (campPowerOn) { const t = g.rows.findIndex(x => x.k.join() === 'Tab'); g.rows.splice(t < 0 ? g.rows.length : t, 0, Object.assign({}, CAMP_POWER_ROW)); }
+  }
+  return on;
+}
 campFleetListSet(CAMP_FLEET_LIST);
 campShipListSet(CAMP_SHIP_LIST);
+campPowerSet(CAMP_POWER);
 campVoiceSet(CAMP_VOICE);
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, dock, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, repair, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
   return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
@@ -298,13 +319,12 @@ const CONTROLS = [
     { k: ['Space'], t: 'Hold: turrets fire at ships in reach', sub: 'FLY AND FIRE' },
     { k: ['Enter'], t: 'Missile at the target (no list open)', sub: 'FLY AND FIRE' },
     { k: ['-', '='], t: 'Zoom; S resets; drag pans', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; S is the reset and brings the view back to the cruiser (src/campzoom.js: all three from CAMP_KEYS; it was Backspace) // drag: the left button held and moved pans the view and the Tab map (src/campdrag.js): it stays where it is put; the wheel zooms about the pointer; a RECENTRE mark, Backspace (this reset) or the arrows held bring it back (a row of its own did not fit the H page)
-    { k: ['A', 'D'], t: 'Who: all pilots, or one pilot', sub: 'THE TARGET' }, // WHO takes the order (C.sel): all three pilots first (the default), then Wedge, Kara, Apollo; no ship you protect is in it
-    { k: ['O', 'P'], t: 'Last or next friendly (one target)', sub: 'THE TARGET' }, // the friendly pick (C.fsel): a ship or an outpost you protect; E sends the pilots to guard it. Only ONE target is held: it replaces the enemy (card space-game-keys2-select)
+    { k: ['Q', 'W'], t: 'Who: all pilots, or one pilot', sub: 'THE TARGET' }, // WHO takes the order (C.sel): all three pilots first (the default), then Wedge, Kara, Apollo; no ship you protect is in it (A and D are free: card space-game-keys3-select)
+    { k: ['O', 'P'], t: 'Last or next friendly (one target)', sub: 'THE TARGET' }, // the friendly pick (C.fsel): a SHIP you protect (O P step through the ships only; a click on an outpost or a planet on the Tab map holds that place as the friendly: card space-game-keys3-select); E sends the pilots to guard it. Only ONE target is held: it replaces the enemy (card space-game-keys2-select)
     { k: ['[', ']'], t: 'Last or next enemy (nearest first)', sub: 'THE TARGET' }, // the enemy pick (C.tgt): Fly to the target flies to it, Enter fires at it, E sends the pilots at it; it replaces the friendly
     { k: ['\\'], t: 'The nearest threat', sub: 'THE TARGET' },
-    { k: ['E'], t: 'Order: attack, guard or form up', sub: 'THE TARGET' }, // E does the fitting thing for the pick: who takes the order (A D) does it, and a pilot in the bay is launched by it (card space-game-keys2-orders)
+    { k: ['E'], t: 'Order: attack, guard or form up', sub: 'THE TARGET' }, // E does the fitting thing for the pick: who takes the order (Q W) does it, and a pilot in the bay is launched by it (card space-game-keys2-orders)
     { k: ['X', 'F'], t: 'X clears the picks, F looks at it', sub: 'THE TARGET' }, // X: no enemy, no friendly, who is all pilots again. F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); S (the zoom row) brings it back
-    { k: ['J', 'K', 'L'], t: 'Power to shields, engines, weapons', sub: 'POWER' },
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
     { k: ['Enter'], t: 'Map: fly there (Shift+Enter: fast)', sub: 'THE MAP' },
@@ -362,6 +382,7 @@ const CONTROLS = [
 ];
 campFleetListSet(CAMP_FLEET_LIST); // the switch's state again, now that the H page's tables are made too (the Q row)
 campShipListSet(CAMP_SHIP_LIST); // and the ship list's (the LISTS group's rows)
+campPowerSet(CAMP_POWER); // and the power's (the J K L row)
 campVoiceSet(CAMP_VOICE); // and the voice's (no row while it is off)
 
 const controlsGroup = id => CONTROLS.find(g => g.id === id) || null;

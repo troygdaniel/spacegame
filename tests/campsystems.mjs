@@ -21,6 +21,7 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const store = new Map();
 const g = nodeGame({ store }); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions; the rim run is tests/camprim.mjs)
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about them (the list, J K L, the bars, the pip orders), so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 g.run('campFleetListSet(true)'); // this suite is about the lists' code, Q's pop-up included: it is switched off in the game (CAMP_FLEET_LIST, card space-game-q-selects-all) and on here; tests/campselect.mjs has the game's own state
 g.run('campShipListSet(true)'); // and the ship list too: it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
@@ -42,7 +43,7 @@ sec('A', () => {
   check('A  more pips is better: shorter intervals, reloads and recharges, a bigger cap, more regeneration, speed, thrust and turn', dec(rows.delay) && dec(rows.reload) && dec(rows.blink) && inc(rows.cap) && inc(rows.regen) && inc(rows.speed) && inc(rows.accel) && inc(rows.turn));
   check('A  and strictly different at 0, 1, 3 and 4 pips from 2 (a pip always matters), the shields\' regeneration too: none at 0, slow at 2, fast at 4', ['delay', 'reload', 'cap', 'speed', 'accel', 'turn', 'blink'].every(k => [0, 1, 3, 4].every(i => rows[k][i] !== 1)) && [0, 1, 2, 3, 4].every(i => i === 0 || rows.regen[i] > rows.regen[i - 1]) && rows.regen[4] >= 3 * rows.regen[2]);
   check('A  zero pips is weak, never dead: the turrets still fire, the shield is not nothing, the carrier still moves (every factor is above 0 and a time is at most 2 times)', rows.delay[0] <= 2 && rows.reload[0] <= 2 && rows.blink[0] <= 2 && rows.cap[0] >= 0.25 && rows.speed[0] >= 0.5 && rows.accel[0] >= 0.5 && rows.turn[0] >= 0.5);
-  check('A  the emergency is data too: 4 pips to shields, 10 s, a 40 s cooldown', P.emergency.shields === 4 && P.emergency.ms === 10000 && P.emergency.cooldown === 40000);
+  check('A  the old emergency (4 pips to shields for 10 s) is gone from the table with the lock that went with it (card space-game-power-removed): the emergency is CAMP.emergency now, a refill for ore', P.emergency === undefined && typeof CAMP_EMERGENCY_GONE === 'undefined' && J('[typeof CAMP.emergency, "until" in campPowerNew(), "at" in campPowerNew()].join()') === 'object,false,false');
 });
 
 sec('B', () => {
@@ -126,7 +127,7 @@ sec('D', () => {
   check('D  mending stops at the cap (4 pips: 225)', close(J('C.shield'), 225, 0.01), J('C.shield'));
   mk(2, 3, 1); g.run('C.shield = 0; C.ore = 200');
   const cost0 = J('C.ore'), rr = J("campOrder(C, 'recharge', '', 'key')");
-  check('D  the old ore recharge is gone: the order only says the shield mends by itself, and takes no ore and changes no shield', rr.ok === false && rr.code === 'shieldauto' && rr.say === 'Shields mend on their own. More pips on shields mend faster.' && close(J('C.shield'), 0) && J('C.ore') === cost0 && J('C.orders.recharge') === null, JSON.stringify([rr, J('C.shield'), J('C.ore')]));
+  check('D  the old ore recharge is gone: the order only says the shield mends by itself, and takes no ore and changes no shield', rr.ok === false && rr.code === 'shieldauto' && rr.say === 'Shields mend on their own.' && close(J('C.shield'), 0) && J('C.ore') === cost0 && J('C.orders.recharge') === null, JSON.stringify([rr, J('C.shield'), J('C.ore')]));
   // ENGINES (weapons 4 - e, shields 2)
   const speedAt = (e, nav) => { mk(4 - e, 2, e); g.run(`${nav ? 'C.nav = { on: true, fast: true, burn: 2 };' : ''} C.input.thrust = 1; for (let i = 0; i < 900; i++) campCarrier(C, 1 / 30)`); return J('Math.hypot(C.carrier.vx, C.carrier.vy)'); };
   [0, 1, 2, 3, 4].forEach(e => { const a = speedAt(e, false), b = speedAt(e, true); check(`D  engines at ${e} pips: top speed ${210 * D.engines.speed[e]} px/s, and the Fast burn twice that`, close(a, 210 * D.engines.speed[e], 0.01) && close(b, 420 * D.engines.speed[e], 0.05), a + ' ' + b); });
@@ -268,7 +269,7 @@ sec('H', () => {
   const sc = read('src/campaignscene.js');
   check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
   check('H  the HUD draws a bar of power segments beside each of the three gauges (SHIELDS, SPEED, LASERS) from the live pips (C.power.p), which replaced the small W S E pips (card space-game-systems-gauges, tests/campgauges.mjs)', /C\.power\.p/.test(sc) && /campGaugesPaint\(/.test(sc) && /pips: P\.p\[1\]/.test(read('src/camphud.js')) && !/'W'/.test(sc));
-  check('H  the blink\'s READY and seconds on the HUD read the engines\' recharge (campBlinkCooldown)', /campBlinkCooldown\(/.test(sc));
+  check('H  the blink\'s recharge is the engines\' (campBlinkCooldown); the HUD line that showed its READY and seconds is gone (card space-game-hud-topleft-trim)', J('typeof campBlinkCooldown') === 'function' && !/camp\.ui\.blink/.test(sc) && !/hud\.blink/.test(sc));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 });
 console.log(failed ? `CAMP SYSTEMS FAIL (${failed} of ${n})` : `CAMP SYSTEMS PASS (${n} checks)`);

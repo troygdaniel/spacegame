@@ -9,9 +9,9 @@ The words of the rival ship (card space-game-rival-duel, src/camprival.js): the 
 | camp.say.rival.leader | Pirate leader ahead. Heavy ship. |
 | camp.say.rival.dead | {name} is down. |
 | camp.nav.k.pirateleader | Pirate leader |
-| camp.say.rival.charge | Broadside charging. Power to shields. |
-| camp.say.rival.down | Its shields are down. Power to weapons. |
-| camp.say.rival.ram | It is ramming. Power to engines. |
+| camp.say.rival.charge | Broadside charging. Get off its line. |
+| camp.say.rival.down | Its shields are down. Hit it now. |
+| camp.say.rival.ram | It is ramming. Turn away. |
 | camp.say.rival.run | It is running. Chase it. |
 | camp.say.rival.run.final | It is running for good. Chase it. |
 | camp.say.rival.gone | {name} got away. |

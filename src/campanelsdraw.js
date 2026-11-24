@@ -12,7 +12,7 @@
 // Everything is on the screen's own camera (scroll factor 0), so the zoom (src/camzoom.js) never scales it. tests/campanelsui.mjs checks the states on stand-ins.
 const CAMPPANELS_LOOK = {
   box: { w: 360, head: 30, row: 24, gap: 2, pad: 6, foot: 44 }, // px: the list's width, its heading's height, a row's height, the gap between rows, the gap under the heading, the foot (what is off the screen, and the keys)
-  top: 262, topRight: 104, edge: 24, edgeRight: 4, depth: 160, every: 250, // the list's y: a left list under the lines of text at the left, a right list right under the gauges (the gauges end at about y 96, the radar is at the bottom right); its distance from the screen's edge (a right list ends 4 px from it, like the weapons gauge's bar that its pip bars sit under), the depth (over the map, 150 to 156), ms between the words being made live
+  top: 150, topRight: 104, edge: 24, edgeRight: 4, depth: 160, every: 250, // the list's y: a left list under the lines of text in the top left corner (at most five lines of 22 px from y 14: card space-game-hud-topleft-trim moved it up from 262), a right list right under the gauges (the gauges end at about y 96); its distance from the screen's edge (a right list ends 4 px from it, like the weapons gauge's bar that its pip bars sit under), the depth (over the map, 150 to 156), ms between the words being made live
   color: { left: CYAN, right: AMBER }, ink: { left: '#7fe9ff', right: '#ffd37a' },
   rowInk: { ok: '#e8f6ff', no: '#7f95a8', suffix: '#8fb4c8', why: '#ff9e7a', at: '#02101c' }, flash: 0xffffff,
   cap: { w: 24, h: 18, gap: 8 }                                // the key cap of a row that opens a part of the list (W E R, O I U), and the room after it: every row of a list that has such a row starts its words after the cap's place
@@ -74,8 +74,8 @@ function campPanelsPaint(s, now) {
     o.name.setVisible(true).setPosition(nx, y + B.row / 2).setText(st.label + (st.more ? '  >' : '')).setColor(ink);
     let sx = G.x + G.w - 12;
     if (st.pip >= 0 && s.gaugeAnim) { // a power row: that system's pip bar at its right, the twin of the gauge's (the same animation and flash: both light together when Enter gives a pip), under the weapons gauge's bar; its key and its reason stand left of it
-      const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), emer = C.t < C.power.until && st.pip === 1, by = y + (B.row - (Z.y1 - Z.y0)) / 2;
-      campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], emer ? 0xffffff : [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
+      const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), by = y + (B.row - (Z.y1 - Z.y0)) / 2;
+      campBarDraw(g, { bar: { x0: Z.x0, y0: by, x1: Z.x1, y1: by + Z.y1 - Z.y0 } }, s.gaugeAnim.shown[st.pip], s.gaugeAnim.flash[st.pip], [CAMP_GAUGE.colors.shields, CAMP_GAUGE.colors.speed, CAMP_GAUGE.colors.lasers][d]);
       sx = Z.x0 - 10;
     }
     if (st.hull >= 0) { const Q = CAMP.charge.list, bx = sx - Q.w, by = y + (B.row - Q.h) / 2; g.fillStyle(0x02060d, 0.85).fillRect(bx - 1, by - 1, Q.w + 2, Q.h + 2); g.fillStyle(0x16293d, 1).fillRect(bx, by, Q.w, Q.h); g.fillStyle(CAMP.charge.color[st.band], 1).fillRect(bx, by, Math.max(1, Math.round(Q.w * st.hull)), Q.h); sx = bx - 10; } // a ship you protect: its hull as a bar at the right of its row, its km and percent left of it (card space-game-protected-health)
