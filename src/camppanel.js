@@ -162,6 +162,7 @@ function campPanelRun(C, row, how, item) {
   if (!C || !row) return { ok: false, say: '' };
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
   if (row.who) return campSelPick(C, row.who, how || 'key'); // a row of the fleet pick: WHO takes the order (no order is given)
+  if (row.formup) return campSelOrder(C, 'formup', how || 'key'); // 5 of the fleet pick: form up on the cruiser, at once, whoever is picked
   if (item && row.pick === 'ward') return campOrder(C, 'mendship', item.id, how || 'key'); // the ship that was chosen is mended (src/campmend.js)
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key');
@@ -236,6 +237,7 @@ function campPanelRowState(C, row) {
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
   if (row.who) return campSelList(C).some(e => e.id === row.who) ? ok() : no('nopilot'); // a pilot who is lost or home is no stop of the pick
+  if (row.formup) { const r = campSelOrder(C, 'formup', 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.fly === 'objective') {
     const f = campNavFind(C, 'the objective'); if (!f.row) return no('nogoal');

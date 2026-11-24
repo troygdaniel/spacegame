@@ -64,11 +64,12 @@ const CAMP_PANELS = {
       { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Fill the shields at once, for ore' },
       { id: 'blink', blink: 1, when: 'blink', label: 'Warp blink ahead', help: 'Warp blink hop (needs that tech)' }
     ] },
-    { id: 'fleet', side: 'left', corner: 'tl', head: 1, numbers: 1, key: 'W', code: 'KeyW', fades: 1, title: 'FLEET', tab: 'Fleet', name: 'the fleet pick', rows: [ // card space-game-keys5-qwe (Troy, 24 Nov 2026): W opens the pick, a digit says WHO takes the order (C.sel); W alone only opens it. It fades like the cruiser list and opens in the same place, with a heading of its own (`head`). A row with `who` is no order: it sets WHO (src/camptarget.js campSelPick); its label is the pilot's call sign and name (CAMP.pilots: Red 1 Wedge) and it is marked while it is the pick
+    { id: 'fleet', side: 'left', corner: 'tl', head: 1, numbers: 1, key: 'W', code: 'KeyW', fades: 1, title: 'FLEET', tab: 'Fleet', name: 'the fleet pick', rows: [ // card space-game-keys5-qwe (Troy, 24 Nov 2026): W opens the pick, a digit says WHO takes the order (C.sel), and 5 is Form up on me; W alone only opens it. It fades like the cruiser list and opens in the same place, with a heading of its own (`head`). A row with `who` is no order: it sets WHO (src/camptarget.js campSelPick); its label is the pilot's call sign and name (CAMP.pilots: Red 1 Wedge) and it is marked while it is the pick
       { id: 'whowedge', who: 'pilot:red', label: 'Red 1 Wedge', help: 'Wedge takes the orders' },
       { id: 'whokara', who: 'pilot:green', label: 'Red 2 Kara', help: 'Kara takes the orders' },
       { id: 'whoapollo', who: 'pilot:yellow', label: 'Red 3 Apollo', help: 'Apollo takes the orders' },
-      { id: 'whoall', who: 'all', label: 'All pilots', help: 'All three pilots take the orders' }
+      { id: 'whoall', who: 'all', label: 'All pilots', help: 'All three pilots take the orders' },
+      { id: 'whoform', formup: 1, label: 'Form up on me', help: 'The picked pilots form up on the cruiser at once' } // 5: an order, not a pick (Troy, 24 Nov 2026): who is picked forms up on the cruiser now, whatever target is held (it stays held); E with no target does the same
     ] },
     { id: 'convoy', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js): no key opens this list now (it was a row of the deleted fleet list); the strip and the voice give them: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },

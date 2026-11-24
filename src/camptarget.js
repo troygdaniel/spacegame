@@ -57,10 +57,7 @@ function campTgtCycle(C) { // ] (card space-game-keys4-onekey, Troy, 24 Nov 2026
   const list = campTgtList(C); if (!list.length) { if (C) C.tgt = ''; return null; }
   const t = campMarkClock(C), cold = !(C.tgtAt >= 0) || t < C.tgtAt || t - C.tgtAt >= CAMP.target.restart;
   if (cold) return campTgtNearest(C); // the first press, a press after the pause, or one with a target held by a click on the map
-  C.tgtAt = t;
-  const at = list.findIndex(u => u.id === C.tgt);
-  if (at === list.length - 1) { C.tgt = ''; campMarkTouch(C, false, true); return null; } // the empty stop after the last ship (card space-game-keys5-qwe, Troy, 24 Nov 2026: X is gone): nothing is held, so E forms up; the next press starts again from the nearest
-  return campTgtStep(C, 1);
+  C.tgtAt = t; return campTgtStep(C, 1);
 }
 function campTgtHold(C, id) { // a click on an enemy (card space-game-click-target, src/campclick.js): that ship is THE target held, as ] or \ would make it (the friendly is let go; the clock of ] starts, so the next ] steps on from it); the ship, or null when it is no hostile now
   const u = campTgtList(C).find(x => x.id === id); if (!u) return null;
@@ -159,7 +156,6 @@ function campFriNow(C) { // the friendly now: a ship of the list, or the place a
 function campFriStep(C, dir) { // [ (1): the friendly after (-1: before), round at the ends; with none, 1 takes the first and -1 the last. One target: the enemy is let go
   const list = campFriList(C); if (!list.length) return null; // no ship to protect: a place held by a map click stays held (campFriNow lets go of a ship that is lost)
   const at = list.findIndex(e => e.id === C.fsel), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
-  if (d > 0 && at === list.length - 1) { C.fsel = ''; C.tgt = ''; campMarkTouch(C, false, true); return null; } // the empty stop after the last ship (card space-game-keys5-qwe): nothing is held, then the next press takes the first
   C.fsel = list[i].id; C.tgt = ''; campMarkTouch(C, false, true); return list[i];
 }
 function campFriClear(C) { const had = !!(C && C.fsel); if (C) C.fsel = ''; return had; }
@@ -198,7 +194,7 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     return Object.assign({}, r, { verb: h ? 'attack' : 'guard', formup: !h && !fr }); // formup: nothing was picked, the pilots guard the cruiser
   }
   const f = campSelNow(C), group = f && f.kind === 'pilot' ? f.squad : 'fighters';
-  if (verb !== 'attack' && verb !== 'guard') return campNo('what');
+  if (verb !== 'attack' && verb !== 'guard' && verb !== 'formup') return campNo('what');
   if (!campWing(C, 'fighter').length && !campWingDocked(C, group).length) return campNo(C.launchQ.length ? 'launching' : 'nofighters'); // pilots in the bay take an order by launching (card space-game-keys-orders)
   if (verb === 'attack') {
     const h = campTgtNow(C);
@@ -206,5 +202,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     const near = !h && !dry ? campTgtNearest(C) : null; // nothing picked: the nearest hostile is picked now, as \ would (it is THE target: the bracket, the display, Fly to the target and the missile follow it)
     return campWingOrder(C, group, 'attack', h ? h.id : near ? near.id : null, how || 'key', dry);
   }
+  if (verb === 'formup') return campWingOrder(C, group, 'guard', null, how || 'key', dry); // W, then 5 (card space-game-keys5-qwe, Troy): form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
   const fr = campFriNow(C); return campWingOrder(C, group, 'guard', fr ? fr.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser
 }
