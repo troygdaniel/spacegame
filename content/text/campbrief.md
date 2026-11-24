@@ -70,7 +70,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.n3 | The arrows fly the cruiser. {keywlast} {keywnext} pick who, {keyattack} engage, {keyguard} guard, {keyrecall} recall. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
-| camp.bf.1.2.w3 | Beat the 5 raids, then dock ({viadock}). |
+| camp.bf.1.2.w3 | Beat the 5 raids, then dock ({viadock}, {rowdock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |

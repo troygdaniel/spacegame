@@ -64,7 +64,8 @@ const CAMP_PANELS = {
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
     { id: 'cruiser', side: 'left', key: 'S', code: 'KeyS', fades: 1, title: 'CRUISER ORDERS', tab: 'Cruiser', name: 'the cruiser list', rows: [ // card space-game-keys2-cruiser (Troy, 23 Nov 2026): S puts the view on the cruiser AND opens its list (it was Q's); the list fades after CAMP_PANELS.anim.idle ms untouched (fades: 1). Its rows in the game, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, and the Warp blink with its tech: campCruiserWire moves the first two in from the autopilot list and the last two in from the power or ship list (the old lists are switched off, not removed). Card space-game-keys-orders: the Mine row comes from the all-squads list (campSquadsListSet)
-      { id: 'gdock', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' }
+      { id: 'srepair', order: 'repair', cost: 'hull', off: 1, label: 'Repair hull', help: 'Mend the hull for ore, anywhere' }, // card space-game-keys3-repair (Troy, 23 Nov 2026): the S list's own repair, the ore repair of the dock list's Repair the hull (60 ore for a whole hull, mended over 8 s: CAMP.mend), a row only in the game (campCruiserWire: `off` otherwise)
+      { id: 'gdock', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' } // the row that opens the dock list: switched off in the game (`off`, campCruiserWire), not deleted: Dock at the outpost is a row of the S list and Repair hull its own, the dock list has no way in
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },
@@ -154,7 +155,8 @@ function campSquadsListSet(on) { // the switch for the W list (the all-squads li
 function campCruiserWire() {
   const L = CAMP_PANELS.panels, cr = L.find(x => x.id === 'cruiser'), nv = L.find(x => x.id === 'nav'), pw = L.find(x => x.id === 'power'), sh = L.find(x => x.id === 'ship'); if (!cr) return;
   const mine = !campFleetOn && !campShipOn, take = id => { for (const p of L) { const i = p.rows.findIndex(r => r.id === id); if (i >= 0) return p.rows.splice(i, 1)[0]; } return null; };
-  const goal = take('goal'), target = take('target'), emer = take('emergency'), blink = take('blink');
+  const goal = take('goal'), target = take('target'), emer = take('emergency'), blink = take('blink'), dock = take('dock'), yard = L.find(x => x.id === 'yard'); // the dock row of the dock list is the cruiser list's too, in the game (card space-game-keys3-repair: Dock and repair is switched off, Repair hull and Dock at the outpost are the S list's rows)
+  { const sr = cr.rows.find(r => r.id === 'srepair'), gd = cr.rows.find(r => r.id === 'gdock'); if (sr) { if (mine) delete sr.off; else sr.off = 1; } if (gd) { if (mine) gd.off = 1; else delete gd.off; } if (dock) { if (mine) cr.rows.splice(Math.max(0, cr.rows.findIndex(r => r.id === 'srepair')), 0, dock); else if (yard) yard.rows.unshift(dock); } }
   if (goal) { if (mine) goal.fast = 'auto'; else delete goal.fast; }
   const at = mine ? cr : nv; if (at) { if (target) at.rows.unshift(target); if (goal) at.rows.unshift(goal); } else { if (goal) cr.rows.unshift(goal); if (target) cr.rows.splice(goal ? 1 : 0, 0, target); }
   const eto = mine ? cr : pw || cr; if (emer) eto.rows.push(emer);
@@ -195,7 +197,7 @@ const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, dock, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, repair, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
   return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
