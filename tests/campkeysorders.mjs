@@ -13,6 +13,7 @@ let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const sec = (name, fn) => { console.log(name); try { fn(); } catch (e) { check(name + ': ran without a throw', false, e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e); } };
 const g = nodeGame();
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
   CAMP.levels[1].missions.push({ id: 'ko', kind: 'escort', par: 100, place: 'ceres', dock: 'ceres', start: 'ceres', startAt: [130, 30], rocks: [], objectives: [{ type: 'hold', secs: 100000 }], bonus: [], convoys: [], waves: [], traffic: [] });
@@ -68,7 +69,7 @@ sec('C. a pilot being mended', () => {
 
 sec('D. E is the order key; G and R are free', () => {
   g.run('__new(); window.__r1 = __raider(900, 300); window.__t = (() => { const f = campSpawn(C, "freighter", C.carrier.x + 500, C.carrier.y); f.id = "freighter-t1"; C.by[f.id] = f; f.dest = { x: C.carrier.x + 9000, y: C.carrier.y }; f.cname = "Transport"; f.named = true; return f; })(); window.PP = campPanelNew(); window.__k = c => campPanelKey(PP, C, c, 0);');
-  check('the table: E is the order key; G and R are on no key; and no key of the Campaign table is T, W, U or I', J(`CAMP_KEYS.engage.k`) === 'E' && J(`!CAMP_KEYS.recall && !campKeyIs('guard', 'KeyG') && !campKeyIs('engage', 'KeyR')`) === true && J(`Object.values(CAMP_KEYS).every(k => !k.codes.some(c => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(c) >= 0))`) && J(`CAMP_PANELS.panels.every(p => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(p.code) < 0)`));
+  check('the table: E is the order key; G and R are on no key; and no key of the Campaign table is T, U or I (W is the next-who key since card space-game-keys3-select, and no other key is W)', J(`CAMP_KEYS.engage.k`) === 'E' && J(`!CAMP_KEYS.recall && !campKeyIs('guard', 'KeyG') && !campKeyIs('engage', 'KeyR')`) === true && J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => ['KeyT', 'KeyU', 'KeyI'].indexOf(c) >= 0 || (c === 'KeyW' && id !== 'wnext')))`) && J(`campKeyIs('wnext', 'KeyW')`) && J(`CAMP_PANELS.panels.every(p => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(p.code) < 0)`));
   g.run('C.tgt = __r1.id; C.sel = "all"; C.fsel = "";');
   const e = J(`__k('KeyE')`);
   check('E: all three pilots attack the picked enemy', e.used && e.ran && e.ok && J(`__out().length === 3 && __out().every(u => u.order.type === 'attack' && u.order.target === __r1.id)`), JSON.stringify(e));
@@ -81,8 +82,8 @@ sec('D. E is the order key; G and R are free', () => {
   const rc = J(`__k('KeyR')`), gk = J(`__k('KeyG')`);
   g.run('__run(1)');
   check('R and G are free: no key used, no order given, the pilots stay out guarding the transport', !rc.used && !rc.ran && !gk.used && !gk.ran && J(`__out().length === 3 && __out().every(u => u.order.type === 'guard' && u.order.at.id === __t.id)`), JSON.stringify([rc, gk]));
-  const old = ['KeyT', 'KeyW', 'KeyU', 'KeyI'].map(c => J(`(() => { const r = __k('${c}'); return r.used || r.ran || !!campPanelOpen(PP); })()`));
-  check('T, W, U and I do nothing now: no order, no list', old.every(x => x === false), JSON.stringify(old));
+  const old = ['KeyT', 'KeyU', 'KeyI'].map(c => J(`(() => { const r = __k('${c}'); return r.used || r.ran || !!campPanelOpen(PP); })()`));
+  check('T, U and I do nothing now: no order, no list', old.every(x => x === false), JSON.stringify(old));
   g.run('__home();');
   check('with all three in the bay A and D still stop at each pilot (All pilots, Wedge, Kara, Apollo): a pilot in the bay can be picked', J(`campSelList(C).map(x => x.name).join()`) === 'All pilots,Wedge,Kara,Apollo', J(`campSelList(C).map(x => x.name).join()`));
   g.run('C.sel = "pilot:green"; C.tgt = __r1.id; __k("Escape");');
@@ -93,17 +94,17 @@ sec('D. E is the order key; G and R are free', () => {
 sec('E. S is the cruiser list; the W list is off', () => {
   g.run('__new(); window.PP = campPanelNew(); window.__k = c => campPanelKey(PP, C, c, 0); C.rocks.push({ id: "rock-t", x: C.carrier.x + 600, y: C.carrier.y, hp: 100, maxHp: 100, r: 30, ore: 5, cutAt: -1e9, field: 0 });');
   const q = J(`__k('KeyS')`);
-  check('S opens the cruiser list, with five rows (card space-game-keys2-cruiser): the two autopilot rows, Mine ore, Dock and repair, Emergency shields (the warp blink with its tech)', q.used && J('campPanelOpen(PP)') === 'cruiser' && J(`campPanelList(C, 'cruiser').map(r => r.label).join()`) === 'Fly to the goal,Fly to the target,Mine ore,Dock and repair,Emergency shields', JSON.stringify(q) + J(`campPanelList(C, 'cruiser').map(r => r.label).join()`));
-  g.run('__k("ArrowDown"); __k("ArrowDown"); __k("ArrowDown");');
-  g.run('__k("Enter");');
-  check('Enter on Dock and repair opens the dock list (Dock at the outpost where there is one, Repair the hull), and Esc comes back to S', J('campPanelOpen(PP)') === 'yard' && J(`campPanelList(C, 'yard').some(r => r.id === 'repairhull')`) && (g.run('__k("Escape")'), J('campPanelOpen(PP)') === 'cruiser'));
+  check('S opens the cruiser list, with five rows (card space-game-keys2-cruiser): the two autopilot rows, Mine ore, Dock at the outpost, Repair hull (card space-game-keys3-repair: Dock and repair is switched off), Emergency shields (the warp blink with its tech)', q.used && J('campPanelOpen(PP)') === 'cruiser' && J(`campPanelList(C, 'cruiser').map(r => r.label).join()`) === 'Fly to the goal,Fly to the target,Mine ore,Dock at the outpost,Repair hull,Emergency shields', JSON.stringify(q) + J(`campPanelList(C, 'cruiser').map(r => r.label).join()`));
+  g.run('__k("ArrowDown"); __k("ArrowDown"); __k("ArrowDown"); __k("ArrowDown");');
+  const rp = J(`__k("Enter")`);
+  check('Enter on Repair hull (the fifth row) with the hull whole is refused in words ("the hull is sound") and the list stays open on it: no dock list opens (the dock list has no way in)', rp.ran && !rp.ok && rp.row === 'srepair' && J('campPanelOpen(PP)') === 'cruiser' && J('PP.at') === 4 && !J(`campPanelList(C, 'cruiser').some(r => r.id === 'gdock')`), JSON.stringify(rp));
   g.run('__k("Escape"); __k("KeyS"); __k("KeyS");');
   check('S again closes the list', J('campPanelOpen(PP)') === '');
   const m = J(`(() => { __k('KeyS'); __k('ArrowDown'); __k('ArrowDown'); const r = __k('Enter'); return { r, open: campPanelOpen(PP), pick: !!PP.pick }; })()`);
   check('Enter on Mine ore with a field of rocks to pick sends the pilots to mine it (one field: at once)', (m.r.ran && m.r.ok && J(`__out().every(u => u.order.type === 'mine')`)) || (m.pick && !m.r.ran), JSON.stringify(m));
   g.run('PP = campPanelNew();');
   const w = J(`__k('KeyW')`), u = J(`__k('KeyU')`);
-  check('W and U open nothing', !w.used && !u.used && J('campPanelOpen(PP)') === '', JSON.stringify([w, u]));
+  check('U opens nothing, and W opens no list: it picks who (the key is used, no order is given)', w.used && !w.ran && !u.used && J('campPanelOpen(PP)') === '', JSON.stringify([w, u]));
   check('the key line names S Cruiser alone (the power and autopilot lists have no key now: O and P are the friendlies\'), and neither W nor U', /S Cruiser/.test(J('campPanelKeyLine()')) && !/\bP Power|\bO Autopilot/.test(J('campPanelKeyLine()')) && !/\bW \w|\bU \w/.test(J('campPanelKeyLine()')), J('campPanelKeyLine()'));
   check('the dock list is reached from the cruiser list: its way in is S (a hint reads it from the table)', J(`campKeyOpens('yard')`) === 'S' && J(`campKeyPath('yard')`) === 'S, Dock and repair' && J(`campKeyOpens('squads')`) === '', J(`campKeyPath('yard')`));
   g.run('campFleetListSet(true);');

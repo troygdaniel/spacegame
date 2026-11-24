@@ -193,7 +193,7 @@ try {
     // the order lists (cards one-list-keys and list-shortcuts): nothing is on the screen until a list's key is pressed; then ONE list, the fleet list at the left (Q; its parts W E R) or the ship list at the right (P; its parts O I U), with a
     // highlight that Up and Down move and a key cap on each row that opens a part. A refused order leaves the list open and its row flashes; the stances are a part of the fleet list (its last row opens it); A D S pick a target (the line under the radar names it, a bracket marks it), with the zoom, with the map, and the key line's backing strip.
     await toPlay(); await t.run(600);
-    await t.ev('(() => { campFleetListSet(true); campShipListSet(true); return 1; })()'); // these pictures are of the order lists, which the game keeps off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all, space-game-p-opens-power); on here as the node suites and the boots have them, with the old keys (Q W E R, P O I U)
+    await t.ev('(() => { campFleetListSet(true); campShipListSet(true); campPowerSet(true); return 1; })()'); /* (the pips are off in the game, card space-game-power-removed: these pictures of the lists include the power list) */ // these pictures are of the order lists, which the game keeps off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all, space-game-p-opens-power); on here as the node suites and the boots have them, with the old keys (Q W E R, P O I U)
     const onPage = rect => j(`(() => { const R = ${rect}, r = game.canvas.getBoundingClientRect(), k = r.width / 1280; return { x: r.left + R.x * k, y: r.top + R.y * k, w: R.w * k, h: R.h * k }; })()`); // a rectangle of the game's screen, on the page (the canvas is scaled to fit the window)
     const box = id => onPage(`campPanelsGeometry(CAMP_PANELS.panels.find(p => p.id === '${id}'), campPanelList(${SC}.camp, '${id}').length)`); // a list's place: it is as tall as its rows in this mission
     const tgtBox = () => onPage('campTdispBox(false)'); // the target display's box (bottom right: it replaced the radar and its line; src/camptdispscene.js)
@@ -214,9 +214,9 @@ try {
     await t.run(400); await panelShot('panels-02c-refused', 'squads'); await keyOn('Escape'); await t.run(200);
     await order('launch'); note('launch', JSON.stringify(await st())); await t.run(2500);
     await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
-    // a hostile put in reach (staged): D picks it with no list open, the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
+    // a hostile put in reach (staged): ] picks it with no list open, the line under the radar names it, the bracket is round it; the fighters list's Attack row (E) goes at it
     await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
-    await keyOn('KeyD'); await t.run(400); note('D', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
+    await keyOn('BracketRight'); await t.run(400); note(']', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
     await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
     await keyOn('KeyX'); await t.run(200);
     for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');

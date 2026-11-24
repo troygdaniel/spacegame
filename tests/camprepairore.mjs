@@ -112,8 +112,8 @@ check('the dock mends the hull only (docked the battle is paused: a ship you pro
 console.log('E. the lists');
 const yard = J('CAMP_YARD.map(r => r.id)');
 check('the U list\'s table: Dock, Repair the hull, Repair a ship we protect (no Build rows)', JSON.stringify(yard) === '["dock","repairhull","repairward"]', JSON.stringify(yard));
-R(`__new(); window.__rows = campPanelList(C, 'yard').map(r => r.id);`);
-check('in 1.1 (a transport to protect) the U list shows all three', JSON.stringify(J('__rows')) === '["dock","repairhull","repairward"]', JSON.stringify(J('__rows')));
+R(`__new(); window.__rows = campPanelList(C, 'yard').map(r => r.id); window.__srows = campPanelList(C, 'cruiser').map(r => r.id);`);
+check('in 1.1 (a transport to protect) the dock list has the two repairs (the Dock row is the S list\'s since card space-game-keys3-repair, beside its own Repair hull row, and nothing opens the dock list)', JSON.stringify(J('__rows')) === '["repairhull","repairward"]' && JSON.stringify(J('__srows')) === '["goal","target","fmine","dock","srepair","emergency"]', JSON.stringify([J('__rows'), J('__srows')]));
 R(`window.C = campNew(3, [], { seed: 1, mission: 0, ore: 100 }); window.__rows3 = campPanelList(C, 'yard').map(r => r.id); window.__hasConvoy = campConvoyShips(C).length + ((C.L && C.L.convoys) || []).length;`);
 check('a level with nothing to protect and no outpost to dock at (the alien home world) has only Repair the hull: no ward row, no dock row', J('__hasConvoy') === 0 && JSON.stringify(J('__rows3')) === '["repairhull"]', JSON.stringify([J('__hasConvoy'), J('__rows3')]));
 check('the ward row picks its target: pick "ward" in the table', J('CAMP_YARD.find(r => r.id === "repairward").pick') === 'ward' || J('campYardRows().find(r => r.id === "repairward").pick') === 'ward');

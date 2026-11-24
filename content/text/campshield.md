@@ -6,4 +6,4 @@ The words of the shield that mends by itself (card space-game-shield-auto): what
 ## Strings
 | key | text |
 |---|---|
-| camp.no.shieldauto | Shields mend on their own. More pips on shields mend faster. |
+| camp.no.shieldauto | Shields mend on their own. |

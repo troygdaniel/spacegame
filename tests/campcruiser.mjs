@@ -1,8 +1,8 @@
-// smoke: S opens the cruiser's list (Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, the warp blink with its tech) and it fades when untouched; Q opens nothing; Fly to the goal burns by itself on a long clear leg; Emergency shields fills the shield for ore with a cooldown (plain Node, no Chrome)
+// smoke: S opens the cruiser's list (Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, the warp blink with its tech) and it fades when untouched; Q opens no list (it picks who); Fly to the goal burns by itself on a long clear leg; Emergency shields fills the shield for ore with a cooldown (plain Node, no Chrome)
 // Card space-game-keys2-cruiser (Troy, 23 Nov 2026, through ORCH: "S centres on the cruiser and opens its list, fading after a few seconds; Q and the autopilot key go; fast drive folds into Fly to goal"). The table, the switches and the wiring are src/data_controls.js
 // (campCruiserWire), the fade src/camppanel.js (campPanelFade), the burn src/campnav.js (campNavAuto), the order src/campmend.js (campEmergency), the numbers CAMP.nav.auto and CAMP.emergency (src/campaign.js), both on the N panel (emergency).
 //   A. the table as the game has it: S is the cruiser list's key, Q is nobody's, the rows and their order, the old lists keep only what is theirs
-//   B. the keys: S opens the list on Fly to the goal and closes it, Q opens nothing, Esc closes, Enter on Dock and repair goes into the dock list
+//   B. the keys: S opens the list on Fly to the goal and closes it, Q opens no list (it picks who), Esc closes, Enter on Dock and repair goes into the dock list
 //   C. the old lists on: every row goes back where it was (the autopilot list's first two, the power list's emergency row, the blink to the ship list or the power list), and off again puts them in the cruiser list
 //   D. the fade: a key or a click keeps the list, 4 s of nothing dims it, 4.5 s closes it; the dock list reached from it fades too; a list that does not fade never does
 //   E. Emergency shields: the shield is filled at once for 50 ore, refused with its reason (cooling, full, no ore), ready again after 20 s; the N panel has both numbers
@@ -27,9 +27,9 @@ g.run(`
 console.log('A. the table as the game has it');
 {
   check('S (KeyS) is the cruiser list\'s key, the list is on and fades; no list has a key on KeyQ', J(`(() => { const c = campKeyList('cruiser'); return [c.key, c.code, !!c.off, !!c.fades, CAMP_PANELS.panels.some(p => p.code === 'KeyQ')].join() })()`) === 'S,KeyS,false,true,false');
-  check('its rows, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, the warp blink', J(`__ids('cruiser')`) === 'goal,target,fmine,gdock,emergency,blink');
-  check('their words: Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields', J(`campKeyList('cruiser').rows.slice(0, 5).map(r => r.label).join('|')`) === 'Fly to the goal|Fly to the target|Mine ore|Dock and repair|Emergency shields');
-  check('without the warp tech the blink row is left out of the mission\'s list; with it, it is the last row', J(`campPanelList(__new(2, 0), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,gdock,emergency' && J(`campPanelList(__new(2, 0, ['blink']), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,gdock,emergency,blink');
+  check('its rows, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock at the outpost, Repair hull, Dock and repair (switched off), Emergency shields, the warp blink', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink');
+  check('their words: Fly to the goal, Fly to the target, Mine ore, Dock at the outpost, Repair hull', J(`campKeyList('cruiser').rows.slice(0, 5).map(r => r.label).join('|')`) === 'Fly to the goal|Fly to the target|Mine ore|Dock at the outpost|Repair hull');
+  check('without the warp tech the blink row is left out of the mission\'s list; with it, it is the last row', J(`campPanelList(__new(2, 0), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency' && J(`campPanelList(__new(2, 0, ['blink']), 'cruiser').map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency,blink');
   check('the autopilot list has only the burn rows left (it has no way in: the fast drive is Fly to the goal\'s), the power list has neither the emergency row nor the blink', J(`__ids('nav')`) === 'burn,burntarget' && !/emergency|blink/.test(J(`__ids('power')`)), J(`__ids('nav')`) + ' / ' + J(`__ids('power')`));
   check('a row\'s list is found by its id: the goal, the target, the emergency row and the blink are the cruiser list\'s, reached by S', J(`['goal', 'target', 'emergency', 'blink', 'fmine'].map(id => campKeyVia(id).id).join()`) === 'cruiser,cruiser,cruiser,cruiser,cruiser' && J(`campKeyOpens('cruiser')`) === 'S');
   check('only the goal row burns by itself (fast: auto); the target row does not', J(`campKeyList('cruiser').rows.map(r => r.id + ':' + (r.fast || '')).slice(0, 2).join()`) === 'goal:auto,target:');
@@ -42,11 +42,12 @@ console.log('B. the keys');
   g.run(`var r2 = __key(P1, C1, 'KeyS', 200);`);
   check('S again closes it', J(`[campPanelOpen(P1), r2.used].join()`) === ',true');
   g.run(`var r3 = __key(P1, C1, 'KeyQ', 300);`);
-  check('Q opens nothing (the key is free)', J(`[campPanelOpen(P1), r3.used].join()`) === ',false');
+  check('Q opens no list: it is the who key now (card space-game-keys3-select): the key is used, no list opens and no order is given', J(`[campPanelOpen(P1), r3.used, r3.ran].join()`) === ',true,false');
   g.run(`__key(P1, C1, 'KeyS', 400); __key(P1, C1, 'Escape', 500);`);
   check('Esc closes it', J(`campPanelOpen(P1)`) === '');
-  g.run(`__key(P1, C1, 'KeyS', 600); for (let i = 0; i < 3; i++) __key(P1, C1, 'ArrowDown', 700 + i); var r4 = __key(P1, C1, 'Enter', 800);`);
-  check('Down three times is Dock and repair; Enter opens the dock list, and Esc goes back to the cruiser list', J(`[campPanelOpen(P1), r4.open].join()`) === 'yard,yard' && (g.run(`__key(P1, C1, 'Escape', 900)`), J(`campPanelOpen(P1)`) === 'cruiser'));
+  g.run(`__key(P1, C1, 'KeyS', 600); for (let i = 0; i < 4; i++) __key(P1, C1, 'ArrowDown', 700 + i); var r4 = __key(P1, C1, 'Enter', 800);`);
+  check('Down four times is Repair hull: with the hull whole Enter is refused in words, and the list stays open on it (no row of the list opens another list: Dock and repair is switched off)', r4_ok(), J(`[campPanelOpen(P1), r4.row, r4.ok, P1.at].join()`));
+  function r4_ok() { return J(`[campPanelOpen(P1), r4.row, r4.ok, P1.at].join()`) === 'cruiser,srepair,false,4' && J(`campPanelList(C1, 'cruiser').every(r => !r.open)`); }
   const scene = readFileSync(new URL('../src/campaignscene.js', import.meta.url), 'utf8');
   check('in the scene S is the zoom\'s reset and then goes on to the list (the other zoom keys and a held S stop at the zoom)', /campZoomPress\(this, zk, e\.repeat\); if \(!zk\.reset \|\| e\.repeat\) return;/.test(scene));
   check('the scene\'s over-the-map door knows the cruiser list\'s key (a list\'s key closes the map and opens the list)', /CAMP_PANELS\.panels\.some\(p => p\.code && p\.code === c\)/.test(scene));
@@ -61,12 +62,12 @@ console.log('C. the old lists on and off again');
   g.run(`campShipListSet(false);`);
   check('the fleet list on, the ship list off: the autopilot list has its first two, the power list its emergency row and the blink', /nav=goal,target,burn,burntarget/.test(rows()) && /power=shields,engines,weapons,balance,emergency,blink/.test(rows()), rows());
   g.run(`campFleetListSet(false); campShipListSet(true);`);
-  check('the fleet list off, the ship list on: the cruiser list is the game\'s S list with Mine and Dock only, the other rows are with their old lists', /cruiser=fmine,gdock/.test(rows()) && /nav=goal,target,burn,burntarget/.test(rows()) && /power=.*emergency/.test(rows()) && /ship=gpower,gnav,gyard,blink/.test(rows()), rows());
+  check('the fleet list off, the ship list on: the cruiser list is the game\'s S list with Mine and Dock only, the other rows are with their old lists', /cruiser=fmine,srepair,gdock/.test(rows()) && /nav=goal,target,burn,burntarget/.test(rows()) && /power=.*emergency/.test(rows()) && /ship=gpower,gnav,gyard,blink/.test(rows()), rows());
   g.run(`campShipListSet(false);`);
   check('both off again: all six rows are the cruiser list\'s in their order, the autopilot list has the burn rows, and again after another round of the switches', __ids_ok());
   g.run(`campFleetListSet(true); campFleetListSet(false); campShipListSet(true); campShipListSet(false);`);
   check('the same after a second round: no row lost, none twice', __ids_ok());
-  function __ids_ok() { return J(`__ids('cruiser')`) === 'goal,target,fmine,gdock,emergency,blink' && J(`__ids('nav')`) === 'burn,burntarget' && J(`campKeyList('cruiser').rows.find(r => r.id === 'goal').fast`) === 'auto'; }
+  function __ids_ok() { return J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink' && J(`__ids('nav')`) === 'burn,burntarget' && J(`campKeyList('cruiser').rows.find(r => r.id === 'goal').fast`) === 'auto'; }
 }
 
 console.log('D. the fade');
@@ -77,8 +78,8 @@ console.log('D. the fade');
   check('a key in the open list starts the count again: Down at 13 s keeps it whole to 17 s, and it is closed by 17.5 s', J(`k1`) === 1 && J(`k2`) === 0 && J(`campPanelOpen(P2)`) === '', J(`[k1, k2].join()`));
   g.run(`__key(P2, C2, 'KeyS', 20000); campPanelFade(P2, 20000); P2.touch = 23000; var c1 = campPanelFade(P2, 26999), c2 = campPanelFade(P2, 27200);`);
   check('a click (the drawing sets P.touch) counts as a touch too', J(`c1`) === 1 && J(`c2`) < 1 && J(`c2`) > 0 && J(`campPanelOpen(P2)`) === 'cruiser', J(`[c1, c2].join()`));
-  g.run(`__key(P2, C2, 'Escape', 30000); __key(P2, C2, 'KeyS', 31000); campPanelFade(P2, 31000); for (let i = 0; i < 3; i++) __key(P2, C2, 'ArrowDown', 32000); __key(P2, C2, 'Enter', 32000); var y0 = campPanelOpen(P2), y1 = campPanelFade(P2, 36000), y2 = campPanelFade(P2, 36600);`);
-  check('the dock list opened from it fades with it (the count goes on from the last key)', J(`y0`) === 'yard' && J(`y1`) === 1 && J(`y2`) === 0 && J(`campPanelOpen(P2)`) === '', J(`[y0, y1, y2].join()`));
+  g.run(`__key(P2, C2, 'Escape', 30000); __key(P2, C2, 'KeyS', 31000); campPanelFade(P2, 31000); campPanelGo(P2, C2, 'yard', '', 'cruiser'); P2.touch = 32000; var y0 = campPanelOpen(P2), y1 = campPanelFade(P2, 36000), y2 = campPanelFade(P2, 36600);`);
+  check('a list opened from it by a row (its trail has the cruiser list; campPanelGo with a via, as a part\'s row does) fades with it (the count goes on from the last key)', J(`y0`) === 'yard' && J(`y1`) === 1 && J(`y2`) === 0 && J(`campPanelOpen(P2)`) === '', J(`[y0, y1, y2].join()`));
   g.run(`var P3 = campPanelNew(); campPanelGo(P3, C2, 'nav'); var n1 = campPanelFade(P3, 0), n2 = campPanelFade(P3, 100000);`);
   check('a list that does not fade (the autopilot\'s, with the old lists on in a test) never does', J(`n1`) === 1 && J(`n2`) === 1 && J(`campPanelOpen(P3)`) === 'nav');
   check('the numbers are the table\'s: 4000 ms untouched, 500 ms to go dark', J(`[CAMP_PANELS.anim.idle, CAMP_PANELS.anim.out].join()`) === '4000,500');
@@ -91,7 +92,7 @@ console.log('E. Emergency shields');
   g.run(`E.shield = 40; E.ore = 49; var poor = campCheck(E, 'emergency', '');`);
   check('with 49 ore it is refused: 50 needed', J(`[poor.ok, poor.code].join()`) === 'false,noore2' && /50 needed/.test(J(`poor.say`)), J(`poor.say`));
   g.run(`E.ore = 80; var pw0 = E.power.p.join(); var ok1 = campOrder(E, 'emergency', '', 'key');`);
-  check('with the ore it fills the shield at once and takes 50 ore; the power pips are not touched', J(`[ok1.ok, E.shield === campShieldMax(E), E.ore, E.power.p.join() === pw0, E.power.until, E.orders.emergency].join()`) === 'true,true,30,true,0,1', J(`[ok1.say, E.shield, E.ore].join('|')`));
+  check('with the ore it fills the shield at once and takes 50 ore; the power pips are not touched', J(`[ok1.ok, E.shield === campShieldMax(E), E.ore, E.power.p.join() === pw0, E.orders.emergency].join()`) === 'true,true,30,true,1', J(`[ok1.say, E.shield, E.ore].join('|')`));
   g.run(`E.shield = 10; E.ore = 100; var cool = campCheck(E, 'emergency', ''); var row1 = __rowof(E, 'emergency');`);
   check('at once again it is refused: cooling, 20 seconds; the row is grey and says 20 s', J(`[cool.ok, cool.code].join()`) === 'false,cooling' && /in 20 seconds/.test(J(`cool.say`)) && J(`[row1.ok, row1.short, row1.state].join('|')`) === 'false|20 s|ready in 20 s' || J(`[row1.ok, row1.short].join('|')`) === 'false|20 s', J(`[cool.say, row1.ok, row1.short, row1.state].join('|')`));
   g.run(`__run(E, 19); var still = campCheck(E, 'emergency', '').code; __run(E, 2); E.shield = 10; var again = campOrder(E, 'emergency', '', 'key');`);
@@ -131,10 +132,26 @@ console.log('F. Fly to the goal burns by itself');
 console.log('G. the words');
 {
   check('the key line names S Cruiser and no Q', J(`campKeyLine()`).includes('S Cruiser') && !/\bQ\b/.test(J(`campKeyLine()`)), J(`campKeyLine()`));
-  check('the H page\'s list rows have a line for S ("Cruiser: fly, mine, dock, shields", at most 43 characters with its cap) and none for Q', J(`campPanelKeyRows().some(r => r.k.join() === 'S' && r.t === 'Cruiser: fly, mine, dock, shields' && (r.k.join().length + 3 + r.t.length) <= 43)`) && !J(`campPanelKeyRows().some(r => r.k.join() === 'Q')`));
-  check('the pause card says S is the cruiser and what is in it', J(`uiText('camp.ui.pausepanels')`).includes('S the cruiser: fly, mine, dock, shields.'), J(`uiText('camp.ui.pausepanels')`));
+  check('the H page\'s list rows have a line for S ("Cruiser: fly, mine, repair, shields", at most 43 characters with its cap) and none for Q', J(`campPanelKeyRows().some(r => r.k.join() === 'S' && r.t === 'Cruiser: fly, mine, repair, shields' && (r.k.join().length + 3 + r.t.length) <= 43)`) && !J(`campPanelKeyRows().some(r => r.k.join() === 'Q')`));
+  check('the pause card says S is the cruiser and what is in it', J(`uiText('camp.ui.pausepanels')`).includes('S the cruiser: fly, mine, dock, repair, shields.'), J(`uiText('camp.ui.pausepanels')`));
   check('the hints read S from the table: the Mine row (via the cruiser list) and the emergency row', J(`campKeyVar('viafmine')`) === 'S' && J(`campKeyVar('viaemergency')`) === 'S' && J(`campKeyVar('cruiserkey')`) === 'S', J(`[campKeyVar('viafmine'), campKeyVar('viaemergency'), campKeyVar('cruiserkey')].join()`));
   check('the briefing\'s key box for the shield names the cruiser list, not Power', J(`uiText('camp.bf.key.shield')`) === 'Cruiser list: Emergency shields', J(`uiText('camp.bf.key.shield')`));
+}
+
+console.log('H. Repair hull replaces Dock and repair (card space-game-keys3-repair)');
+{
+  check('the table keeps Dock and repair, switched off (`off`), beside the new Repair hull row (the S list\'s own, the ore repair of the dock list): in the game the S list shows Repair hull and Dock at the outpost, never Dock and repair', J(`__ids('cruiser')`) === 'goal,target,fmine,dock,srepair,gdock,emergency,blink' && J(`campKeyList('cruiser').rows.filter(r => r.off).map(r => r.id).join()`) === 'gdock' && J(`campKeyList('cruiser').rows.find(r => r.id === 'srepair').label`) === 'Repair hull' && !J(`campPanelList(__new(2, 0), 'cruiser').some(r => r.id === 'gdock')`), J(`__ids('cruiser')`));
+  check('the dock list has no way in (nothing opens it) but keeps its rows (the Dock row is the S list\'s now, the repair and the ward row stay there)', J(`__ids('yard')`) === 'repairhull,repairward' && J(`campKeyList('yard').key`) === '' && J(`campKeyVia('dock').id`) === 'cruiser');
+  g.run(`var H1 = __new(3, 0); H1.carrier.hp = H1.carrier.maxHp - 100; H1.ore = 200; var hrow = __rowof(H1, 'srepair'), hrun = campPanelRun(H1, campPanelList(H1, 'cruiser').find(r => r.id === 'srepair'), 'key');`);
+  check('a hurt hull with the ore: the row is lit and says what it costs (ore and seconds); Enter pays the ore and starts the mend, anywhere in space', J(`[hrow.ok, /^\\d+ ore, \\d+ s$/.test(hrow.state), /^\\d+ ore$/.test(hrow.short)].join()`) === 'true,true,true' && J(`[hrun.ok, H1.ore < 200, H1.mends.length].join()`) === 'true,true,1', J(`[hrow.state, hrow.short, hrun.say].join('|')`));
+  g.run(`var H2 = __new(3, 0); H2.carrier.hp = H2.carrier.maxHp - 100; H2.ore = 5; var lowrow = __rowof(H2, 'srepair'); var H3 = __new(3, 0); var fullrow = __rowof(H3, 'srepair');`);
+  check('short of ore the row is grey and says why: "needs N ore"', J(`lowrow.ok`) === false && /^needs \d+ ore$/.test(J(`lowrow.short`)) && /needs \d+ ore/.test(J(`lowrow.state`)), J(`[lowrow.state, lowrow.short].join('|')`));
+  check('the whole hull: grey, "the hull is sound" / "hull sound"', J(`[fullrow.ok, fullrow.state, fullrow.short].join('|')`) === 'false|the hull is sound|hull sound');
+  g.run(`var H4 = __new(2, 0); var gr4 = campPanelList(H4, 'cruiser').find(r => r.id === 'goal'); campPanelRun(H4, gr4, 'key'); var says4 = __rowof(H4, 'goal').state, tr4 = __rowof(H4, 'target').state;`);
+  check('the top-left HUD no longer says where the autopilot is going (card space-game-hud-topleft-trim), so the goal row says it: ", flying there" while the trip is on', /, flying there$/.test(J(`says4`)), J(`says4`));
+  g.run(`campFleetListSet(true); campShipListSet(true); var yr = __ids('yard'), cr2 = __ids('cruiser'); campFleetListSet(false); campShipListSet(false);`);
+  check('with the old lists on every row is where it was: the dock list has Dock first, Dock and repair is the cruiser list\'s only row (with Mine, if the squads list is off), Repair hull is off', J(`yr`) === 'dock,repairhull,repairward' && J(`cr2`) === 'srepair,gdock', J(`[yr, cr2].join(' / ')`));
+  check('the ids of the two rows are unique in the table (srepair is the S list\'s, repairhull the dock list\'s): the old suites can still name each', J(`new Set(CAMP_PANELS.panels.flatMap(p => p.rows.map(r => r.id))).size === CAMP_PANELS.panels.flatMap(p => p.rows).length`));
 }
 
 console.log(`\n${n - failed}/${n} checks passed`);

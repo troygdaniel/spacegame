@@ -1,11 +1,11 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
-// (the key rounds of 23 Nov 2026: A D pick WHO takes the order, [ ] the enemy and the backslash the nearest threat, O P the friendly, E the one order key (attack the enemy picked, guard the friendly picked, else form up on the cruiser; there is no recall), X clears, S puts the view on the cruiser and opens its list (Fly to the goal, Fly to the target, Mine, Dock and repair, Emergency shields, the warp blink; Down to a row and Enter gives it); the power keys J K L, Enter a missile, the arrows to fly, the map on Tab, Space held; the pilots start OUT beside the cruiser), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
+// (the key rounds of 23 Nov 2026: Q W pick WHO takes the order, [ ] the enemy and the backslash the nearest threat, O P the friendly, E the one order key (attack the enemy picked, guard the friendly picked, else form up on the cruiser; there is no recall), X clears, S puts the view on the cruiser and opens its list (Fly to the goal, Fly to the target, Mine, Dock, Repair hull, Emergency shields, the warp blink; Down to a row and Enter gives it); the power is gone (no J K L: card space-game-power-removed), Enter a missile, the arrows to fly, the map on Tab, Space held; the pilots start OUT beside the cruiser), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
 //   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat | --panels | --replay]      the mission number is the one on the board (1 to 3)
 // --replay: the mission before the next one is picked in the ready room as a REPLAY (Enter, Up, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
 // --panels: every order row of the cruiser list given once in the flight (S, Down to the row, Enter; a row of a list that has no way in by key is written down as left out), the target keys, E in its three ways, the power keys, the missile, the map zoomed out to the whole system: what each one says (the toasts are written down at the end)
-// --retreat: the wing is gone and the hull is at 30 percent: the HUD says where to retreat, the cruiser list's Fly to the goal goes there (it burns by itself on a long clear leg), then the way to mend: the dock row (S, Dock and repair) while the list has it, else the Repair hull row (ore)
-// --dock: after the burn, the dock row at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on; the walk says so and goes on when the cruiser list has no dock row (card space-game-keys3-repair)
+// --retreat: the wing is gone and the hull is at 30 percent: the HUD says where to retreat, the cruiser list's Fly to the goal goes there (it burns by itself on a long clear leg), then the way to mend: the list's Dock row (the ready room opens: its repair page), else its Repair hull row (ore)
+// --dock: after the burn, the cruiser list's Dock row at the outpost of the mission (the ready room opens over the paused battle: its rows and words), then Esc and the flight goes on; the walk says so and goes on when the list has no Dock row
 // --lose: the cruiser is destroyed after the burn, with the wing out: the lost card, Enter (the mission again, from its brief), the pause card on Esc and its keys page on H, R from the pause
 // --quickwin: the win is forced after the first seconds of flight (the score of the moment), to walk the cards that follow a mission quickly: the debrief, the level won card, the pick or the refit, the next level's room
 // Without --fight the walk stops after the first 25 seconds of flight (keys, lists, map: well under five minutes); with it the mission is flown to its debrief and the ready room.
@@ -37,7 +37,7 @@ try {
   const card = () => j(`(${S}.card || []).filter(o => o.text).map(o => o.text).join(' | ')`);
   const state = () => j(`({ mode: ${S}.mode, result: ${S}.camp.result, t: Math.round(${S}.camp.t / 1000), clock: Math.round(campMissionClock(${S}.camp)), obj: campObjective(${S}.camp), hull: Math.round(${S}.camp.carrier.hp), shield: Math.round(${S}.camp.shield), aliens: campAliens(${S}.camp).length, wing: campWing(${S}.camp).length, x: Math.round(${S}.camp.carrier.x), y: Math.round(${S}.camp.carrier.y) })`);
 
-  // an order is given through the list its row is in (cards one-list-keys and list-shortcuts; since the key rounds the game has one list with a key, S, the cruiser list): that list's own key, Down to the row, Enter; a list with no key of its own (the dock list) is opened from its parent:
+  // an order is given through the list its row is in (cards one-list-keys and list-shortcuts; since the key rounds the game has one list with a key, S, the cruiser list, and every row the game gives is one of its rows): that list's own key, Down to the row, Enter; a list with no key of its own (a part of a list that is off) is opened from its parent:
   // the parent's key, Down to the part's row, Enter. The list is read from the key table (campKeyVia) and the row's place from the list of THIS mission in the page, never a letter or a number written here
   // listWay(row): { list, keys: [[the key to press, how many Downs after it], ...] }, or null when the row is not in this mission's list;   listGo(row): the list open with the highlight on the row (not given);   listOrder(row): and Enter
   const listWay = row => j(`(() => { const C = ${S}.camp, id = ${JSON.stringify(row)}, p = campKeyVia(id); if (!p) return null; const at = campPanelList(C, p.id).findIndex(r => r.id === id); if (at < 0) return null;
@@ -105,32 +105,32 @@ try {
 
   if (PANELS) {
     let mark = 0; const say = async what => { await t.run(300); const all = await j('window.__toasts'); note(what + ' -> ' + (all.slice(mark).join(' || ') || '(no toast)')); mark = all.length; };
-    // every order row the cruiser list has, once (a row that is not on a list with a way in by key is written down as left out), and the direct keys between them (the key rounds of 23 Nov 2026): the cruiser list's rows (fly to the goal, fly to the target, mine, dock, repair, emergency shields, the blink),
-    // the enemy keys (the backslash, ] [) and E at the enemy picked, who (D A), the friendly keys (P O) and E at the friendly picked, X and E with nothing picked (form up on the cruiser), the power keys (J K L; Balance is a row of the strip and the voice only).
+    // every order row the cruiser list has, once (a row that is not on a list with a way in by key is written down as left out), and the direct keys between them (the key rounds of 23 Nov 2026): the cruiser list's rows (fly to the goal, fly to the target, mine, dock, repair the hull, emergency shields, the blink),
+    // the enemy keys (the backslash, ] [) and E at the enemy picked, who (W Q), the friendly keys (P O) and E at the friendly picked, X and E with nothing picked (form up on the cruiser), and the keys that are gone (J K L: the power is removed, card space-game-power-removed).
     // A list of [what to do, what it is]: a string is a direct key, [row] is an order given through the list it is in
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no way)'; }; // the keys of an order as they were pressed
     const done = [];
     for (const [act, what] of [[['goal'], 'fly to the goal'], [['target'], 'fly to the target (nothing picked yet)'], [['fmine'], 'mine'], [['emergency'], 'emergency shields'], [['blink'], 'blink'],
-      ['Backslash', '\\ nearest threat'], ['BracketRight', '] next enemy'], ['KeyE', 'E attack the enemy picked (all three pilots)'], ['BracketLeft', '[ last enemy'], ['KeyD', 'D next who'], ['KeyE', 'E attack the enemy picked (one pilot)'], ['KeyA', 'A last who'],
+      ['Backslash', '\\ nearest threat'], ['BracketRight', '] next enemy'], ['KeyE', 'E attack the enemy picked (all three pilots)'], ['BracketLeft', '[ last enemy'], ['KeyW', 'W next who'], ['KeyE', 'E attack the enemy picked (one pilot)'], ['KeyQ', 'Q last who'],
       ['KeyP', 'P next friendly'], ['KeyE', 'E guard the friendly picked'], ['KeyO', 'O last friendly'], [['target'], 'fly to the target (a friendly picked)'], ['KeyX', 'X clear the target and put who back on all three'], ['KeyE', 'E with nothing picked: form up on the cruiser'],
-      [['dock'], 'dock (away from it)'], [['repairhull'], 'repair the hull (for ore)'],
-      ['KeyJ', 'J shields pip'], ['KeyK', 'K engines pip'], ['KeyL', 'L weapons pip'],
+      [['dock'], 'dock (away from it)'], [['srepair'], 'repair the hull (for ore)'],
+      ['KeyJ', 'J (no key of the flight: the power is gone)'], ['KeyK', 'K (no key of the flight: the power is gone)'], ['KeyL', 'L (no key of the flight: the power is gone)'],
       ['Digit1', '1 (no key of the flight)'], ['KeyR', 'R (no key of the flight: there is no recall)'], ['KeyG', 'G (no key of the flight)'], ['KeyT', 'T (no key of the flight)']]) {
       mark = await j('window.__toasts.length');
       if (typeof act === 'string') { await key(act); await say(what); }
       else { done.push(act[0]); const keys = await via(act[0]), gave = await listOrder(act[0]); await say(keys + ': ' + what + (gave ? '' : ' (the row is left out of this mission\'s list)')); }
       await t.run(1200);
     }
-    check('a digit and a letter that is no key of the table (1 R G T) opened no list', (await j(`campPanelOpen(${S}.pn)`)) === '');
+    check('a digit and a letter that is no key of the table (1 R G T J K L) opened no list', (await j(`campPanelOpen(${S}.pn)`)) === '');
     for (const id of await j(`CAMP_PANELS.panels.map(p => p.id)`)) for (const r of await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).map(r => ({ id: r.id, label: r.label, open: r.open || '', stay: !!r.stay }))`)) { // the rows not given above (the other stances and convoy orders, each part's own orders, the power rows), but for the two that fly to the goal: they were given before. A row that opens a part gives no order: its part's rows are given
       if (r.open || done.indexOf(r.id) >= 0 || r.id === 'goal' || r.id === 'burn' || !(await listWay(r.id))) continue; // (a row of a list switched off has no way in by key: nothing is pressed for it)
       mark = await j('window.__toasts.length'); const keys = await via(r.id); await listOrder(r.id); await say(keys + ': ' + r.label + ' (the ' + id + ' list)'); await t.run(600);
     }
-    // the direct keys of the key rounds: S puts the view on the cruiser and opens its list (Esc closes it: it is the list its own key opened), and J gives a pip to the shields with no list open (the power list has no key; Balance is the strip's and the voice's)
+    // the direct keys of the key rounds: S puts the view on the cruiser and opens its list (Esc closes it: it is the list its own key opened); J K L give no pip now (the power is removed: card space-game-power-removed; the ship runs at the balanced values)
     await key('KeyS'); await t.run(300); const sOpen = await j(`campPanelOpen(${S}.pn)`); await key('Escape'); await t.run(200);
     check('S opens the cruiser list directly; Esc closes it (the list its own key opened) and does not pause the battle', sOpen === 'cruiser' && (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`${S}.mode`)) === 'play', sOpen);
-    await j(`campOrder(${S}.camp, 'balance', '', 'key')`); await t.run(200); const pw0 = await j(`${S}.camp.power.p`); await key('KeyJ'); await t.run(300); const pw1 = await j(`${S}.camp.power.p`); await snap('11-power');
-    check('J gives the shields one more pip at once and opens no list (the pips of the other two give one up)', pw1[1] === pw0[1] + 1 && (await j(`campPanelOpen(${S}.pn)`)) === '', JSON.stringify([pw0, pw1])); await j(`campOrder(${S}.camp, 'balance', '', 'key')`); await t.run(200);
+    const pw0 = await j(`${S}.camp.power.p`); for (const k of ['KeyJ', 'KeyK', 'KeyL']) await key(k); await t.run(300); const pw1 = await j(`${S}.camp.power.p`);
+    check('J K L give no pip and open no list: the power is removed and the ship runs at the balanced values', JSON.stringify(pw1) === JSON.stringify(pw0) && (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`CAMP.power.on`)) === false, JSON.stringify([pw0, pw1]));
     mark = await j('window.__toasts.length'); await key('Enter'); await say('Enter missile, with no list open (nothing big in reach)');
     await key('Tab'); await t.run(400); for (let i = 0; i < 8; i++) await key('Minus', 30); await t.run(900); await snap('12-map-whole'); for (let i = 0; i < 8; i++) await key('Equal', 30); await t.run(400); await snap('13-map-zoom'); await key('Tab'); await t.run(300); // - zooms the map out to the whole system, = back in (S would close the map and open the cruiser list: S is that list's key)
     note('mode after the map: ' + await j(`${S}.mode`));
@@ -141,29 +141,29 @@ try {
     await listOrder('goal'); await t.run(1500); note('nav now: ' + await j(`JSON.stringify(${S}.camp.nav || null)`).then(v => String(v).slice(0, 200)));
     for (let i = 0; i < 12 && (await j(`!!(${S}.camp.nav && ${S}.camp.nav.on)`)); i++) await t.run(2000);
     note('after the burn: ' + JSON.stringify(await state()) + ' | ' + (await hud()).filter(x => /^(post|obj|arrow)=/.test(x)).join(' | ')); await snap('12-there');
-    const dockedLow = await listOrder('dock'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900); // the dock row is the cruiser list's Dock and repair (S, Down, Enter, Down, Enter) while the list has it; card space-game-keys3-repair takes it off and gives the list a Repair hull row for ore
+    const dockedLow = await listOrder('dock'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900); // the dock row is the cruiser list's own (S, Down to Dock, Enter; card space-game-keys3-repair), with a Repair hull row beside it for ore
     if (dockedLow && (await j(`game.scene.isActive('CampHub')`))) {
       note('docked: ' + (await shown()).join(' | ').slice(0, 900)); await snap('13-docked-low');
       await key('Digit2'); await t.run(700); note('repair page: ' + (await shown()).join(' | ').slice(0, 600)); await snap('13b-repair-page');
       await key('KeyR'); await t.run(900); note('after R on the repair page: ' + (await shown()).join(' | ').slice(0, 500) + ' | hull ' + await j(`Math.round(${S}.camp.carrier.hp)`) + ' ore ' + await j(`Math.floor(${S}.camp.ore)`)); await snap('14-mended');
       await key('Escape'); await t.run(900); note('after Esc: mode ' + await j(`${S}.mode`) + ' docked ' + await j(`${S}.docked`) + ' hull ' + await j(`Math.round(${S}.camp.carrier.hp)`));
     } else {
-      note('no dock on the cruiser list (' + dockedLow + '): the hull is mended with ore, anywhere, by its own row');
-      const h0 = await j(`Math.round(${S}.camp.carrier.hp)`), o0 = await j(`Math.floor(${S}.camp.ore)`), gave = await listOrder('repairhull'); await t.run(9000);
+      note('no dock from the cruiser list here (' + dockedLow + '): the hull is mended with ore, anywhere, by the Repair hull row');
+      const h0 = await j(`Math.round(${S}.camp.carrier.hp)`), o0 = await j(`Math.floor(${S}.camp.ore)`), gave = await listOrder('srepair'); await t.run(9000);
       note('Repair the hull row given: ' + gave + ' | hull ' + h0 + ' -> ' + await j(`Math.round(${S}.camp.carrier.hp)`) + ' | ore ' + o0 + ' -> ' + await j(`Math.floor(${S}.camp.ore)`)); await snap('14-mended');
     }
   }
   if (DOCK) {
     note('outposts: ' + await j(`campOutposts(${S}.camp.level).map(o => o.id + ' ' + o.name + ' ' + Math.round(campDist(${S}.camp.carrier, o))).join(' | ')`));
     await t.ev(`(() => { const C = ${S}.camp, o = campOutposts(C.level).slice().sort((a, b) => campDist(C.carrier, a) - campDist(C.carrier, b))[0]; C.carrier.x = o.x + (o.r || 60) + 120; C.carrier.y = o.y; C.carrier.vx = 0; C.carrier.vy = 0; return 1; })()`); await t.run(600); // the cruiser beside the nearest outpost (the arrival circle is 300 km wide: the relay is 250 km off)
-    await t.run(500); const dockWay = await listGo('dock'); await t.run(400); await snap('11-dock-list'); if (dockWay) await key('Escape'); /* (with no list open Esc would pause the battle) */ note('the way to the dock row (S, the Dock and repair row, Enter): ' + dockWay + '; the dock list dock row: ' + await j(`(typeof campPanelRows === 'function' ? campPanelRows(${S}.camp, (campKeyVia('dock') || {}).id) : []).filter(r => r.id === 'dock').map(r => JSON.stringify(r)).join(' ')`).then(v => String(v).slice(0, 300)));
+    await t.run(500); const dockWay = await listGo('dock'); await t.run(400); await snap('11-dock-list'); if (dockWay) await key('Escape'); /* (with no list open Esc would pause the battle) */ note('the way to the dock row (S, Down to Dock): ' + dockWay + '; the dock row: ' + await j(`(typeof campPanelRows === 'function' ? campPanelRows(${S}.camp, (campKeyVia('dock') || {}).id) : []).filter(r => r.id === 'dock').map(r => JSON.stringify(r)).join(' ')`).then(v => String(v).slice(0, 300)));
     const dockedHere = await listOrder('dock'); await settle(`game.scene.isActive('CampHub')`, 30); await t.run(900);
     if (dockedHere && (await j(`game.scene.isActive('CampHub')`))) {
       note('docked: ' + (await shown()).join(' | ').slice(0, 800)); await snap('12-docked');
       await key('Escape'); await t.run(900);
       note('after Esc: Campaign ' + await j(`game.scene.isActive('Campaign')`) + ' hub ' + await j(`game.scene.isActive('CampHub')`) + ' mode ' + await j(`${S}.mode`) + ' docked ' + await j(`${S}.docked`));
       await t.run(1200); await snap('13-undocked'); note('HUD: ' + (await hud()).join(' | ').slice(0, 400));
-    } else note('no way to dock by key: the cruiser list has no Dock and repair row (card space-game-keys3-repair), so the dock is not walked');
+    } else note('no way to dock by key: the cruiser list has no Dock row here (no outpost in the mission), so the dock is not walked');
   }
   if (LOSE) {
     await t.run(2500); // (the pilots start out beside the cruiser: there is no Launch to give)

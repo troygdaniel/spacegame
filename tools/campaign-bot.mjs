@@ -2,7 +2,7 @@
 // Card space-game-night-gameplay (docs/night/gameplay.md). It reads the game (src/campaign.js) and changes nothing in it.
 //   node tools/campaign-bot.mjs                      the whole table: levels 1 to 3, every bot, seeds 1 to 12
 //   node tools/campaign-bot.mjs --level 1 --seeds 20 --bots plain,carrier --skill steady
-//   node tools/campaign-bot.mjs --power 4,1,1        the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: every factor 1, the shield mending at its base rate)
+//   node tools/campaign-bot.mjs --power 4,1,1        (IGNORED while CAMP.power.on is false, which it is since card space-game-power-removed: the pips are off) the ship's systems for every run: weapons, shields, engines, 6 pips (default 2,2,2: every factor 1, the shield mending at its base rate)
 //   node tools/campaign-bot.mjs --tech beam          start with these techs (a level's table row says which a player would have)
 //   node tools/campaign-bot.mjs --old               level 1 with the numbers it had before the easier level 1 (Earth's shield 300 and the rest): what Troy's first tries were played on
 //   node tools/campaign-bot.mjs --set alien.hpScale=2 --set alien.damageScale=2   what if: change numbers of the table (CAMP.<path> = a number) for this run only
@@ -70,11 +70,11 @@ g.run(`(() => {
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
   // --keys: an order as a player gives it. The row is found in the key table (campKeyVia), its list is opened with the list's own key, Down goes to the row, Enter gives it (src/camppanel.js campPanelKey);
-  // "attack that one" is the target picked first (what A, D and S do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a lane: the map's) stays an order.
+  // "attack that one" is the target picked first (what [ ] and the backslash do) and then the fighters' Attack row; a missile is Enter with no list open. What has no row (a lane: the map's) stays an order.
   const give = (C, rowId) => { const list = campKeyVia(rowId), rows = list ? campPanelList(C, list.id) : [], i = rows.findIndex(r => r.id === rowId); if (i < 0) return { ok: false, say: 'no such row here: ' + rowId }; const P = campPanelNew(); campPanelKey(P, C, list.code, 0); const nrows = rows.length, downs = ((i - P.at) % nrows + nrows) % nrows; for (let k = 0; k < downs; k++) campPanelKey(P, C, 'ArrowDown', 0); window.__KEYN = (window.__KEYN | 0) + 1; let r = campPanelKey(P, C, 'Enter', 0); if (P.pick) { window.__KEYN++; r = campPanelKey(P, C, 'Enter', 0); } return r; }; // (a row that needs a target opens a sub-list when there are several to choose from, src/camppick.js: the bot takes the top one, as a player who has no better idea does)
   const aim = (C, id) => { if (id) C.tgt = id; else campTgtClear(C); };
-  // an order to ONE pilot with the keys (card space-game-bracket-select-orders): D steps the friends till it is the pilot's squad, then the order key (E: attack the enemy picked, guard the friendly picked, form up with none); the selection is let go after
-  const pilotKey = (C, sq, key) => { const P = campPanelNew(); C.sel = ''; window.__KEYN = (window.__KEYN | 0) + 1; for (let k = 0; k < 8 && C.sel !== 'pilot:' + sq; k++) campPanelKey(P, C, 'KeyD', 0); const r = C.sel === 'pilot:' + sq ? campPanelKey(P, C, key, 0) : { ok: false, ran: false, say: 'no such pilot out: ' + sq }; C.sel = ''; return r; };
+  // an order to ONE pilot with the keys (card space-game-bracket-select-orders): W steps who till it is the pilot's squad (card space-game-keys3-select: Q W pick who), then the order key (E: attack the enemy picked, guard the friendly picked, form up with none); the selection is let go after
+  const pilotKey = (C, sq, key) => { const P = campPanelNew(); C.sel = ''; window.__KEYN = (window.__KEYN | 0) + 1; for (let k = 0; k < 8 && C.sel !== 'pilot:' + sq; k++) campPanelKey(P, C, 'KeyW', 0); const r = C.sel === 'pilot:' + sq ? campPanelKey(P, C, key, 0) : { ok: false, ran: false, say: 'no such pilot out: ' + sq }; C.sel = ''; return r; };
   const ROW = { launch: 'launch', escort: 'escort', mine: 'fmine', recall: 'frecall' }; // the whole-wing rows left Q (card space-game-squad-tint): the bot's Launch, Mine and Recall are the All squads list's (W)
   // the wing is split as a player splits it (card space-game-cut-escorts: there is no escort ship): the Yellow squad (two ships) is the escort, going to the convoy; Red and Green (six) are the fighters that Attack goes to
   const wingEscort = (C, arg) => { const t = campFind(C, arg), cv = t && t.kind === 'convoy' ? C.by[t.id] : campNearest(campConvoys(C), C.carrier); return cv ? campWingOrder(C, 'yellow', 'escort', cv.id, 'bot') : campOrder(C, 'escort', arg); };

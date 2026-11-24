@@ -1,4 +1,4 @@
-// not in the smoke: a boot of the Campaign's order lists (the fleet list Q at the left with its part W, the ship list P at the right with its parts O I U; a part's key opens it directly; nothing is drawn until one is opened) with a real keyboard, run by hand (one Chrome, muted, through the test lock; cards one-list-keys and list-shortcuts). The game switches these lists off (Q: card space-game-q-selects-all; P and its parts: space-game-p-opens-power, keys2-select; W and the rest: keys-orders, keys2-cruiser; the S cruiser list is the game's own now) and the walk switches the old ones on in the page, as the node suites do; the stance lists, the squads' own lists and the Escorts row are gone (cards space-game-fighter-squads, squad-tint, bracket-select-orders). Keys of the key rounds that this walk meets: A D pick WHO, [ ] and the backslash the enemy, O P the friendlies (the old lists shadow them while they are on), E the one order, S the view back on the cruiser, X clears; the pilots start OUT beside the cruiser, so Launch is a greyed row
+// not in the smoke: a boot of the Campaign's order lists (the fleet list Q at the left with its part W, the ship list P at the right with its parts O I U; a part's key opens it directly; nothing is drawn until one is opened) with a real keyboard, run by hand (one Chrome, muted, through the test lock; cards one-list-keys and list-shortcuts). The game switches these lists off (Q: card space-game-q-selects-all; P and its parts: space-game-p-opens-power, keys2-select; W and the rest: keys-orders, keys2-cruiser; the S cruiser list is the game's own now) and the walk switches the old ones on in the page, as the node suites do; the stance lists, the squads' own lists and the Escorts row are gone (cards space-game-fighter-squads, squad-tint, bracket-select-orders). Keys of the key rounds that this walk meets: Q W pick WHO and O P the friendlies (the old lists shadow them while they are on), [ ] and the backslash the enemy, A D are free, E the one order, S the view back on the cruiser, X clears; the pilots start OUT beside the cruiser, so Launch is a greyed row
 // The rules are tests/campanels.mjs, tests/campanelsdraw.mjs, tests/campanelsui.mjs, tests/camptarget.mjs and tests/camppanelkeys.mjs (plain Node). This boots the Campaign once and the title once and does what Troy does: no list on the screen at the
 // first frame (nothing; the target is the target display's now), Q and the highlight, the key caps on the rows that open a part, W and Enter launch the wing, P the ship list, W straight to the all-squads list, Left back to the fleet list, O and a pip of power
 // (the list stays open), a refused order leaves the list open, ] X the hostile target (a hostile is put in reach: the first
@@ -27,7 +27,7 @@ async function campaign() {
   try {
     const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
     await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
-  await t.ev(`(() => { campFleetListSet(true); campShipListSet(true); ${SC}.hud.keys.setText(campKeyLine()); return 1; })()`); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power; the squads list, the autopilot, power and dock keys went with the key rounds); on here, as the node suites do (with them on, P and O open the ship and power lists before they pick friendlies, and S has no list: it only puts the view on the cruiser)
+  await t.ev(`(() => { campFleetListSet(true); campShipListSet(true); campPowerSet(true); ${SC}.hud.keys.setText(campKeyLine()); return 1; })()`); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power; the squads list, the autopilot, power and dock keys went with the key rounds); on here, as the node suites do (with them on, P and O open the ship and power lists before they pick friendlies, Q and W open the fleet and all-squads lists before they pick who, and S has no list: it only puts the view on the cruiser; the power is switched on too, campPowerSet, card space-game-power-removed: the power list is off without it, and this walk gives a pip of power from it)
     for (let i = 0; i < 8 && (await j(`${SC}.mode`)) !== 'play'; i++) { await press(t, 'Enter'); await t.run(300); } // the story card, then the briefing: Enter until the battle is on
     check('the battle is on', (await j(`${SC}.mode`)) === 'play');
     await t.run(400);
@@ -59,13 +59,13 @@ async function campaign() {
     check('nothing is drawn until a list\'s key is pressed: no list is open, no heading and no row is on the screen', (await isOpen()) === '' && (await j(`!${PL}.title.visible && ${PL}.rows.every(r => !r.name.visible && !r.suffix.visible && !r.cap.visible) && !${PL}.keys.visible`)) === true);
     check('with no list open and nothing picked the bottom right corner is empty: the target display is not there (the radar and the target\'s line are gone)', (await j(`!${SC}.hud.tdisp || (!${SC}.hud.tdisp.id && !${SC}.hud.tdisp.pic.visible)`)) === true);
     await snap(t, 'start');
-    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (A steps WHO, W is the all-squads list's key here), and a digit is no key at all
+    // flight: the arrows turn and thrust the cruiser; A, W and the other letters do not (A is no key now, W is the all-squads list's key here), and a digit is no key at all
     const rot0 = await j(`${SC}.camp.carrier.rot`); wing0 = await launchedNow();
     await press(t, 'KeyA', 400); await press(t, 'KeyW', 400);
     const wOpen = await isOpen(), wTitle = await j(`${PL}.title.visible && ${PL}.title.text`);
     await press(t, 'KeyW', 400); const wShut = await isOpen();
     await press(t, 'KeyD', 400); await press(t, 'KeyS', 400);
-    check('W A S D do not fly the cruiser: no turn, no thrust (A and D step WHO and S puts the view on the cruiser: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
+    check('W A S D do not fly the cruiser: no turn, no thrust (A and D are free keys now, and S resets the view: none of them moves the ship)', Math.abs((await j(`${SC}.camp.carrier.rot`)) - rot0) < 1e-6 && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) < 1);
     check('W is the all-squads list\'s key: it opens that list directly (headed W   ALL SQUADS), and W again closes it', wOpen === 'squads' && wTitle === (await j(`(() => { const p = campKeyList('squads'); return p.key + '   ' + p.title; })()`)) && wTitle === 'W   ALL SQUADS' && wShut === '', wOpen + ' | ' + wTitle + ' | ' + wShut);
     await press(t, 'Digit1', 20); await press(t, 'Digit2', 20); await press(t, 'KeyG', 20); await press(t, 'KeyZ', 20); await press(t, 'KeyY', 20); await press(t, 'KeyV', 20); await t.run(300);
     check('a digit or a letter that is no key of the table (1 2 G Z Y V) does nothing in flight: nothing launched (the pilots were out already), no list opened', (await launchedNow()) === wing0 && (await isOpen()) === '');
@@ -149,23 +149,23 @@ async function campaign() {
       check('W, Enter on "Attack <name>" gives the order at it at once: it stays the target, and the lists are closed', (await j(`${SC}.camp.tgt`)) === near && (await isOpen()) === '' && (await j(`${P}.pick`)) === null && (await j(`${SC}.camp.orders.attack | 0`)) > o0, await j(`${SC}.camp.tgt`));
       await press(t, 'KeyX', 20); await t.run(200);
     } else console.log('  note the Attack row check was skipped: the Attack row is not in this mission\'s list');
-    // I: the power list; a power row leaves the list open (a pip more, and more)
+    // O: the power list (campPowerSet(true) above); a power row leaves the list open (a pip more, and more)
     const pw0 = await j(`${SC}.camp.power.p`), sAt = await listAt('power', 'shields');
     await press(t, 'KeyO', 20); for (let i = 0; i < sAt; i++) await press(t, 'ArrowDown', 20); await t.run(300);
     check('O opens the power list directly, at the right, headed with its key, the highlight on "Shields: one more pip"', (await isOpen()) === 'power' && (await j(`${PL}.title.text`)) === 'O   POWER' && (await j(`${HI}.name.text`)) === (await rowLabel('shields')) && JSON.stringify(await shownRows()) === JSON.stringify(await drawnAs('power')) && (await j(`${PL}.keys.text`)) === (await foot('camp.ui.listkeysub', 'O')) && (await fits()) === true, (await j(`${PL}.title.text`)) + ' | ' + JSON.stringify(await shownRows()));
     await snap(t, 'power-list');
     await press(t, 'Enter', 20); await t.run(300);
     const pw1 = await j(`${SC}.camp.power.p`);
-    check('I, Enter: the shields get one more pip (' + JSON.stringify(pw0) + ' to ' + JSON.stringify(pw1) + ') and the list stays open on that row, to give it again', pw1[1] === pw0[1] + 1 && pw1[0] + pw1[1] + pw1[2] === pw0[0] + pw0[1] + pw0[2] && (await isOpen()) === 'power' && (await j(`${P}.at`)) === sAt && (await j(`${HI}.name.text`)) === (await rowLabel('shields')));
+    check('O, Enter: the shields get one more pip (' + JSON.stringify(pw0) + ' to ' + JSON.stringify(pw1) + ') and the list stays open on that row, to give it again', pw1[1] === pw0[1] + 1 && pw1[0] + pw1[1] + pw1[2] === pw0[0] + pw0[1] + pw0[2] && (await isOpen()) === 'power' && (await j(`${P}.at`)) === sAt && (await j(`${HI}.name.text`)) === (await rowLabel('shields')));
     const bAt = await listAt('power', 'balance'); for (let i = sAt; i < bAt; i++) await press(t, 'ArrowDown', 20); await press(t, 'Enter', 20); await t.run(300);
     check('Down to "Balance the power", Enter: the pips are as they were and the list is still open; Esc closes it', JSON.stringify(await j(`${SC}.camp.power.p`)) === JSON.stringify(pw0) && (await isOpen()) === 'power' && (await press(t, 'Escape', 20), await t.run(200), await isOpen()) === '' && (await j(`${SC}.mode`)) === 'play', JSON.stringify(await j(`${SC}.camp.power.p`)));
     await press(t, 'KeyX', 20); await t.run(100); // no target: "Fly to the target" cannot be done
     if ((await j(`(campPanelRows(${SC}.camp, 'nav').find(r => r.id === 'target') || { ok: true }).ok`)) === false) {
       const why = await j(`campPanelRows(${SC}.camp, 'nav').find(r => r.id === 'target').state`);
-      check('an order that is refused leaves the list open and says why at its foot (O, Down to "Fly to the target", Enter with no target)', (await order('target')) === true && (await isOpen()) === 'nav' && (await j(`${PL}.more.text`)).toLowerCase() === String(why).toLowerCase() && !(await j(`${SC}.camp.nav`)), await j(`${PL}.more.text`));
+      check('an order that is refused leaves the list open and says why at its foot (I, Down to "Fly to the target", Enter with no target)', (await order('target')) === true && (await isOpen()) === 'nav' && (await j(`${PL}.more.text`)).toLowerCase() === String(why).toLowerCase() && !(await j(`${SC}.camp.nav`)), await j(`${PL}.more.text`));
       await press(t, 'Escape', 20); await t.run(200);
     } else console.log('  note the refused-order check was skipped: a target was picked by the game');
-    // a hostile put in reach: ] picks it with no list open (D steps WHO, O and P the friendlies: with the old lists on they open lists), the bracket is drawn, the target's line names it
+    // a hostile put in reach: ] picks it with no list open (Q W step WHO, O and P the friendlies: with the old lists on they open lists), the bracket is drawn, the target's line names it
     const spawned = await j(`(() => { const C = ${SC}.camp, c = C.carrier, u = campSpawn(C, 'raider', c.x + 500, c.y - 200); return !!u; })()`).catch(() => false);
     if (spawned) {
       await press(t, 'BracketRight', 20); await t.run(300);
@@ -178,8 +178,8 @@ async function campaign() {
     await t.ev(`(() => { shipcompAvailable = () => true; return 1; })()`);
     await press(t, 'Slash', 40); await t.run(300);
     check('/ opens the command strip: its input has the focus', (await j(`document.activeElement && document.activeElement.tagName`)) === 'INPUT');
-    await press(t, 'KeyD', 40); await press(t, 'KeyQ', 40); await t.run(100);
-    check('the keys typed in the strip are the strip\'s, not the game\'s: D picks no pilot and no target, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await isOpen()) === '');
+    await press(t, 'KeyW', 40); await press(t, 'KeyQ', 40); await t.run(100);
+    check('the keys typed in the strip are the strip\'s, not the game\'s: W picks no pilot and opens no list, no target is picked, and Q opens no list', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await isOpen()) === '');
     await press(t, 'Escape', 40); await t.run(300);
     check('Esc closes the strip and does not pause the battle', (await j(`document.activeElement && document.activeElement.tagName`)) !== 'INPUT' && (await j(`${SC}.mode`)) === 'play');
     check('hold to speak is off in the Campaign (CAMP_VOICE, card space-game-keys-select): the listener has no key there and follows the scene', (await j(`(() => { listenKeysSync(game); return [LISTEN.code === undefined, LISTEN.cap].join(); })()`)) === 'true,');
