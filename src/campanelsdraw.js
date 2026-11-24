@@ -32,7 +32,7 @@ function campPanelsInstall(s) {
   const L = s.pnl, own = (o, d) => { o.setScrollFactor(0).setDepth(K.depth + (d || 0)); L.objs.push(o); return o; }, tx = (size, color, st) => own(s.add.text(0, 0, '', uiFont(size, color, st)), 2);
   L.g = own(s.add.graphics());
   L.title = tx(15, '#ffffff', { letterSpacing: 2 }).setOrigin(0, 0.5); L.count = tx(12, '#9fbdd1').setOrigin(1, 0.5);
-  for (let i = 0; i < n; i++) L.rows.push({ cap: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), name: tx(15, K.rowInk.ok).setOrigin(0, 0.5), suffix: tx(12, K.rowInk.suffix).setOrigin(1, 0.5) });
+  for (let i = 0; i < n; i++) L.rows.push({ cap: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), cap2: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), name: tx(15, K.rowInk.ok).setOrigin(0, 0.5), suffix: tx(12, K.rowInk.suffix).setOrigin(1, 0.5) });
   L.more = tx(12, '#9fbdd1').setOrigin(0, 0.5); L.keys = tx(12, '#9fbdd1').setOrigin(0, 0.5);
   L.onPointer = p => campPanelsClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', L.onPointer);
@@ -57,7 +57,7 @@ function campPanelsPaint(s, now) {
   g.fillStyle(0x04101c, 0.9); g.fillRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.lineStyle(2, col, 0.9); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
   if (heading) { g.fillStyle(col, 0.22); g.fillRoundedRect(G.x, G.y, G.w, G.head.h, 7); L.title.setVisible(true).setPosition(G.x + 12, G.y + G.head.h / 2).setText((def.key && !def.corner ? def.key + '   ' : '') + V.title).setColor(K.ink[def.side]); } // (V.title: the list's, or what is being picked)
-  const caps = V.rows.some(r => r.more || r.key), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
+  const caps = V.numbers ? V.rows.some(r => r.num) : V.rows.some(r => r.more || r.key), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
   if (!def.corner) L.count.setVisible(true).setPosition(G.x + G.w - 12, G.y + B.head / 2).setText((V.first + V.at + 1) + ' / ' + V.total); // (a corner list has no 1 / 7 counter: card space-game-layout-cruiser)
   V.rows.forEach((st, i) => { // a row: its words, and at the right what it will do or why it cannot; the highlighted one has a bright bar
     const o = L.rows[i]; if (!o) return;
@@ -66,8 +66,10 @@ function campPanelsPaint(s, now) {
     if (st.marked) { g.fillStyle(at ? 0x02101c : col, 1); g.fillRect(G.x + 4, y + 4, 3, B.row - 8); }
     if (lit > 0) { g.fillStyle(K.flash, 0.85 * lit); g.fillRoundedRect(G.x + 4, y, G.w - 8, B.row, 5); }
     const ink = at && st.ok ? K.rowInk.at : st.ok ? K.rowInk.ok : K.rowInk.no;
-    if (st.key) { g.fillStyle(at ? 0x02101c : col, 1); g.fillRoundedRect(G.x + 10, y + (B.row - K.cap.h) / 2, K.cap.w, K.cap.h, 4); o.cap.setVisible(true).setPosition(G.x + 10 + K.cap.w / 2, y + B.row / 2).setText(st.key).setColor(at ? K.ink[def.side] : '#02101c'); } // the key that opens this part directly
+    const lead = V.numbers ? (st.num ? String(st.num) : '') : st.key; // the chip at the left: the key that opens this part directly, or (a numbered list: card space-game-s-list-numbers) the digit that does this row
+    if (lead) { g.fillStyle(at ? 0x02101c : col, 1); g.fillRoundedRect(G.x + 10, y + (B.row - K.cap.h) / 2, K.cap.w, K.cap.h, 4); o.cap.setVisible(true).setPosition(G.x + 10 + K.cap.w / 2, y + B.row / 2).setText(lead).setColor(at ? K.ink[def.side] : '#02101c'); }
     o.name.setVisible(true).setPosition(nx, y + B.row / 2).setText(st.label + (st.more ? '  >' : '')).setColor(ink);
+    if (V.numbers && st.key && o.cap2) { const kx = nx + (o.name.width || 110) + 10; g.fillStyle(col, 1); g.fillRoundedRect(kx, y + (B.row - K.cap.h) / 2, K.cap.w, K.cap.h, 4); o.cap2.setVisible(true).setPosition(kx + K.cap.w / 2, y + B.row / 2).setText(st.key).setColor('#02101c'); } // a row with a key of its own as well (Reload missiles: R) shows it in a second chip after its words
     let sx = G.x + G.w - 12;
     if (st.pip >= 0 && s.gaugeAnim) { // a power row: that system's pip bar at its right, the twin of the gauge's (the same animation and flash: both light together when Enter gives a pip), under the weapons gauge's bar; its key and its reason stand left of it
       const Z = campHudGeom().cells[2].bar, d = CAMP_DIAL_PIPS.indexOf(st.pip), by = y + (B.row - (Z.y1 - Z.y0)) / 2;
@@ -79,7 +81,7 @@ function campPanelsPaint(s, now) {
   });
   const cur = V.rows[V.at], F = G.foot; // the foot: the highlighted row's full state (or its reason), what is off the screen, and the keys
   L.more.setVisible(true).setPosition(F.x + 12, F.y + 10).setText(cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : '')).setColor(cur && !cur.ok ? K.rowInk.why : '#9fbdd1');
-  L.keys.setVisible(true).setPosition(F.x + 12, F.y + 30).setText(uiText(V.keys, { key: def.key })); // the foot's words are the model's: Esc closes a list its own key opened, goes back from one a row opened, and from a target sub-list
+  L.keys.setVisible(true).setPosition(F.x + 12, F.y + 30).setText(uiText(V.keys, { key: def.key, last: V.last })); // the foot's words are the model's: Esc closes a list its own key opened, goes back from one a row opened, and from a target sub-list
   L.objs.forEach(o => { if (o && o.setAlpha) o.setAlpha(fa); }); // the fade: the whole list, its words and its bars, at one opacity
 }
 

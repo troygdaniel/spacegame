@@ -95,13 +95,12 @@ sec('E. S is the cruiser list; the W list is off', () => {
   g.run('__new(); window.PP = campPanelNew(); window.__k = c => campPanelKey(PP, C, c, 0); C.rocks.push({ id: "rock-t", x: C.carrier.x + 600, y: C.carrier.y, hp: 100, maxHp: 100, r: 30, ore: 5, cutAt: -1e9, field: 0 });');
   const q = J(`__k('KeyS')`);
   check('S opens the cruiser list, with six rows (card space-game-keys2-cruiser): the two autopilot rows, Mine ore, Dock at the outpost, Repair hull (card space-game-keys3-repair: Dock and repair is switched off), Reload missiles (card space-game-missiles-cost-ore), Emergency shields (the warp blink with its tech)', q.used && J('campPanelOpen(PP)') === 'cruiser' && J(`campPanelList(C, 'cruiser').map(r => r.label).join()`) === 'Fly to the goal,Fly to the target,Mine ore,Dock at the outpost,Repair hull,Reload missiles,Emergency shields', JSON.stringify(q) + J(`campPanelList(C, 'cruiser').map(r => r.label).join()`));
-  g.run('__k("ArrowDown"); __k("ArrowDown"); __k("ArrowDown"); __k("ArrowDown");');
-  const rp = J(`__k("Enter")`);
-  check('Enter on Repair hull (the fifth row) with the hull whole is refused in words ("the hull is sound") and the list stays open on it: no dock list opens (the dock list has no way in)', rp.ran && !rp.ok && rp.row === 'srepair' && J('campPanelOpen(PP)') === 'cruiser' && J('PP.at') === 4 && !J(`campPanelList(C, 'cruiser').some(r => r.id === 'gdock')`), JSON.stringify(rp));
+  const rp = J(`__k("Digit5")`);
+  check('The digit 5 on Repair hull (the fifth row; card space-game-s-list-numbers) with the hull whole is refused in words ("the hull is sound") and the list stays open on it: no dock list opens (the dock list has no way in)', rp.ran && !rp.ok && rp.row === 'srepair' && J('campPanelOpen(PP)') === 'cruiser' && J('PP.at') === 4 && !J(`campPanelList(C, 'cruiser').some(r => r.id === 'gdock')`), JSON.stringify(rp));
   g.run('__k("Escape"); __k("KeyS"); __k("KeyS");');
   check('S again closes the list', J('campPanelOpen(PP)') === '');
-  const m = J(`(() => { __k('KeyS'); __k('ArrowDown'); __k('ArrowDown'); const r = __k('Enter'); return { r, open: campPanelOpen(PP), pick: !!PP.pick }; })()`);
-  check('Enter on Mine ore with a field of rocks to pick sends the pilots to mine it (one field: at once)', (m.r.ran && m.r.ok && J(`__out().every(u => u.order.type === 'mine')`)) || (m.pick && !m.r.ran), JSON.stringify(m));
+  const m = J(`(() => { __k('KeyS'); const r = __k('Digit3'); return { r, open: campPanelOpen(PP), pick: !!PP.pick }; })()`);
+  check('The digit 3 on Mine ore with a field of rocks to pick sends the pilots to mine it (one field: at once)', (m.r.ran && m.r.ok && J(`__out().every(u => u.order.type === 'mine')`)) || (m.pick && !m.r.ran), JSON.stringify(m));
   g.run('PP = campPanelNew();');
   const w = J(`__k('KeyW')`), u = J(`__k('KeyU')`);
   check('U opens nothing, and W opens no list: it is the order key (the key is used and an order is tried, in words), no list opens', w.used && w.ran && !u.used && J('campPanelOpen(PP)') === '', JSON.stringify([w, u]));
