@@ -268,7 +268,7 @@ sec('H', () => {
   const sc = read('src/campaignscene.js');
   check('H  the scene starts a battle at the saved setting and saves a change of it (campPowerLoad / campPowerSave of C.power.base: the setting, never the emergency)', /power: campPowerLoad\(\)/.test(sc) && /campPowerSave\(C\.power\.base\)/.test(sc));
   check('H  the HUD draws a bar of power segments beside each of the three gauges (SHIELDS, SPEED, LASERS) from the live pips (C.power.p), which replaced the small W S E pips (card space-game-systems-gauges, tests/campgauges.mjs)', /C\.power\.p/.test(sc) && /campGaugesPaint\(/.test(sc) && /pips: P\.p\[1\]/.test(read('src/camphud.js')) && !/'W'/.test(sc));
-  check('H  the blink\'s READY and seconds on the HUD read the engines\' recharge (campBlinkCooldown)', /campBlinkCooldown\(/.test(sc));
+  check('H  the blink\'s recharge is the engines\' (campBlinkCooldown); the HUD line that showed its READY and seconds is gone (card space-game-hud-topleft-trim)', J('typeof campBlinkCooldown') === 'function' && !/camp\.ui\.blink/.test(sc) && !/hud\.blink/.test(sc));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 });
 console.log(failed ? `CAMP SYSTEMS FAIL (${failed} of ${n})` : `CAMP SYSTEMS PASS (${n} checks)`);
