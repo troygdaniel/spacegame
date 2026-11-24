@@ -3,11 +3,12 @@
 // placeholder, so the voice pack can record each line once), said by one of a few pilots, each a callsign and an Aura voice of his own (never the computer's, never a bar character's).
 // QUIET by default (Settings > Sound > Chatter: On, Quiet, Off): in Quiet the radio carries one line in 8 seconds and the same kind of call is not made twice in 24 s; On is livelier (3 s,
 // 10 s). Nothing is queued: a call that cannot be said when it falls due (the ship's computer spoke in the last 2.5 s, a line is playing, a warning) is dropped. The words are shown
-// bottom left, beside the command strip, with the callsign, and said with voiceSay at prio 0: it never waits behind the computer and never talks over it or a warning.
+// bottom left, just above the FLEET corner and growing upward (card space-game-talk-over-fleet-corner), with the callsign, and said with voiceSay at prio 0: it never waits behind the computer and never talks over it or a warning.
 // Everything here is plain numbers and strings (no Phaser), so tests/campchatter.mjs runs it in Node:
 //   chatterEventOf(C, e)    PURE: which call a sim event is (src/campaign.js events, C.events), or null
 //   chatterNew()            a fresh radio state S: { last, hold, at, q, pilot, line }
 //   chatterOrderDiff(seen, orders)  PURE: the calls the orders given since the last look bring (C.orders counters): copy for a launch, attack, escort or guard, home for a recall
+//   chatterSpot(C, dx)      PURE: where the line stands, { x, bottom }: its left edge (the corner's, less the stroke) and the y its last line ends at, 4 px above the bottom left corner's title row, or above its details while they are open (dx: the corner's step right of an open list)
 //   chatterHear(sc, e)      the scene's one call for each sim event (the computer's lines hold the radio; the rest may be a call); a scene with no radio hears nothing
 //   chatterHold(S, now)     the ship's computer spoke: the radio is quiet for CHATTER.hold ms (the scene calls it for every 'say' event)
 //   chatterPush(S, ev, now) a call is made: true when the radio takes it (mode, the 8 s, the same kind of call, one at a time), it is said CHATTER.events[ev].delay ms later
@@ -115,6 +116,14 @@ function chatterTick(S, now, busy) {
   S.line[p.ev] = i; S.last = now;
   const pl = CHATTER.pilots[S.pilot];
   return { ev: p.ev, call: pl[0], voice: pl[1], text: pool[i] };
+}
+
+// where the line stands (card space-game-talk-over-fleet-corner; Troy, 24 Nov 2026: the fleet's spoken lines were drawn on top of the Q FLEET corner): the text's bottom edge sits CAMP.corner.gap above the bottom left corner's title row,
+// or above its details while they are open (the same rule campCornerNow uses: strength over 0), so a longer line grows upward; the left edge is the corner's less the stroke (CAMP.corner.ink), the 18 px margin of the frames
+function chatterSpot(C, dx) {
+  const K = CAMP.corner, d = typeof CAMP_CORNERS !== 'undefined' ? CAMP_CORNERS.find(c => c.at === 'bl') : null;
+  const open = d && d.rows && C && campCornerStrength(C, d.id) > 0, H = open ? campCornerItemsH(d.rows(C) || []) : 0, G = campCornerGeom('bl', H, dx || 0);
+  return { x: G.title.x - K.ink, bottom: (G.det ? G.det.y : G.title.y) - K.gap };
 }
 
 // said in the pilot's voice at prio 0: voiceSay drops it when anything is playing, and it is never queued; false when there is no voice (the scene shows the words anyway)
