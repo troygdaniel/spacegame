@@ -27,12 +27,14 @@ try {
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await belt(t); await t.clock(); await t.run(700);
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(300); } // the story card, and a briefing after it where there is one
   check('the flight has started', (await j(`${SC}.mode`)) === 'play');
+  // (the units get 1e6 hp: the pilots now start out beside the cruiser and would kill the raiders in the fifteen seconds, which ends the trip as it should; the test kills its target by hand)
+  // (the drone stands at x 1000, not 2200: near the right edge the Fly and Fast buttons of its set mark stand to its LEFT, over the raiders' spot, and a click there is a click on a button)
   // two raiders close together (a stack) and a drone alone, held still so the clicks land where they are drawn
-  await t.ev(`(() => { const C = ${SC}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); const a = campSpawn(C, 'raider', -300, 1500), b = campSpawn(C, 'raider', -296, 1502), d = campSpawn(C, 'drone', 2200, 1700); [a, b, d].forEach(u => { u.nextShot = 1e9; u.hold = true; }); window.__ids = [a.id, b.id, d.id]; return 1; })()`);
+  await t.ev(`(() => { const C = ${SC}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); const a = campSpawn(C, 'raider', -300, 1500), b = campSpawn(C, 'raider', -296, 1502), d = campSpawn(C, 'drone', 1000, 1700); [a, b, d].forEach(u => { u.nextShot = 1e9; u.hold = true; u.hp = 1e6; }); window.__ids = [a.id, b.id, d.id]; return 1; })()`);
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(600);
   check('Tab opens the map', await j(`!!${SC}.mp`));
   const at = (x, y) => j(`(() => { const mp = ${SC}.mp, p = campMapPoint(mp.fit, CAMPMAP.frame, ${x}, ${y}); return { x: p.x, y: p.y }; })()`);
-  const d = await at(2200, 1700);
+  const d = await at(1000, 1700);
   await clickAt(t, d.x, d.y); await t.run(300);
   let st = await j(`({ set: ${SC}.mp.setId, nav: !!${SC}.camp.nav, fly: ${SC}.mp.btnFly.visible, fast: ${SC}.mp.btnFast.visible, dest: ${SC}.mp.dest.text })`);
   check('a click on a drone\'s mark SETS it: marked, the two buttons by it, the line says what it is ("Drone N") and how far, no flight', /^alien:drone-/.test(st.set) && !st.nav && st.fly && st.fast && /Drone \d+/.test(st.dest), JSON.stringify(st));
