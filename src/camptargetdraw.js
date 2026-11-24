@@ -4,9 +4,15 @@
 const CAMPTGT = { color: 0xff6a5a, friend: 0x7dffa0, line: 2, minScreen: 34, pad: 10, arm: 0.42, depth: 8, pulse: 0.35 }; // the colour, the line's width on the SCREEN (px), the bracket's least size on the screen (px across), room round the ship (world px), how much of each side a corner covers, the depth, how far its alpha swings
 const campTgtPulse = () => 1 - CAMPTGT.pulse * (0.5 - 0.5 * Math.cos((typeof performance !== 'undefined' ? performance.now() : 0) / 1000 * 4)); // the slow pulse: the alpha now (the same for every marker, so they breathe together)
 function campTgtCorners(g, v, col, z, al) { // the square marker round a ship: four corners, as big as the ship and its room, never smaller on the screen than CAMPTGT.minScreen px. The hostile target, the friend and the fighters an order went to all use it (card space-game-friendly-display)
-  const K = CAMPTGT, h = Math.max((v.r || 20) + K.pad, K.minScreen / 2 / z), a = h * K.arm;
-  g.lineStyle(K.line / z, col, al);
-  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => { const x = v.x + sx * h, y = v.y + sy * h; g.lineBetween(x, y, x - sx * a, y); g.lineBetween(x, y, x, y - sy * a); });
+  // Each arm is a thin filled rectangle (K.line px on the screen across, the length of the arm), not a line: the arms run along the screen's axes, so the picture is the line's, butt ends and all, and a rectangle goes to the batch
+  // as it is where Phaser makes a path of every line and builds it again at every render. With All pilots the default, three squares are on from the first frame (card space-game-perf-after-keys: 24 lines, 65 KB of garbage a frame).
+  const K = CAMPTGT, h = Math.max((v.r || 20) + K.pad, K.minScreen / 2 / z), a = h * K.arm, w = K.line / z, hw = w / 2;
+  g.fillStyle(col, al);
+  for (let i = 0; i < 4; i++) { // the corners in the order they were always drawn: top left, top right, bottom right, bottom left
+    const sx = i === 0 || i === 3 ? -1 : 1, sy = i < 2 ? -1 : 1, x = v.x + sx * h, y = v.y + sy * h;
+    g.fillRect(sx < 0 ? x : x - a, y - hw, a, w); // the arm along the top or bottom edge, from the corner inwards
+    g.fillRect(x - hw, sy < 0 ? y : y - a, w, a); // the arm along the side
+  }
 }
 function campTgtPaint(s) {
   if (!s || !s.add || !s.camp) return;

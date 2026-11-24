@@ -106,6 +106,7 @@ async function enter(key, opts = {}) {
     await t.clock(); await t.run(600); // settle, stepped from here on
     // out of the story card and into the battle, with the fight of the scenario (a natural run starts the level as it is)
     await t.ev(`(() => { const s = game.scene.getScene('Campaign'); s.hideCard(); s.mode = 'play'; if (${k.keep ? 'true' : 'false'}) { __prep(s.camp); window.__keep = true; campOrder(s.camp, 'launch'); window.__topup(); } return 1; })()`);
+    if (process.env.PERF_PATCH) await t.ev(`(() => { ${process.env.PERF_PATCH}; return 1; })()`); // PERF_PATCH='window.campTgtPaint = () => {}': code run in the page after the fight is set up and before anything is measured, to switch one part of a frame off and see what that part costs (an experiment, nothing is saved)
     return t;
   } catch (e) { await t.close(); throw e; }
 }

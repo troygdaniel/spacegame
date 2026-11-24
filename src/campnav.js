@@ -278,15 +278,16 @@ function campNavWait(C) {
 // ---- the arrow at the screen edge ----
 // dx, dy: where the target is from the middle of the screen (the carrier). Returns { x, y, angle }: on the border of the screen inset by margin, on the line from the middle to the target,
 // slid along the border out of any keep rectangle, and turned to point at the target from where it ended up; null when the target is at the middle.
+const CAMPNAVEDGE_NONE = [], CAMPNAVEDGE_AT = [0, 0]; // no keep rectangles; the spot `at` writes into (one list for every call: the walk below asks for up to five hundred spots, and each used to be a list of its own)
 function campNavEdge(dx, dy, W_, H_, m, keep) {
   if (!dx && !dy) return null;
-  const cx = W_ / 2, cy = H_ / 2, hw = cx - m, hh = cy - m, k = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+  const cx = W_ / 2, cy = H_ / 2, hw = cx - m, hh = cy - m, k = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity), K = keep || CAMPNAVEDGE_NONE;
   let x = cx + dx * k, y = cy + dy * k;
-  const inKeep = (px, py) => (keep || []).some(r => px >= r[0] && px <= r[2] && py >= r[1] && py <= r[3]);
+  const inKeep = (px, py) => { for (let i = 0; i < K.length; i++) { const r = K[i]; if (px >= r[0] && px <= r[2] && py >= r[1] && py <= r[3]) return true; } return false; };
   if (inKeep(x, y)) { // walk round the border, either way, to the nearest free spot
-    const w = 2 * hw, h = 2 * hh, per = 2 * (w + h), at = t => { t = ((t % per) + per) % per; return t < w ? [m + t, m] : t < w + h ? [m + w, m + t - w] : t < 2 * w + h ? [m + w - (t - w - h), m + h] : [m, m + h - (t - 2 * w - h)]; };
+    const w = 2 * hw, h = 2 * hh, per = 2 * (w + h), A = CAMPNAVEDGE_AT, at = t => { t = ((t % per) + per) % per; if (t < w) { A[0] = m + t; A[1] = m; } else if (t < w + h) { A[0] = m + w; A[1] = m + t - w; } else if (t < 2 * w + h) { A[0] = m + w - (t - w - h); A[1] = m + h; } else { A[0] = m; A[1] = m + h - (t - 2 * w - h); } return A; };
     let t0 = 0; { const u = x - m, v = y - m; t0 = Math.abs(v) < 1e-6 ? u : Math.abs(u - w) < 1e-6 ? w + v : Math.abs(v - h) < 1e-6 ? w + h + (w - u) : 2 * w + h + (h - v); }
-    for (let d = 8; d <= per / 2; d += 8) for (const sgn of [1, -1]) { const p = at(t0 + sgn * d); if (!inKeep(p[0], p[1])) { x = p[0]; y = p[1]; d = per; break; } }
+    for (let d = 8; d <= per / 2; d += 8) for (let side = 0; side < 2; side++) { const p = at(t0 + (side ? -d : d)); if (!inKeep(p[0], p[1])) { x = p[0]; y = p[1]; d = per; break; } }
   }
   return { x, y, angle: Math.atan2(cy + dy - y, cx + dx - x) };
 }

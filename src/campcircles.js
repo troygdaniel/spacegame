@@ -9,6 +9,12 @@
 //   campCircleSides(r)            how many corners a circle of radius r gets: 10 to 96, about 3.3 times the square root of r (the edge then strays 0.45 px at most)
 //   campCirclePoints(x, y, r)     the corners, [{ x, y }], in a list that is used again by the next call (read it at once: fillPoints and strokePoints do)
 //   CAMPCIRCLES.scenes            the scenes whose Graphics draw circles this way
+// ROUNDED RECTANGLES (card space-game-perf-after-keys): the same goes for fillRoundedRect and strokeRoundedRect. Phaser makes each one a path of arcs and triangulates it again at every render; the All pilots box (bottom left),
+// which is on from the first frame now, cost 250 KB a frame of garbage and 0.2 ms for its frame alone. In a Campaign scene a rounded rectangle is a polygon of four quarter circles cut into a few corners each (the edge strays
+// under a quarter of a pixel), filled as a fan of triangles and outlined as a closed line.
+//   campRoundRectSides(r)         the corners of one quarter circle (the two ends included are counted once each): 3 to 8
+//   campRoundRectPoints(x, y, w, h, r)   the polygon, [{ x, y }] in a list that is used again by the next call; the radius is held to half the shorter side
+//   campRoundRect(g, x, y, w, h, r)      a filled rounded rectangle on any Graphics, the cheap way; campRoundRectLine(g, x, y, w, h, r) its outline
 const CAMPCIRCLES = { min: 10, max: 96, k: 3.3, scenes: { Campaign: 1, CampHub: 1, CampWarp: 1 }, pool: [], out: [] };
 const campCircleSides = r => Math.max(CAMPCIRCLES.min, Math.min(CAMPCIRCLES.max, Math.ceil(CAMPCIRCLES.k * Math.sqrt(Math.max(0, +r || 0)))));
 function campCirclePoints(x, y, r) {
@@ -24,10 +30,32 @@ function campDisc(g, x, y, r) { // a fan of triangles from the first corner: fil
   return g;
 }
 function campRing(g, x, y, r) { return g && r > 0 ? g.strokePoints(campCirclePoints(x, y, r), true, true) : g; } // one closed line through the corners
+const CAMPROUND = { min: 3, max: 8, k: 1.25, pool: [], out: [] };
+const campRoundRectSides = r => Math.max(CAMPROUND.min, Math.min(CAMPROUND.max, Math.ceil(CAMPROUND.k * Math.sqrt(Math.max(0, +r || 0)))));
+function campRoundRectPoints(x, y, w, h, r) { // clockwise from the top edge's left end; a radius of 0 is the four corners of a plain rectangle
+  const K = CAMPROUND, out = K.out, rr = Math.max(0, Math.min(+r || 0, Math.abs(w) / 2, Math.abs(h) / 2)), n = rr > 0 ? campRoundRectSides(rr) : 1;
+  const cs = [[x + w - rr, y + rr, -Math.PI / 2], [x + w - rr, y + h - rr, 0], [x + rr, y + h - rr, Math.PI / 2], [x + rr, y + rr, Math.PI]]; // each corner's centre and where its quarter turn starts
+  let k = 0; out.length = 0;
+  for (let c = 0; c < 4; c++) for (let i = 0; i <= (rr > 0 ? n : 0); i++) {
+    const p = K.pool[k] || (K.pool[k] = { x: 0, y: 0 }), a = cs[c][2] + (Math.PI / 2) * (n ? i / n : 0);
+    p.x = cs[c][0] + Math.cos(a) * rr; p.y = cs[c][1] + Math.sin(a) * rr; out[k++] = p;
+  }
+  return out;
+}
+function campRoundRect(g, x, y, w, h, r) { // a fan of triangles from the first corner (the shape is convex)
+  if (!g || !(w > 0) || !(h > 0)) return g;
+  const pts = campRoundRectPoints(x, y, w, h, r), a = pts[0];
+  for (let i = 1; i < pts.length - 1; i++) g.fillTriangle(a.x, a.y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+  return g;
+}
+function campRoundRectLine(g, x, y, w, h, r) { return g && w > 0 && h > 0 ? g.strokePoints(campRoundRectPoints(x, y, w, h, r), true, true) : g; }
 (function () { // the two calls of Phaser's Graphics, for the Campaign's scenes only (a page with no Phaser, a test in plain Node, has nothing to change)
   const G = typeof Phaser === 'object' && Phaser && Phaser.GameObjects && Phaser.GameObjects.Graphics; if (!G || G.prototype.__campCircles) return;
   const P = G.prototype, fill0 = P.fillCircle, stroke0 = P.strokeCircle, mine = g => !!(g.scene && g.scene.sys && CAMPCIRCLES.scenes[g.scene.sys.settings.key]);
   P.fillCircle = function (x, y, r) { return mine(this) && r > 0 ? campDisc(this, x, y, r) : fill0.call(this, x, y, r); };
   P.strokeCircle = function (x, y, r) { return mine(this) && r > 0 ? campRing(this, x, y, r) : stroke0.call(this, x, y, r); };
+  const rfill0 = P.fillRoundedRect, rstroke0 = P.strokeRoundedRect, plain = (w, h, r) => typeof r === 'number' && w > 0 && h > 0; // a radius that is an object (one per corner) or a rectangle with no size is Phaser's own
+  P.fillRoundedRect = function (x, y, w, h, r) { return mine(this) && plain(w, h, r === undefined ? 20 : r) ? campRoundRect(this, x, y, w, h, r === undefined ? 20 : r) : rfill0.call(this, x, y, w, h, r); };
+  P.strokeRoundedRect = function (x, y, w, h, r) { return mine(this) && plain(w, h, r === undefined ? 20 : r) ? campRoundRectLine(this, x, y, w, h, r === undefined ? 20 : r) : rstroke0.call(this, x, y, w, h, r); };
   P.__campCircles = true;
 })();
