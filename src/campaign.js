@@ -148,12 +148,11 @@ const CAMP = {
   },
   repair: {                                // a hurt fighter lands to be mended (card space-game-fighter-repair; src/camprepair.js, docs/CAMPAIGN.md "Repair"): the wing's fighters only, the enemy's never do
     kinds: ['fighter'],                    // who breaks off
-    below: 0.3,                            // the share of its hull under which a fighter breaks off and flies home
+    below: 0.25,                           // the share of its hull under which a fighter breaks off and flies home (card space-game-keys2-orders: a badly hurt pilot returns by itself; both numbers are on the N panel)
     within: 15,                            // s of flight (the way home over its top speed): a cruiser farther off than this and the fighter fights on
-    time: 10,                              // s a landed fighter is mended, then it is whole again
-    ore: 5,                                // ore a mend costs (paid when the fighter lands, from the ore and the cash of a sale); card space-game-repair-with-ore: nothing builds ships, ore mends them
+    time: 20,                              // s a landed fighter is mended, then it is whole again and goes out by itself (keys2-orders: there is no Launch and no recall)
+    ore: 0,                                // ore a mend costs (card space-game-repair-with-ore made it 5; keys2-orders: a pilot's return is free, the tuning panel can put a price back); with none to pay it takes `slow` times as long only when a price is set
     slow: 2,                               // times as long a mend takes when there is no ore for it (never refused)
-    fight: 1800,                           // px: an alien this close to the cruiser, or any ship of the wing still out on an order, sends the mended fighter out again (else it stays in the bay)
     sayEvery: 5                            // s between two radio lines of the same kind (four fighters hurt together are one call)
   },
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)

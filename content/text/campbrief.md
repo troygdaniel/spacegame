@@ -67,14 +67,14 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w4 | A miner is jumped on the way. Send a squad. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: say or type "tuck in". |
-| camp.bf.1.1.n3 | The arrows fly the cruiser. {keywlast} {keywnext} pick who, {keyattack} engage, {keyguard} guard, {keyrecall} recall. |
+| camp.bf.1.1.n3 | The arrows fly the cruiser. {keywlast} {keywnext} pick who, {keyengage} gives the order. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 5 raids, then dock ({viadock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
 | camp.bf.1.3.w1 | 3 haulers leave Ceres for Earth, 12 seconds apart. |
 | camp.bf.1.3.w2 | 1 must get home. Each hauler lost costs points. |
-| camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: pick one ({keyflast} {keyfnext}), then {keyguard}. |
+| camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: pick one ({keyflast} {keyfnext}), then {keyengage}. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
 | camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |

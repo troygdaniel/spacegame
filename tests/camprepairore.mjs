@@ -33,7 +33,7 @@ console.log('A. the numbers, and what is gone');
 const M = J('CAMP.mend');
 check('CAMP.mend: the price of a whole hull, the seconds it takes, the price of a point of a protected ship, its seconds, its range, the dock\'s share', M && M.hullOre > 0 && M.hullSecs > 0 && M.wardPoint > 0 && M.wardSecs > 0 && M.range > 0 && M.dockShare > 0 && M.dockShare < 1, JSON.stringify(M));
 check('the whole hull costs what it cost at the dock (60 ore) and the dock takes half', M && M.hullOre === 60 && M.dockShare === 0.5, JSON.stringify(M));
-check('a fighter\'s mend costs a little ore (5), and takes twice as long with none', J('CAMP.repair.ore') === 5 && J('CAMP.repair.slow') === 2, J('[CAMP.repair.ore, CAMP.repair.slow]'));
+check('a fighter\'s mend costs no ore by default (card space-game-keys2-orders: it was 5; the N panel can put a price back, tested below with 5), and with a price and no ore it takes twice as long', J('CAMP.repair.ore') === 0 && J('CAMP.repair.slow') === 2, J('[CAMP.repair.ore, CAMP.repair.slow]'));
 check('the numbers are finite', M && Object.values(M).every(v => typeof v === 'number' && isFinite(v)));
 check('nothing builds ships: no CAMP.build, no campBuild, no campFactory, no campCanBuild, no queue in a new battle', J('typeof CAMP.build') === 'undefined' && J('typeof campBuild') === 'undefined' && J('typeof campFactory') === 'undefined' && J('typeof campCanBuild') === 'undefined' && J('typeof __new().build') === 'undefined');
 check('no Fabricator: not a tech, not an outpost price, not in the dock or the refit', J('typeof CAMP.tech.fabricator') === 'undefined' && J('typeof CAMP.outpost.fabricator') === 'undefined' && !/fabricator/i.test(read('src/camphub.js').replace(/\/\/[^\n]*/g, '')) && !/fabricator/i.test(read('src/campdock.js').replace(/\/\/[^\n]*/g, '')));
@@ -74,16 +74,18 @@ check('a dead cruiser is not mended (and nothing throws)', J('C.carrier.hp') <= 
 console.log('C. the fighters');
 R(`window.__wing = seed => { __new(seed); campOrder(C, 'launch'); for (let i = 0; i < 8; i++) campStep(C, 1); C.events.length = 0; };
   window.__land = () => { const u = campWing(C, 'fighter')[0]; u.hp = u.maxHp * 0.2; for (let i = 0; i < 600 && C.repairs.length === 0; i++) campStep(C, 1 / 30); window.__LANDED = C.t; };`);
+R(`CAMP.repair.ore = 5; window.__T = CAMP.repair.time * 1000;`); // a price put on the N panel: the default is none now
 R(`__wing(); window.__ore0 = C.ore; __land();`);
-check('a hurt fighter lands and is mended as before, and the mend cost 5 ore', J('C.repairs.length') === 1 && J('__ore0 - C.ore') === 5 && Math.abs(J('C.repairs[0].until - __LANDED') - 10000) < 60, J('[C.repairs.length, __ore0 - C.ore, C.repairs[0] && C.repairs[0].until - __LANDED]'));
+check('a hurt fighter lands and is mended as before, and the mend cost 5 ore', J('C.repairs.length') === 1 && J('__ore0 - C.ore') === 5 && Math.abs(J('C.repairs[0].until - __LANDED') - J('__T')) < 60, J('[C.repairs.length, __ore0 - C.ore, C.repairs[0] && C.repairs[0].until - __LANDED]'));
 R(`__wing(); C.ore = 0; C.cash = 0; __land();`);
-check('with no ore it is not refused: it mends, in twice the time (20 s), and nothing goes below zero', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until - __LANDED') - 20000) < 60 && J('C.ore') === 0 && (J('C.cash') || 0) === 0, J('[C.repairs.length, C.repairs[0] && C.repairs[0].until - __LANDED, C.ore]'));
+check('with no ore it is not refused: it mends, in twice the time, and nothing goes below zero', J('C.repairs.length') === 1 && Math.abs(J('C.repairs[0].until - __LANDED') - 2 * J('__T')) < 60 && J('C.ore') === 0 && (J('C.cash') || 0) === 0, J('[C.repairs.length, C.repairs[0] && C.repairs[0].until - __LANDED, C.ore]'));
 R(`__wing(); C.ore = 2; C.cash = 0; __land();`);
-check('with less ore than a mend costs it is not paid at all: slow, and the 2 ore stay', Math.abs(J('C.repairs[0].until - __LANDED') - 20000) < 60 && J('C.ore') === 2);
+check('with less ore than a mend costs it is not paid at all: slow, and the 2 ore stay', Math.abs(J('C.repairs[0].until - __LANDED') - 2 * J('__T')) < 60 && J('C.ore') === 2);
 R(`__wing(); C.ore = 0; C.cash = 40; __land();`);
-check('credits from a sale do not pay for a mend in flight (they are spent at a station: card space-game-credits-apart-from-ore): slow, and the 40 stay', J('C.repairs.length') === 1 && J('C.cash') === 40 && Math.abs(J('C.repairs[0].until - __LANDED') - 20000) < 60, J('[C.cash, C.repairs[0] && C.repairs[0].until - __LANDED]'));
+check('credits from a sale do not pay for a mend in flight (they are spent at a station: card space-game-credits-apart-from-ore): slow, and the 40 stay', J('C.repairs.length') === 1 && J('C.cash') === 40 && Math.abs(J('C.repairs[0].until - __LANDED') - 2 * J('__T')) < 60, J('[C.cash, C.repairs[0] && C.repairs[0].until - __LANDED]'));
 R(`__wing(); CAMP.repair.ore = 0; window.__o = C.ore; __land(); CAMP.repair.ore = 5;`);
-check('a mend priced at 0 on the N panel is free and takes the usual time', J('__o - C.ore') === 0 && Math.abs(J('C.repairs[0].until - __LANDED') - 10000) < 60);
+check('a mend priced at 0 on the N panel is free and takes the usual time', J('__o - C.ore') === 0 && Math.abs(J('C.repairs[0].until - __LANDED') - J('__T')) < 60);
+R(`CAMP.repair.ore = 0;`); // the default again
 
 // ---- D. a ship you protect ----
 console.log('D. a ship you protect');

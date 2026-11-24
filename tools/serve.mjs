@@ -51,7 +51,7 @@ const DEV_CLIENT = `(function () {
   es.addEventListener('rebuilt', function (e) { say(JSON.parse(e.data)); });
   es.onerror = function () { set('dev server stopped', '#ff4d6d'); };
   window.addEventListener('keydown', function (e) {
-    if (e.code !== 'KeyR' || !e.shiftKey || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; // Shift+R only: a plain R is Guard in the game
+    if (e.code !== 'KeyR' || !e.shiftKey || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; // Shift+R only (a plain R is a game key in some scenes)
     var t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     reload();

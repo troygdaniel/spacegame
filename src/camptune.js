@@ -40,6 +40,8 @@ const CAMP_TUNE = {
     // the wing and the ships you escort
     { id: 'fighterhull', group: 'wing', root: 'CAMP', path: 'fighter.hp', min: 6, max: 200, step: 2, unit: '', when: 'next' },
     { id: 'fighterdamage', group: 'wing', root: 'CAMP', path: 'fighter.damage', min: 1, max: 40, step: 1, unit: '', when: 'now' },
+    { id: 'repairbelow', group: 'wing', root: 'CAMP', path: 'repair.below', min: 0.05, max: 0.9, step: 0.05, unit: '', when: 'now' },     // card space-game-keys2-orders: the hull a pilot breaks off at and returns home by itself
+    { id: 'repairtime', group: 'wing', root: 'CAMP', path: 'repair.time', min: 2, max: 90, step: 2, unit: 's', when: 'now' },                  // and the seconds its mend takes before it comes back out whole
     { id: 'convoyspeed', group: 'wing', root: 'CAMP', path: 'convoy.speedScale', min: 0.3, max: 3, step: 0.05, unit: 'x', when: 'next' },
     // the enemy
     { id: 'enemyhull', group: 'foes', root: 'CAMP', path: 'alien.hpScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },

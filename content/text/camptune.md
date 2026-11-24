@@ -46,6 +46,8 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.lasertank | Laser tank size |
 | camp.ui.tune.row.laserrefill | Laser refill at the usual power |
 | camp.ui.tune.row.fighterhull | Fighter hull |
+| camp.ui.tune.row.repairbelow | Pilot goes home at hull |
+| camp.ui.tune.row.repairtime | Pilot's mend, seconds |
 | camp.ui.tune.row.fighterdamage | Fighter damage a shot |
 | camp.ui.tune.row.convoyspeed | Transport and hauler speed |
 | camp.ui.tune.row.enemyhull | Enemy hull (times the mission's) |

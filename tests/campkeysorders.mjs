@@ -4,7 +4,7 @@
 //   A. a mission begins with the three pilots out, one in each squad, guarding the cruiser: nothing is in the bay and nothing is launching; the Launch order has nothing to do
 //   B. a pilot that was recalled and has landed is in the bay; an order to it launches it with that order (Attack, Guard, Escort, Mine), one pilot or all three; Recall to ships that are all home says so
 //   C. a pilot being mended goes out with the order when it is whole
-//   D. the keys: E engage, G guard, R recall act on the picks; T, W, U and I are free; a pilot in the bay can be picked with A and D and takes the order
+//   D. the keys: E acts on the picks (card space-game-keys2-orders made it the one order key: G and R are free now, there is no recall); T, W, U and I are free; a pilot in the bay can be picked with A and D and takes the order
 //   E. Q is the cruiser list (Mine, Dock and repair); the all-squads list is switched off, not removed; the old lists come back with the switch
 // Run: node tests/campkeysorders.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -39,8 +39,8 @@ sec('A. the pilots start out', () => {
 sec('B. an order launches a pilot in the bay', () => {
   g.run('__new(); __home(); window.__r1 = __raider(900, 300); window.__r2 = __raider(-700, 500);');
   check('all three flew home, landed and are in the bay', J('C.bay.fighters') === 3 && J('__out().length') === 0, J('C.bay.fighters') + ' in the bay, ' + J('__out().length') + ' out');
-  const none = J(`campSelOrder(C, 'recall', 'key')`);
-  check('Recall with every pilot home says no fighters are out, and does not launch them', none.ok === false && /no fighters/i.test(none.say) && J('__out().length') === 0, JSON.stringify(none));
+  const none = J(`campSelOrder(C, 'engage', 'key', true)`);
+  check('a dry E with every pilot home says it can be given (the pilots in the bay take it by launching) and launches nothing', none.ok === true && none.formup === true && J('__out().length') === 0 && J('C.bay.fighters') === 3, JSON.stringify(none));
   g.run('C.tgt = __r1.id; C.sel = "";');
   const dry = J(`campWingOrder(C, 'green', 'attack', __r1.id, 'key', true)`);
   check('the dry run says the attack can be given (a pilot in the bay takes it) and launches nothing', dry.ok === true && J('__out().length') === 0 && J('C.bay.fighters') === 3, JSON.stringify(dry));
@@ -66,20 +66,21 @@ sec('C. a pilot being mended', () => {
   check('an order to Wedge while he is mended is taken (he goes out with it when he is whole)', o.ok === true && J(`C.repairs[0].order && C.repairs[0].order.type === 'attack' && C.repairs[0].stay === false`), JSON.stringify(o));
 });
 
-sec('D. E engage, G guard, R recall', () => {
+sec('D. E is the order key; G and R are free', () => {
   g.run('__new(); window.__r1 = __raider(900, 300); window.__t = (() => { const f = campSpawn(C, "freighter", C.carrier.x + 500, C.carrier.y); f.id = "freighter-t1"; C.by[f.id] = f; f.dest = { x: C.carrier.x + 9000, y: C.carrier.y }; f.cname = "Transport"; f.named = true; return f; })(); window.PP = campPanelNew(); window.__k = c => campPanelKey(PP, C, c, 0);');
-  check('the table: E engage, G guard, R recall; none of them is the old letter (T is free), and no key of the Campaign table is T, W, U or I', J(`CAMP_KEYS.attack.k + CAMP_KEYS.guard.k + CAMP_KEYS.recall.k`) === 'EGR' && J(`campKeyIs('recall', 'KeyT') || campKeyIs('guard', 'KeyR')`) === false && J(`Object.values(CAMP_KEYS).every(k => !k.codes.some(c => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(c) >= 0))`) && J(`CAMP_PANELS.panels.every(p => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(p.code) < 0)`));
+  check('the table: E is the order key; G and R are on no key; and no key of the Campaign table is T, W, U or I', J(`CAMP_KEYS.engage.k`) === 'E' && J(`!CAMP_KEYS.recall && !campKeyIs('guard', 'KeyG') && !campKeyIs('engage', 'KeyR')`) === true && J(`Object.values(CAMP_KEYS).every(k => !k.codes.some(c => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(c) >= 0))`) && J(`CAMP_PANELS.panels.every(p => ['KeyT', 'KeyW', 'KeyU', 'KeyI'].indexOf(p.code) < 0)`));
   g.run('C.tgt = __r1.id; C.sel = "all"; C.fsel = "";');
   const e = J(`__k('KeyE')`);
   check('E: all three pilots attack the picked enemy', e.used && e.ran && e.ok && J(`__out().length === 3 && __out().every(u => u.order.type === 'attack' && u.order.target === __r1.id)`), JSON.stringify(e));
-  const gd = J(`__k('KeyG')`);
-  check('G with no friendly picked: all three guard the cruiser', gd.used && gd.ran && gd.ok && J(`__out().every(u => u.order.type === 'guard' && u.order.at.kind === 'carrier')`), JSON.stringify(gd));
+  g.run('C.tgt = "";');
+  const gd = J(`__k('KeyE')`);
+  check('E with nothing picked: all three form up on the cruiser', gd.used && gd.ran && gd.ok && J(`__out().every(u => u.order.type === 'guard' && u.order.at.kind === 'carrier')`), JSON.stringify(gd));
   g.run('C.fsel = __t.id;');
-  const gf = J(`__k('KeyG')`);
-  check('G with a friendly picked (the transport): the pilots guard it', gf.used && gf.ran && gf.ok && J(`__out().every(u => u.order.type === 'guard' && u.order.at.id === __t.id)`), JSON.stringify(gf));
-  const rc = J(`__k('KeyR')`);
+  const gf = J(`__k('KeyE')`);
+  check('E with a friendly picked (the transport): the pilots guard it', gf.used && gf.ran && gf.ok && J(`__out().every(u => u.order.type === 'guard' && u.order.at.id === __t.id)`), JSON.stringify(gf));
+  const rc = J(`__k('KeyR')`), gk = J(`__k('KeyG')`);
   g.run('__run(1)');
-  check('R: all three recall (they fly home)', rc.used && rc.ran && rc.ok && J(`__out().every(u => u.order.type === 'recall')`), JSON.stringify(rc));
+  check('R and G are free: no key used, no order given, the pilots stay out guarding the transport', !rc.used && !rc.ran && !gk.used && !gk.ran && J(`__out().length === 3 && __out().every(u => u.order.type === 'guard' && u.order.at.id === __t.id)`), JSON.stringify([rc, gk]));
   const old = ['KeyT', 'KeyW', 'KeyU', 'KeyI'].map(c => J(`(() => { const r = __k('${c}'); return r.used || r.ran || !!campPanelOpen(PP); })()`));
   check('T, W, U and I do nothing now: no order, no list', old.every(x => x === false), JSON.stringify(old));
   g.run('__home();');
