@@ -106,7 +106,7 @@ g.run(`
 check('at the start of the mission: the enemy held has its red square (4 corners, 2 strokes each) and all three pilots their green ones', J('__strokes().red') === 8 && J('__strokes().green') === 24);
 g.run(`C.t = 30000;`);
 check('after the fade: no square, red or green, on anything', J('__strokes().red') === 0 && J('__strokes().green') === 0);
-check('the target is still held, and its target box and the who box are still shown (their subjects are unchanged)', J('C.tgt') === J('R1.id') && J('campHeldNow(C).unit.id') === J('R1.id') && J('campTdispSubject(C, S.pn, 0) !== null') && J('campFdispSubject(C) !== null'));
+check('the target is still held, and its target box and the FLEET corner\'s selection line are still shown (their subjects are unchanged)', J('C.tgt') === J('R1.id') && J('campHeldNow(C).unit.id') === J('R1.id') && J('campTdispSubject(C, S.pn, 0) !== null') && J("campCornerNow(C, 'fleet').selection !== ''"));
 g.run(`campTgtStep(C, 1);`);
 check('picking the enemy again: its red square is back and the pilots\' are not (they were not picked)', J('__strokes().red') === 8 && J('__strokes().green') === 0);
 g.run(`campSelStep(C, 1);`);
