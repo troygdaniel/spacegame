@@ -29,6 +29,9 @@ try {
   await key('KeyK'); await t.run(900);
   const where = () => j(`game.scene.getScenes(true).map(s => s.scene.key).join()`);
   const seen = new Set();
+  // the Mods screen's R reloads the page once a pack was changed (src/mods.js restart): a mash that gets there and presses R is a player who restarts the game. The stepped clock is gone with the page, so it is set up again from the title and the mash goes on (the save is in localStorage).
+  let reloads = 0;
+  const alive = async fn => { try { return await fn(); } catch (e) { if (!/tick is not defined/.test(String(e && e.message))) throw e; reloads++; await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title after a reload'); await t.clock(); await t.run(900); } };
   if (FLIGHT) {
     for (let i = 0; i < 14 && !(await j(`!!(game.scene.isActive('Campaign') && game.scene.getScene('Campaign').mode === 'play')`)); i++) { await key('Enter', 50); await t.run(600); }
     if (!(await j(`!!(game.scene.isActive('Campaign') && game.scene.getScene('Campaign').mode === 'play')`))) { console.log('  FAIL the flight did not begin'); bad++; }
@@ -37,15 +40,16 @@ try {
   for (let i = 0; i < KEYS; i++) {
     let code = bag[Math.floor(rnd() * bag.length)]; if (FLIGHT && rnd() < 0.02) code = 'Escape'; sent.push(code);
     const hold = (code === 'ArrowUp' || code === 'ArrowLeft' || code === 'ArrowRight' || code === 'Space') && rnd() < 0.5; // the keys that are held in play: the arrows and the turrets
-    await key(code, hold ? 400 : 40);
+    await alive(() => key(code, hold ? 400 : 40));
     if (i % 5 === 4) {
-      await t.run(300);
+      await alive(() => t.run(300));
       const w = await where(); seen.add(w);
       if (!w) { console.log('  FAIL no scene is running after key ' + (i + 1) + ' (' + code + ')'); bad++; break; }
       if (t.errors.length) { console.log('  FAIL the game logged an error after key ' + (i + 1) + ' (' + code + '): ' + t.errors.join(' | ').slice(0, 600)); bad++; break; }
     }
   }
   console.log('  scenes seen: ' + [...seen].join('  |  '));
+  if (reloads) console.log('  (the page was reloaded ' + reloads + ' time' + (reloads === 1 ? '' : 's') + ' by the Mods screen R; the mash went on from the title)');
   if (!bad) console.log('  ok   ' + sent.length + ' keys, seed ' + SEED + ': a scene was always running and the game logged no error');
   else console.log('  keys: ' + sent.join(' '));
 } catch (e) { console.log('  FAIL the run stopped: ' + (e && e.message) + '\n  keys: ' + sent.join(' ')); bad++; }
