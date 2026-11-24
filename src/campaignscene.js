@@ -41,6 +41,7 @@ function campaignStart(s, level) { // the title's K: the ready room (src/camphub
   go(s, 'Campaign', { level: n });
 }
 
+const campShipK = (s, id) => { const sp = s && s.sp && s.sp[id]; return sp && sp._k > 1 ? sp._k : 1; }; // how many times the far view draws a ship's picture up (its least size, src/campzoom.js; 1 at a zoom where it is big enough): what is drawn ON the hull (the cruiser's turret mounts and bay lights) is carried out with it, so it stays where the picture's own turrets and bays are (card space-game-ships-bigger)
 // a tech as the pick and the refit cards list it (card space-game-ready-room-simple): its name and what it changes in plain words with the numbers (src/camphub.js campHubTechChange), else the tech's own sentence
 const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id, P)) || uiText('camp.tech.' + id + '.text')); // P: the pilot's progress, for the numbers that depend on what he has
 
@@ -65,6 +66,7 @@ class Campaign extends Phaser.Scene {
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
     this.pickZoom = null; // the zoom a target sub-list took and the one to give back (src/camppickdraw.js)
+    this.peek = null; this.selPeek = null; // the peek at a picked ship that was off the screen, and the ships picked the frame before (src/campselzoom.js)
     this.tuned = false; // a mission flown with any override on is a tuned run: its score and rank are not kept (update sets it)
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
@@ -97,6 +99,7 @@ class Campaign extends Phaser.Scene {
     this.hud.chat = this.add.text(CAMP.corner.edge - CAMP.corner.ink, CAMP.corner.at.bl.y - CAMP.corner.title.h - CAMP.corner.gap, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setOrigin(0, 1).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, just above the Q W FLEET corner and growing upward (placed each frame by chatterSpot, src/campchatter.js: it was drawn over the corner's title, card space-game-talk-over-fleet-corner)
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campPanelsInstall === 'function') campPanelsInstall(this); // the order lists: W the all-squads orders at the left, P the power list at the right (and O the autopilot, U the dock), hidden until asked for (src/camppanel.js, src/campanelsdraw.js)
+    if (typeof campPanelHold === 'function' && this.pn) campPanelHold(this.pn, (this.time && this.time.now) || 0); // a battle begins on the press that launched it (the briefing's Enter or click): it fires nothing for CAMP.card.lock ms
     if (typeof campFocusInstall === 'function') campFocusInstall(this); // F glides the camera to the selected ship and follows it (src/campfocus.js)
     if (typeof campDragInstall === 'function') campDragInstall(this); // press and drag pans the flight view and the map, with a RECENTRE mark and the way back (src/campdrag.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
@@ -171,7 +174,7 @@ class Campaign extends Phaser.Scene {
     o.forEach(x => x.setScrollFactor(0).setDepth(200));
     this.card = o; this.panel = true;
   }
-  hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }
+  hideCard() { if (this.card) { this.card.forEach(x => x.destroy()); if (typeof campPanelHold === 'function' && this.pn) campPanelHold(this.pn, (this.time && this.time.now) || 0); } this.card = null; this.panel = false; } // a card closing holds the missile key for CAMP.card.lock ms (campPanelHold: the Enter that closed it is not also a missile)
   flash(id) { const sp = this.sp[id]; if (!sp) return; sp.setTint(0xff8a8a); this.time.delayedCall(90, () => { if (sp.active !== false) sp.clearTint(); }); } // the hull took a hit: the carrier blinks red for 90 ms (the blind critic: nothing but a red bar said so)
   say(lines) { if (typeof shipcompSay === 'function') lines.forEach(l => { if (l) shipcompSay(l); }); } // the ship's voice, as much as Settings > Sound allows: each line on its own, because Short speaks only the first sentence or two of what it is given and one joined text lost the line that says what to do (docs/night/ux.md 1)
   // a mission: the BRIEFING (its title, the objectives in plain words, the bonus objectives), the flight, the DEBRIEF (what it earned). A row with no objectives (an old-style level) has neither.
@@ -312,7 +315,7 @@ class Campaign extends Phaser.Scene {
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, X clears the trip (src/campmapdraw.js)
     if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c))) { if (campKeyIs('missile', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never a missile over the map
-    if (!typing && campKeyIs('focus', c)) { if (typeof campFocusPress === 'function') campFocusPress(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
+    if (!typing && campKeyIs('focus', c)) { const pk = typeof campPeekBreak === 'function' && campPeekBreak(this); if (typeof campFocusPress === 'function') campFocusPress(this); if (pk && typeof campPeekHome === 'function') campPeekHome(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
     const now = (this.time && this.time.now) || 0, pr = !typing && typeof campPanelKey === 'function' ? campPanelKey(this.pn, C, c, now) : { used: false }; // the lists and the direct keys (src/camppanel.js): Q W E R and P O U open a list (Up, Down, Enter in it), A D S X the target, J K L ; the power, Enter a missile
     if (pr.ran) { toast(this, pr.say, pr.ok ? '#9fe9ff' : '#ffb454'); if (pr.ok && pr.row === 'balance' && this.gaugeAnim) this.gaugeAnim.flash = this.gaugeAnim.flash.map(() => 1); } // the balance key flashes all three bars, even when the power was even already
     if (pr.used) return;
@@ -327,6 +330,7 @@ class Campaign extends Phaser.Scene {
   shipClick(px, py, button) {
     const C = this.camp; if (!C || this.mode !== 'play' || this.mp || this.leaving || typeof campClickAct !== 'function') return false;
     if (typeof campPanelOpen === 'function' && campPanelOpen(this.pn)) return false; // a list is open: the keys are its, and a click does not reach under it
+    if (typeof campPanelHeld === 'function' && campPanelHeld(this.pn, (this.time && this.time.now) || 0)) return false; // a card has just closed: the click that closed it does nothing in the flight view (campPanelHold)
     const cam = this.cameras.main, w = campClickWorld(cam, px, py), r = campClickAct(this.pn, C, campClickHit(C, w.x, w.y, cam.zoom), button, (this.time && this.time.now) || 0);
     if (r.ran) toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); // the order's answer, as the key's toast
     return !!r.used;
@@ -402,7 +406,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campFarSync === 'function') campFarSync(this);
     if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
-    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] O P or Q W (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
+    if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
+    if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
     if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: Q W FLEET at the bottom left (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)
@@ -466,7 +471,7 @@ class Campaign extends Phaser.Scene {
     sg.clear();
     if (!lit.length) return;
     const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(); // the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
-    C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al); });
+    C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u)); });
   }
   sync() {
     const C = this.camp, seen = {};
@@ -474,7 +479,7 @@ class Campaign extends Phaser.Scene {
       let sp = this.sp[u.id];
       if (!sp) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone; sp = this.sp[u.id] = this.add.image(u.x, u.y, this.texOf(u.kind)).setScale(look.scale).setDepth(u.kind === 'carrier' ? 5 : u.team === 'earth' ? 4 : 3); if (look.tint) sp.setTint(look.tint); }
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
-      if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a small ship is drawn no smaller than CAMPZOOM.view.minShip px (src/campzoom.js)
+      if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, typeof campZoomHull === 'function' ? campZoomHull(u.kind, sp.width * look.scale) : sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a ship is drawn no smaller than its least size (CAMPZOOM.view.leastSmall and leastBig, src/campzoom.js; the hull's length, campZoomHull)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
     this.squadMarks();
@@ -518,14 +523,15 @@ class Campaign extends Phaser.Scene {
     const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
     if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
     const L = campBayLight(C, this.bayAt), bays = campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
-    const pos = ([x, y]) => [c.x + cs * x - sn * y, c.y + sn * x + cs * y];
-    const quad = (x, y, x1, x2, y1, y2) => [[x + x1, y + y1], [x + x2, y + y1], [x + x2, y + y2], [x + x1, y + y2]].map(([a, b]) => [c.x + cs * a - sn * b, c.y + sn * a + cs * b]); // a box in the carrier's frame, turned with it
+    const kc = campShipK(this, c.id); // the picture drawn up by the far view: the boxes and the halo go out with it (card space-game-ships-bigger)
+    const pos = ([x, y]) => [c.x + cs * x * kc - sn * y * kc, c.y + sn * x * kc + cs * y * kc];
+    const quad = (x, y, x1, x2, y1, y2) => [[x + x1, y + y1], [x + x2, y + y1], [x + x2, y + y2], [x + x1, y + y2]].map(([a, b]) => [c.x + cs * a * kc - sn * b * kc, c.y + sn * a * kc + cs * b * kc]); // a box in the carrier's frame, turned with it
     [['launch', bays.launch, -d, 0], ['land', bays.land, 0, d]].forEach(([k, at, x1, x2]) => {
       const lv = L[k]; if (lv <= 0) return;
       at.forEach(([x, y]) => {
         const q = quad(x, y, x1, x2, -w, w), m = quad(x, y, x1, x2, -w * 0.45, w * 0.45);
         g.fillStyle(B.color, B.slot * lv).fillPoints(q.map(([a, b]) => ({ x: a, y: b })), true); g.fillStyle(B.core, B.slot * lv).fillPoints(m.map(([a, b]) => ({ x: a, y: b })), true);
-        const [gx, gy] = pos([x + (k === 'launch' ? 1 : -1), y]); B.halo.forEach(([r, a]) => h.fillStyle(B.color, a * lv).fillCircle(gx, gy, r));
+        const [gx, gy] = pos([x + (k === 'launch' ? 1 : -1), y]); B.halo.forEach(([r, a]) => h.fillStyle(B.color, a * lv).fillCircle(gx, gy, r * kc));
       });
     });
   }
@@ -550,12 +556,13 @@ class Campaign extends Phaser.Scene {
     const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
     if (c.hp > 0) {
       g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
-      C.turrets.forEach(tu => { // the eight turrets, where the sim put them: a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
-        const hot = C.t - tu.shotAt < 120;
+      const kc = campShipK(this, c.id); // the picture drawn up by the far view (card space-game-ships-bigger): the mounts sit where the picture's turrets are, and are drawn as much bigger
+      C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
+        const hot = C.t - tu.shotAt < 120, tx = c.x + (tu.x - c.x) * kc, ty = c.y + (tu.y - c.y) * kc;
         const M = CAMP_MOUNT;
-        mg.fillStyle(0x04101c, 0.9).fillCircle(tu.x, tu.y, M.base); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tu.x, tu.y, hot ? M.hot : M.dot);
-        if (!tu.target) mg.lineStyle(M.width[0], M.stub[1], 0.95).lineBetween(tu.x, tu.y, tu.x + Math.cos(c.rot) * M.stub[0], tu.y + Math.sin(c.rot) * M.stub[0]); // nothing in reach: a steel barrel along the heading, so the mount reads as a gun and not as a lit window
-        if (tu.target) mg.lineStyle(hot ? M.width[1] : M.width[0], hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]), tu.y + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]));
+        mg.fillStyle(0x04101c, 0.9).fillCircle(tx, ty, M.base * kc); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tx, ty, (hot ? M.hot : M.dot) * kc);
+        if (!tu.target) mg.lineStyle(M.width[0] * kc, M.stub[1], 0.95).lineBetween(tx, ty, tx + Math.cos(c.rot) * M.stub[0] * kc, ty + Math.sin(c.rot) * M.stub[0] * kc); // nothing in reach: a steel barrel along the heading, so the mount reads as a gun and not as a lit window
+        if (tu.target) mg.lineStyle((hot ? M.width[1] : M.width[0]) * kc, hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tx, ty, tx + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc, ty + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc);
       });
     }
   }
