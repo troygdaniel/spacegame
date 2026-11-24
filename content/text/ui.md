@@ -133,7 +133,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.no.nomother | The mothership has not come yet. |
 | camp.no.nowing | No ships are out. |
 | camp.no.what | I cannot do that, pilot. |
-| camp.no.nomissiles | The magazine is empty, pilot. It reloads slowly. |
+| camp.no.nomissiles | The magazine is empty, pilot. {keyreload} builds more, for ore. |
 | camp.no.missilewait | The launcher is still cycling. |
 | camp.no.nobig | No big ship in missile range, pilot. |
 | camp.no.range | The mothership is out of missile range, pilot. |
@@ -169,8 +169,6 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.out | OUT |
 | camp.ui.wave | WAVE {n} OF {total} |
 | camp.ui.mother | MOTHERSHIP |
-| camp.ui.missiles | {keymissile}  MISSILES  {n} |
-| camp.ui.missilenext | next in {s} s |
 | camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. {keymissile} fires a homing missile at the target. |
 | camp.tech.shield.name | Shield grid |
 | camp.tech.shield.text | The carrier takes 40 percent less damage. |

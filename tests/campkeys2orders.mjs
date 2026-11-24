@@ -28,7 +28,7 @@ g.run(`
 
 sec('A. the table', () => {
   check('E is the one order key: CAMP_KEYS.engage is E (KeyE); recall is not in the table; attack and guard are only the letter the target boxes read (E, no code: they take no key)', J(`CAMP_KEYS.engage.k`) === 'E' && J(`CAMP_KEYS.engage.codes.join()`) === 'KeyE' && J(`!!CAMP_KEYS.recall`) === false && J(`['attack', 'guard'].every(id => CAMP_KEYS[id].k === 'E' && CAMP_KEYS[id].codes.length === 0)`) === true);
-  check('G and R are on no key of the table (they are free)', J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => c === 'KeyG' || c === 'KeyR'))`) === true);
+  check('G is on no key of the table (it is free); R is the missiles\' (card space-game-missiles-cost-ore: only CAMP_KEYS.reload has it)', J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => c === 'KeyG'))`) === true && J(`Object.keys(CAMP_KEYS).filter(id => CAMP_KEYS[id].codes.some(c => c === 'KeyR')).join()`) === 'reload');
   check('{keyengage} is E in the hints (no text names {keyattack}, {keyguard} or {keyrecall} any more: build-content and the suites read them)', J(`campKeyVar('keyengage')`) === 'E' && J(`campKeyVar('keyrecall')`) === '');
 });
 
@@ -76,7 +76,7 @@ sec('C. a pilot in the bay is launched by E', () => {
 sec('D. no recall', () => {
   g.run('__new(); __pn();');
   const rr = J(`__k('KeyR')`), gg = J(`__k('KeyG')`);
-  check('R and G do nothing in a battle: no key used, no order given, the pilots are still out', !rr.used && !rr.ran && !gg.used && !gg.ran && J('__out().length') === 3 && J('C.bay.fighters') === 0, JSON.stringify([rr, gg]));
+  check('G does nothing in a battle and R is the missiles\' (a full rack: refused in words, no order to the pilots); the pilots are still out', rr.used && rr.ran && rr.row === 'sreload' && !gg.used && !gg.ran && J('__out().length') === 3 && J('C.bay.fighters') === 0, JSON.stringify([rr, gg]));
   check('campSelOrder has no recall verb any more (it asks what to do)', J(`campSelOrder(C, 'recall', 'key').ok`) === false && J('__out().length') === 3);
   g.run('__run(20)');
   check('twenty seconds on, the pilots are still out (nothing sends them home)', J('__out().length') === 3 && J('C.bay.fighters') === 0);

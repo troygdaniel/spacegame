@@ -89,6 +89,7 @@ class Campaign extends Phaser.Scene {
     this.hud = { earth: mid(14, 14, '#9fe9ff'), wave: mid(6, 14, '#ffd37a'), mother: t(W / 2 - 150, this.hudBelow, 14, '#ff9ec0'),
       obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); // the bars' animation: only the power list's rows draw bars now (src/camphud.js; the three gauges are gone, card space-game-layout-hud)
+    this.msp = null; // the missiles in flight, the turrets' ring and mounts: made on the first frame (syncRockets), new for each battle (the old bottom-left count text was the flag)
     if (typeof campCruiserHudMake === 'function') Object.assign(this.hud, campCruiserHudMake(this, uiFont)); // the cruiser's status at the top left, over the S CRUISER title: SHIELD and HULL bars and the ORE line (src/campcruiserhud.js; card space-game-layout-cruiser): five texts in the HUD, so a result card hides them with the rest
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.repair = mid(80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
@@ -305,6 +306,7 @@ class Campaign extends Phaser.Scene {
     if (campKeyCodes('help').indexOf(c) >= 0) { this.openKeys(); return; } // H: every key, on one page
     if (campKeyIs('tune', c)) { if (typeof this.openTune === 'function') this.openTune(); return; } // N: the tuning panel (src/camptunedraw.js), over the battle, which waits
     const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // a word typed into the strip is not a key
+    if (campKeyIs('reload', c) && (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)) return; // R with a modifier is the browser's (Shift+R: the dev reload); plain R builds missiles (card space-game-missiles-cost-ore)
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
@@ -517,12 +519,11 @@ class Campaign extends Phaser.Scene {
       });
     });
   }
-  // the missiles in flight (a body, a flame and a trail of smoke), the turrets (a faint ring of how far they reach, four mounts that flash when one fires) and the magazine count
+  // the missiles in flight (a body, a flame and a trail of smoke) and the turrets (a faint ring of how far they reach, four mounts that flash when one fires)
   syncRockets(ms) {
     const C = this.camp, c = C.carrier, k = CAMP.missile, seen = {}, play = this.mode === 'play';
-    if (!this.hud.missiles) { // made the first time: the missiles in flight, the turrets' reach ring and mounts, the magazine count (bottom left, above the key line)
+    if (!this.msp) { // made the first time: the missiles in flight, the turrets' reach ring and mounts (the magazine count is the status block's now: src/campcruiserhud.js, card space-game-missiles-cost-ore)
       this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
-      this.hud.missiles = this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - CAMP.tdisp.count, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     }
     C.rockets.forEach(m => {
       const ux = Math.cos(m.rot), uy = Math.sin(m.rot);
@@ -547,8 +548,6 @@ class Campaign extends Phaser.Scene {
         if (tu.target) mg.lineStyle(hot ? M.width[1] : M.width[0], hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tu.x, tu.y, tu.x + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]), tu.y + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]));
       });
     }
-    this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
-      + (C.missiles < k.magazine && C.reloadAt ? '    ' + uiText('camp.ui.missilenext', { s: Math.max(0, Math.ceil((C.reloadAt - C.t) / 1000)) }) : ''));
   }
   // the lines of text at the top centre (CAMP.hud.text, src/camphud.js campHudFlow), the wave and the goal first: a line with nothing to say gives its place back, so the ones that have something stand together; Earth's bar goes under its line. this.hudBelow is where the column ends (the mothership and the rival stand under it)
   flowHud(bar) {

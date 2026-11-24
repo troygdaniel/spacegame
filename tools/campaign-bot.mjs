@@ -83,6 +83,7 @@ g.run(`(() => {
     if (!window.__KEYS) return name === 'escort' ? wingEscort(C, arg) : name === 'attack' ? wingAttack(C, arg) : campOrder(C, name, arg);
     if (name === 'escort') return wingEscort(C, arg); // the escort of the old wing is the Yellow squad now (card space-game-cut-escorts: no escort ship): the one squad that goes to the convoy while Red and Green fight; no key sends ONE squad to a convoy (the lists of the squads went, card space-game-bracket-select-orders), so this is the wing order
     if (ROW[name]) return give(C, ROW[name]);
+    if (name === 'reload') return campPanelKey(campPanelNew(), C, 'KeyR', 0); // R builds the rack (card space-game-missiles-cost-ore): a key, not a row of a list
     if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
     if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; if (name === 'attack' && !m) campTgtNearest(C); else aim(C, m ? m.id : ''); return name === 'attack' ? (pilotKey(C, 'red', 'KeyE'), pilotKey(C, 'green', 'KeyE')) : campPanelKey(campPanelNew(), C, 'Enter', 0); }
     return campOrder(C, name, arg);
@@ -108,6 +109,7 @@ g.run(`(() => {
       const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
       if (threat && !st.tuck) { st.tuck = true; ord(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; ord(C, 'convoy', 'carry on'); }
     }
+    if (B.missiles && !fight && Math.round(s * 30) % 90 === 0 && typeof campMissileState === 'function' && campMissileState(C).state === 'ready') ord(C, 'reload'); // missiles cost ore (card space-game-missiles-cost-ore): in a calm moment the rack is built up, as a player does (R); at zero the ship builds one by itself
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') ord(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
