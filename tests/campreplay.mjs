@@ -96,7 +96,7 @@ g.run(`
 `);
 const shown = () => J('__shown(S)'), has = re => shown().some(t => re.test(t));
 g.run(`S.onKey({ code: 'Enter', repeat: false });`); // (opens the missions overlay)
-check('the missions overlay puts the cursor > on the next mission and shows the keys on its last line: Up Down choose   Enter open its briefing, then Launch flies it   X back to the next   Left close', has(/^ {2}\[x\] 1 {2}Belt survey/) && has(/^ {2}\[x\] 2 {2}Ore haulers/) && has(/^> \[>\] 3 {2}The mothership/) && has(/^Up Down {2}choose a mission {5}Enter {2}open its briefing, then Launch flies it {5}X {2}back to the next {5}Left {2}close$/) && has(/^900 pts {2}2 of \d bonus$/), shown().join(' | '));
+check('the missions overlay puts the cursor > on the next mission and shows the keys on its last line: Up Down or click choose   Enter or click again open its briefing, then Launch flies it   X back to next   Left close', has(/^ {2}\[x\] 1 {2}Belt survey/) && has(/^ {2}\[x\] 2 {2}Ore haulers/) && has(/^> \[>\] 3 {2}The mothership/) && has(/^Up Down or click {2}choose {3}Enter or click again {2}open its briefing, then Launch flies it {3}X {2}back to next {3}Left {2}close$/) && has(/^900 pts {2}2 of \d bonus$/), shown().join(' | '));
 g.run(`S.onKey({ code: 'ArrowUp', repeat: false });`);
 check('Up moves the > up to the second mission done', has(/^> \[x\] 2 {2}Ore haulers/) && has(/^ {2}\[>\] 3 {2}The mothership/));
 g.run(`S.onKey({ code: 'KeyR', repeat: false });`);
