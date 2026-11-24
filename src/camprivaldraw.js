@@ -4,7 +4,7 @@
 // The sim says what is true (campRivalState); this file only draws it. A test with a stand-in scene (tests/camprival.mjs H) holds the shapes it draws.
 // The colours: the pirates' ochre for the hull, cyan for the shield (as the cruiser's), amber and ember for a charge, a pale blue when the shield is down. Never red (the aliens') or green (yours).
 const CAMP_RIVAL_DRAW = {
-  hud: { x: W / 2 - 150, w: 300, shieldY: 24, hullY: 38, nameY: 4, phaseY: 53 }, // above the toast, which opens at about y 75
+  hud: { x: W / 2 - 150, w: 300, shieldY: 20, hullY: 34, nameY: 0, phaseY: 49 }, // the places are px UNDER the column of HUD lines at the top centre (scene.hudBelow, card space-game-layout-hud; they were from the screen's top, 4 to 70)
   color: { hull: 0xe8b84a, hullLow: 0xe8873a, shield: 0x7fe9ff, down: 0x6a8aa8, charge: 0xffa83a, warn: 0xffd9a0, line: 0xff8a3a },
   bubble: { grow: 20, alpha: [0.22, 0.4], hit: 0.95, hitMs: 160 },              // the shield bubble: px beyond the hull, how solid (empty, full), how solid on a hit and for how long
   ring: { from: 120, to: 34, w: 3, spin: 2.4 },                                  // the charge ring: it closes from `from` px to `to` px as the charge runs out
@@ -14,17 +14,17 @@ const CAMP_RIVAL_DRAW = {
 const campRivalLive = C => C.ships.filter(u => u.rival && u.hp > 0);
 
 function campRivalHud(scene, g, bar) {
-  const C = scene.camp, D = CAMP_RIVAL_DRAW, H = D.hud;
+  const C = scene.camp, D = CAMP_RIVAL_DRAW, H = D.hud, top = (scene.hudBelow || 0) + 2; // (a stand-in scene in a test has no column: the places are then from the top, 2 px down)
   if (!scene.hud.rivalName) { // made the first time (in `hud`, so a result card hides them with the rest)
     const t = (x, y, size, color) => scene.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
-    scene.hud.rivalName = t(H.x, H.nameY, 14, '#ffd37a'); scene.hud.rivalPhase = t(W / 2, H.phaseY, 16, '#ffa83a').setOrigin(0.5, 0);
+    scene.hud.rivalName = t(H.x, top + H.nameY, 14, '#ffd37a'); scene.hud.rivalPhase = t(W / 2, top + H.phaseY, 16, '#ffa83a').setOrigin(0.5, 0);
   }
   const u = campRivalLive(C)[0];
   if (!u) { scene.hud.rivalName.setText(''); scene.hud.rivalPhase.setText(''); return null; }
   const s = campRivalState(C, u);
-  scene.hud.rivalName.setText(s.name.toUpperCase());
-  bar(H.x, H.shieldY, H.w, s.down ? 0 : s.shield, s.down ? D.color.down : D.color.shield);
-  bar(H.x, H.hullY, H.w, s.hull, s.hull > 0.3 ? D.color.hull : D.color.hullLow);
+  scene.hud.rivalName.setText(s.name.toUpperCase()).setY(top + H.nameY); scene.hud.rivalPhase.setY(top + H.phaseY); // (under the column as it is this frame)
+  bar(H.x, top + H.shieldY, H.w, s.down ? 0 : s.shield, s.down ? D.color.down : D.color.shield);
+  bar(H.x, top + H.hullY, H.w, s.hull, s.hull > 0.3 ? D.color.hull : D.color.hullLow);
   const words = { charge: 'camp.ui.rival.charge', down: 'camp.ui.rival.down', ram: 'camp.ui.rival.ram', run: 'camp.ui.rival.run' }[s.phase], blink = s.phase === 'charge' && s.frac > 0.6 && Math.sin(C.t / 90) > 0;
   scene.hud.rivalPhase.setText(words ? uiText(words) : '').setColor(s.phase === 'down' ? '#9fd0ff' : '#ffa83a').setAlpha(blink ? 0.35 : 1);
   return s;

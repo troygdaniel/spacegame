@@ -1,7 +1,6 @@
 // ---------- Campaign: the order lists, the drawing (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
 // The Phaser half of src/camppanel.js, which says WHAT a list holds, what a key does and what a row says now. Nothing is on the screen until a list's key is pressed: then ONE list opens, a fleet list at the left (Q, or a part of it: W E R)
 // or a ship list at the right (P, or a part of it: O I U), right UNDER the gauges at the top right (card space-game-power-presets: the power list's three rows each carry their system's pip bar, the twin of the gauge's, and the highlighted row frames its gauge).
-//   campPanelPowerHi(s)      the dial (0 SHIELDS, 1 SPEED, 2 LASERS) whose row is highlighted in the open power list, else -1: the scene frames that gauge A row is its words in plain language and, at the right, a word or two of the live state, or the reason it cannot be done now (the row is grey);
 // a row that opens a part of the list shows that part's KEY in a cap at its left and an arrow at its right; the highlighted row has a bright bar; the one in force (a stance, a convoy order) is marked.
 // A list longer than CAMP_PANELS.show rows scrolls with the highlight, and says how many rows are below. The foot of the list names its keys (Up Down, Enter, Left back, Esc), read from the key table.
 // The target (A D S X, with no list open) is shown by the target display in the bottom right corner (src/camptdispscene.js), which took over the target's line that was here (card space-game-target-display).
@@ -35,11 +34,6 @@ function campPanelsInstall(s) {
   L.onPointer = p => campPanelsClick(s, p.x, p.y);
   if (s.input && s.input.on) s.input.on('pointerdown', L.onPointer);
   if (s.events && s.events.once) { const off = () => { try { if (s.input && s.input.off) s.input.off('pointerdown', L.onPointer); } catch (e) { /* gone */ } }; s.events.once('shutdown', off); s.events.once('destroy', off); }
-}
-// the dial whose row is highlighted in the open power list (the scene frames that gauge), else -1
-function campPanelPowerHi(s) {
-  const P = s && s.pn, C = s && s.camp; if (!P || !C || s.mode !== 'play' || typeof campPanelOpen !== 'function' || campPanelOpen(P) !== 'power') return -1;
-  const row = campPanelList(C, 'power')[P.at | 0]; return row && row.pip !== undefined ? CAMP_DIAL_PIPS.indexOf(row.pip) : -1;
 }
 // the list closes at once: a card, the map or the end took the screen
 function campPanelsClose(s) { if (s && s.pn && typeof s.pn === 'object') campPanelClose(s.pn); }

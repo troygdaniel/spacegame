@@ -40,7 +40,7 @@ console.log('A. where things are');
   const G = J(`campPanelsGeometry(campPanelDef('power'), 5)`), Gs = J(`campPanelsGeometry(campPanelDef('ship'), 3)`);
   check('the power list (and the ship list) open right UNDER the gauges: their top is below the block\'s bottom and within 12 px of it, they end 4 px from the right edge, and the gauges are not covered', G.y >= Z.block.y1 + 2 && G.y - Z.block.y1 <= 12 && Gs.y === G.y && G.x + G.w === W - 4 && Z.cells.every(c => c.dial.y1 <= G.y && c.bar.y1 <= G.y), JSON.stringify([G, Z.block]));
   check('the target display is at the bottom right, below the lists; the top right under the lists holds nothing else (the toast, the lines of text and the rival\'s bars are at the middle and the left)', box.y > G.y + G.h && box.y + box.h < J('H') - 40 && box.x + box.w <= W, JSON.stringify([box, G.y + G.h]));
-  check('the lines of text at the left start in the corner (CAMP.hud.text.y 14: card space-game-hud-topleft-trim; they began where the gauges used to end, y 96), the dim plate behind them starts there too', H.text.y === 14 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(0, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
+  check('the lines of text stand at the top centre, the first at y 6 (CAMP.hud.text; card space-game-layout-hud: they were at the top left, the cruiser\'s corner now), the dim plate behind them is centred on the same x and starts there too, and the old gauges\' distance from the right edge is still 8', H.text.y === 6 && H.text.x === W / 2 && J('CAMP.hud.right') === 8 && src('src/campaignscene.js').indexOf('this.add.rectangle(W / 2 - CAMP.hud.plate.w / 2, CAMP.hud.text.y - 6') > 0 && !/CAMP\.hud\.x\b/.test(src('src/campaignscene.js') + src('src/camphud.js')));
 }
 
 {
@@ -67,37 +67,26 @@ console.log('B. the power rows\' pip bars');
   g.run(`S.camp.power.p = [2, 2, 2]; S.camp.power.base = [2, 2, 2]; S.gaugeAnim = campGaugeAnimNew([2, 2, 2]); __paint(5000);`);
 }
 
-console.log('C. both light together');
+console.log('C. the row bars ease with the animation');
 {
-  const colors = J('CAMP_GAUGE.colors');
   g.run(`campPanelClose(S.pn); __open(); __down(1); campPanelKey(S.pn, S.camp, 'Enter', 0);`); // Engines: 1 / 2 / 3, not yet eased
   const shown0 = J('JSON.stringify(S.gaugeAnim.shown)');
   g.run(`campGaugeAnim(S.gaugeAnim, S.camp.power.p, 16); campPanelsPaint(S, 1000);`);
   const flash = J('JSON.stringify(S.gaugeAnim.flash)');
-  const rowSegs = J('__segs(S.pnl.g.log)'), gauge = J(`(() => { const g2 = __mk('g'); campGaugesPaint(g2, null, S.camp, S.gaugeAnim, 1000, -1); return __segs(g2.log || []); })()`);
+  const rowSegs = J('__segs(S.pnl.g.log)');
   const white = list => list.filter(s => s[2] === 0xffffff).length;
-  check('one animation drives both: a frame after the Enter the engines\' flash (and the weapons\', which gave the pip) is on, the shields\' is not and the bars have not finished easing (shown between the old and the new pips); the row\'s bar and the gauge\'s bar are drawn from the same numbers', JSON.parse(flash)[2] > 0.9 && JSON.parse(flash)[0] > 0.9 && JSON.parse(flash)[1] === 0 && JSON.parse(shown0)[2] === 2 && J('S.gaugeAnim.shown[2]') > 2 && J('S.gaugeAnim.shown[2]') < 3 && J('S.gaugeAnim.shown[0] > 1 && S.gaugeAnim.shown[0] < 2'), flash + ' ' + shown0);
-  check('the flash is on the same segment in both: a white fill in the engines\' row bar and a white fill in the engines\' gauge bar (the segment that changed), none on the others\' rows', white(rowSegs.filter(s => s[1] >= J(`campPanelsGeometry(campPanelDef('power'), 5).rowY(1)`) && s[1] < J(`campPanelsGeometry(campPanelDef('power'), 5).rowY(2)`))) >= 1 && white(rowSegs.filter(s => s[1] < J(`campPanelsGeometry(campPanelDef('power'), 5).rowY(0)`) + 24)) === 0 && rowSegs.length >= 12, JSON.stringify([white(rowSegs), rowSegs.length, gauge.length]));
+  const rowY = i => J(`campPanelsGeometry(campPanelDef('power'), 5).rowY(${i})`);
+  check('the animation drives the rows\' bars (the gauges\' own bars beside the dials are gone: card space-game-layout-hud): a frame after the Enter the engines\' flash (and the weapons\', which gave the pip) is on, the shields\' is not and the bars have not finished easing (shown between the old and the new pips)', JSON.parse(flash)[2] > 0.9 && JSON.parse(flash)[0] > 0.9 && JSON.parse(flash)[1] === 0 && JSON.parse(shown0)[2] === 2 && J('S.gaugeAnim.shown[2]') > 2 && J('S.gaugeAnim.shown[2]') < 3 && J('S.gaugeAnim.shown[0] > 1 && S.gaugeAnim.shown[0] < 2'), flash + ' ' + shown0);
+  check('the flash is a white fill in the engines\' row bar (the segment that changed), none in the shields\' row', white(rowSegs.filter(s => s[1] >= rowY(1) && s[1] < rowY(2))) >= 1 && white(rowSegs.filter(s => s[1] >= rowY(0) && s[1] < rowY(0) + 24)) === 0 && rowSegs.length >= 12, JSON.stringify([white(rowSegs), rowSegs.length]));
   g.run(`campGaugeAnim(S.gaugeAnim, S.camp.power.p, 5000);`);
-  check('and they ease to the new pips together: after the easing the engines\' bar shows 3 in the row and the gauge alike (the same A.shown)', J('S.gaugeAnim.shown.join()') === '1,2,3' && J('S.camp.power.p.join()') === '1,2,3' && J('(() => { const g2 = __mk("g"); campGaugesPaint(g2, null, S.camp, S.gaugeAnim, 1000, -1); return __segs(g2.log).filter(s => s[2] === CAMP_GAUGE.colors.speed && s[3] === 1).length; })()') === 3);
+  check('and they ease to the new pips: after the easing the engines\' row bar shows 3 lit segments (the same A.shown)', J('S.gaugeAnim.shown.join()') === '1,2,3' && J('S.camp.power.p.join()') === '1,2,3');
   g.run(`campPanelClose(S.pn); S.camp.power.p = [2, 2, 2]; S.camp.power.base = [2, 2, 2]; S.gaugeAnim = campGaugeAnimNew([2, 2, 2]);`);
 }
 
-console.log('D. the highlighted row frames its gauge');
+console.log('D. the dial frame is gone with the dials');
 {
-  const hi = () => J('campPanelPowerHi(S)');
-  g.run(`campPanelClose(S.pn);`); const none = hi();
-  g.run(`__open();`); const r0 = hi(); g.run(`__down(1);`); const r1 = hi(); g.run(`__down(1);`); const r2 = hi(); g.run(`__down(1);`); const r3 = hi(); g.run(`__down(1);`); const r4 = hi();
-  check('the dial of the highlighted row: none with no list, Shields 0, Engines 1, Weapons 2 (the dials\' order), none on Balance and Emergency', none === -1 && r0 === 0 && r1 === 1 && r2 === 2 && r3 === -1 && r4 === -1, JSON.stringify([none, r0, r1, r2, r3, r4]));
-  g.run(`campPanelClose(S.pn); campPanelKey(S.pn, S.camp, 'KeyP', 0);`); const ship = hi();
-  g.run(`campPanelClose(S.pn); campPanelKey(S.pn, S.camp, 'KeyQ', 0);`); const fleet = hi();
-  g.run(`__open(); S.mode = 'pause';`); const paused = hi(); g.run(`S.mode = 'play'; campPanelClose(S.pn);`);
-  check('no other list names a dial (the ship list, the fleet list), and a paused game names none', ship === -1 && fleet === -1 && paused === -1, JSON.stringify([ship, fleet, paused]));
-  const frame = h => J(`(() => { const g2 = __mk('g'); campGaugesPaint(g2, null, S.camp, S.gaugeAnim, 1000, ${h}); return { frames: g2.log.filter(e => e[0] === 'strokeRoundedRect').map(e => [e[1], e[2], e[3], e[4]]), lines: g2.log.filter(e => e[0] === 'lineBetween').map(e => e.slice(1)) }; })()`);
-  const Z = J('campHudGeom()'), top = J('CAMPPANELS_LOOK.topRight'), f1 = frame(1), f0 = frame(-1), f2 = frame(2);
-  check('hi = -1 draws no frame; hi = 1 draws one round the SPEED dial and its bar (inside its cell, from the dial\'s left to the bar\'s right) and a line from it down to the top of the list; hi = 2 the same round LASERS', f0.frames.length === 0 && f0.lines.filter(l => l[3] === top).length === 0 && f1.frames.length === 1 && f1.frames[0][0] >= Z.cells[1].x0 && f1.frames[0][0] + f1.frames[0][2] <= Z.cells[2].x0 && f1.frames[0][0] + f1.frames[0][2] >= Z.cells[1].bar.x1 && f1.lines.filter(l => l[3] === top).length === 1 && f1.lines.filter(l => l[3] === top)[0][0] === (Z.cells[1].bar.x0 + Z.cells[1].bar.x1) / 2 && f2.frames.length === 1 && f2.frames[0][0] >= Z.cells[2].x0, JSON.stringify([f1, f2]));
   const sc = src('src/campaignscene.js');
-  check('the scene hands the highlighted row\'s dial to the gauges\' paint each frame', /campGaugesPaint\(g, this\.hud\.gauges, C, this\.gaugeAnim, nowMs, typeof campPanelPowerHi === 'function' \? campPanelPowerHi\(this\) : -1\)/.test(sc));
+  check('no dial is framed for the highlighted row any more (card space-game-layout-hud): campPanelPowerHi and the frame\'s painter do not exist, and the scene hands nothing to a gauge paint', J('typeof campPanelPowerHi') === 'undefined' && J('typeof campGaugesPaint') === 'undefined' && !/campGaugesPaint|campPanelPowerHi/.test(sc));
 }
 
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));

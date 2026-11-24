@@ -55,12 +55,9 @@ check('with the pips off a cell is as wide as the dial (CAMP.hud.plain), three o
 check('with the pips on the cell is the old 118 and the block as it was (the bars and the keys are in it)', gOn.cells[1].x0 - gOn.cells[0].x0 === J('CAMP.hud.cell') && gOn.block.x1 - gOn.block.x0 === 3 * J('CAMP.hud.cell'));
 check('the hull bar sits under the shield dial and is as wide as the dial, not as the old dial and bar', gOff.hull.x0 === gOff.cells[0].x0 && gOff.hull.x1 - gOff.hull.x0 === 2 * gOff.cells[0].R);
 check('the dial is whole inside its cell, with room (the glow is a few px outside it)', gOff.cells.every(c => c.dial.x1 <= c.x0 + J('CAMP.hud.plain')));
-// what is drawn: a recorder in place of the Graphics; a power segment is a 10 x 9 rectangle
+// what is drawn: a recorder in place of the Graphics; a power segment is a 10 x 9 rectangle. The dials are not drawn at all now (card space-game-layout-hud); the power list's rows draw bars with campBarDraw
 g.run(`window.__rec = () => { const calls = []; const p = new Proxy({}, { get: (t, k) => k === '__calls' ? calls : (...a) => { calls.push([k, a]); return p; } }); return p; };`);
-const segs = on => { g.run(`campPowerSet(${on})`); return J(`(() => { const C = ${NEW}, gr = __rec(), A = campGaugeAnimNew(C.power.p); campGaugesPaintDirect(gr, null, C, A, 1000, ${on ? 1 : -1}); const c = gr.__calls; return [c.filter(x => x[0] === 'fillRect' && x[1][2] === CAMP.hud.bar.w && x[1][3] === CAMP.hud.bar.h).length, c.filter(x => x[0] === 'strokeRoundedRect' || x[0] === 'fillRoundedRect').length, c.length > 100]; })()`); };
-const sOff = segs(false), sOn = segs(true); g.run('campPowerSet(false)');
-check('painted with the pips off there is no bar of power segments and no frame round a dial (and the dials are drawn)', sOff[0] === 0 && sOff[1] === 0 && sOff[2] === true, JSON.stringify(sOff));
-check('and with them on there are bars (4 segments a dial, each drawn dark and the lit ones again: at least 12 rectangles) and the frame of the highlighted dial', sOn[0] >= 12 && sOn[1] >= 2, JSON.stringify(sOn));
+check('the dials and their frame are not drawn any more (no painter is left), and a bar of power segments is still drawn by the power list\'s rows: 4 segments, each dark with the lit ones over them', J('typeof campGaugesPaintDirect') === 'undefined' && J('typeof campGaugesPaint') === 'undefined' && J(`(() => { const gr = __rec(), C = ${NEW}, Z = campHudGeom().cells[2]; campBarDraw(gr, Z, 2, 0, 0xffffff); return gr.__calls.filter(x => x[0] === 'fillRect').length; })()`) >= 4 + 2);
 check('the dials say what they said: shields 150, speed 0, lasers 100', J(`campGauges(${NEW}).map(d => d.big).join()`) === '150,0,100' && J(`campGauges(${NEW}).map(d => d.label).join()`) === 'SHIELDS,SPEED,LASERS');
 
 console.log('F. the words');

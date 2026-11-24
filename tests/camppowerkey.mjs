@@ -57,7 +57,7 @@ console.log('C. the warp blink');
 
 console.log('D. the words');
 {
-  check('the key line names S Cruiser and nothing else of the lists (no ship list, no power, no autopilot, no I, no W or U)', J('campPanelKeyLine()') === 'S Cruiser    ' && J(`campKeyLine()`).startsWith('S Cruiser        Arrows fly'));
+  check('the table names S Cruiser and nothing else of the lists (no ship list, no power, no autopilot, no I, no W or U) and the bottom line is the flying keys only', J('campPanelKeyLine()') === 'S Cruiser    ' && J(`campKeyLine()`) === 'Arrows fly  Space turrets  Enter missile  Tab Map  H Keys');
   check('{powerkey}, {shipkey} and {navkey} say nothing (no key); {viaemergency} and {viablink} are S (the cruiser list\'s rows) and so is {yardkey} (the dock list is a row of the cruiser list)', J(`['powerkey', 'shipkey', 'viaemergency', 'viablink', 'navkey', 'yardkey'].map(campKeyVar).join('|')`) === '||S|S||S');
   check('the H page: one line for the cruiser list (S) and none for the power list, the autopilot, the ship list or the dock list (a row of the cruiser list)', J(`controlsGroup('panels').rows.slice(0, 1).map(r => r.k.join(' ') + ':' + r.t).join('|')`) === 'S:Cruiser: fly, mine, repair, shields' && !J(`controlsGroup('panels').rows.some(r => /ship orders|^Power:|^Autopilot:/i.test(r.t))`) && J(`controlsGroup('panels').rows.slice(0, 1).every(r => r.k.join(' ').length + 3 + r.t.length <= 43)`));
   check('the pause card says S the cruiser (fly, mine, dock, shields), and no power, no autopilot, no ship orders', J(`uiText('camp.ui.pausepanels')`).includes('S the cruiser: fly, mine, dock, repair, shields.') && !/power|autopilot|ship orders/.test(J(`uiText('camp.ui.pausepanels')`)));

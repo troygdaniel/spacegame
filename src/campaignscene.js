@@ -81,14 +81,16 @@ class Campaign extends Phaser.Scene {
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE');
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
-    this.hudBack = this.add.rectangle(0, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the left HUD column: a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
+    this.hudBack = this.add.rectangle(W / 2 - CAMP.hud.plate.w / 2, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the HUD column at the top centre (it was at the top left until card space-game-layout-hud): a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
     this.keysBack = this.add.rectangle(W / 2, H - 35, W, 26, 0x02060d, 0.75).setScrollFactor(0).setDepth(99); // a thin strip under the bottom key line: a ship or a rock drawn through 'Tab Map  H Keys' was hard to read (card space-game-campaign-panels-ui)
     const t = (x, y, size, color) => this.add.text(x, y, '', uiFont(size, color, { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
-    this.hud = { ore: t(campHudGeom().ore.x, campHudGeom().ore.y, 14, '#ffd37a').setOrigin(1, 0), earth: t(24, 14, 14, '#9fe9ff'), wave: t(24, 36, 14, '#ffd37a'), mother: t(W / 2 - 150, 18, 14, '#ff9ec0'), // ore: under the speed and laser dials; the lines at the top left (CAMP.hud.text) are put by flowHud, each where the lines above it end (card space-game-hud-topleft-trim: the BAY, BLINK and AUTOPILOT lines are gone)
-      obj: t(24, 58, 14, '#ffffff'), post: t(24, 102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
-    if (typeof campGaugesMake === 'function') { this.hud.gauges = campGaugesMake(this, uiFont); this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); } // the three gauges (card space-game-systems-gauges, src/camphud.js): SHIELDS (the hull under it), SPEED, LASERS, a bar of power segments beside each; they replace the W S E pips
+    const mid = (y, size, color) => t(CAMP.hud.text.x, y, size, color).setOrigin(0.5, 0); // the lines of the HUD column stand at the top centre (CAMP.hud.text), each centred on x; flowHud puts each one where the lines above it end (card space-game-layout-hud: wave, goal, Earth, repair and outpost lines moved from the top left, which is the cruiser's corner now; the three gauges and the ore line are gone)
+    this.hudBelow = CAMP.hud.text.y + 2 * CAMP.hud.text.pitch; // where the column ends: the mothership's name and bar and the rival's bars stand under it (flowHud keeps it)
+    this.hud = { earth: mid(14, 14, '#9fe9ff'), wave: mid(6, 14, '#ffd37a'), mother: t(W / 2 - 150, this.hudBelow, 14, '#ff9ec0'),
+      obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
+    this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); // the bars' animation: only the power list's rows draw bars now (src/camphud.js; the three gauges are gone, card space-game-layout-hud)
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
-    this.hud.repair = t(24, 80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
+    this.hud.repair = mid(80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
     this.hud.chat = this.add.text(24, H - 112, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, beside the command strip (which starts at x 368)
     this.input.keyboard.on('keydown', e => this.onKey(e));
@@ -398,11 +400,10 @@ class Campaign extends Phaser.Scene {
   }
   arrowKeep() { return CAMP.nav.arrow.keep; } // the places the edge arrow's label keeps out of: the table's (the target display's corner is one of them: its box, campTdispBox, is inside it)
   hudHides() { return ['won', 'lost', 'debrief', 'refit', 'pick', 'end'].indexOf(this.mode) >= 0; } // the modes of a result card
-  hudShow(on) { // the HUD's texts and gauges: off behind a result card, back when it goes; the arrow's own label is set by paintHud, so it is only hidden here
+  hudShow(on) { // the HUD's texts: off behind a result card, back when it goes; the arrow's own label is set by paintHud, so it is only hidden here
     if (this.hudOn === on) return; this.hudOn = on;
     if (!on && this.hudG) this.hudG.clear();
     Object.keys(this.hud || {}).forEach(k => { const t = this.hud[k]; if (t && t.setVisible && (!on || k !== 'arrow')) t.setVisible(on); });
-    if (this.hud && this.hud.gauges && typeof campGaugesVisible === 'function') campGaugesVisible(this.hud.gauges, on);
     if (this.keysBack && this.keysBack.setVisible) this.keysBack.setVisible(on);
     if (this.hudBack && this.hudBack.setVisible) this.hudBack.setVisible(on);
   }
@@ -546,29 +547,27 @@ class Campaign extends Phaser.Scene {
     this.hud.missiles.setColor(C.missiles > 0 ? '#ffb454' : '#ff4d6d').setText(uiText('camp.ui.missiles', { n: C.missiles })
       + (C.missiles < k.magazine && C.reloadAt ? '    ' + uiText('camp.ui.missilenext', { s: Math.max(0, Math.ceil((C.reloadAt - C.t) / 1000)) }) : ''));
   }
-  // the lines of text under the gauges (CAMP.hud.text, src/camphud.js campHudFlow): a line with nothing to say gives its place back, so the ones that have something stand together; Earth's bar goes under its line
+  // the lines of text at the top centre (CAMP.hud.text, src/camphud.js campHudFlow), the wave and the goal first: a line with nothing to say gives its place back, so the ones that have something stand together; Earth's bar goes under its line. this.hudBelow is where the column ends (the mothership and the rival stand under it)
   flowHud(bar) {
-    const C = this.camp, H = this.hud, ids = ['earth', 'wave', 'obj', 'repair', 'post'];
+    const C = this.camp, H = this.hud, ids = ['wave', 'obj', 'earth', 'repair', 'post'];
     if (typeof campHudFlow !== 'function') return;
     const F = campHudFlow(ids.map(id => ({ id, show: !!(H[id] && H[id].text), h: id === 'earth' ? 12 : 0 })));
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
-    if (C.earth && F.ys.earth !== undefined) bar(24, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
+    if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
+    this.hudBelow = F.bottom;
+    if (H.mother && H.mother.setY) H.mother.setY(F.bottom + 2);
     if (this.hudBack && this.hudBack.setSize) this.hudBack.setSize(CAMP.hud.plate.w, Math.max(CAMP.hud.plate.min, F.bottom + CAMP.hud.plate.pad - (CAMP.hud.text.y - 6))); // the dim plate under the column follows its length
   }
-  // the gauges, the goal's arrow and the lines of text (the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
+  // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
     g.clear();
-    if (this.hud.gauges && this.gaugeAnim) { // the three gauges and their power bars (src/camphud.js): the dials, the hull bar under the shields, the bars easing to the pips
-      const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs;
-      campGaugesPaint(g, this.hud.gauges, C, this.gaugeAnim, nowMs, typeof campPanelPowerHi === 'function' ? campPanelPowerHi(this) : -1); // (the dial of the highlighted row of the power list gets a frame: src/campanelsdraw.js)
-    }
+    if (this.gaugeAnim) { const nowMs = performance.now(); campGaugeAnim(this.gaugeAnim, C.power.p, Math.min(100, nowMs - (this.gaugeAt || nowMs))); this.gaugeAt = nowMs; } // the bars of the power list's rows ease to the pips (src/campanelsdraw.js)
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
-    if (m) bar(W / 2 - 150, 36, 300, m.hp / m.maxHp, 0xc9a0ff);
+    if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
     const waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
-    if (this.hud.ore) this.hud.ore.setColor(C.ore >= CAMP.ore.cap ? '#ffb454' : '#ffd37a').setText(uiText('camp.ui.ore') + '  ' + Math.floor(C.ore) + '/' + CAMP.ore.cap + (C.cash > 0 ? '   ' + uiText('camp.ui.cash') + '  ' + Math.floor(C.cash) : '') + (C.mends.length ? '  +' + C.mends.length : '')); // the ore, under the shield gauge (+n: ships being mended) and the credits beside it when there are some (what the outposts paid, and what the save brought: card space-game-credits-apart-from-ore) (a stand-in scene in a test may have no ore text)
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
     this.hud.wave.setText(uiText('camp.ui.wave', { n: wc.n, total: wc.total }));
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
