@@ -44,7 +44,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.missilecount | Missiles at the start |
 | camp.ui.tune.row.missilereload | Missile reload time |
 | camp.ui.tune.row.lasertank | Laser tank size |
-| camp.ui.tune.row.laserrefill | Laser refill at the usual power |
+| camp.ui.tune.row.laserrefill | Laser refill |
 | camp.ui.tune.row.fighterhull | Fighter hull |
 | camp.ui.tune.row.fighterdamage | Fighter damage a shot |
 | camp.ui.tune.row.convoyspeed | Transport and hauler speed |

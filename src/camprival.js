@@ -1,5 +1,5 @@
 // ---------- Campaign: the rival ship (card space-game-rival-duel; Troy, 21 Nov 2026) ----------
-// An enemy ship the cruiser's size, with a hull and a shield of its own, that hunts the cruiser and duels it in readable phases, so power management matters. The pure half (no Phaser, no page;
+// An enemy ship the cruiser's size, with a hull and a shield of its own, that hunts the cruiser and duels it in readable phases, so the fight has to be flown. (It was written for power management, which went in card space-game-power-removed: the advice in the comments below that says "power to X" is gone from the ship's lines.) The pure half (no Phaser, no page;
 // tests/camprival.mjs runs it in Node). Every number is CAMP.rival in src/campaign.js, a kind of it is a row, so there can be several rivals (the first, and for now the only, is the pirate leader).
 // THE PHASES (a cycle; each is announced on the screen and by the ship's voice, and fires a cue):
 //   stalk    it circles the cruiser at `hold` px (340: on the screen and in the turrets' reach) and shoots a little. After `first` s (then `stalk` s after each ram or run) it begins to charge.

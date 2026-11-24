@@ -1,4 +1,6 @@
 // ---------- The Campaign's three gauges (card space-game-systems-gauges; Troy, 21 Nov 2026) ----------
+// PLAIN READOUTS since card space-game-power-removed (Troy, 23 Nov 2026: "he never uses it"): while CAMP.power.on is false (the game) each dial stands alone: no bar of power segments beside it, no key under it, no frame from a power list, and
+// the cell is CAMP.hud.plain wide, not CAMP.hud.cell. Everything below about bars, pips and J K L is the code kept behind that switch.
 // Top RIGHT of the Campaign HUD (they were at the top left until card space-game-power-presets: the ship lives on the right hand, and the P list and its power sub-list open right under them), in the look of Long Haul's dials (src/hud.js hudGauge): SHIELDS (the hull is a thin bar under it), SPEED and LASERS. Beside each dial is a bar of power segments, the pips of
 // the system that feeds it (the shields' for SHIELDS, the engines' for SPEED, the weapons' for LASERS), lit as they are given and animated as power moves, like X-Wing. The bars replace the small W S E pips.
 // The ship's power keys (J K L; there is no SYSTEMS panel since card space-game-two-hands-keys): the direct keys J K L (a pip to the shields, the engines, the weapons: the order of the dials, and each key is printed under its bar) change the same numbers. Where things are is the table CAMP.hud (src/campaign.js); this file is the numbers
@@ -10,7 +12,7 @@
 //   campGaugeAnim(A, pips, ms)   the bars' animation: the lit share of each bar eases to its pips, a flash runs when they change;  campGaugeAnimNew(pips) starts one
 //   campPowerKey(C, code)    a direct key: J shields, K engines, L weapons (the dials' order; the semicolon's balance key is gone): the same orders the strip gives; { used, ran, ok, say, sys }
 // the code -> system of the keys of the SHIP panel's power rows (J K L in the table today)
-function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; }
+function campPowerKeys() { const k = {}; ['shields', 'engines', 'weapons'].forEach(id => CAMP_KEYS[id].codes.forEach(c => { k[c] = CAMP_KEYS[id].sys; })); return k; } // (no keys while the pips are off: CAMP.power.on)
 const CAMP_DIAL_PIPS = [1, 2, 0]; // the pips of the shields, the engines, the weapons (indexes into C.power.p, which is weapons, shields, engines): what dial 0, 1 and 2 show, left to right
 const CAMP_GAUGE = {
   colors: { shields: 0x7fe9ff, speed: 0x6dff9c, lasers: 0xffb454 },   // the dial and its bar: the colours the W S E pips had (weapons amber, shields cyan, engines green)
@@ -39,13 +41,13 @@ function campHullBar(C) {
 
 // ---- the places (pure) ----
 function campHudGeom() {
-  const H = CAMP.hud, R = H.r + 9, M = CAMP.power.max, bw = M * H.bar.w + (M - 1) * H.bar.gap, Wd = typeof W === 'number' ? W : 1280, gx = Wd - H.right - 3 * H.cell; // the block of three cells ends H.right px from the screen's right edge
+  const H = CAMP.hud, R = H.r + 9, M = CAMP.power.max, bw = M * H.bar.w + (M - 1) * H.bar.gap, Wd = typeof W === 'number' ? W : 1280, cw = CAMP.power.on ? H.cell : H.plain, gx = Wd - H.right - 3 * cw; // the block of three cells ends H.right px from the screen's right edge; a cell is the dial and its bar, or the dial alone while the pips are off (card space-game-power-removed)
   const cells = [0, 1, 2].map(i => {
-    const x0 = gx + i * H.cell, cx = x0 + R, cy = H.y + R, bx = cx + R + 6, by = Math.round(cy - H.bar.h / 2);
+    const x0 = gx + i * cw, cx = x0 + R, cy = H.y + R, bx = cx + R + 6, by = Math.round(cy - H.bar.h / 2);
     return { x0, cx, cy, R, dial: { x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R }, bar: { x0: bx, y0: by, x1: bx + bw, y1: by + H.bar.h }, key: { x: bx + bw / 2, y: by + H.bar.h + 9 } };
   });
   const hy = H.y + H.hullBar.y;
-  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: cells[0].bar.x1, y1: hy + H.hullBar.h }, bottom: H.text.y, ore: { x: gx + 3 * H.cell, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * H.cell, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } };
+  return { cells, hull: { x0: cells[0].x0, y0: hy, x1: CAMP.power.on ? cells[0].bar.x1 : cells[0].x0 + 2 * R, y1: hy + H.hullBar.h }, bottom: H.text.y, ore: { x: gx + 3 * cw, y: H.ore.y }, block: { x0: gx, y0: H.y, x1: gx + 3 * cw, y1: H.y + H.hullBar.y + H.hullBar.h + 6 } }; // (the hull bar is under the shield dial: as wide as the dial and its bar, or the dial alone)
 }
 // the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none
 function campHudFlow(items) {
@@ -136,10 +138,10 @@ function campGaugesPaint(g, T, C, A, now, hi) { // hi: the dial (0 SHIELDS, 1 SP
   const order = CAMP_DIAL_PIPS; // the pips of the shields, the engines, the weapons: the order of the dials
   Z.cells.forEach((cell, i) => {
     const d = D[i]; campDialDraw(g, cell, d, now);
-    campBarDraw(g, cell, A.shown[order[i]], A.flash[order[i]], i === 0 && emer ? 0xffffff : d.color);
+    if (CAMP.power.on) campBarDraw(g, cell, A.shown[order[i]], A.flash[order[i]], i === 0 && emer ? 0xffffff : d.color); // the bar of power segments: only while the pips are on (CAMP.power.on; card space-game-power-removed: plain dials)
     if (T && T.n) { T.n[i].setText(d.big).setColor(d.warn ? '#ff4d6d' : '#ffffff'); T.l[i].setText(d.label); T.k[i].setText(d.key); }
   });
-  if (hi >= 0 && hi <= 2 && Z.cells[hi]) { // the dial and its bar of the highlighted row of the power list: one frame round both, and a line down to the list that opens under the gauges (drawn before the hull bar, which is over it)
+  if (CAMP.power.on && hi >= 0 && hi <= 2 && Z.cells[hi]) { // the dial and its bar of the highlighted row of the power list: one frame round both, and a line down to the list that opens under the gauges (drawn before the hull bar, which is over it)
     const c = Z.cells[hi], col = D[hi].color, pulse = 0.75 + 0.25 * Math.sin(now / 180);
     const fx = c.x0, fy = c.dial.y0 - 3, fw = c.bar.x1 + 3 - c.x0, fh = c.dial.y1 - c.dial.y0 + 14, bx = (c.bar.x0 + c.bar.x1) / 2, top = typeof CAMPPANELS_LOOK === 'object' ? CAMPPANELS_LOOK.topRight : 104;
     g.fillStyle(col, 0.1).fillRoundedRect(fx, fy, fw, fh, 6); g.lineStyle(2, col, pulse).strokeRoundedRect(fx, fy, fw, fh, 6); g.lineStyle(2, col, pulse).lineBetween(bx, fy + fh, bx, top);
