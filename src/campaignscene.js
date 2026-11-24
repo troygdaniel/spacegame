@@ -386,8 +386,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campConvoySync === 'function') campConvoySync(this); // the shield bubble and the links of the ships that are tucked in (src/campconvoyscene.js)
     if (typeof campFarSync === 'function') campFarSync(this);
     if (typeof campSightSync === 'function') campSightSync(this); // the edge arrows of the hostiles that are off the screen and the pulse of a group just seen (src/campsightscene.js) // the names of the places and the escorted ships when the view is out so far that the world's labels are specks (src/campfarscene.js)
-    if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot A D picked and the friendly , . picked (src/camptargetdraw.js)
-    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] , . or A D (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
+    if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot A D picked and the friendly O P picked (src/camptargetdraw.js)
+    if (typeof campSelZoom === 'function') campSelZoom(this); // a ship selected with [ ] O P or A D (one pilot) zooms the view out until it and the cruiser are on the screen (src/campselzoom.js)
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
     if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the who display in the bottom left corner: the pilot A or D picked, or All pilots (card space-game-friendly-display; the same file)
