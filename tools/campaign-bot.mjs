@@ -47,6 +47,9 @@ const BOTS = {
   plains: { name: 'plains', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true },                  // plain, and it sends the Red squad to the miner of 1.1 when the radio says pirates are on him (an ordinary squad order)
   plainm: { name: 'plainm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, mineAll: true },          // plain, and the wing keeps mining while any rock is left, goal met or not (a player who wants the cash: 1.2 in the real game, card space-game-tune-l1-notes)
   plainu: { name: 'plainu', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, noroute: true },            // plain, and it never scouts the fork: the default lane (what a player who ignores the new tools meets; card space-game-fleet-command-tune)
+  plaini: { name: 'plaini', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'ignore' },              // plain, but the miner's call of 1.1 is ignored: no pilot is sent at the pirates on him
+  plaing: { name: 'plaing', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'guard' },               // plain, and at the miner's call of 1.1 one pilot (Kara) is sent to guard the miner
+  plaina: { name: 'plaina', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'all' },                 // plain, and at the miner's call all three pilots are sent at the pirates on him
   thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp' },   // a player who directs the fleet: helps the miner and uses the convoy orders (and scouts the fork)
   thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp', noroute: true } // the same on the default lane
 };
@@ -77,8 +80,19 @@ g.run(`(() => {
   const pilotKey = (C, sq, key) => { const P = campPanelNew(); C.sel = ''; window.__KEYN = (window.__KEYN | 0) + 1; for (let k = 0; k < 8 && C.sel !== 'pilot:' + sq; k++) campPanelKey(P, C, 'KeyQ', 0); const r = C.sel === 'pilot:' + sq ? campPanelKey(P, C, key, 0) : { ok: false, ran: false, say: 'no such pilot out: ' + sq }; C.sel = ''; return r; };
   const ROW = { launch: 'launch', escort: 'escort', mine: 'fmine', recall: 'frecall' }; // the whole-wing rows left Q (card space-game-squad-tint): the bot's Launch, Mine and Recall are the All squads list's (W)
   // the wing is split as a player splits it (card space-game-cut-escorts: there is no escort ship): the Yellow squad (two ships) is the escort, going to the convoy; Red and Green (six) are the fighters that Attack goes to
+  // while the pirates of the miner's call live, the pilots an answer sent to him stay on it: the bot's attack order every few seconds leaves them be ('guard': Kara; 'all': everyone; 'ignore': nobody goes, and
+  // the attack order is not given at those pirates at all). callHeld is the groups held now; callOnly is true while the only pirates alive are the call's
+  let callHeld = {}, callOnly = false;
+  const callTick = (C, B) => { callHeld = {}; callOnly = false; const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || typeof B.help !== 'string' || !C.waves[w].started) return;
+    const foes = campAliens(C), mine = foes.filter(u => u.wave === w); if (!mine.length) return; callOnly = mine.length === foes.length;
+    if (B.help === 'guard') callHeld = { green: 1 }; else if (B.help === 'all') callHeld = { red: 1, green: 1, yellow: 1 }; };
+  // the answer to the miner's call of 1.1 (card l1-miner-choice): help: true sends Wedge at the pirates (as it always did), 'guard' sends one pilot (Kara) to fly beside the miner, 'all' sends all three at the pirates
+  const minerAnswer = (C, how, foe) => { const w = C.L.waves.find(x => x.beat === 'distress'), m = w && C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === w.victim);
+    if (how === 'ignore' || how === 'guard') campWingOrder(C, null, 'guard', null, 'bot'); // the pilots form up on the cruiser (the bot's standing attack order would send them at anything seen): nobody goes, or only the one sent next
+    if (how === 'ignore') return null;
+    return how === 'guard' && m ? campWingOrder(C, 'green', 'guard', m.id, 'bot') : how === 'all' ? campWingOrder(C, null, 'attack', foe.id, 'bot') : campWingOrder(C, 'red', 'attack', foe.id, 'bot'); };
   const wingEscort = (C, arg) => { const t = campFind(C, arg), cv = t && t.kind === 'convoy' ? C.by[t.id] : campNearest(campConvoys(C), C.carrier); return cv ? campWingOrder(C, 'yellow', 'escort', cv.id, 'bot') : campOrder(C, 'escort', arg); };
-  const wingAttack = (C, arg) => { let r = null; ['red', 'green'].forEach(k => { const x = campWingOrder(C, k, 'attack', arg === 'mothership' ? 'mother' : null, 'bot'); if (x.ok || !r) r = x; }); return r.ok || campWing(C, 'fighter').length === 0 ? r : campOrder(C, 'attack', arg); };
+  const wingAttack = (C, arg) => { let r = null; ['red', 'green'].filter(k => !callHeld[k]).forEach(k => { const x = campWingOrder(C, k, 'attack', arg === 'mothership' ? 'mother' : null, 'bot'); if (x.ok || !r) r = x; }); if (!r) return { ok: false }; /* every squad it orders is held at the miner's call */ return r.ok || campWing(C, 'fighter').length === 0 ? r : campOrder(C, 'attack', arg); };
   const ord = (C, name, arg) => {
     if (!window.__KEYS) return name === 'escort' ? wingEscort(C, arg) : name === 'attack' ? wingAttack(C, arg) : campOrder(C, name, arg);
     if (name === 'escort') return wingEscort(C, arg); // the escort of the old wing is the Yellow squad now (card space-game-cut-escorts: no escort ship): the one squad that goes to the convoy while Red and Green fight; no key sends ONE squad to a convoy (the lists of the squads went, card space-game-bracket-select-orders), so this is the wing order
@@ -90,7 +104,8 @@ g.run(`(() => {
   };
   window.__botStep = (C, s, B, sk, st) => {
     if (B.idle) return; // (an idle player gives no order)
-    if (B.help && !st.helped && C.beats && !C.beats.thanked) { const w = C.L.waves.findIndex(x => x.beat === 'distress'), foes = w >= 0 && C.waves[w] && C.waves[w].started ? C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w) : []; if (foes.length) { st.helped = true; campWingOrder(C, 'red', 'attack', foes[0].id, 'bot'); } } // the miner is under attack (the radio says so, one plain line): a player who reads it sends the Red squad at the pirates on him, an ordinary squad order
+    callTick(C, B);
+    if (B.help && !st.helped && C.beats && !C.beats.thanked) { const w = C.L.waves.findIndex(x => x.beat === 'distress'), foes = w >= 0 && C.waves[w] && C.waves[w].started ? C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w) : []; if (foes.length) { st.helped = true; minerAnswer(C, B.help, foes[0]); } } // the miner is under attack (the radio says so, one plain line): a player who reads it sends the Red squad at the pirates on him, an ordinary squad order
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
     if (B.reactive != null && st.react == null && ((C.earth && C.earth.shield <= C.earth.max * 0.9) || C.carrier.hp <= C.carrier.maxHp * 0.8)) st.react = s + B.reactive;
@@ -111,7 +126,7 @@ g.run(`(() => {
     }
     if (B.missiles && !fight && Math.round(s * 30) % 90 === 0 && typeof campMissileState === 'function' && campMissileState(C).state === 'ready') ord(C, 'reload'); // missiles cost ore (card space-game-missiles-cost-ore): in a calm moment the rack is built up, as a player does (R); at zero the ship builds one by itself
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') ord(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
-    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight)) {
+    if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight) && !(callOnly && typeof B.help === 'string')) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
       if (boat) { if (window.__KEYS) { aim(C, boat.id); pilotKey(C, 'red', 'KeyW'); pilotKey(C, 'green', 'KeyW'); } else ['red', 'green'].forEach(k => campWingOrder(C, k, 'attack', boat.id)); } else ord(C, 'attack', C.ships.some(u => u.kind === 'mother') ? 'mothership' : '');
       const left = campAliens(C).filter(u => !u.hold); if (left.length && left.every(u => u.running)) { const run = left.sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0]; campWingOrder(C, null, 'attack', run.id, 'bot'); } // all that is left is a pirate running with its hull gone: the wing is sent at it by name, as a player picks it (the pilots start out now, and a runner kept out of the wing's own sight: card space-game-keys-orders)
