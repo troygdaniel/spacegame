@@ -1,7 +1,7 @@
-// smoke: the convoy orders: tuck in, hold here, run for it, carry on: the orders and who takes them, how the ships move, the cover of the cruiser's shield, the hull that blocks, the voice, the four rows of the convoy list (W opens it directly; it is a part of the fleet list, Q) and the words (plain Node, no Chrome)
+// smoke: the convoy orders: tuck in, hold here, run for it, carry on: the orders and who takes them, how the ships move, the cover of the cruiser's shield, the hull that blocks, the voice, the four rows of the convoy list (data: no key opens it now) and the words (plain Node, no Chrome)
 // Card space-game-convoy-orders (src/campconvoy.js, CAMP.convoyOrders in src/campaign.js, the four rows of CAMP_PANELS' convoy list in src/data_controls.js).
-// The keys are as cards one-list-keys and list-shortcuts left them (22 and 23 Nov 2026): Q opens the fleet list, which has a row for the convoy; W opens the convoy's own list directly, at any time; each convoy order is a
-// row of that list (nothing cycles, nothing settles, no pages, no digits). The four rows are always in the W list (greyed, "no convoy", when there is no escorted ship); it is the Convoy row of the fleet list that is
+// The convoy list is plain data since card space-game-delete-off-lists (24 Nov 2026) took the fleet list, whose Convoy row opened it, away: a test opens it with campPanelGo; each convoy order is a
+// row of that list (nothing cycles, nothing settles, no pages, no digits). The four rows are always in the list (greyed, "no convoy", when there is no escorted ship); the orders are given by the strip and the voice
 // left out in a mission that has no convoy and no escorted ship (its `when: 'convoy'`).
 //   A. the orders           B. how the ships move       C. the cover                  D. the hull that blocks
 //   E. the voice and strip  F. the convoy list (W)      G. the words                  J. the scene's drawing       H. a battle with orders      I. determinism

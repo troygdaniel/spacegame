@@ -1,9 +1,8 @@
-// smoke: the order lists in the scene (the arrows fly and W A S D do not; a list's key, Down, Enter is an order; W E R and O I U open their parts directly; with a list open the ship coasts; A D S X pick the target; the map and a list never share the arrows), the drawing of the open list, and every key hint reads the key table: a remap is one change in it (plain Node, no Chrome)
+// smoke: the order lists in the scene (the arrows fly and W A S D do not; S opens the cruiser list and its digit is an order; with it open the ship still flies; Q ] [ pick who and the target; the map and a list never share the arrows), the drawing of the open list, and every key hint reads the key table: a remap is one change in it (plain Node, no Chrome)
 // Cards one-list-keys and list-shortcuts (Troy, 22 and 23 Nov 2026: "one list per hand", then "shortcut keys that take you straight to the sub-list"), after space-game-panel-keys-zxc. The keys of the table are CAMP_PANELS and CAMP_KEYS
 // (src/data_controls.js); the rules are tests/campanels.mjs and tests/camptarget.mjs.
-//   A. the scene: the arrows fly, W A S D do not (A D S are the target's, W the convoy list's), a digit is nothing, each part's key opens its list, Enter or Right on a part's row and Left back, an open list has the arrows
-//      (the ship coasts), the map and a list, and no command time: the battle goes at its own speed while a list is open and after an order
-//   B. the drawing: nothing until a list's key; the open list with its parts' keys in caps, a part in its place, the target's line; a row lights when Enter gives it
+//   A. the scene: the arrows fly, W A S D do not (Q is who, [ ] \ the target, W the order), a digit is nothing with no list open, S opens the cruiser list and the ship still flies, the map and a list, and no command time
+//   B. the drawing: nothing until a list's key; the open list with its rows' digits, the target's line; a row lights when its digit gives it
 //   C. every hint reads the table: a remap (a list or a part on another letter, a row with other words, a direct key on another key) changes the nudges, the briefing, the help lines, the dock hint, the key line with nothing else
 // Run: node tests/camppanelkeys.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';

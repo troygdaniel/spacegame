@@ -9,8 +9,8 @@
 //   4. content/text/ui.md has exactly the table's lines; the key line in space and the README name only keys that are in the table
 //   5. nothing names a control that is gone
 //   6. the Campaign (cards space-game-campaign-keys-help, one-list-keys and list-shortcuts): every key a Campaign file binds is on the table (the CAMPAIGN and LISTS groups and the debug keys), every key the table names is bound, and the key line, the
-//      pause card and the title name only keys of the table. A key added to the Campaign scene, its map or its lists and not to src/data_controls.js fails here, so the H page cannot go stale again.
-//      "One list per hand", with shortcut keys to its parts: Q opens the fleet list and W E R T its parts (all squads, red, green, yellow), P the ship list and O I U its parts (power, autopilot, dock); EACH OF THE EIGHT OPENS EXACTLY
+//      "One list per hand", with shortcut keys to its parts, reduced to ONE list with a key (S, the cruiser list: card space-game-delete-off-lists took the fleet, all-squads, ship, power and autopilot lists away); S OPENS EXACTLY
+//      ONE LIST AND IS BOUND TO NOTHING ELSE IN FLIGHT but the zoom's reset, on purpose; no digit but the S list's rows, no letter order and no Shift is a flight key; and NO FLIGHT KEY HAS TWO MEANINGS but the shared ones the table's own
 //      ONE LIST AND IS BOUND TO NOTHING ELSE IN FLIGHT (Up, Down, Left, Enter in the open list); no digit, no letter order and no Shift is a flight key; and NO FLIGHT KEY HAS TWO MEANINGS but the shared ones the table's own
 //      comment documents: the arrows and Enter belong to whichever list is open (an order list, the map; else the ship: fly, missile), and X clears the target in flight and the trip in the map
 // How it knows what is bound: the literal keys of addKey / addKeys calls, the e.code and e.key tests of keydown handlers, and the keys kept

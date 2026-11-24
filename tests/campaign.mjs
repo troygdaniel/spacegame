@@ -6,7 +6,7 @@
 //   D. whole battles: doing nothing loses; a sensible player wins within a few minutes on every seed; the same seed flies the same
 //   E. the numbers: carrier speed and hull, Earth's shield, the techs, the repair field
 //   F. the save: the level and the techs, apart from the Long Haul save; Long Haul is not touched
-//   H. the scene's keys on a stand-in (cards one-list-keys and list-shortcuts): Q opens the fleet list, P the ship list, and a part of either has a key that opens it directly from anywhere (W E R, O I U); one list at a time,
+//   H. the scene's keys on a stand-in (cards one-list-keys and keys2-cruiser): S opens the cruiser list (a numbered list: its digits do its rows), Esc closes it, Q W [ ] are who and the order and the target; one list at a time,
 //      hidden until asked for; Up and Down move the highlight, Enter gives the row (on a part's row: opens that part), Left goes back onto that row, Esc or the list's key closes it; no order has a key of its own (a digit and a
 //      letter that is no key do nothing in flight), a row that can never be used in the mission is not in its list, the ship coasts while a list is open
 // Run: node tests/campaign.mjs   (exit code 1 on a failed check)

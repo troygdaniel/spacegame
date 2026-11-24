@@ -3,7 +3,7 @@
 // (the Tab map's V). All of it is gone in one commit; what a scout did for the cloaked caches is the sensors' job now (CAMP.sensor.wing, src/campsight.js campSightFighter, src/campanomaly.js).
 //   A. the wing: eight fighters, three squads of 3, 3 and 2, no escort kind anywhere in the table; ranks, the refit, the build and the Fabricator give fighters
 //   B. what is gone: the Escorts list and its rows, Build an escort, the Scout order and its words, the map's V key and Scout button, the SCOUTS count, the escort's picture
-//   C. what stays: Escort the convoy is a row of the all-squads list and of each squad's list, an order of the squads; a typed "escort the convoy" works; "send the escorts" is no order
+//   C. what stays: Escort the convoy is an order of the squads (the strip, the voice, the bot; no list has the row now); a typed "escort the convoy" works; "send the escorts" is no order
 //   D. the sensors: a fighter out in range reads a cloaked anomaly (named, one radio line, once), the cruiser notices it as it did, a fighter out of range does not, the squads' Guard order takes an anomaly as a place
 //   E. old saves: an escort bought at an old refit counts as a fighter (the most is 3)
 // Run: node tests/campcutescorts.mjs   (exit code 1 on a failed check)

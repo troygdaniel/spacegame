@@ -3,7 +3,7 @@
 // "show the map" and "how is the carrier" all answered "The ship's computer needs a chat key". Now four kinds of plain question are answered from the battle, locally, for nothing.
 // Checks: each kind by many phrasings (case, punctuation, "please"); sentences that only look like them are left to the model; the fleet orders still win; the numbers in a status are the
 // battle's; the end-to-end answer with no key; Long Haul's own computer is not changed; the words are in content/text/ui.md.
-// The keys an answer names are the key table's (cards one-list-keys, list-shortcuts and keys-orders, src/data_controls.js): "S opens the cruiser list, P opens the power list"; no order has a digit. The pilots start out, so the goal line no longer tells the player to launch.
+// The keys an answer names are the key table's (cards one-list-keys, list-shortcuts and keys-orders, src/data_controls.js): "S opens the cruiser list"; no order has a digit but the S list's rows. The pilots start out, so the goal line no longer tells the player to launch.
 // Run: node tests/uxhelp.mjs   (exit code 1 on a failed check)
 import { readFileSync as __rf } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';

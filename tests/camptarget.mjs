@@ -1,6 +1,6 @@
 // smoke: the one target of the Campaign: A D S pick it, X clears it; the squads' Attack rows (W all, E red, R green, T yellow) go at it, the autopilot's rows (I) fly or burn to it, Enter (no list open) fires a missile at it (plain Node, no Chrome)
-// Card space-game-two-hands-keys (Troy, 21 Nov 2026), the keys as cards one-list-keys and list-shortcuts left them (22 and 23 Nov 2026: Q opens the fleet list and P the ship list, each with a row for every part of it; a part has a key that opens its list directly:
-// E red, R green, I the autopilot; Up, Down and Enter in a list, Left back to the list it is a part of; no digit is a key in flight).
+// Card space-game-two-hands-keys (Troy, 21 Nov 2026), the keys as cards one-list-keys, keys4-onekey and delete-off-lists left them (S the cruiser list with its digits; Q who, [ ] \ the target, W the order; the fleet and ship lists are gone):
+// no digit is a key in flight but the S list's.
 // The rules are src/camptarget.js (pure: C.tgt is a ship's id), the keys are src/camppanel.js, the bracket and the target line are the drawing (tests/campanelsui.mjs).
 //   A. the list and the picks: the hostiles nearest the carrier first; ] the next, [ the last, round at the ends; with none picked ] takes the nearest and [ the farthest; the backslash the nearest; X clears; a dead target is let go
 //   B. the orders: E, "Attack the target" (the top row), Enter sends the fighters at it (and with none picked is the old Attack: the nearest alien); the same row is reached through Q, the Fighters row, Enter; R has the green squad's own Attack row, which moves that squad only;

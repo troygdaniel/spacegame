@@ -4,7 +4,7 @@
 //   A. the table: only the cruiser list is numbered; the digit helper (Digit and Numpad, 1 to 9); the foot's words
 //   B. the keys: a digit does that row (the same doing as Enter had), a digit with no row does nothing, a greyed row's digit says why and flashes, Esc closes; Up Down Left Right are not used; Enter fires a missile and the list stays open
 //   C. the target sub-list: numbered too; Up Down Enter are not its keys
-//   D. the other lists keep their keys (the old lists, switched on): Up Down Enter drive them and a digit is nothing to them
+//   D. a list that is not numbered (the convoy list, opened by data) keeps Up Down Enter, and a digit is nothing to it
 //   E. the scene: the arrows fly with the S list open (not with a list that has them); a held arrow is not a repeat of the list's
 //   F. the drawing on stand-ins: a number chip on each row (1 to n), no highlighted row, the Reload missiles row has its R chip too, the foot says 1-n and Esc
 //   G. the words follow the real length (card space-game-s-list-eight-rows): the H page's chip and the pause card say 1-8 from the table (campPanelMost), the foot the live length; digit 8 does the warp blink

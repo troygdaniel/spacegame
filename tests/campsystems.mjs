@@ -1,4 +1,4 @@
-// smoke: the Campaign's ship systems: power to weapons, shields and engines, 6 pips, 2/2/2 is the base setting; the direct keys J K L ; and the POWER list (O) give the same orders (plain Node, no Chrome)
+// smoke: the Campaign's ship systems: power to weapons, shields and engines, 6 pips, 2/2/2 is the base setting; the direct keys J K L ; give the orders, Emergency shields is a row of the cruiser list (plain Node, no Chrome)
 // Card space-game-campaign-systems (Troy: manage my ship's resources and systems, energy, shields, engine, like X-Wing; the design lines are docs/CAMPAIGN.md "Ship systems"). The whole thing is plain numbers in
 // src/campaign.js, one table CAMP.power by pips 0 to 4. Checks:
 //   A  the table: every effect is 1 at 2 pips (the shield mends at its base rate there: card space-game-shield-auto), runs the right way with the pips, and zero pips is weak but never dead
@@ -9,8 +9,7 @@
 //   E  emergency shields: 1/4/1 for 10 s, then back; locked meanwhile; ready again 40 s after it started
 //   F  the save: the setting is in the Campaign's save and is how a level starts; a bad one is the default; the emergency is never saved
 //   G  the words: the orders say short lines, the strip and the voice understand "power to shields", "balance power" and "emergency shields"; low shields and low engines are said, and the radio calls them
-//   J  the keys (cards one-list-keys and list-shortcuts): J K L ; are direct keys of CAMP_KEYS, the same with a list open or not; the power is a list as well (O opens POWER directly; it is a part of the ship list, P): its rows shields,
-//      engines, weapons and balance give the same orders as the keys and leave the list open, and its fifth row is Emergency shields (O, Down to it, Enter), which closes it
+//   J  the keys (cards one-list-keys and delete-off-lists): J K L ; are direct keys of CAMP_KEYS, the same with a list open or not; the power list is deleted: Emergency shields is a row of the cruiser list (S, its digit), which closes the list
 //   H  the wiring: the scene saves the setting and draws the three power bars (beside the gauges: src/camphud.js)
 // Run: node tests/campsystems.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
