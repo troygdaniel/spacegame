@@ -161,11 +161,10 @@ const CAMP = {
   },
   tdisp: {                                 // the target display, in the corner the radar had (card space-game-target-display; Troy, 22 Nov 2026: "the bottom right mini map can go away, to make way to show the target selected"; src/camptdisp.js, src/camptdispscene.js)
     right: 18,                             // px from the right edge of the screen to the box
-    left: 18,                              // px from the left edge to the friend display's box (card space-game-friendly-display: the same box, in the bottom left corner)
-    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the who box, left of a right list for the target box; card space-game-w-list-covers-friend-box)
+    beside: 12,                            // px between an open list and a display's box when the box steps out of its way (right of a left list for the FLEET corner, left of a right list for the target box; card space-game-w-list-covers-friend-box)
     line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
-    count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the who box ends CAMP.tdisp.line px above the target box's foot, so this strip under it is free (card space-game-missiles-line-overlap: the count sat on the box's bottom edge)
+    count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the FLEET corner (CAMP.corner.at.bl) ends at y 630, so this strip under it is free (cards space-game-missiles-line-overlap, space-game-layout-fleet)
     w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
