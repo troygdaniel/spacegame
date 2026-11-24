@@ -59,7 +59,7 @@ try {
   //   dock: while no keyed list has its row, the order as the strip's word gives it (said in a note).   Anything else with no row: left out, false
   const noRow = async row => {
     if (row === 'launch') return true;
-    if (row === 'attack') { const near = await ck('near'), eng = await ck('engage'); if (!near || !eng) return false; await closeLists(); await key(near); await key(eng); return true; }
+    if (row === 'attack') { const near = await ck('near'), eng = await ck('order'); if (!near || !eng) return false; await closeLists(); await key(near); await key(eng); return true; }
     if (row === 'burn' || row === 'burntarget') return (await listWay(row === 'burn' ? 'goal' : 'target')) ? listOrder(row === 'burn' ? 'goal' : 'target') : false;
     if (row === 'dock') { const r = await j(`campOrder(${S}.camp, 'dock', '', 'strip')`); note('(the dock has no key and no row now: the order was given as the strip gives it: ' + JSON.stringify(r).slice(0, 160) + ')'); return !!(r && r.ok); }
     return false;
@@ -123,11 +123,11 @@ try {
     // every key of the flight and every row of the lists the game has now, once: the cruiser list's rows (S), the target keys (the backslash, the brackets), who, the friendlies, E after each kind of pick, X, the power keys while the table has them.
     // A list of [what to do, what it is]: a string is a direct key (its code read from the key table), [row] is an order given through the list it is in (or as noRow gives it)
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no row: see the notes)'; }; // the keys of an order as they were pressed
-    const CK = {}; for (const id of ['near', 'next', 'last', 'wnext', 'wlast', 'fnext', 'flast', 'clear', 'engage', 'shields', 'engines', 'weapons']) CK[id] = await ck(id);
+    const CK = {}; for (const id of ['near', 'hostiles', 'who', 'friendlies', 'clear', 'order', 'shields', 'engines', 'weapons']) CK[id] = await ck(id);
     note('keys from the table: ' + JSON.stringify(CK));
-    check('the key table has the target keys, who, the friendlies, clear and the one order key, and this walk can press them', ['near', 'next', 'last', 'wnext', 'wlast', 'fnext', 'flast', 'clear', 'engage'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
-    const done = [], acts = [[['fmine'], 'mine ore'], [CK.near, 'the nearest threat'], [CK.engage, 'E with an enemy picked: attack it'], [CK.next, 'the next enemy'], [CK.last, 'the last enemy'], [CK.wnext, 'the next who (a pilot)'], [CK.engage, 'E with one pilot as who'], [CK.wlast, 'the last who (All pilots again)'],
-      [CK.fnext, 'the next friendly (it replaces the enemy: one target is held)'], [CK.engage, 'E with a friendly picked: guard it'], [CK.flast, 'the last friendly'], [['target'], 'fly to the target'], [CK.clear, 'X clears the target and puts who on All pilots'], [CK.engage, 'E with nothing picked: form up on the cruiser'],
+    check('the key table has the target keys, who, the friendlies, clear and the one order key, and this walk can press them', ['near', 'hostiles', 'who', 'friendlies', 'clear', 'order'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
+    const done = [], acts = [[['fmine'], 'mine ore'], [CK.near, 'the nearest threat'], [CK.order, 'W with an enemy picked: attack it'], [CK.hostiles, 'the next enemy'], [CK.who, 'the next who (a pilot)'], [CK.order, 'W with one pilot as who'], [CK.who, 'the next who (the next pilot)'],
+      [CK.friendlies, 'the next friendly (it replaces the enemy: one target is held)'], [CK.order, 'W with a friendly picked: guard it'], [CK.friendlies, 'the next friendly'], [['target'], 'fly to the target'], [CK.clear, 'X clears the target and puts who on All pilots'], [CK.order, 'W with nothing picked: form up on the cruiser'],
       [['emergency'], 'emergency shields'], [['blink'], 'the warp blink'], [['dock'], 'dock (away from it)']]
       .concat(CK.shields ? [[CK.shields, 'a pip to the shields'], [CK.engines, 'a pip to the engines'], [CK.weapons, 'a pip to the weapons']] : [])
       .concat([['Digit1', '1 (no key of the flight)'], ['KeyG', 'G (no key of the flight: there is no guard key)'], ['KeyR', 'R (no key of the flight: there is no recall)']]);
