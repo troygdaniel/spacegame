@@ -13,7 +13,7 @@ const PART = Number((process.argv.indexOf('--part') > 0 && process.argv[process.
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, KeyK: 75, KeyL: 76, KeyQ: 81, KeyW: 87, KeyE: 69, KeyR: 82, KeyP: 80, KeyO: 79, KeyI: 73, KeyU: 85, Enter: 13, Escape: 27, Tab: 9, KeyH: 72, ArrowLeft: 37, ArrowDown: 40 };
+const VK = { Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, KeyK: 75, KeyL: 76, KeyQ: 81, KeyW: 87, KeyE: 69, KeyR: 82, KeyP: 80, KeyO: 79, KeyI: 73, KeyU: 85, KeyS: 83, Backslash: 220, BracketLeft: 219, BracketRight: 221, Enter: 13, Escape: 27, Tab: 9, KeyH: 72, ArrowLeft: 37, ArrowDown: 40 };
 
 const t = await launch('', ROOT);
 try {
@@ -65,11 +65,12 @@ try {
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
-  await listOrder('launch'); await t.run(600); // Q, Down to "Launch the wing", Enter
+  // the three pilots are out beside the cruiser when the mission begins (card space-game-keys-orders): there is no launch row and no launch key
+  const CK = await j(`({ near: campKeyCodes('near')[0] || '', engage: campKeyCodes('engage')[0] || '' })`); // the nearest threat (the backslash) and the one order key (E: card space-game-keys2-orders), read from the key table
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
-      if (s % 10 === 5) await listOrder('attack'); // E (the fighters list), Enter on "Attack the target"
+      if (s % 10 === 5 && CK.near && CK.engage && (await j(`${S}.mode`)) === 'play') { for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); await key(CK.near); await key(CK.engage); } // the backslash picks the nearest threat and E sends all pilots at it (the all-squads list and its Attack row are switched off)
       await t.run(5000);
       if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
     }

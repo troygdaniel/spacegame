@@ -2,7 +2,8 @@
 // The rules are tests/camppick.mjs (plain Node). This boots the real game once, in mission 1.1 with the wing out (three pilots), and plays the keys as a player does: three hostiles are put in the battle, W opens the all-squads list
 // (not on Attack: it is grey while no hostile is picked, and Enter on it refuses), ] picks the nearest hostile and W opens on Attack, named after it; Enter sends all three pilots at it at once (card space-game-w-uses-selection: no sub-list);
 // Mine ore with several rock fields still opens the target sub-list (no order yet), Down moves the highlight, Esc goes back; then the keys of card space-game-bracket-select-orders: X clears, ] picks the nearest hostile, E sends the pilots
-// at it with no list opened, D picks a pilot and E sends that pilot alone. Q (the fleet list, switched on here) then All squads then Esc, Esc goes back through the lists one by one. (Not run by 1-GEN: no Chrome while Troy plays.)
+// at it with no list opened, the who key (read from the key table: W since card space-game-keys3-select, D before it) picks a pilot and E sends that pilot alone. Q (the fleet list, switched on here) then All squads then Esc, Esc goes back through the lists one by one.
+// The old lists are switched ON for the list parts (campFleetListSet(true): Q the fleet list, W the all-squads list) and OFF for the part about the game's own keys (X, ], E, who), where Q and W pick who. (Not run by 1-GEN: no Chrome while Troy plays.)
 // Pictures go to the folder in PICK_SHOTS (default ~/dev/spacegame-night/shots/pick-*.png), never into the repository.
 //   node tests/camppick-boot.mjs
 // Exit code 1 when a check fails or the game logged an error.
@@ -15,7 +16,7 @@ const { launch } = await import('./cdp.mjs');
 const OUT = process.env.PICK_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyQ: 81, KeyE: 69, KeyW: 87, KeyD: 68, KeyX: 88, BracketRight: 221, Enter: 13, Escape: 27, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
+const VK = { KeyQ: 81, KeyE: 69, KeyW: 87, KeyD: 68, KeyA: 65, KeyX: 88, BracketRight: 221, Enter: 13, Escape: 27, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 };
 
 async function key(t, code, extra = {}, wait = 40) { // a real key: down, a few frames, up (the game clock is stepped, so waits are game milliseconds)
   const k = Object.assign({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Arrow|Escape)/.test(code) ? code : code.replace(/^Key/, '').toLowerCase() }, extra);
@@ -68,8 +69,10 @@ try {
     check('Esc goes back to the all-squads list (the sub-list is gone, the list is still open)', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.pick`)) === null);
     await key(t, 'Escape'); await t.run(300);
   } else console.log('  skip   the Mine ore sub-list (this mission has one rock field)');
+  await t.ev('(() => { campFleetListSet(false); return 1; })()'); // the game's own keys from here: no fleet list and no all-squads list, so the who keys are free
+  const WHO = await j(`campKeyCodes('wnext')[0] || ''`), WHOCAP = await j(`CAMP_KEYS.wnext.k`); // the next who: read from the key table, never a letter written here
   await key(t, 'KeyX'); await t.run(300);
-  check('X lets the target go (and the friend): both selections are empty, no list is open', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.sel`)) === '' && (await j(`${SC}.pn.open`)) === '');
+  check('X lets the target go and puts who back on All pilots: no enemy, no friendly, no list open', (await j(`${SC}.camp.tgt`)) === '' && (await j(`${SC}.camp.fsel || ''`)) === '' && (await j(`${SC}.camp.sel`)) === 'all' && (await j(`${SC}.pn.open`)) === '', JSON.stringify(await j(`[${SC}.camp.tgt, ${SC}.camp.fsel, ${SC}.camp.sel]`)));
   await t.ev(`campWingOrder(${SC}.camp, 'fighters', 'guard', null, 'key')`); await t.run(300);
   const near = await j(`campTgtList(${SC}.camp)[0].id`); // the nearest hostile now (the hostiles hardly move in the 300 ms of the pick)
   await key(t, 'BracketRight', { key: ']' }); await t.run(300);
@@ -81,13 +84,15 @@ try {
   // (the three pilots flew at the first target and it is gone by now: pick the nearest hostile again, and the checks below use that one)
   await key(t, 'BracketRight', { key: ']' }); await t.run(300);
   const near2 = await j(`${SC}.camp.tgt`);
-  await key(t, 'KeyD'); await t.run(300);
-  check('D picks a pilot as the friend (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2);
+  check('the key table has a key for the next who, and this boot can press it', !!WHO && !!VK[WHO], WHO);
+  await key(t, WHO); await t.run(300);
+  check(WHOCAP + ' picks a pilot as who (the first, Red); the hostile is still the target', !!near2 && (await j(`${SC}.camp.sel`)) === 'pilot:red' && (await j(`${SC}.camp.tgt`)) === near2, JSON.stringify(await j(`[${SC}.camp.sel, ${SC}.camp.tgt]`)));
   await key(t, 'KeyE'); await t.run(300);
   check('E with a pilot picked sends that pilot alone: Red attacks, the others stay on guard', (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad === 'red').every(u => u.order && u.order.type === 'attack' && u.order.target === '${near2}')`)) && (await j(`campWing(${SC}.camp, 'fighter').filter(u => u.squad !== 'red').every(u => !(u.order && u.order.type === 'attack'))`)));
   await key(t, 'KeyX'); await t.run(300);
+  await t.ev('(() => { campFleetListSet(true); return 1; })()'); // the old lists again, for the walk back through them
   await key(t, 'KeyQ'); await t.run(200);
-  check('Q (the fleet list is switched on in this page) opens it on All squads and picks nothing', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads' && (await j(`${SC}.camp.sel`)) === '');
+  check('Q (the fleet list is switched on in this page) opens it on All squads and picks nobody (who stays All pilots)', (await j(`${SC}.pn.open`)) === 'fleet' && (await j(`campPanelList(${SC}.camp, 'fleet')[${SC}.pn.at].open`)) === 'squads' && (await j(`${SC}.camp.sel`)) === 'all');
   await key(t, 'Enter'); await t.run(300);
   check('Q, Enter on All squads: the all-squads list opens, reached by a row (its foot says Esc back)', (await j(`${SC}.pn.open`)) === 'squads' && (await j(`${SC}.pn.trail.join()`)) === 'fleet');
   await key(t, 'Escape'); await t.run(300);
