@@ -166,7 +166,6 @@ function campKeyPath(id) {
   const p = campKeyList(id); if (!p) return '';
   if (p.key) return p.key;
   const up = campKeyList(p.parent), row = up ? up.rows.find(r => r.open === id) : null;
-  if (row && row.off) return ''; // the row that opens it is switched off: no way there by keys
   return up ? (campKeyPath(up.id) + (row ? ', ' + row.label : '')).replace(/^, /, '') : '';
 }
 function campKeyVar(name) {
