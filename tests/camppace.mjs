@@ -3,7 +3,7 @@
 //   A. the table: Calm 0.6, Normal 0.72, Brisk 0.85 (15 percent under the 0.7, 0.85 and 1 they were: card space-game-command-slowtime; the pace stays, the command time of that card is gone), the default, the shot power; there is no key
 //   B. a battle with no pace, or with the number 1, is the table's own numbers, bit for bit (what the pins and the bots use); Brisk is no longer that: it is 0.85 of them
 //   C. the scaling: the five small kinds by the multiplier, the shots by its square root, the carrier, mothership, towers, haulers, turrets and Fast not at all; a change in play and back is exact
-//   D. the one pace: the Campaign scene makes every battle at Normal (CAMP.pace.start); there is no key for it (P opens the ship list: card one-list-keys), no setting, no Settings > Game, no campace.js (there is no command time either: card space-game-no-command-slowdown); campNew's opts.pace still takes a mode, for the tests, the bots and the sims
+//   D. the one pace: the Campaign scene makes every battle at Normal (CAMP.pace.start); there is no key for it (card one-list-keys), no setting, no Settings > Game, no campace.js (there is no command time either: card space-game-no-command-slowdown); campNew's opts.pace still takes a mode, for the tests, the bots and the sims
 //   E. the balance: a plain bot wins every mission at Normal and Calm (levels 2 and 3 in about one to two minutes, the rim run of level 1 in four to seven), a player who does nothing never wins
 // Run: node tests/camppace.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';

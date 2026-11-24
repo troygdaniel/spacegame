@@ -39,7 +39,7 @@ console.log('A. who has a bar');
   g.run('__new(0)');
   const care = J(`campChargeBars(C).map(b => b.id).sort()`), want = J(`C.ships.filter(u => u.hp > 0 && (u.kind === 'freighter' || (u.kind === 'miner' && u.team === 'neutral'))).map(u => u.id).sort()`);
   check('1.1: the transport and the neutral miners have a bar', care.length >= 1 && J(`campChargeBars(C).some(b => b.kind === 'freighter')`) && JSON.stringify(care) === JSON.stringify(want), care.join());
-  check('they are the ships the convoy orders and the escort sub-list name: campConvoyShips', JSON.stringify(care) === JSON.stringify(J(`campConvoyShips(C).map(u => u.id).sort()`)) && JSON.stringify(care) === JSON.stringify(J(`campPickGuarded(C).map(u => u.id).sort()`)));
+  check('they are the ships the convoy orders and the ward sub-list name: campConvoyShips', JSON.stringify(care) === JSON.stringify(J(`campConvoyShips(C).map(u => u.id).sort()`)) && JSON.stringify(care) === JSON.stringify(J(`campPickGuarded(C).map(u => u.id).sort()`)));
   check('nobody else has one: not the carrier, a fighter, an escort, a patrol, an alien nor a tower', J(`campChargeBars(C).every(b => { const u = C.by[b.id]; return u.kind === 'freighter' || (u.kind === 'miner' && u.team === 'neutral'); })`));
   g.run(`window.PAT = campSpawn(C, 'patrol', C.carrier.x + 500, C.carrier.y); PAT.team = 'neutral'; window.AL = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y); campOrder(C, 'launch'); __run(C, 6);`);
   check('a neutral patrol, an alien, the launched wing and the carrier still have none', !J(`campChargeMark(C, PAT.id)`) && !J(`campChargeMark(C, AL.id)`) && !J(`campChargeMark(C, C.carrier.id)`) && J(`C.ships.filter(u => u.team === 'earth' && (u.kind === 'fighter' || u.kind === 'escort')).every(u => !campChargeMark(C, u.id))`));
@@ -106,11 +106,11 @@ console.log('C. the map and the sub-list');
   check('the map, quiet: the mark\'s bar is the thin line (loud 0) until the ship is hit, then the full bar (1) and it eases off like the flight view\'s', J(`campMapMarks(C).find(m => m.id === TT.id).loud`) === 0 && (g.run('campHurt(C, TT, 1, "x");'), J(`campMapMarks(C).find(m => m.id === TT.id).loud`)) === 1 && (g.run('C.t = 74250;'), Math.abs(J(`campMapMarks(C).find(m => m.id === TT.id).loud`) - 0.5) < 1e-9));
   check('the map draws it without a number: no text object is made for a mark\'s bar (the line, the frame and the fill are rects)', !/setText|add\.text/.test(src('src/campmapdraw.js').split('\n').filter(l => /m\.hull != null/.test(l)).join('')));
   g.run('__new(2, 40)');
-  const rows = J(`campPickItems(C, 'escort').map(it => campPickRow(C, it, 'escort'))`);
-  check('the escort sub-list: every row carries the ship\'s hull and its band for the bar', rows.length >= 3 && rows.every(r => r.hull >= 0 && r.hull <= 1 && ['green', 'amber', 'red'].includes(r.band)));
+  const rows = J(`campPickEscorts(C).map(it => campPickRow(C, it, 'ward'))`);
+  check('the ships you protect, as a sub-list lists them (the repair row\'s ward list): every row carries the ship\'s hull and its band for the bar', rows.length >= 3 && rows.every(r => r.hull >= 0 && r.hull <= 1 && ['green', 'amber', 'red'].includes(r.band)));
   g.run(`campSpawn(C, 'raider', C.carrier.x + 1500, C.carrier.y); campSpawn(C, 'skiff', C.carrier.x + 1900, C.carrier.y);`);
-  const er = J(`campPickItems(C, 'enemy').map(it => campPickRow(C, it, 'enemy'))`), fr = J(`campPickItems(C, 'field').map(it => campPickRow(C, it, 'field'))`);
-  check('the attack and mine sub-lists have no bar (a hostile is not a ship you protect; a field has no hull)', er.length >= 2 && er.every(r => r.hull === -1 && r.band === '') && fr.every(r => r.hull === -1));
+  const fr = J(`campPickItems(C, 'field').map(it => campPickRow(C, it, 'field'))`);
+  check('the mine sub-list has no bar (a field has no hull)', fr.every(r => r.hull === -1));
   check('the row keeps its words: km and percent still say it in text', rows.every(r => /km\s+\d+%/.test(r.short)));
 }
 

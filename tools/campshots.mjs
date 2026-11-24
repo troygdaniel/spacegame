@@ -7,7 +7,6 @@
 //   node tools/campshots.mjs fx     explosions as the game makes them, at 60, 160, 320 and 520 ms (2x crops), and the guns
 //   node tools/campshots.mjs mars   Mars and the Earth-Luna start, up close
 //   node tools/campshots.mjs zoom   + - S and the wheel: the view, the edge arrow and the map at several zooms, a click on a place at a zoom
-//   node tools/campshots.mjs panels the OLD order lists, switched on in the page (the game keeps them off: its one list is the cruiser's, on S): nothing drawn until a list's key; then the fleet list at the left or the ship list at the right, or a part of one (W all squads, O the power while it exists): the key caps, the highlight, a refused row's flash, the stance list, the target line, with the zoom and the map, the key line
 //   node tools/campshots.mjs look   the new look of the ships: 2x crops round the carrier (start, launch, recall, a crowd, the turrets firing)
 // Some pictures are STAGED (the carrier or the aliens are put in place, the hull and the shield are set low): the fight after the staging is the game's. The blind critic gets the PNG files and nothing else (docs/CRITIC.md).
 // Exit code 1 when a picture could not be taken or the game logged an error.
@@ -43,15 +42,14 @@ const wayTo = row => j(`(() => { const C = ${SC}.camp, id = ${JSON.stringify(row
 const goTo = async row => { // the list open with the highlight on the row (not given)
   if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys
   const way = await wayTo(row); if (!way) { note('(the row ' + row + ' is left out of this mission\'s list)'); return false; }
-  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
+  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to the list before it; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
   NUM = 0; for (const [code, downs] of way.keys) { await keyOn(code); if (await j(`campPanelNumbered(${SC}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
   return true;
 };
-// Three orders are no row of a list in the game now (the key rounds of 23 Nov 2026: the fleet and all-squads lists are switched off, cards space-game-keys-orders and space-game-keys2-orders). While the table has no keyed row for them:
+// Three orders are no row of a list in the game (the key rounds of 23 and 24 Nov 2026; the fleet and all-squads lists are deleted: card space-game-delete-off-lists). While the table has no keyed row for them:
 //   launch: the pilots start the mission out, so nothing is pressed; after a recall they are sent out by the order the strip's word gives (no key gives it)
 //   attack: the backslash picks the nearest threat and the one order key (W since card space-game-keys4-onekey) sends all pilots at it (both read from the key table)
 //   recall: no key and no row (a badly hurt pilot flies home by itself): the order the strip's word gives, for the pictures of the landing
-// With the old lists switched on in the page (the panels part) the rows are there again and are given through their list, as before.
 const noRow = async row => {
   if (row === 'launch') { await j(`(() => { const C = ${SC}.camp; return campWing(C).length + C.launchQ.length < 3 ? campOrder(C, 'launch', '', 'strip') : null; })()`); return true; }
   if (row === 'recall') { await j(`campOrder(${SC}.camp, 'recall', '', 'strip')`); return true; }
@@ -66,7 +64,7 @@ const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;
   if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
   if (await j(`!!${SC}.pn.pick`)) await keyOn(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
-  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
+  for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open: Esc until it is closed, the keys go back to the ship
   return true;
 };
 const recall = () => order('recall'); // (no row and no key in the game now: noRow gives the order)
@@ -205,43 +203,6 @@ try {
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel over the map', JSON.stringify(await zs()));
     await t.key('TAB'); await t.run(300); const before = await zs();
     await t.ev(`(() => { ${SC}.input.emit('wheel', {}, [], 0, -240); return 1; })()`); await t.run(900); note('wheel, map shut', JSON.stringify(before), '->', JSON.stringify(await zs()));
-  } else if (part === 'panels') {
-    // the order lists (cards one-list-keys and list-shortcuts): nothing is on the screen until a list's key is pressed; then ONE list, the fleet list at the left (Q; its parts W E R) or the ship list at the right (P; its parts O I U), with a
-    // highlight that Up and Down move and a key cap on each row that opens a part. A refused order leaves the list open and its row flashes; the stances are a part of the fleet list (its last row opens it); A D S pick a target (the line under the radar names it, a bracket marks it), with the zoom, with the map, and the key line's backing strip.
-    await toPlay(); await t.run(600);
-    await t.ev('(() => { campFleetListSet(true); campShipListSet(true); campPowerSet(true); return 1; })()'); /* (the pips are off in the game, card space-game-power-removed: these pictures of the lists include the power list) */ // these pictures are of the order lists, which the game keeps off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all, space-game-p-opens-power); on here as the node suites and the boots have them, with the old keys (Q W E R, P O I U)
-    const onPage = rect => j(`(() => { const R = ${rect}, r = game.canvas.getBoundingClientRect(), k = r.width / 1280; return { x: r.left + R.x * k, y: r.top + R.y * k, w: R.w * k, h: R.h * k }; })()`); // a rectangle of the game's screen, on the page (the canvas is scaled to fit the window)
-    const box = id => onPage(`campPanelsGeometry(CAMP_PANELS.panels.find(p => p.id === '${id}'), campPanelList(${SC}.camp, '${id}').length)`); // a list's place: it is as tall as its rows in this mission
-    const tgtBox = () => onPage('(() => { const K = CAMP.corner, a = K.at.tr; return { x: a.x, y: a.y, w: K.w, h: 190 }; })()'); // the HOSTILES corner, top right: its title row and the details under it (the target box at the bottom right is gone: cards space-game-layout-targets, space-game-layout-align; src/campcorner.js)
-    const boxShot = async (name, b, pad = 6) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x: b.x - pad, y: b.y - pad, width: b.w + 2 * pad, height: b.h + 2 * pad, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
-    const panelShot = async (name, id, pad = 6) => boxShot(name, await box(id), pad);
-    const clipShot = async (name, x, y, w, h) => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: w, height: h, scale: 2 } }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('crop', name); };
-    const st = () => j(`(() => { const s = ${SC}, P = s.pn; return { open: P.open, at: P.at, top: P.top, ships: s.camp.ships.filter(u => u.team === 'earth').length, tgt: s.camp.tgt }; })()`);
-    await t.run(300); note('start', JSON.stringify(await st())); await snap('panels-01-no-list'); await boxShot('panels-01a-target-line', await tgtBox()); // no list: only the target's line
-    await keyOn('KeyQ'); await t.run(300); note('Q', JSON.stringify(await st())); await snap('panels-01b-fleet-open'); await panelShot('panels-01c-fleet', 'fleet');
-    await keyOn('KeyW'); await t.run(300); note('W (from the fleet list: the all-squads list)', JSON.stringify(await st())); await snap('panels-01f-squads-open'); await panelShot('panels-01g-squads', 'squads');
-    await keyOn('ArrowLeft'); await t.run(300); note('Left (back to the fleet list)', JSON.stringify(await st())); await panelShot('panels-01h-fleet-back', 'fleet');
-    await keyOn('KeyP'); await t.run(300); note('P (the fleet list closes, the ship list opens)', JSON.stringify(await st())); await snap('panels-01d-ship-open'); await panelShot('panels-01e-ship', 'ship');
-    if (await j(`!!(campKeyList('power') && campKeyList('power').code && campKeyRow('shields'))`)) { // the power list, while the table still has it (card space-game-power-removed takes the power out)
-      await keyOn(await j(`campKeyList('power').code`)); await t.run(300); await keyOn('Enter'); await t.run(300); note('the power list\'s key, Enter (a pip to the shields, the list stays open)', JSON.stringify(await st()), await j(`JSON.stringify((${SC}.camp.power || {}).p || null)`)); await snap('panels-01i-power-open'); await panelShot('panels-01j-power', 'power');
-      await goTo('balance'); await keyOn('Enter'); await keyOn('Escape'); await t.run(200); // the power as it was
-    } else { note('(no power list in the key table: its pictures are left out)'); await shut(); }
-    // a refused order (Attack the target with no hostile picked: the pilots are out from the start now, so Recall would be taken): the list stays open, the row flashes twice and the foot says why
-    await keyOn('KeyX'); await goTo('attack'); await t.run(300); await keyOn('Enter'); await t.run(6); note('Enter on Attack the target, no hostile picked', JSON.stringify(await st())); await panelShot('panels-02-flash-40ms', 'squads'); // the second capture of a pair is 34 ms after the first: this one is the flash's first peak (40 ms)
-    await t.run(46); await panelShot('panels-02b-flash-120ms', 'squads'); // and the second peak (120 ms)
-    await t.run(400); await panelShot('panels-02c-refused', 'squads'); await keyOn('Escape'); await t.run(200);
-    await order('launch'); note('launch', JSON.stringify(await st())); await t.run(2500);
-    await keyOn('KeyP'); await t.run(400); note('P', JSON.stringify(await st())); await snap('panels-04-ship-list'); await panelShot('panels-04b-ship', 'ship'); await keyOn('KeyP'); await t.run(300);
-    // a hostile put in reach (staged): ] picks it with no list open (the hostiles key, read from the key table), the HOSTILES corner at the top right names it, the bracket is round it; the fighters list's Attack row (E) goes at it
-    await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; campSpawn(C, 'raider', c.x + 520, c.y - 180); return 1; })()`); await t.run(300);
-    await keyOn(await j(`campKeyCodes('hostiles')[0]`)); await t.run(400); note('] (the next enemy)', JSON.stringify(await st())); await snap('panels-05-target'); await boxShot('panels-05a-target-line', await tgtBox());
-    await goTo('attack'); await t.run(400); await panelShot('panels-05b-fighters-target', (await wayTo('attack')).list); await keyOn('Escape'); await t.run(200);
-    await keyOn('KeyX'); await t.run(200);
-    for (let i = 0; i < 3; i++) await keyOn('Equal'); await t.run(900); await snap('panels-06-zoomed-in');
-    await t.key('TAB'); await t.run(400); await snap('panels-07-map-open'); await t.key('TAB'); await t.run(300); await zreset(); await t.run(900);
-    // the key line: a ship under it
-    await clipShot('panels-08-keyline', 77, 575, 1130, 58); // the viewport is 633 px high (the canvas fits it at 0.88): the key line is at about y 590 to 610
-    note('sizes', JSON.stringify(await sizes()));
   } else if (part === 'mars') {
     await toPlay(); await t.run(500);
     await t.ev(`(() => { const c = ${SC}.camp.carrier; c.x = 3500; c.y = 450; c.vx = c.vy = 0; c.rot = 0; return 1; })()`); await t.run(900); await snap('c40-mars');

@@ -32,11 +32,9 @@ console.log('A. who is shown');
   check('nothing picked: nothing is shown (the corner is empty)', J('campTdispSubject(C, P, 0)') === null);
   g.run(`window.R1 = __foe('raider', 900, 0); C.tgt = R1.id;`);
   check('the target (A D S) is shown, as a hostile', J('(() => { const s = campTdispSubject(C, P, 0); return !!s && s.u.id === R1.id && s.side === "hostile"; })()'));
-  g.run(`window.TR = C.ships.find(u => u.kind === 'freighter'); campPickOpen(P, { id: 'escort', pick: 'escort' }, campPickItems(C, 'escort'));`);
+  g.run(`window.TR = C.ships.find(u => u.kind === 'freighter'); TR.x = C.carrier.x + 300; TR.y = C.carrier.y; TR.hp = TR.maxHp * 0.4; campPickOpen(P, { id: 'repairward', pick: 'ward' }, campPickItems(C, 'ward'));`); // (the one sub-list of ships you protect: the repair row of the dock list, a hurt ship near the cruiser)
   check('a sub-list open on a ship of yours: that ship is shown, as a friend, before the target', J('(() => { const s = campTdispSubject(C, P, 0); return !!s && s.side === "friend" && s.u.team !== "alien"; })()'));
-  g.run(`campPickOpen(P, { id: 'attack', pick: 'enemy' }, campPickItems(C, 'enemy'));`);
-  check('on a hostile candidate: it is shown in red as a hostile (the highlight is what is being decided)', J('(() => { const s = campTdispSubject(C, P, 0); return !!s && s.side === "hostile" && s.u.team === "alien"; })()'));
-  g.run(`P.pick = null; P.seen = { kind: 'escort', id: TR.id, until: 5000 };`);
+  g.run(`P.pick = null; P.seen = { kind: 'ward', id: TR.id, until: 5000 };`);
   check('an order just given at a ship of yours: it stays shown for a moment (CAMP_PICK.seen), then the target is shown again', J('campTdispSubject(C, P, 1000).side') === 'friend' && J('campTdispSubject(C, P, 1000).u.id') === J('TR.id') && J('campTdispSubject(C, P, 6000).u.id') === J('R1.id'));
   g.run(`campPickOpen(P, { id: 'mine', pick: 'field' }, [{ id: 'field-0', what: 'field' }]); C.tgt = '';`);
   check('a rock field in a sub-list is not a ship: nothing is shown', J('campTdispSubject(C, P, 0)') === null);

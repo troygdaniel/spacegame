@@ -3,7 +3,7 @@
 // (the Tab map's V). All of it is gone in one commit; what a scout did for the cloaked caches is the sensors' job now (CAMP.sensor.wing, src/campsight.js campSightFighter, src/campanomaly.js).
 //   A. the wing: eight fighters, three squads of 3, 3 and 2, no escort kind anywhere in the table; ranks, the refit, the build and the Fabricator give fighters
 //   B. what is gone: the Escorts list and its rows, Build an escort, the Scout order and its words, the map's V key and Scout button, the SCOUTS count, the escort's picture
-//   C. what stays: Escort the convoy is a row of the all-squads list and of each squad's list, an order of the squads; a typed "escort the convoy" works; "send the escorts" is no order
+//   C. what stays: Escort the convoy is an order of the squads (the strip, the voice, the bot; no list has the row now); a typed "escort the convoy" works; "send the escorts" is no order
 //   D. the sensors: a fighter out in range reads a cloaked anomaly (named, one radio line, once), the cruiser notices it as it did, a fighter out of range does not, the squads' Guard order takes an anomaly as a place
 //   E. old saves: an escort bought at an old refit counts as a fighter (the most is 3)
 // Run: node tests/campcutescorts.mjs   (exit code 1 on a failed check)
@@ -40,7 +40,7 @@ console.log('A. the wing');
 console.log('B. what is gone');
 {
   const T = J('CAMP_PANELS.panels.map(p => p.id)');
-  check('the panels have no Escorts list and no Build an escort row; the fleet list has the squads and the convoy', !T.includes('escorts') && J(`CAMP_PANELS.panels.flatMap(p => p.rows.map(r => r.id)).some(id => /^(gescorts|eattack|eguard|erecall|builde)$/.test(id))`) === false && J(`campPanelDef('fleet').rows.map(r => r.id).join()`) === 'gsquads,gconvoy');
+  check('the panels have no Escorts list and no Build an escort row; the lists are the cruiser, the convoy and the dock lists', !T.includes('escorts') && T.join() === 'cruiser,convoy,yard' && J(`CAMP_PANELS.panels.flatMap(p => p.rows.map(r => r.id)).some(id => /^(gescorts|eattack|eguard|erecall|builde)$/.test(id))`) === false && J(`campPanelDef('convoy').rows.map(r => r.id).join()`) === 'ctuck,crun,chold,ccarry');
   g.run('__new(1)');
   check('the Scout order and its words are gone: no campScoutDo, "scout Mars" is no order, the closed list of the ship computer has no fleet_scout, no scout verb', J('typeof campScoutDo') === 'undefined' && J(`campIntent('scout mars')`) === null && J(`campOrder(C, 'scout', 'mars').ok`) === false && J(`Object.keys(SC_ACT).includes('fleet_scout')`) === false && J('typeof CAMP.wing.verbs.scout') === 'undefined');
   check('the words of the Scout order, the SCOUTS count and the escort kind are out of the content (only the anomaly read lines stay, in the scouts file)', ['camp.say.scout', 'camp.say.scoutnothing', 'camp.say.scouthome', 'camp.say.scoutleft', 'camp.no.noscout', 'camp.no.scoutsbusy', 'camp.ui.scouts', 'camp.map.scout', 'camp.map.scoutkey', 'camp.no.noescorts', 'camp.nav.k.escort', 'camp.room.item.escorts', 'camp.hub.boughte'].every(k => J(`typeof UI_TEXT[${JSON.stringify(k)}]`) === 'undefined') && J(`typeof UI_TEXT['camp.say.anomalyread']`) === 'string');
@@ -53,7 +53,7 @@ console.log('B. what is gone');
 console.log('C. what stays');
 {
   g.run('__new(1)'); g.run(`campOrder(C, 'launch'); __run(12);`);
-  check('Escort the convoy is a row of the all-squads list, with a target pick, and the old order "escort" goes to every fighter', J(`['squads:escort'].every(x => { const [p, r] = x.split(':'); const row = campPanelDef(p).rows.find(q => q.id === r); return row && row.pick === 'escort' && /Escort the convoy/.test(row.label); })`) && J(`campCheck(C, 'escort', '').ok`) === true);
+  check('Escort the convoy is no row of any list now (the all-squads list is deleted: card space-game-delete-off-lists); the order "escort" is the strip\'s and the voice\'s and goes to every fighter', J(`CAMP_PANELS.panels.every(p => p.rows.every(r => r.id !== 'escort' && r.pick !== 'escort'))`) && J(`campCheck(C, 'escort', '').ok`) === true);
   check('one squad can escort while the others fight: Yellow to the transport, Red and Green at a raider (the ship the squad is sent to is its order\'s target)', (() => { g.run(`window.__r = campSpawn(C, 'raider', C.carrier.x + 800, C.carrier.y); __r.vmax = 0; __r.accel = 0; __r.nextShot = 1e12; __r.hp = __r.maxHp = 1e7;`); const cv = J(`campConvoys(C)[0] && campConvoys(C)[0].id`), a = J(`campWingOrder(C, 'yellow', 'escort', ${JSON.stringify(cv)}, 'key')`), b = J(`campWingOrder(C, 'red', 'attack', __r.id, 'key')`); return !!cv && a.ok && a.n === 1 && b.ok && b.n === 1 && J(`campWingShips(C, 'yellow').every(u => u.order.type === 'escort' && u.order.target === ${JSON.stringify(cv)})`) && J(`campWingShips(C, 'red').every(u => u.order.type === 'attack' && u.order.target === __r.id)`) && J(`campWingShips(C, 'green').every(u => u.order.type === 'guard')`); })());
   check('the words: "escort the convoy" is the order, "red squad escort the convoy" is the squad\'s, "send the escorts to the convoy" and "escorts attack" are nobody\'s', J(`campIntent('escort the convoy')`).act === 'fleet_escort' && J(`campIntent('red squad escort the convoy')`).act === 'fleet_wing' && J(`campIntent('send the escorts to the convoy')`) === null && J(`campIntent('escorts attack')`) === null);
 }

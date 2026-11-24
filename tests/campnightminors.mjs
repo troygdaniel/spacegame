@@ -12,7 +12,6 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
-g.run('campShipListSet(true)'); // this suite is about the ship list's code (P, Down, a part's row): it is switched off in the game (CAMP_SHIP_LIST, card space-game-p-opens-power: P opens power) and on here; tests/campselect.mjs has the game's own state
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
 
 console.log('1. the lost card names the mission');
@@ -43,9 +42,9 @@ const bl = J(`(() => { const C = campNew(1, [], { seed: 1 }); const none = campB
 check('the blink with no blink technology says so: "No warp blink yet. It is a technology you can pick."', bl.none === 'No warp blink yet. It is a technology you can pick.', bl.none);
 check('the blink while it cools says the seconds left', /^The blink is not ready: \d+ s\.$/.test(bl.cool), bl.cool);
 check('the blink when it is ready says nothing (the blink goes)', bl.ready === '', JSON.stringify(bl.ready));
-const br = J(`(() => { const row = CAMP_PANELS.panels.find(p => p.id === 'ship').rows.find(r => r.blink), C = campNew(1, [], { seed: 1 }); const inList = campPanelList(C, 'ship').some(r => r.blink); C.input.blink = false; const none = campPanelRun(C, row, 'key'), n1 = C.input.blink;
-  C.techs = ['blink']; const listed = campPanelList(C, 'ship').some(r => r.blink); C.blinkAt = 0; C.t = 5000; const cool = campPanelRun(C, row, 'key'), n2 = C.input.blink; C.t = campBlinkCooldown(C) + 5000; const go = campPanelRun(C, row, 'key'); return { inList, listed, none, n1, cool, n2, go, set: C.input.blink }; })()`);
-check('the blink is a row of the ship list now ("Warp blink ahead", only with its tech: no key of its own): the row answers with campBlinkWhy, and sets the blink for the next step only when it can go; the scene toasts the answer', br.inList === false && br.listed === true && br.none.ok === false && br.none.say === bl.none && br.n1 === false && br.cool.ok === false && br.cool.say === bl.cool && br.n2 === false && br.go.ok === true && br.go.say === '' && br.set === true && /pr\.ran\) \{ toast\(this, pr\.say/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')), JSON.stringify(br));
+const br = J(`(() => { const row = CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.blink), C = campNew(1, [], { seed: 1 }); const inList = campPanelList(C, 'cruiser').some(r => r.blink); C.input.blink = false; const none = campPanelRun(C, row, 'key'), n1 = C.input.blink;
+  C.techs = ['blink']; const listed = campPanelList(C, 'cruiser').some(r => r.blink); C.blinkAt = 0; C.t = 5000; const cool = campPanelRun(C, row, 'key'), n2 = C.input.blink; C.t = campBlinkCooldown(C) + 5000; const go = campPanelRun(C, row, 'key'); return { inList, listed, none, n1, cool, n2, go, set: C.input.blink }; })()`);
+check('the blink is a row of the cruiser list now ("Warp blink ahead", only with its tech: no key of its own): the row answers with campBlinkWhy, and sets the blink for the next step only when it can go; the scene toasts the answer', br.inList === false && br.listed === true && br.none.ok === false && br.none.say === bl.none && br.n1 === false && br.cool.ok === false && br.cool.say === bl.cool && br.n2 === false && br.go.ok === true && br.go.say === '' && br.set === true && /pr\.ran\) \{ toast\(this, pr\.say/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')), JSON.stringify(br));
 
 console.log('10. one name for the star of level 3');
 const star = J(`(() => { const pl = campPlaces(3); return Object.keys(pl).filter(k => pl[k].kind === 'star').map(k => pl[k].name); })()`);
@@ -70,13 +69,13 @@ check('hiding clears the gauges and the radar, and hides every text and the key 
 check('showing it again gives the texts back, and leaves the arrow to its own paint', hs.on[0] === true && hs.on[1] === true && hs.on[3] === true && hs.on[2] === false, JSON.stringify(hs));
 check('the scene hides it before it paints (update: hudHides ? hudShow(false) : hudShow(true) then paintHud)', /this\.hudHides\(\)\) this\.hudShow\(false\); else \{ this\.hudShow\(true\); this\.paintHud\(\)/.test(readFileSync(join(ROOT, 'src', 'campaignscene.js'), 'utf8')));
 
-console.log('11. the edge arrow\'s label keeps out of the target display\'s corner (the two lists are hidden until Q or P: an open list is drawn over the label)');
-const ak = J(`(() => { const keep = Campaign.prototype.arrowKeep.call({ pn: campPanelNew() }), T = campTdispBox(), G = campPanelsGeometry(campPanelDef('ship')), F = campPanelsGeometry(campPanelDef('fleet'));
+console.log('11. the edge arrow\'s label keeps out of the target display\'s corner (the cruiser list is hidden until S: an open list is drawn over the label)');
+const ak = J(`(() => { const keep = Campaign.prototype.arrowKeep.call({ pn: campPanelNew() }), T = campTdispBox(), G = campPanelsGeometry(campPanelDef('yard')), F = campPanelsGeometry(campPanelDef('cruiser'));
   const hit = at => r => at.x + 85 > r[0] && at.x - 85 < r[2] && at.y + 9 > r[1] && at.y - 9 < r[3], at = campNavLabelAt(T.x + T.w / 2, T.y + T.h / 2, 170, 18, keep, W, H), free = [campNavLabelAt(G.x + 30, G.y + 200, 170, 18, keep, W, H), campNavLabelAt(F.x + 330, F.y + 200, 170, 18, keep, W, H)];
   return { base: CAMP.nav.arrow.keep.length, n: keep.length, a: keep.find(r => T.x >= r[0] && T.y >= r[1] && T.x + T.w <= r[2] && T.y + T.h <= r[3]), line: [T.x, T.y, T.x + T.w, T.y + T.h], clear: !keep.some(hit(at)), at, free, want: [[G.x + 30, G.y + 200], [F.x + 330, F.y + 200]] }; })()`);
 check('the table\'s rectangles and no more (the target\'s line that had one of its own is gone): the target display\'s whole box is inside one of them', ak.n === ak.base && !!ak.a && ak.a[0] <= ak.line[0] && ak.a[1] <= ak.line[1] && ak.a[2] >= ak.line[2] && ak.a[3] >= ak.line[3], JSON.stringify(ak));
 check('a label wanted on the target display is put off every rectangle', ak.clear, JSON.stringify(ak));
-check('and one wanted where a list opens stays where it was put: no list is on the screen until its key is pressed, so its place is not kept out of (the fleet list\'s is taken to the right of the who box, which is kept, and the ship list\'s to the left of the enemy\'s and friendly\'s, which are: cards space-game-friendly-display, space-game-keys-panels)', ak.free.every((p, i) => p.x === ak.want[i][0] && p.y === ak.want[i][1]), JSON.stringify(ak.free));
+check('and one wanted where a list opens stays where it was put: no list is on the screen until its key is pressed, so its place is not kept out of (a list at the left is taken to the right of the who box, which is kept, and one at the right to the left of the enemy\'s and friendly\'s, which are: cards space-game-friendly-display, space-game-keys-panels)', ak.free.every((p, i) => p.x === ak.want[i][0] && p.y === ak.want[i][1]), JSON.stringify(ak.free));
 console.log('12. a tab closed at the tech pick: the next launch goes to the pick, not to mission 1');
 const lv = J(`(() => { const P = campProgressNew(), n = campMissions(2).length, sc = k => ({ score: 100 * (k + 1), bonuses: [], t: 60000, hullLeft: 1, shipsLost: 0 });
   P.level = 2; for (let i = 0; i < n - 1; i++) campMissionDone(P, 2, i, sc(i)); const mid = [P.level, P.mission, P.levelDone];

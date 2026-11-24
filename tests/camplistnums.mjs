@@ -4,7 +4,7 @@
 //   A. the table: only the cruiser list is numbered; the digit helper (Digit and Numpad, 1 to 9); the foot's words
 //   B. the keys: a digit does that row (the same doing as Enter had), a digit with no row does nothing, a greyed row's digit says why and flashes, Esc closes; Up Down Left Right are not used; Enter fires a missile and the list stays open
 //   C. the target sub-list: numbered too; Up Down Enter are not its keys
-//   D. the other lists keep their keys (the old lists, switched on): Up Down Enter drive them and a digit is nothing to them
+//   D. a list that is not numbered (the convoy list, opened by data) keeps Up Down Enter, and a digit is nothing to it
 //   E. the scene: the arrows fly with the S list open (not with a list that has them); a held arrow is not a repeat of the list's
 //   F. the drawing on stand-ins: a number chip on each row (1 to n), no highlighted row, the Reload missiles row has its R chip too, the foot says 1-n and Esc
 //   G. the words follow the real length (card space-game-s-list-eight-rows): the H page's chip and the pause card say 1-8 from the table (campPanelMost), the foot the live length; digit 8 does the warp blink
@@ -86,10 +86,9 @@ g.run(`
 
 // ---- D. the other lists ----
 {
-  g.run(`campFleetListSet(true); __new(1);`);
-  check('with the old lists on, the fleet list keeps Up, Down and Enter, and a digit is nothing to it', (() => { g.run(`__k('KeyQ', 100)`); const o = J('campPanelOpen(P)') === 'fleet'; const dn = J(`__k('ArrowDown')`); const dg = J(`__k('Digit2')`); return o && dn.used && J('P.at') === 1 && !dg.used; })());
-  check('campPanelOwnsArrows: the fleet list has them; the S list has not; with no list open nobody has them', J('campPanelOwnsArrows(P)') === true && (g.run(`campPanelClose(P); __k('KeyS', 100)`), J('campPanelOwnsArrows(P)') === false) && (g.run(`campPanelClose(P)`), J('campPanelOwnsArrows(P)') === false));
-  g.run(`campFleetListSet(false);`);
+  g.run(`__new(1);`);
+  check('a list that is not numbered (the convoy list, opened by data: no key opens it now) keeps Up, Down and Enter, and a digit is nothing to it', (() => { g.run(`campPanelGo(P, C, 'convoy')`); const o = J('campPanelOpen(P)') === 'convoy'; const dn = J(`__k('ArrowDown')`); const dg = J(`__k('Digit2')`); return o && dn.used && J('P.at') === 1 && !dg.used; })());
+  check('campPanelOwnsArrows: the convoy list has them; the S list has not; with no list open nobody has them', J('campPanelOwnsArrows(P)') === true && (g.run(`campPanelClose(P); __k('KeyS', 100)`), J('campPanelOwnsArrows(P)') === false) && (g.run(`campPanelClose(P)`), J('campPanelOwnsArrows(P)') === false));
 }
 
 // ---- E. the scene ----
@@ -116,9 +115,8 @@ g.run(`
   check('the words of the rows start after the chip (every row, so they line up)', J('S.pnl.rows.filter(r => r.name.visible).every(r => r.name.x > S.pnl.rows[0].cap.x + 10)'));
   check('only the Reload missiles row has the second chip (its R), and no other', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()') === 'Reload missiles:R', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()'));
   check('the foot says the digits and Esc (1-7  does a row    Esc close), no highlighted row\'s state under it', J('S.pnl.keys.t') === '1-7  does a row    Esc close', J('S.pnl.keys.t'));
-  g.run(`campPanelClose(S.pn); campFleetListSet(true); campPanelKey(S.pn, S.camp, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
-  check('a list that is not numbered draws no digit in its chips (the old lists, switched on: a part\'s key only)', J('S.pnl.rows.filter(r => r.cap.visible).every(r => !/^[1-9]$/.test(r.cap.t))') && J('S.pnl.rows.filter(r => r.cap.visible).length') >= 1);
-  g.run(`campFleetListSet(false);`);
+  g.run(`campPanelClose(S.pn); campPanelGo(S.pn, S.camp, 'convoy'); campPanelsPaint(S, 1000);`);
+  check('a list that is not numbered draws no digit in its chips (the convoy list, opened by data)', J('S.pnl.rows.filter(r => r.cap.visible).every(r => !/^[1-9]$/.test(r.cap.t))'));
 }
 // ---- G. the words follow the real length (card space-game-s-list-eight-rows: the H page said 1-7 while the S list has eight rows, the warp blink the eighth) ----
 {

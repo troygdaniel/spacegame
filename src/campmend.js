@@ -1,8 +1,8 @@
 // ---------- Campaign: repair in space with ore (card space-game-repair-with-ore; Troy, 22 Nov 2026: "we do not build ships, we repair them in space with ore") ----------
 // Nothing builds ships any more: the wing you launch with is the wing you have for the mission, and the next mission starts with the whole wing again. Ore pays for mending instead, in open space:
-//   the hull       the order 'repair' (the U list's Repair the hull, the strip and the voice): the ore is paid now, the hull mends over CAMP.mend.hullSecs. The price is the share of the hull that is missing of
+//   the hull       the order 'repair' (the cruiser list's Repair hull, the strip and the voice): the ore is paid now, the hull mends over CAMP.mend.hullSecs. The price is the share of the hull that is missing of
 //                  CAMP.mend.hullOre (60 ore for a whole hull, as the dock's repair was; at least CAMP.mend.min). Docked at an outpost it is instant and CAMP.mend.dockShare (half) of the price
-//   a ship you protect   the order 'mendship' (arg: its id, or none for the nearest hurt one in range; the U list's Repair a ship we protect picks it, src/camppick.js kind 'ward'): a ship of the convoys or
+//   a ship you protect   the order 'mendship' (arg: its id, or none for the nearest hurt one in range; the strip and the voice give it; the dock list's row, which no key opens now, picks it, src/camppick.js kind 'ward'): a ship of the convoys or
 //                  a neutral miner within CAMP.mend.range of the cruiser is mended over CAMP.mend.wardSecs for CAMP.mend.wardPoint ore a hit point
 //   the fighters   a hurt fighter that lands is still mended (src/camprepair.js), but each mend costs CAMP.repair.ore; with none it takes CAMP.repair.slow times as long and is never refused
 // In flight all of it is paid in ORE only (the cruiser's store); docked, the dock's repair takes credits first and then ore (campMendFunds, campMendPay: card space-game-credits-apart-from-ore)
@@ -12,7 +12,7 @@
 //   campMend(C, arg, dry)         the order 'repair'
 //   campMendWard(C, arg, dry)     the order 'mendship'
 //   campMending(C, id)            true while that ship is being mended
-//   campWardsNear(C)              the hurt ships you protect within range of the cruiser, the nearest first (the candidates of the U list's ward row)
+//   campWardsNear(C)              the hurt ships you protect within range of the cruiser, the nearest first (the candidates of the dock list's ward row)
 //   campWardQuote(C, u)           { missing, cost } for a protected ship
 //   campMendTick(C, dt)           every step
 const campMending = (C, id) => (C.mends || []).some(m => m.id === id);

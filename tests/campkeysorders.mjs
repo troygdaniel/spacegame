@@ -5,7 +5,7 @@
 //   B. a pilot that was recalled and has landed is in the bay; an order to it launches it with that order (Attack, Guard, Escort, Mine), one pilot or all three; Recall to ships that are all home says so
 //   C. a pilot being mended goes out with the order when it is whole
 //   D. the keys: E acts on the picks (card space-game-keys2-orders made it the one order key: G and R are free now, there is no recall); T, W, U and I are free; a pilot in the bay can be picked with A and D and takes the order
-//   E. Q is the cruiser list (Mine, Dock and repair); the all-squads list is switched off, not removed; the old lists come back with the switch
+//   E. S is the cruiser list (Mine, Dock, Repair hull, ...); the all-squads list is deleted (card space-game-delete-off-lists)
 // Run: node tests/campkeysorders.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -34,7 +34,7 @@ sec('A. the pilots start out', () => {
   check('after five seconds they are still three, still out (nothing sends them home)', J('__out().length') === 3 && J('C.bay.fighters') === 0);
   const r = J(`campOrder(C, 'launch')`);
   check('the Launch order has nothing to do: the bay is empty (no key and no row has it any more)', r.ok === false && r.code === 'baydry', JSON.stringify(r));
-  check('no key opens a list with the Launch row: its list (all squads) is switched off, not removed', J(`campKeyVia('launch').id`) === 'squads' && J(`campKeyVia('launch').off`) === true && J(`campKeyVia('launch').key`) === '');
+  check('there is no Launch row in any list: the all-squads list that had it is deleted (card space-game-delete-off-lists)', J(`campKeyVia('launch')`) === null && J(`campKeyRow('launch')`) === null);
 });
 
 sec('B. an order launches a pilot in the bay', () => {
@@ -105,12 +105,8 @@ sec('E. S is the cruiser list; the W list is off', () => {
   const w = J(`__k('KeyW')`), u = J(`__k('KeyU')`);
   check('U opens nothing, and W opens no list: it is the order key (the key is used and an order is tried, in words), no list opens', w.used && w.ran && !u.used && J('campPanelOpen(PP)') === '', JSON.stringify([w, u]));
   check('the key line names S Cruiser alone (the power and autopilot lists have no key now: O and P are free), and neither W nor U', /S Cruiser/.test(J('campPanelKeyLine()')) && !/\bP Power|\bO Autopilot/.test(J('campPanelKeyLine()')) && !/\bW \w|\bU \w/.test(J('campPanelKeyLine()')), J('campPanelKeyLine()'));
-  check('the dock list is reached from the cruiser list: its way in is S (a hint reads it from the table)', J(`campKeyOpens('yard')`) === 'S' && J(`campKeyPath('yard')`) === 'S, Dock and repair' && J(`campKeyOpens('squads')`) === '', J(`campKeyPath('yard')`));
-  g.run('campFleetListSet(true);');
-  const old = J(`(() => { PP = campPanelNew(); __k('KeyW'); const a = campPanelOpen(PP); PP = campPanelNew(); __k('KeyU'); const b = campPanelOpen(PP); PP = campPanelNew(); __k('KeyQ'); return [a, b, campPanelOpen(PP)]; })()`);
-  check('with the old switch on (campFleetListSet(true)) W opens the all-squads list, U the dock list and Q the fleet list; Mine ore is the all-squads list\'s again', old.join() === 'squads,yard,fleet' && J(`campKeyVia('fmine').id`) === 'squads', old.join());
-  g.run('campFleetListSet(false);');
-  check('and off again (the game): S is the cruiser list, Mine ore is one of its rows', J(`(() => { PP = campPanelNew(); __k('KeyS'); return campPanelOpen(PP); })()`) === 'cruiser' && J(`campKeyVia('fmine').id`) === 'cruiser');
+  check('the dock list is reached from the cruiser list on paper: its way in is S, then its row (a hint reads it from the table; the row is switched off, so no key goes there)', J(`campKeyOpens('yard')`) === 'S' && J(`campKeyPath('yard')`) === 'S, Dock and repair' && J(`campKeyOpens('squads')`) === '', J(`campKeyPath('yard')`));
+  check('S is the cruiser list, Mine ore is one of its rows, and W, U and Q open no list', J(`(() => { PP = campPanelNew(); __k('KeyS'); return campPanelOpen(PP); })()`) === 'cruiser' && J(`campKeyVia('fmine').id`) === 'cruiser' && J(`(() => { const out = ['KeyW', 'KeyU', 'KeyQ'].map(c => { PP = campPanelNew(); __k(c); return campPanelOpen(PP); }); return out.join(); })()`) === ',,');
 });
 
 console.log(failed ? `\n${failed} of ${n} FAILED` : `\nAll ${n} checks passed.`);

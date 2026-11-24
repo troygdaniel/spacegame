@@ -1,9 +1,9 @@
-// smoke: power management is gone from the game: no power list, no J K L, no pips on the gauges, no "power to shields" words; every system runs at the balanced values and the shield still mends (plain Node, no Chrome)
+// smoke: power management is gone from the game: no power list (deleted), no J K L, no pips on the gauges, no "power to shields" words; every system runs at the balanced values and the shield still mends (plain Node, no Chrome)
 // Card space-game-power-removed (Troy, 23 Nov 2026: "he never uses it": remove the power list (P), the pips and J K L; the top-right gauges stay as plain readouts of shields, speed and lasers, with no pip bars; shields, speed
 // and lasers run at the balanced values; shields still recharge by themselves; switch off rather than delete where that is cheap). The switch is CAMP_POWER in src/data_controls.js (campPowerSet(on) moves all of it) and
-// CAMP.power.on in src/campaign.js. The code behind it is tested, switched on, by tests/campsystems.mjs, campgauges.mjs, camppowerkey.mjs, camppowerlink.mjs, campshieldauto.mjs and the suites of the lists; this suite is the game as it is.
-//   A. the switch: off in the game; campPowerSet(true) brings back the keys, the list, the H page row and the rules; campPowerSet(false) takes them away again, to the byte
-//   B. the keys and the list: no J K L (no key, no H page row), no key opens the power list, the list is off
+// CAMP.power.on in src/campaign.js. The code behind it is tested, switched on, by tests/campsystems.mjs, campgauges.mjs, campshieldauto.mjs and the suites of the lists; this suite is the game as it is.
+//   A. the switch: off in the game; campPowerSet(true) brings back the keys, the H page row and the rules; campPowerSet(false) takes them away again, to the byte
+//   B. the keys and the list: no J K L (no key, no H page row), no power list
 //   C. the rules: a saved or asked setting is ignored (2 / 2 / 2: every factor 1, a shield of 150), "power" and "balance" are refused, the typed words give nothing
 //   D. the shield still mends by itself: 3 a second after 3 s with no hit
 //   E. the gauges: three plain dials, a cell as wide as the dial, no bar, no key under it, no frame; with the switch on the bars are there again
@@ -25,7 +25,7 @@ const SNAP = `JSON.stringify([CAMP_KEYS.shields, CAMP_KEYS.engines, CAMP_KEYS.we
 const off0 = g.run(SNAP);
 g.run('campPowerSet(true)');
 const on = JSON.parse(g.run(SNAP));
-check('campPowerSet(true) brings the old world back: J K L, the power list no longer off (it has no key since card space-game-keys2-select: P and O pick friendlies, so only a mod or a test opens it by code), the H page row, CAMP.power.on', on[0].k === 'J' && on[1].k === 'K' && on[2].k === 'L' && on[3].find(p => p[0] === 'power')[3] === false && J("controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L')") && J('CAMP.power.on') === true && on[5].KeyJ === 'shields');
+check('campPowerSet(true) brings the old world back: J K L, the H page row, CAMP.power.on (the power list itself is deleted: card space-game-delete-off-lists)', on[0].k === 'J' && on[1].k === 'K' && on[2].k === 'L' && !on[3].some(p => p[0] === 'power') && J("controlsGroup('campaign').rows.some(r => r.k.join() === 'J,K,L')") && J('CAMP.power.on') === true && on[5].KeyJ === 'shields');
 g.run('campPowerSet(false)');
 check('and campPowerSet(false) takes it all away again, byte for byte', g.run(SNAP) === off0);
 
@@ -33,9 +33,8 @@ console.log('B. the keys and the list');
 check('J, K and L are no key: no code in CAMP_KEYS, no letter on the keys table', J('[CAMP_KEYS.shields, CAMP_KEYS.engines, CAMP_KEYS.weapons].every(k => k.k === "" && k.codes.length === 0)') && J('["KeyJ", "KeyK", "KeyL"].every(c => !Object.keys(CAMP_KEYS).some(id => CAMP_KEYS[id].codes.indexOf(c) >= 0))'));
 check('the H page has no J K L row and no POWER heading', J("controlsGroup('campaign').rows.every(r => r.k.join() !== 'J,K,L' && r.sub !== 'POWER')"));
 check('the gauges have no direct key and the key text of each dial is empty', J('Object.keys(CAMP_GAUGE.keys).length') === 0 && J(`campGauges(${NEW}).every(d => d.key === '')`));
-check('the power list is off and has no key; no list lists it with a key on the H page', J("(() => { const p = CAMP_PANELS.panels.find(x => x.id === 'power'); return p.off === true && p.key === '' && p.code === ''; })()") && J("campPanelKeyRows().every(r => !/^Power/.test(r.t))"));
+check('there is no power list (deleted: card space-game-delete-off-lists); no list lists it with a key on the H page', J("CAMP_PANELS.panels.every(x => x.id !== 'power')") && J("campPanelKeyRows().every(r => !/^Power/.test(r.t))"));
 check('no key of the keyboard opens it: every letter key, with no list open and with each of the lists on open, leaves the power list shut', J(`(() => { const C = campNew(1, [], { seed: 3 }), codes = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c => 'Key' + c); return codes.every(c => { const P = campPanelNew(); campPanelKey(P, C, c, 0); return campPanelOpen(P) !== 'power'; }); })()`));
-check('the power list is kept for the switch, with its pip rows', J("CAMP_PANELS.panels.find(x => x.id === 'power').rows.length") >= 3);
 
 console.log('C. the rules');
 g.run(`window.C = ${NEW}; 0`);
@@ -65,7 +64,7 @@ const say = k => J(`uiText(${JSON.stringify(k)})`);
 check('the ship\'s lines no longer tell the pilot to move power: the rival\'s three, the lasers running dry, the shield that mends by itself', ['camp.say.rival.charge', 'camp.say.rival.down', 'camp.say.rival.ram', 'camp.say.lasersdry', 'camp.no.shieldauto'].every(k => !/power|pip/i.test(say(k)) && !/^camp\./.test(say(k))), ['camp.say.rival.charge', 'camp.say.rival.down', 'camp.say.rival.ram', 'camp.say.lasersdry', 'camp.no.shieldauto'].map(say).join(' | '));
 check('the lines are curt: 12 words or fewer', ['camp.say.rival.charge', 'camp.say.rival.down', 'camp.say.rival.ram', 'camp.say.lasersdry', 'camp.no.shieldauto'].every(k => say(k).split(/\s+/).length <= 12));
 check('the briefing\'s readiness has no power line, and a saved setting does not change its shield (150)', J(`(() => { campPowerSave([3, 1, 2]); const r = campBriefReady(campProgressNew(), 1, 0); return [r.lines.some(l => /^Power/.test(l)), r.lines[r.lines.length - 1], r.power.join()]; })()`).join() === 'false,Shield: full, 150 points,2,2,2' && !('camp.bf.ready.power' in J('UI_TEXT')));
-check('the emergency and blink rows have left the power list for the cruiser list (card space-game-keys2-cruiser): the power list holds only the four pip rows, and the briefing\'s shield key box says S', J("CAMP_PANELS.panels.find(x => x.id === 'power').rows.map(r => r.id).join()") === 'shields,engines,weapons,balance' && J("CAMP_PANELS.panels.find(x => x.id === 'cruiser').rows.some(r => r.id === 'emergency')") && J('campBriefKeys(1, 0).filter(k => k.id === "shield").map(k => k.k.join()).join()') === 'S');
+check('the emergency and blink rows are rows of the cruiser list (card space-game-keys2-cruiser) and there is no power list to hold pip rows (deleted: card space-game-delete-off-lists); the briefing\'s shield key box says S', J("CAMP_PANELS.panels.find(x => x.id === 'cruiser').rows.some(r => r.id === 'emergency')") && J("CAMP_PANELS.panels.find(x => x.id === 'cruiser').rows.some(r => r.id === 'blink')") && J('campBriefKeys(1, 0).filter(k => k.id === "shield").map(k => k.k.join()).join()') === 'S');
 const sc = src('src/shipcomputer.js');
 g.run("window.__scene = { scene: { key: 'Campaign' }, leaving: false, dead: false, camp: campNew(1, [], { seed: 1 }), toasts: [] }; 0");
 check('the model is not offered the pip orders in its closed list, and is not told a key or pips for the shield', !/fleet_power <|fleet_balance \|/.test(sc) && !/more pips on them/.test(sc) && J('shipcompSystem(__scene)').indexOf('pips') < 0);

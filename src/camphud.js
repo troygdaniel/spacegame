@@ -1,8 +1,8 @@
 // ---------- The Campaign's gauge numbers and places (card space-game-systems-gauges, Troy, 21 Nov 2026) ----------
 // NOT DRAWN ANY MORE (card space-game-layout-hud, Troy, 24 Nov 2026): the three round gauges (shields, speed, lasers), the hull bar and the ore line at the top right are gone from the screen, and so are the drawing of them, their texts and the
 // picture cache (src/campgaugecache.js). The cruiser's shield, hull and ore are written at the top left by src/campcruiserhud.js (card space-game-layout-cruiser), which has its own numbers. What is kept here is the part the rest of the game still reads, behind the
-// power switch (CAMP.power.on, off in the game since card space-game-power-removed): the numbers (campGauges, campHullBar), the places (campHudGeom: the power list's row bars are the third dial's bar, campHudFlow: the lines of text), the bars' animation and one bar's drawing
-// (the power list's rows use them) and the direct keys J K L (campPowerKey). Where things are is the table CAMP.hud (src/campaign.js). The pure part is tested in plain Node (tests/campgauges.mjs).
+// power switch (CAMP.power.on, off in the game since card space-game-power-removed): the numbers (campGauges, campHullBar), the places (campHudGeom: the third dial's bar, campHudFlow: the lines of text), the bars' animation and one bar's drawing
+// (no list row draws them now: the power list is deleted, card space-game-delete-off-lists) and the direct keys J K L (campPowerKey). Where things are is the table CAMP.hud (src/campaign.js). The pure part is tested in plain Node (tests/campgauges.mjs).
 //   campGauges(C)            the three dials' numbers: [{ id, key, label, frac, big, color, warn, tick, pips }]   (frac 0 to 1; big the number in the dial; tick 0 to 1 a mark on the dial; pips lit in its bar)
 //   campHullBar(C)           the hull's numbers: { frac, n, label, color, warn }
 //   campHudGeom()            the places of the dials, bars and the hull bar, in screen px, from CAMP.hud: { cells: [{ cx, cy, R, dial, bar, key }], hull, bottom, ore: { x, y }, block: { x0, y0, x1, y1 } } (the power list's rows take the bar's size from it)

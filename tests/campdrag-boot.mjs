@@ -33,7 +33,6 @@ try {
   const cam = () => j(`(() => { const c = ${S}.cameras.main, ca = ${S}.camp.carrier; return { sx: c.scrollX, sy: c.scrollY, z: c.zoom, follow: !!c._follow, panned: !!${S}.panned, mark: !!(${S}.dragMark && ${S}.dragMark.on), cx: ca.x, cy: ca.y, mid: { x: c.scrollX + 640, y: c.scrollY + 360 } }; })()`);
 
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
-  await t.ev('(() => { campFleetListSet(true); campShipListSet(true); return 1; })()'); // these walks are about the order lists: Q and P open them, which the game switches off (CAMP_FLEET_LIST, CAMP_SHIP_LIST: cards space-game-q-selects-all and space-game-p-opens-power; the game's one list with a key is the S cruiser list now, which fades after a few seconds); on here, as the node suites do, and it also keeps S what this walk means by it: the view back on the cruiser and the zoom reset, with no list opened (in the game S opens the cruiser list too, and over the Tab map it closes the map for that list)
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
   for (let l = 1; l <= LEVEL; l++) for (let m = 1; m <= 3; m++) if (l < LEVEL || m < MISSION) results[l + '.' + m] = res;
   await t.ev(`localStorage.setItem('longhaul.campaign', ${JSON.stringify(JSON.stringify({ level: LEVEL, mission: MISSION - 1, techs: LEVEL === 1 ? [] : ['shield'], ore: 60, bonus: { fighters: 0, escorts: 0 }, results }))})`);
@@ -81,7 +80,7 @@ try {
   await t.run(500); await keyUp('ArrowUp'); await t.run(300);
   check('held past 350 ms it does', !(await cam()).panned);
   // a drag that starts on an open list is the list's click, not a pan
-  await key('KeyQ'); await t.run(300); const lp = await j(`(() => { const def = campPanelDef(campPanelOpen(${S}.pn)), V = campPanelView(${S}.pn, ${S}.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()`);
+  await key('KeyS'); await t.run(300); const lp = await j(`(() => { const def = campPanelDef(campPanelOpen(${S}.pn)), V = campPanelView(${S}.pn, ${S}.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()`);
   await drag(lp.x, lp.y, lp.x + 150, lp.y + 20); check('a drag that starts on the open list does not pan the view', !(await cam()).panned, JSON.stringify(lp));
   await key('Escape', 40);
 

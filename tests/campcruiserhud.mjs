@@ -123,8 +123,8 @@ g.run(`
   check('rows start CAMPPANELS_LOOK.box.pad under the box\'s top; the box is as tall as its rows, pads and foot', G0.r0 === G0.y + B.pad && J('campPanelsGeometry(campPanelDef("cruiser"), 5).h') === B.pad + 5 * (B.row + B.gap) - B.gap + B.pad + B.foot, JSON.stringify(G0));
   const Gp = J('campPanelsGeometry(campPanelDef("cruiser"), 5, true)');
   check('while it picks a target the caption band comes back (PICK A TARGET), and the rows go down by it', Gp.head.h === B.capt && Gp.h === G.h + B.capt && Gp.y === G.y, JSON.stringify([G.h, Gp.h]));
-  const Gr = J('campPanelsGeometry(campPanelDef("power"), 5)'), Gf = J('campPanelsGeometry(campPanelDef("fleet"), 5)');
-  check('the other lists keep their own places and headings (the power list at the right under the top, the fleet list at the left edge)', Gr.head.h === B.head && Gf.head.h === B.head && Gf.y === J('CAMPPANELS_LOOK.top') && Gf.x === J('CAMPPANELS_LOOK.edge'), JSON.stringify([Gr.head, Gf.head]));
+  const Gr = J('campPanelsGeometry(campPanelDef("yard"), 5)'), Gf = J('campPanelsGeometry(campPanelDef("convoy"), 5)');
+  check('the other lists keep their own places and headings (the dock list at the right under the top, the convoy list at the left edge)', Gr.head.h === B.head && Gf.head.h === B.head && Gf.y === J('CAMPPANELS_LOOK.top') && Gf.x === J('CAMPPANELS_LOOK.edge'), JSON.stringify([Gr.head, Gf.head]));
   g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelsPaint(S, 1000);`);
   check('with no key pressed the list is not drawn at all (the corner\'s title row is the corner panel\'s)', J('S.pnl.title.visible') === false && J('S.pnl.count.visible') === false && J('S.pnl.rows.every(r => !r.name.visible)'));
   g.run(`campPanelKey(S.pn, S.camp, 'KeyS', 1000); campPanelsPaint(S, 1000);`);
