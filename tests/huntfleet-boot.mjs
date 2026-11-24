@@ -64,6 +64,7 @@ try {
   //   a row of the cruiser list (S: Fly to the goal, Fly to the target, Mine ore, Emergency shields ...): the key of the list the row is in, Down to the row, Enter, read from the table as before
   //   W, the one order key: an enemy picked, the pilots attack it (the caller picks it: the backslash); nothing picked (X first), they form up on the cruiser; a friendly picked (X, then [), they guard it
   //   no key and no row at all: the launch (the pilots start the mission out), and the convoy's orders and the dock while the table has no keyed row for them: given as the order the strip's words give, and said so in a note
+let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
   const KEYED = { attack: () => [K.order], fguard: () => [K.clear, K.order], escort: () => [K.clear, K.friendlies, K.order] };
   const WORDS = { ctuck: ['convoy', 'tuck in'], crun: ['convoy', 'run for it'], chold: ['convoy', 'hold here'], ccarry: ['convoy', 'carry on'], dock: ['dock', ''] };
   const ALIAS = { burn: 'goal' }; // the fast burn rows have no way in: Fly to the goal burns by itself on a long clear leg (card space-game-keys2-cruiser)
@@ -93,9 +94,9 @@ try {
     }
     if (!way) { note(`(the row ${id} is not in this mission's lists, or its list has no key)`); return false; }
     await closeLists(); // an open list is closed first (Esc pauses only when none is open)
-    for (const [code, downs] of way) { await key(code, wait); const cur = await j(`${S}.pn.at`), n = await j(`campPanelList(${S}.camp, campPanelOpen(${S}.pn)).length`); for (let i = 0, d = ((downs - cur) % n + n) % n; i < d; i++) await key(K.down, wait); } // (a list can open on its first row that can be given: the Downs count from the highlight)
-    await key(K.pick, wait);
-    if (await j(`!!${S}.pn.pick`)) await key(K.pick, wait); // a row that needs a target (Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
+    NUM = 0; for (const [code, downs] of way) { await key(code, wait); if (await j(`campPanelNumbered(${S}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${S}.pn.at`), n = await j(`campPanelList(${S}.camp, campPanelOpen(${S}.pn)).length`); for (let i = 0, d = ((downs - cur) % n + n) % n; i < d; i++) await key(K.down, wait); } // (a list can open on its first row that can be given: the Downs count from the highlight)
+    await key(NUM ? 'Digit' + NUM : K.pick, wait); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+    if (await j(`!!${S}.pn.pick`)) await key(NUM ? 'Digit1' : K.pick, wait); // a row that needs a target (Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
     await closeLists(); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
     return true;
   };

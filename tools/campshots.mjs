@@ -44,7 +44,7 @@ const goTo = async row => { // the list open with the highlight on the row (not 
   if ((await j(`${SC}.mode`)) !== 'play') return false; // a card has the keys
   const way = await wayTo(row); if (!way) { note('(the row ' + row + ' is left out of this mission\'s list)'); return false; }
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
-  for (const [code, downs] of way.keys) { await keyOn(code); const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
+  NUM = 0; for (const [code, downs] of way.keys) { await keyOn(code); if (await j(`campPanelNumbered(${SC}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${SC}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SC}.pn); return o ? campPanelList(${SC}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await keyOn('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
   return true;
 };
 // Three orders are no row of a list in the game now (the key rounds of 23 Nov 2026: the fleet and all-squads lists are switched off, cards space-game-keys-orders and space-game-keys2-orders). While the table has no keyed row for them:
@@ -61,10 +61,11 @@ const noRow = async row => {
 const shut = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); }; // every list closed (Esc goes back one step; it is pressed only while a list is open, so it never pauses)
 // S resets the zoom AND opens the cruiser list (card space-game-keys2-cruiser); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: S, the list closed again, and the map opened again when it was up
 const zreset = async map => { await keyOn('KeyS'); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
+let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
 const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;
-  if (!(await goTo(row))) return false; await keyOn('Enter');
-  if (await j(`!!${SC}.pn.pick`)) await keyOn('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+  if (await j(`!!${SC}.pn.pick`)) await keyOn(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
   return true;
 };
