@@ -38,7 +38,7 @@ function campRepairRun(C, u, dt) {
     u.hp = 0; u.docked = true; u.repair = false; C.events.push({ type: 'dock', id: u.id, repair: true });
     return true;
   }
-  campSeek(u, c.x, c.y, dt); // (as a recall flies it)
+  campWingHome(C, u, dt); // (as a recall flies it)
   return true;
 }
 

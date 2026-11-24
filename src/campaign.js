@@ -355,10 +355,9 @@ const CAMP = {
     steer: 3,                              // turn input per radian off the line to the target (1 is full turn, so 3 is full beyond a third of a radian)
     align: 0.5,                            // rad: thrust only when the nose is within this of the line (the Long Haul autopilot's aligned)
     etaSlow: 1.1,                          // the flight time on the map is distance over the carrier's top speed times this (it speeds up and brakes)
-    fast: 2.2,                             // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away. 462 px/s: above a fighter's 430 (and an escort's 300), so a ship of the wing could not keep up: Fast needs the wing aboard (card space-game-campaign-fast-board)
-    auto: { leg: 3000, near: 4000 },       // FLY TO THE GOAL BURNS BY ITSELF (card space-game-keys2-cruiser): the cruiser list's row burns when the leg is at least `leg` px, the wing is aboard and no hostile is within `near` px, and drops to regular speed when one comes that near (src/campnav.js campNavAuto). ORCH's guesses
-    recallWait: 20,                        // s: after a second press of Fast with ships out, how long the wing has to get back aboard before the burn is given up (the ships still out are named)
-    askFor: 8,                             // s: a first press of Fast with ships out is refused and remembered this long: a second press in that time recalls the wing and burns once the last ship is aboard
+    fast: 2.2,                             // the map's Fast button (card space-game-map-click-fly): the carrier's top speed and thrust, times this, while the autopilot flies it; steering takes it away. 462 px/s: above a fighter's 430 (and an escort's 300), so a ship of the wing cannot keep up on its own: a burn tows the wing (card space-game-burn-with-wing-out; it was "Fast needs the wing aboard")
+    auto: { leg: 3000, near: 4000 },       // FLY TO THE GOAL BURNS BY ITSELF (card space-game-keys2-cruiser): the cruiser list's row burns when the leg is at least `leg` px and no hostile is within `near` px (the wing out or aboard), and drops to regular speed when one comes that near (src/campnav.js campNavAuto). ORCH's guesses
+    tow: 1.3,                              // A BURN TAKES THE WING WITH IT (card space-game-burn-with-wing-out; a guess to tune): a ship of the wing towed by a burn may fly this times the cruiser's burn speed, to catch up with its slot; it falls in on the cruiser's formation (src/campaign.js campTowSet)
     farFrom: 8000,                         // px: a Fast trip longer than this (Earth to Mars is 4,100, Earth to Jupiter 40,000) burns at farFast instead of fast (card space-game-campaign-sol)
     farFast: 3.2,                          // times the carrier's speed on a far trip: 672 px/s, Long Haul's own cruise (8,000 px/s) at the Campaign's 1 to 12 scale, so Earth to Neptune (112,000 px) is about 3 minutes
     pick: 28,                              // px on the map around a mark that count as a click on it
@@ -756,11 +755,20 @@ function campPaceMult(p) {
   const m = CAMP.pace.modes.find(x => x.id === p); return m ? m.mult * CAMP.pace.scale : 1;
 }
 const campSmall = kind => kind === 'fighter' || !!PIRATES[kind] || !!CAMP.pirate.kinds[kind] || !!CAMP.torpedo.boats[kind] || !!CAMP.rival.kinds[kind]; // a small ship: the ones the pace scales (the fighters of the wing, the aliens that are not the mothership or a tower)
-// the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly
+// the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly; u.tow is a ship of the wing towed by a burn (src/campaign.js campTowSet): its top speed and push times it
 function campPaceShip(C, u) {
   if (!u.base) return;
-  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R; u.accel = b.accel * P * R; u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
+  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R * (u.tow || 1); u.accel = b.accel * P * R * (u.tow || 1); u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
   u.def = P === 1 ? b.def : Object.assign({}, b.def, { speed: b.def.speed * P, max: b.def.max * P }); // pirateSteer reads the shape: its ring and its lean use the speed and the acceleration
+}
+// A BURN TAKES THE WING WITH IT (card space-game-burn-with-wing-out; src/campnav.js has the rule and campTowTop): once a tick for each ship of the wing, is it towed? u.tow is the factor on its top speed and push (CAMP.nav.tow
+// times the cruiser's burn speed over the ship's own top speed, at the battle's pace); 1 when it is not. A ship with a hostile within CAMP.flight.self px is not.
+const campTowTop = C => { const N = C.nav, c = C.carrier; return N && N.on && N.fast && c && c.hp > 0 ? CAMP.carrier.speed * campPowerFx(C).speed * (N.burn || CAMP.nav.fast) * (campHas(C, 'overdrive') ? CAMP.tech.overdrive.speed : 1) : 0; };
+function campTowSet(C, u, aliens) {
+  const top = campTowTop(C); let T = 1;
+  if (top && u.base && !campNearest(aliens, u, CAMP.flight.self)) T = Math.max(1, top * CAMP.nav.tow / (u.base.vmax * C.pace * (u.fp || 1)));
+  if (T !== (u.tow || 1)) { u.tow = T; campPaceShip(C, u); }
+  return T > 1;
 }
 // a new pace for the battle, from now on and for the ships already out (the quick key)
 function campPaceSet(C, p) {
@@ -1063,7 +1071,7 @@ function campStep(C, sec) {
 function campTick(C, dt) {
   C.t += dt * 1000; C.dt = dt; C.laserNow.length = 0;
   campSchedule(C);
-  if (typeof campNavWait === 'function') campNavWait(C); // a Fast trip waiting for the wing to come aboard (src/campnav.js)
+  if (typeof campNavTick === 'function') campNavTick(C); // a burn that began by itself ends by itself when a hostile comes near (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input
   campPowerStep(C, dt); // the ship's systems: the emergency's end, the shield's cap and its mending, the low lines
   campLaserStep(C, dt); // the turrets' charge mends at the rate of the weapons' power
@@ -1504,11 +1512,13 @@ function campMotherAI(C, u, dt) {
 function campWingAI(C, u, dt) {
   const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
   let foe = null, home = null;
+  const towed = campTowSet(C, u, aliens); // a burn takes the wing with it (src/campnav.js has the rule): a ship with no hostile near is towed
   if (campRepairRun(C, u, dt)) return; // a fighter under 30 percent hull breaks off, flies home and lands to be mended, whatever its order (src/camprepair.js)
   if (o.type === 'recall') {
     if (campDist(u, c) < CAMP.bay.dockAt) { u.hp = 0; u.docked = true; C.bay.fighters++; C.events.push({ type: 'dock', id: u.id }); return; }
-    return campSeek(u, c.x, c.y, dt);
+    return campWingHome(C, u, dt);
   }
+  if (towed) { const s = campFlightSlot(C, u, c); return campStation(u, s, dt, campDist(u, s) > CAMP.flight.catchUp ? null : s.face); } // under a burn: in formation on the cruiser, at its speed, whatever the order (it is kept)
   if (o.type === 'attack') {
     foe = o.target && C.by[o.target] && C.by[o.target].hp > 0 ? C.by[o.target] : campFlightCover(C, u) || campDogFoe(C, u, campNearest(aliens, u)); // (a wingman covers its leader first: src/campflight.js) // a named alien is the order's; with none named, a fighter flies at its partner (src/campdogfight.js)
     if (!foe) home = c; // nothing left to hit: back to the carrier's side
@@ -1558,6 +1568,8 @@ function campWingFire(C, u, k, foe, dist, target, may) {
   return true;
 }
 
+// home to the cruiser: the way to a point (a ship on its way to land), and under a burn, to the cruiser's own velocity too, so that it can land on it (src/campaign.js campTowSet)
+function campWingHome(C, u, dt) { const c = C.carrier; return u.tow > 1 ? campStation(u, { x: c.x, y: c.y, vx: c.vx, vy: c.vy }, dt) : campSeek(u, c.x, c.y, dt); }
 // fly to a place and take its velocity (the formation): the ship's wish is the place's own velocity plus the way to it
 function campStation(u, p, dt, face) {
   const dx = p.x - u.x, dy = p.y - u.y, d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), want = Math.min(u.vmax, d * 1.6);

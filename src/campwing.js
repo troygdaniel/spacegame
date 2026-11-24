@@ -121,8 +121,8 @@ function campSquadsShown(P, C, now) {
 }
 
 // Recall and the bay (card space-game-recall-while-launching; found by 3-GEN): Launch queues every ship in C.launchQ and one leaves every CAMP.bay.launchEvery ms, so a Recall given while the bay is still emptying
-// found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waits for the wing aboard
-// waited for ships that were never recalled: campNavOut counts the queue). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters) and counted aboard; the group's
+// found the ships out and sent them home, and the ships still in the queue came out afterwards with the guard and escort orders of a launch, as if there had been no Recall (and a burn that waited for the wing aboard
+// waited for ships that were never recalled: campNavOut counts the queue; a burn no longer waits, card space-game-burn-with-wing-out). Now the ships of the group that are still in the queue are put back in the bay (C.bay.fighters) and counted aboard; the group's
 // kinds say which; a group of named ships (C.groups) has none in the queue, which has no ids yet. Returns how many went back.
 function campWingQueueBack(C, id) {
   const sp = campWingGroupSpec(C, id), kinds = sp && !sp.ships && !sp.squad ? sp.kinds || [] : []; // a squad has no ships in the queue (a fighter joins its squad when it leaves the bay): a Recall of one squad leaves the others' waiting ships where they are

@@ -1,11 +1,11 @@
 // smoke: Recall given while the bay is still emptying: the ships still in the launch queue go back aboard, and none comes out later with the old order (plain Node, no Chrome)
 // Card space-game-recall-while-launching (found by 3-GEN): Launch queues every ship of the bay (C.launchQ) and one leaves every CAMP.bay.launchEvery ms. A Recall in between sent the ships that were out home and left the
-// rest in the queue, which came out afterwards with the guard and escort orders of a launch; a burn that waits for the wing aboard (src/campnav.js) counted them and waited for ships never recalled. src/campwing.js
+// rest in the queue, which came out afterwards with the guard and escort orders of a launch; a burn that waited for the wing aboard (src/campnav.js, until card space-game-burn-with-wing-out) counted them and waited for ships never recalled. src/campwing.js
 // campWingQueueBack is the rule: the ships of the recalled group still in the queue are put back in the bay.
 //   A. the rule: Recall (everyone) with some out and some queued: the queue is empty, the bay has them back, nothing leaves later, every ship is aboard in the end
 //   B. the groups: Fighters put the queued fighters back, one squad puts none back; a group of named ships puts none back
 //   C. what stays as it was: nothing out yet (all in the queue) is still "launching"; the check (dry) does nothing; a recall with nothing queued changes no count; a second Launch after a Recall works
-//   D. the burn: Fast pressed twice while the bay empties waits for the ships out only, and starts when they are aboard
+//   D. the burn: Fast pressed while the bay empties burns at once (a burn tows the wing, card space-game-burn-with-wing-out): nothing is recalled, the queue goes on launching and the ships are towed
 //   E. the words: the same line as before; the order counts once
 // Run: node tests/camprecall.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -72,15 +72,15 @@ console.log('C. what stays as it was');
 
 console.log('D. the burn');
 {
-  g.run(`__new(0.7); window.__nq = C.launchQ.length; window.__nout = campWing(C).length; campNavFly(C, __mars(C), true, 'key'); window.__r = campNavFly(C, __mars(C), true, 'key');`);
-  check('the second press of Fast while the bay empties recalls the wing and waits for the ships OUT only (not for the ones that were still in the queue)', J('__r.ok') === true && J('__r.waiting') === true && J('C.navWait.n') === J('__nout') && J('__r.say') === 'Recalling... ' + J('__nout') + ' out.' && J('C.launchQ.length') === 0 && J('campNavOut(C)') === J('__nout'), J('JSON.stringify([__nout, __nq, C.navWait && C.navWait.n, __r.say])'));
-  g.run(`for (let i = 0; i < 30 * 15 && C.navWait; i++) { campStep(C, 1 / 30); C.events.length = 0; }`);
-  check('the ships land and the burn starts by itself with the whole wing aboard (3 fighters)', J('C.navWait') === null && J('C.nav && C.nav.fast') === true && J('campNavOut(C)') === 0 && J('C.bay.fighters') === 3, J('JSON.stringify([C.nav, C.bay])'));
+  g.run(`__new(0.7); window.__nq = C.launchQ.length; window.__nout = campWing(C).length; window.__r = campNavFly(C, __mars(C), true, 'key');`);
+  check('Fast while the bay empties burns at once: ok, no recall, no wait, the ships still in the queue stay in it', J('__nq') > 0 && J('__r.ok') === true && J('__r.waiting') === null && J('C.nav.fast') === true && J('C.orders.recall') === 0 && J('C.launchQ.length') === J('__nq'), J('JSON.stringify([__nout, __nq, C.launchQ.length, __r])'));
+  g.run(`__run(C, 8);`);
+  check('the queue launches into the burn and all three pilots are out and towed (a lifted top speed), with the cruiser', J('C.launchQ.length') === 0 && J('campNavOut(C)') === 3 && J('campWing(C).every(u => u.tow > 1)') && J('campWing(C).every(u => campDist(u, C.carrier) < 450)') && J('C.nav.fast') === true, J('JSON.stringify([C.launchQ.length, campNavOut(C), campWing(C).map(u => [u.tow, Math.round(campDist(u, C.carrier))])])'));
 }
 
 console.log('E. the words');
 {
-  check('the rule is in the one place, the recall branch of campWingOrder (campDo, the strip, the voice and the nav all go through it); the nav counts the ships left after it', (() => { const s = src('src/campwing.js'), i = s.indexOf("if (verb === 'recall') {"), j = s.indexOf('return campWingDone', i); return i > 0 && j > i && s.slice(i, j).indexOf('campWingQueueBack(C, id)') > 0 && src('src/campnav.js').indexOf('const left = campNavOut(C)') > 0; })());
+  check('the rule is in the one place, the recall branch of campWingOrder (campDo, the strip, the voice and the nav all go through it); the nav has no wait for it any more', (() => { const s = src('src/campwing.js'), i = s.indexOf("if (verb === 'recall') {"), j = s.indexOf('return campWingDone', i); return i > 0 && j > i && s.slice(i, j).indexOf('campWingQueueBack(C, id)') > 0 && src('src/campnav.js').indexOf('campNavWait') < 0; })());
   check('"recall" said in words does the same: the queued ships go back', (() => { g.run(`__new(0.7); window.__q1 = C.launchQ.length;`); const r = J('campOrder(C, "wing", "all recall")'); return (r.ok === true) && J('C.launchQ.length') === 0 && J('C.bay.fighters') === J('__q1'); })());
 }
 

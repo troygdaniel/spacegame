@@ -83,7 +83,7 @@ earlier builds.
 | 15 | **After a win or a loss the HUD stays under the card** (the goal line, the tower arrow, the radar). Cosmetic. | Any debrief, lose card or the ending. |
 
 ## What to know before playing (not bugs, but they confuse a first minute)
-- A mission **starts away from its place** ("Fly to Mars: 3,140 km"); the battle begins when the carrier arrives. Fast needs the wing aboard. The briefing is the page for it.
+- A mission **starts away from its place** ("Fly to Mars: 3,140 km"); the battle begins when the carrier arrives. (Fast needed the wing aboard until card `space-game-burn-with-wing-out`: a burn now tows the wing.) The briefing is the page for it.
 - **Orders are two keys**: Q (FLEET), E (SHIP), C (SYSTEMS), then a row digit; a digit alone does nothing. **Dock is E then 5.** **B is the blink, P the pace.**
 - The **"cloaked cache" bonus** is on every mission, because every level has anomalies.
 - The ready room's board starts on the next mission; Enter or R on a finished one replays it (best score kept).

@@ -363,7 +363,7 @@ class Campaign extends Phaser.Scene {
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
       const listed = (this.pn && typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn)); // an open Q or P list has the arrows: the ship coasts (card one-list-keys)
       const wheel = !this.mp && !listed && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake)
-      if (wheel && (C.nav || C.navWait) && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip, and a burn that was waiting for the wing
+      if (wheel && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip
       if (!(C.nav && C.nav.on)) {
         if (this.mp || listed) { inp.turn = 0; inp.thrust = 0; inp.brake = false; }
         else {
