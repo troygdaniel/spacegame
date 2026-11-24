@@ -291,7 +291,7 @@ class Campaign extends Phaser.Scene {
     if (this.leaving) return;
     if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;
-    if (e.repeat && !(this.mode === 'play' && (c === 'ArrowUp' || c === 'ArrowDown') && this.pn && typeof campPanelOpen === 'function' && campPanelOpen(this.pn))) return; // a held key is one press, but for Up and Down in an open list: the highlight keeps moving
+    if (e.repeat && !(this.mode === 'play' && (c === 'ArrowUp' || c === 'ArrowDown') && this.pn && typeof campPanelOwnsArrows === 'function' && campPanelOwnsArrows(this.pn))) return; // a held key is one press, but for Up and Down in an open list that has the arrows (not the numbered S list: it has the digits): the highlight keeps moving
     if (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) { if (c === 'KeyH' || c === 'Escape') this.closeKeys(); return; } // the H page of every key (src/campkeys.js) has the keys while it is open
     if (this.mode === 'play' && typeof campCornerKey === 'function') campCornerKey(C, c); // a key of a corner panel opens its details (src/campcorner.js: Q W FLEET, and the keys of the corners other cards add)
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.afterIntro(); } return; }
@@ -367,7 +367,7 @@ class Campaign extends Phaser.Scene {
       const k = this.k, inp = C.input;
       // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
-      const listed = (this.pn && typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn)); // an open Q or P list has the arrows: the ship coasts (card one-list-keys)
+      const listed = (this.pn && typeof campPanelOwnsArrows === 'function' && campPanelOwnsArrows(this.pn)); // an open list that has the arrows (card one-list-keys): the ship coasts. The S list does not (card space-game-s-list-numbers: it is the digits'): with it open the arrows fly
       const wheel = !this.mp && !listed && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake)
       if (wheel && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip
       if (!(C.nav && C.nav.on)) {

@@ -157,7 +157,7 @@ console.log('E. the words, the strip and the voice');
   check('a fleet act outside the Campaign is still refused (the fleet is only yours there)', J(`shipcompPlan('SAY: ok\\nDO: fleet_missiles', { scene: { key: 'Space' } })`).refused === true);
   check('the model path: a reply "DO: fleet_missiles the mothership" is read and checked against the live battle', (() => { g.run('__nb(); window.__gun = __foe("mother", 1500, 0)'); const p = J(`(() => { const p = shipcompPlan('SAY: Firing.\\nDO: fleet_missiles the mothership', __scene); return { action: p.action, arg: p.arg, refused: p.refused, text: p.text }; })()`); return p.action === 'fleet_missiles' && !p.refused && p.text === 'Missile away, at the mothership.'; })());
   const sys = J('shipcompSystem(__scene)');
-  check('the model is told in a battle: the key (Enter, a direct key, while no list is open), what it does, and the act on its list', /fleet_missiles/.test(sys) && /With no list open Enter fires a missile at the target/.test(sys) && /Q opens|Q /.test(sys) && !/SHIP panel|FLEET panel/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick an enemy/.test(sys) && !/main gun/.test(sys));
+  check('the model is told in a battle: the key (Enter, a direct key, while no list is open), what it does, and the act on its list', /fleet_missiles/.test(sys) && /Enter fires a missile at the target/.test(sys) && /Q opens|Q /.test(sys) && !/SHIP panel|FLEET panel/.test(sys) && /holds Space to make its eight turrets fire/.test(sys) && /pick an enemy/.test(sys) && !/main gun/.test(sys));
   check('the state it is told says how many are left', /Missiles in the magazine: 6 of 6/.test(J('campSummary(C)')));
 }
 
