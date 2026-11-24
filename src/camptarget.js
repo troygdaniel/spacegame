@@ -9,6 +9,8 @@
 //   campTgtStep(C, dir)         the ship after (1) or before (-1) the target in the list, round at the ends; with none, 1 takes the nearest and -1 the farthest (the keys use campTgtCycle). Returns the ship, or null when there is no hostile
 //   campTgtNearest(C)           \: the nearest hostile, whatever the target was
 //   campTgtCycle(C)             ] (card space-game-keys4-onekey): the next hostile, one way, nearest first; after CAMP.target.restart ms with no press of ] the next press starts again from the nearest (C.tgtAt: the clock of the last press). campTgtStep stays for the other direction (tests, the bot)
+//   campTgtHold(C, id)          a click on an enemy (card space-game-click-target, src/campclick.js): that ship is the target held, as ] would make it; the ship, or null
+//   campFriShip(C, id) / campSelHold(C, squad)   a click on a ship you protect / on a pilot: that ship is the friendly held / that pilot is WHO; the entry, or null
 //   campTgtClear(C)             the enemy only (X is campPicksClear)
 //   campTgtName(C)              'Raider 3', or '' for none
 //   campTgtInfo(C)             { name, km, hp } for the panel and the bracket, or null
@@ -57,6 +59,10 @@ function campTgtCycle(C) { // ] (card space-game-keys4-onekey, Troy, 24 Nov 2026
   const t = campMarkClock(C), cold = !(C.tgtAt >= 0) || t < C.tgtAt || t - C.tgtAt >= CAMP.target.restart;
   if (cold) return campTgtNearest(C); // the first press, a press after the pause, or one with a target held by a click on the map
   C.tgtAt = t; return campTgtStep(C, 1);
+}
+function campTgtHold(C, id) { // a click on an enemy (card space-game-click-target, src/campclick.js): that ship is THE target held, as ] or \ would make it (the friendly is let go; the clock of ] starts, so the next ] steps on from it); the ship, or null when it is no hostile now
+  const u = campTgtList(C).find(x => x.id === id); if (!u) return null;
+  C.tgt = u.id; C.fsel = ''; C.tgtAt = campMarkClock(C); campMarkTouch(C, false, true); return u;
 }
 function campTgtClear(C) { const had = !!(C && C.tgt); if (C) C.tgt = ''; return had; }
 function campTgtName(C) { const u = campTgtNow(C); return u ? campNavUnitName(u) : ''; }
@@ -109,6 +115,10 @@ function campSelStep(C, dir) { // Q (1): the next who (-1: the last), round at t
   const at = Math.max(0, list.findIndex(e => e.id === C.sel)), d = dir < 0 ? -1 : 1, i = (at + d + list.length) % list.length;
   C.sel = list[i].id; campMarkTouch(C, true, false); return list[i];
 }
+function campSelHold(C, squad) { // a click on a pilot's ship (card space-game-click-target): that pilot is WHO, as Q would step to it; the entry of the list, or null when that pilot is not a stop (lost, home)
+  const e = campSelList(C).find(x => x.kind === 'pilot' && x.squad === squad); if (!e) return null;
+  C.sel = e.id; campMarkTouch(C, true, false); return e;
+}
 function campSelClear(C) { const had = !!(C && C.sel && C.sel !== CAMP_SELALL); if (C) C.sel = CAMP_SELALL; return had; } // WHO back to All pilots
 function campFriList(C) { // the stops of [: the SHIPS you protect (the transport, a miner, a hauler), nearest the cruiser first (no outpost or planet: a click on the Tab map holds one, campFriHold): [{ id, kind: 'ward', unit (the ship), name, x, y, r }]
   if (!C || !C.carrier || typeof campPickGuardees !== 'function') return [];
@@ -121,6 +131,10 @@ function campFriPlace(C, id) { // an outpost or a planet (a place of the level, 
 }
 function campFriHold(C, id) { // a click on an outpost or a planet on the Tab map (src/campmapdraw.js): that place is THE target held now (the enemy is let go); the entry, or null when it is no place
   const e = campFriPlace(C, id); if (!e) return null;
+  C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return e;
+}
+function campFriShip(C, id) { // a click on a ship you protect (card space-game-click-target): that ship is THE target held (the enemy is let go), as [ would make it; the entry, or null when it is no ship of the list now
+  const e = campFriList(C).find(x => x.id === id); if (!e) return null;
   C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return e;
 }
 function campFriNow(C) { // the friendly now: a ship of the list, or the place a map click holds; null when there is none (a ship that was lost is let go the next time anyone asks)

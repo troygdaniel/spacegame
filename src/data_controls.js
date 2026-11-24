@@ -330,6 +330,7 @@ const CONTROLS = [
     { k: [']'], t: 'Next enemy (nearest first)', sub: 'THE TARGET' }, // the enemy pick (C.tgt): Fly to the target flies to it, Enter fires at it, W sends the pilots at it; it replaces the friendly. A pause of CAMP.target.restart ms starts again from the nearest
     { k: ['\\'], t: 'The nearest threat', sub: 'THE TARGET' },
     { k: ['W'], t: 'Order: attack, guard or form up', sub: 'THE TARGET' }, // W does the fitting thing for the pick: who takes the order (Q) does it, and a pilot in the bay is launched by it (card space-game-keys2-orders; it was E)
+    { k: ['Click'], t: 'Click a ship; right click orders', sub: 'THE TARGET' }, // the mouse on the flight view (card space-game-click-target, src/campclick.js): a left click holds an enemy or a ship you protect (or picks a pilot: who), a right click holds it AND gives the order W gives; a drag still pans
     { k: ['X', 'F'], t: 'X clears the picks, F looks at it', sub: 'THE TARGET' }, // X: no enemy, no friendly, who is all pilots again. F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); S (the zoom row) brings it back
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
