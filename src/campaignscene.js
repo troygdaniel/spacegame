@@ -323,6 +323,15 @@ class Campaign extends Phaser.Scene {
     }
   }
 
+  // a click on a ship in the flight view (card space-game-click-target; src/campdrag.js calls it, src/campclick.js has the rules): left holds an enemy or a ship you protect, or picks a pilot; right does that and gives the order, the order key's own
+  shipClick(px, py, button) {
+    const C = this.camp; if (!C || this.mode !== 'play' || this.mp || this.leaving || typeof campClickAct !== 'function') return false;
+    if (typeof campPanelOpen === 'function' && campPanelOpen(this.pn)) return false; // a list is open: the keys are its, and a click does not reach under it
+    const cam = this.cameras.main, w = campClickWorld(cam, px, py), r = campClickAct(this.pn, C, campClickHit(C, w.x, w.y, cam.zoom), button, (this.time && this.time.now) || 0);
+    if (r.ran) toast(this, r.say, r.ok ? '#9fe9ff' : '#ffb454'); // the order's answer, as the key's toast
+    return !!r.used;
+  }
+
   // the H page of every key (src/campkeys.js): from the battle it waits for the page (the pause card's own mode), from the pause card it comes up over it
   openKeys() {
     if (typeof campPanelsClose === 'function') campPanelsClose(this);

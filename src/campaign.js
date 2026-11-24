@@ -198,6 +198,9 @@ const CAMP = {
     fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
     verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
   },
+  click: {                                 // the mouse on the flight view (card space-game-click-target; src/campclick.js)
+    hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
+  },
   target: {                                // the hostiles' key (card space-game-keys4-onekey; src/camptarget.js campTgtCycle)
     restart: 2000                          // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
   },
