@@ -10,6 +10,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + detail + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 const rows = JSON.parse(g.run(`JSON.stringify(Object.keys(UI_TEXT).filter(k => /^camp\\./.test(k)).map(k => [k, UI_TEXT[k]]))`));
 check('the table has the Campaign lines to read', rows.length > 200, String(rows.length));
 const stale = rows.filter(([k, v]) => !/^camp\.(hub|keys|ui\.(pick|refit))/.test(k) && /\b[Pp]ress \d\b|\((?:[0-9])\)|\bkey [0-9]\b|, then \d\b/.test(v));

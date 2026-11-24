@@ -970,7 +970,7 @@ const UI_TEXT = {
   'camp.bf.key.missile': 'Fire a homing missile at the target',
   'camp.bf.key.mine': 'Cruiser list: {rowfmine}',
   'camp.bf.key.dock': 'Dock to build, mend and sell',
-  'camp.bf.key.shield': 'Shield: {rowemergency}',
+  'camp.bf.key.shield': 'Power: {rowemergency}',
   'camp.bf.keys.next': 'Enter or Right: next    Left: back    L: launch now    Esc: the board',
   'camp.bf.keys.launch': 'Enter or L: launch    Left: back    Esc: the board',
   'camp.bf.keys.zoom': '{keyzoomout} {keyzoomin} zoom',

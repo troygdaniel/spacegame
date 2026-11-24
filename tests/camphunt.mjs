@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 
 // ---- 1. the Fast burn to a mission's place does not decloak an anomaly (2.1: the wreck lay on the route) ----
