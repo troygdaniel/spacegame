@@ -1,17 +1,17 @@
 // ---------- The scene half of the target display (card space-game-target-display; the rule is src/camptdisp.js) ----------
 // The box in the bottom right corner, where the radar was: a frame (red for a hostile, cyan for a ship of yours or a neutral you are picking), the ship's name and type, a picture of it, a hull bar and a shield bar with their
-// numbers, how far it is and the line of what it is doing. Nothing selected, nothing drawn: the corner is empty. The same box is the WHO display in the bottom LEFT corner (card space-game-friendly-display: campFdispSync, All pilots or the pilot A D picked; campTdispBox(true); its objects in scene.hud.fdisp), ; the TARGET box in the bottom right holds the one target (cards space-game-keys-panels, space-game-keys2-panels: an enemy or a friendly ship or outpost), drawn by the same code, with an order-key line at its foot (E Attack for an enemy, E Guard for a friendly: lit when the order can be given, grey when not). It is read when a ship is first shown and four times a second after (CAMP.tdisp.every), the frame and the bars
+// numbers, how far it is and the line of what it is doing. Nothing selected, nothing drawn: the corner is empty. The bottom LEFT corner is the FLEET panel now (card space-game-layout-fleet: src/campcorner.js, src/campcornerscene.js: the who box that was here is gone); the TARGET box in the bottom right holds the one target (cards space-game-keys-panels, space-game-keys2-panels: an enemy or a friendly ship or outpost), drawn by the same code, with an order-key line at its foot (E Attack for an enemy, E Guard for a friendly: lit when the order can be given, grey when not). It is read when a ship is first shown and four times a second after (CAMP.tdisp.every), the frame and the bars
 // are drawn again only when the ship, the side or a number changes, and every text is set through campLabel (src/camptextguard.js), so a steady box costs nothing. It is on the screen's own camera (scroll factor 0), over the
 // edge arrows and under the lists, and hidden behind a card, the pause, the page of keys and the Tab map (the same times as the lists). The scene calls campTdispSync(scene, now) every frame; the objects are kept in
 // scene.hud.tdisp (a scene that starts again has a new hud: the old are destroyed with it). Nothing here decides anything.
-function campTdispBox(left, dx) { const K = CAMP.tdisp, h = K.h + (left ? 0 : K.line), y = H - K.bottom - K.h - K.line; return { x: (left ? K.left : W - K.right - K.w) + (dx || 0), y, w: K.w, h }; } // a box on the screen: the TARGET's in the bottom right corner (the one target held, an enemy or a friendly), the WHO box in the bottom LEFT one (left). Both boxes start at the same height; the target box has the order-key line at its foot (CAMP.tdisp.line px more), so the who box ends that much higher and the MISSILES count (card space-game-missiles-line-overlap) sits in the strip under it; dx moves a box sideways (campBoxDx: out of the way of an open list). Both are rectangles the edge arrows' labels keep out of (inside CAMP.nav.arrow.keep)
+function campTdispBox(left, dx) { const K = CAMP.tdisp, C = CAMP.corner, y = H - K.bottom - K.h - K.line; return left ? { x: C.at.bl.x + (dx || 0), y: C.at.bl.y - K.h, w: C.w, h: K.h } : { x: W - K.right - K.w + (dx || 0), y, w: K.w, h: K.h + K.line }; } // a rectangle on the screen: the TARGET box (bottom right: the one target held, an enemy or a friendly; the order-key line at its foot, CAMP.tdisp.line px) or, with left, the room the FLEET corner and its details can take at the bottom left (CAMP.corner.at.bl; the MISSILES count, CAMP.tdisp.count, is under it); dx moves it sideways (campBoxDx: out of the way of an open list). Both are inside the edge arrows' keep rectangles (CAMP.nav.arrow.keep)
 const CAMP_TDISP_LAY = { name: [10, 8], type: [10, 29], pic: [10, 50], col: 96, hullL: 50, hullB: 63, hullN: 74, shL: 92, shB: 105, shN: 116, km: [10, 136], doing: [10, 160], wrap: 180, cap: { x: 10, w: 24, h: 18, dy: 4 }, label: 42 }; // where each part is, in px from the box's top left corner; the key line's cap (its place from the line's top) and its word's x
 function campTdispMake(s) {
   const K = CAMP.tdisp, mk = (o, d) => o.setScrollFactor(0).setDepth(K.depth + (d || 0)), tx = (size, color, st) => mk(s.add.text(0, 0, '', uiFont(size, color, st)), 2).setVisible(false);
   return { g: mk(s.add.graphics()), pic: mk(s.add.image(0, 0, 'ship'), 1).setVisible(false), name: tx(16, '#ffffff', { fontStyle: 'bold' }), type: tx(12, '#9fbdd1'), hullL: tx(11, '#9fbdd1'), hullN: tx(11, '#e8f6ff'), shL: tx(11, '#9fbdd1'), shN: tx(11, '#e8f6ff'), km: tx(14, '#e8f6ff'), doing: tx(12, '#ffffff', { wordWrap: { width: CAMP_TDISP_LAY.wrap } }), keyCap: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), keyLabel: tx(13, '#e8f6ff'), at: -1e9, id: '', side: '', info: null, gkey: '', kind: '' };
 }
 function campTdispOn(s) { return s.mode === 'play' && !s.mp && !(typeof s.hudHides === 'function' && s.hudHides()) && !(typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)); }
-function campTdispHide(V) { V.g.clear(); V.gkey = ''; V.id = ''; V.info = null; [V.pic, V.name, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing, V.keyCap, V.keyLabel].forEach(o => o.setVisible(false)); campFdispRowsHide(V); V.allOn = false; }
+function campTdispHide(V) { V.g.clear(); V.gkey = ''; V.id = ''; V.info = null; [V.pic, V.name, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing, V.keyCap, V.keyLabel].forEach(o => o.setVisible(false)); }
 function campTdispFrame(V, col) { const B = campTdispBox(V.left, V.dx), g = V.g; g.clear(); g.fillStyle(0x04101c, 0.9).fillRoundedRect(B.x, B.y, B.w, B.h, 7); g.lineStyle(2, col, 0.9).strokeRoundedRect(B.x, B.y, B.w, B.h, 7); } // the box's own frame
 function campTdispBar(g, x, y, w, h, share, color) { g.fillStyle(0x16293d, 1).fillRect(x, y, w, h); g.fillStyle(color, 1).fillRect(x, y, Math.max(share > 0 ? 1 : 0, Math.round(w * share)), h); g.lineStyle(1, 0x38e1ff, 0.4).strokeRect(x, y, w, h); } // a bar: its ground, its fill by the share, its edge
 function campTdispDraw(V, info) { // the frame, the picture's frame and the two bars (an outpost has neither), and the order-key line's rule and cap
@@ -38,14 +38,11 @@ function campBoxDx(s, left) {
   return left ? G.x + G.w + K.beside - B.x : G.x - K.beside - B.w - B.x;
 }
 function campTdispSync(s, now) { campTdispShow(s, now, 'tdisp', { left: false, keyline: true }, () => campTdispSubject(s.camp, s.pn, now)); } // the TARGET display, bottom right: the one target held (an enemy picked with [ ] \\, or a friendly with O P), with its order-key line; or the ship an order's list is on
-function campFdispSync(s, now) { campTdispShow(s, now, 'fdisp', { left: true, keyline: false }, () => campFdispSubject(s.camp)); } // the WHO display, bottom left: All pilots or the pilot A D picked (src/camptdisp.js campFdispSubject)
 function campTdispShow(s, now, slot, o, subject) { // one display: its objects are kept in scene.hud[slot]; the ship is read when first shown and every CAMP.tdisp.every ms after
   const C = s.camp, K = CAMP.tdisp; if (!C || !s.hud || !s.add) return;
   const V = s.hud[slot] || (s.hud[slot] = Object.assign(campTdispMake(s), { left: !!o.left, keyline: !!o.keyline })), sub = campTdispOn(s) ? subject() : null;
   const dx = campBoxDx(s, V.left); if (V.dx !== dx) { V.dx = dx; V.gkey = ''; } // a box steps out of an open list's way, and is drawn again there
   if (!sub) { if (V.id || V.gkey) campTdispHide(V); return; }
-  if (sub.all) return campFdispAll(s, now, V, sub); // All pilots
-  if (V.allOn) { campFdispRowsHide(V); V.allOn = false; V.gkey = ''; V.id = ''; } // back to one ship: the rows go, the frame and the texts are made again
   const sid = sub.u ? sub.u.id : sub.post.id;
   if (V.id !== sid || V.side !== sub.side || now - V.at >= K.every) { // a new ship is read at once, the same one four times a second
     V.info = sub.post ? campTdispPostInfo(C, sub.post) : campTdispInfo(C, sub.u, sub.side); V.id = sid; V.side = sub.side; V.at = now;
@@ -73,31 +70,4 @@ function campTdispShow(s, now, slot, o, subject) { // one display: its objects a
     campLabel(V.keyCap, ord.key, ord.ok ? '#02101c' : '#9fb4c4'); V.keyCap.setPosition(B.x + L.cap.x + L.cap.w / 2, y + L.cap.dy + L.cap.h / 2).setVisible(true);
     campLabel(V.keyLabel, ord.label, ord.ok ? '#e8f6ff' : '#7f95a8'); V.keyLabel.setPosition(B.x + L.label, y + L.cap.dy + 1).setVisible(true);
   } else { V.keyCap.setVisible(false); V.keyLabel.setVisible(false); }
-}
-
-// ---- the display for Q: All pilots (card space-game-q-all-pilots-panel; Troy, 23 Nov 2026: Q picks all three pilots, "All pilots with each pilot's name and hull") ----
-// The same box and frame, with the title (camp.sel.all) where a ship's name goes and, under it, a row for each pilot out: the pilot's name, its hull numbers and a hull bar the box's width. Nothing else: no picture, no type, no order.
-// With no pilot out it is the title alone. The rows' texts are made the first time they are wanted (three at most) and kept in V.rows.
-const CAMP_FDISP_ALL = { first: 40, pitch: 50, name: 10, numRight: 190, bar: { x: 10, dy: 22, w: 180, h: 9 } }; // px from the box's top left corner: the first row's top and the step to the next, the name's x, the numbers' right end, the bar under the name
-function campFdispRows(s, V, n) {
-  const K = CAMP.tdisp, mk = (o, d) => o.setScrollFactor(0).setDepth(K.depth + d); V.rows = V.rows || [];
-  while (V.rows.length < n) V.rows.push({ name: mk(s.add.text(0, 0, '', uiFont(14, '#ffffff', { fontStyle: 'bold' })), 2).setVisible(false), num: mk(s.add.text(0, 0, '', uiFont(12, '#e8f6ff')), 2).setOrigin(1, 0).setVisible(false) });
-  return V.rows;
-}
-function campFdispRowsHide(V) { (V.rows || []).forEach(r => { r.name.setVisible(false); r.num.setVisible(false); }); }
-function campFdispAll(s, now, V, sub) {
-  const C = s.camp, K = CAMP.tdisp, A = CAMP_FDISP_ALL, B = campTdispBox(V.left, V.dx), L = CAMP_TDISP_LAY;
-  if (V.id !== 'all' || now - V.at >= K.every) { V.info = campFdispAllInfo(C, sub.all); V.id = 'all'; V.side = 'friend'; V.at = now; } // read when first shown and four times a second after
-  const info = V.info, rows = campFdispRows(s, V, info.rows.length);
-  if (!V.allOn) { [V.pic, V.type, V.hullL, V.hullN, V.shL, V.shN, V.km, V.doing].forEach(o => o.setVisible(false)); V.allOn = true; V.gkey = ''; V.kind = ''; } // the single ship's parts go, and its picture is set again when one comes back
-  if (V.gkey !== info.key) { // the frame and the bars are drawn again only when a pilot or a number changes
-    V.gkey = info.key; campTdispFrame(V, K.color.friend);
-    info.rows.forEach((r, i) => campTdispBar(V.g, B.x + A.bar.x, B.y + A.first + i * A.pitch + A.bar.dy, A.bar.w, A.bar.h, r.hull.share, CAMP.charge.color[campChargeBand(r.hull.share)]));
-  }
-  campLabel(V.name, info.name, K.ink.friend); V.name.setPosition(B.x + L.name[0], B.y + L.name[1]).setVisible(true);
-  V.rows.forEach((r, i) => {
-    const row = info.rows[i]; if (!row) { r.name.setVisible(false); r.num.setVisible(false); return; }
-    campLabel(r.name, row.name); r.name.setPosition(B.x + A.name, B.y + A.first + i * A.pitch).setVisible(true);
-    campLabel(r.num, row.hull.now + ' / ' + row.hull.max); r.num.setPosition(B.x + A.numRight, B.y + A.first + i * A.pitch + 2).setVisible(true);
-  });
 }

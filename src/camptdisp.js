@@ -7,10 +7,8 @@
 //   campTdispInfo(C, u, side)    what is drawn: { id, side, kind, name, type, hull: { now, max, share }, shield: { now, max, share } | null, km, doing, key } (key: everything the drawing shows, so it is drawn again only when it changes)
 //   campTdispDoing(C, u)         the one line: what the ship is doing, read from the same picks the AIs make (campAlienAI, campPirateTarget, the wing's orders) without moving anything
 //   campTdispName(C, u)          the name the lists give it ("Skiff 3", "Hauler 2", "Transport convoy"; a pilot's ship: the pilot's name, "Wedge")
-//   campFdispSubject(C)          the ship the FRIEND display shows (card space-game-friendly-display; the bottom LEFT corner, the mirror of the target display): the friend A or D picked (C.sel, campSelUnits in src/camptarget.js), a pilot or a ship you protect, or null; for Q, all three pilots, { u: null, all: [the ships out] }
 //   campTdispPostInfo(C, e)      what an outpost shows when it is the target held: its name, "Friendly post", how far; no bars, no picture (the key line is the box's)
 //   campTdispOrder(C, verb)      the key line at the foot of the target box (Attack for an enemy, Guard for a friendly): { verb, key, label, ok }: the key from the key table (CAMP_KEYS[verb].k), the word, and ok when the order can be given now (campSelOrder, a dry run: nothing moves)
-//   campFdispAllInfo(C, units)   what that display draws for Q (card space-game-q-all-pilots-panel): { name: 'All pilots', rows: [{ id, name, hull }], key }
 const campTdispName = u => {
   if (u.kind === 'fighter' && u.team === 'earth' && typeof campPilotName === 'function' && campPilotName(u)) return campPilotName(u); // Wedge, Kara, Apollo (card space-game-three-pilots)
   if (u.kind === 'freighter' || (u.kind === 'miner' && u.team === 'neutral')) return u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : (u.kind === 'freighter' ? campConvoyName(u) : (u.cname || campNavUnitName(u))); // as the Escort sub-list names it (campPickEscorts)
@@ -26,13 +24,6 @@ function campTdispSubject(C, P, now) { // the ONE target box (bottom right): a s
   if (h.post) return { u: null, post: h.post, side: 'friend', held: true };
   return h.unit && h.unit.hp > 0 && !h.unit.gone ? { u: h.unit, side: h.kind === 'hostile' ? 'hostile' : 'friend', held: true } : null;
 }
-function campFdispSubject(C) {
-  if (!C || !C.carrier || typeof campSelUnits !== 'function') return null;
-  const u = campSelUnits(C).who; // WHO (Q W): one pilot's ship, or All pilots (the default; card space-game-keys-select)
-  if (u) return u.hp > 0 && !u.gone ? { u, side: 'friend' } : null;
-  const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // All pilots (Q W's first stop) (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
-  return f && f.kind === 'all' ? { u: null, all: (f.units || []).filter(x => x && x.hp > 0 && !x.gone), side: 'friend' } : null;
-}
 function campTdispPostInfo(C, e) {
   const km = campNavKm(campDist(e, C.carrier)), type = uiText('camp.tdisp.type.post');
   return { id: e.id, side: 'friend', kind: 'post', name: e.name, type, hull: null, shield: null, km, doing: '', key: [e.id, 'post', e.name, km].join('|') };
@@ -40,10 +31,6 @@ function campTdispPostInfo(C, e) {
 function campTdispOrder(C, verb) {
   const r = typeof campSelOrder === 'function' ? campSelOrder(C, verb, 'key', true) : null, k = typeof CAMP_KEYS === 'object' ? ((CAMP_KEYS.engage || CAMP_KEYS[verb] || {}).k || '') : ''; // E is the one order key (CAMP_KEYS.engage, card space-game-keys2-orders); before that, the verb's own
   return { verb, key: Array.isArray(k) ? String(k[0] || '') : String(k || ''), label: uiText('camp.tdisp.key.' + verb), ok: !!(r && r.ok) };
-}
-function campFdispAllInfo(C, units) { // what the Q display draws: its title and a row for each pilot out, with the pilot's name and hull; key: everything it shows
-  const rows = (units || []).map(u => ({ id: u.id, name: campTdispName(u), hull: campTdispHull(u) }));
-  return { id: 'all', side: 'friend', kind: 'all', name: uiText('camp.sel.all'), rows, key: ['all'].concat(rows.map(r => r.id + ':' + r.name + ':' + r.hull.now + '/' + r.hull.max)).join('|') };
 }
 // the ship a hostile is going for, as the AIs pick it (campAlienAI for an alien, campPirateTarget for a pirate and a torpedo boat); the carrier (or Earth) when nothing nearer is
 function campTdispFoe(C, u) {
