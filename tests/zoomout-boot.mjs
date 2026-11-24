@@ -14,10 +14,11 @@ const LEVEL = Number(arg('level', 1)), MISSION = Number(arg('mission', 1));
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyK: 75, KeyL: 76, Backspace: 8, KeyS: 83, Digit1: 49, Minus: 189, Equal: 187, Enter: 13, Escape: 27, Tab: 9 };
+const VK = { KeyQ: 81, KeyK: 75, KeyL: 76, Backspace: 8, KeyS: 83, Digit1: 49, Minus: 189, Equal: 187, Enter: 13, Escape: 27, Tab: 9 };
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), S = `game.scene.getScene('Campaign')`;
+  const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
   const kd = code => ({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : code === 'Equal' ? '=' : code === 'Backspace' ? 'Backspace' : code.replace(/^(Key|Digit)/, '').toLowerCase(), modifiers: 0 });
   const key = async (code, wait = 60) => { await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, kd(code))); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, kd(code))); await t.run(60); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `zoom-${LEVEL}${MISSION}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(60); } };
@@ -53,7 +54,7 @@ try {
   const sz = await j(`(() => { const out = {}; Object.keys(${S}.sp).forEach(id => { const u = ${S}.camp.by[id]; if (!u) return; const sp = ${S}.sp[id]; out[u.kind] = Math.round(sp.displayWidth * ${S}.cameras.main.zoom * 10) / 10; }); return out; })()`);
   note('drawn width on the screen by kind at the farthest zoom: ' + JSON.stringify(sz)); check('every ship is drawn at least 9 px across on the screen at the farthest zoom (the least is 10)', Object.values(sz).length > 3 && Object.values(sz).every(v => v >= 9), JSON.stringify(sz));
   const fps = await j(`Math.round(game.loop.actualFps || 0)`); note('actualFps (as the loop sees it, stepped clock): ' + fps);
-  await key('KeyS', 40); await t.run(1200); check('S puts the view back to the start zoom (0.335, six presses of -), not 1', Math.abs((await j(`${S}.cameras.main.zoom`)) - DEF) < 0.01); await shut();
+  await key(await zr(), 40); await t.run(1200); check('Q puts the view back to the start zoom (0.335, six presses of -), not 1', Math.abs((await j(`${S}.cameras.main.zoom`)) - DEF) < 0.01); await shut();
   // the Tab map: - and the wheel out to the whole system
   await key('Tab'); await t.run(700); const m0 = await j(`({ z: ${S}.mp.z, zMin: ${S}.mp.zMin, whole: ${S}.mp.whole })`); note('map opened: ' + JSON.stringify(m0)); await snap('3-map-open');
   let mz = []; for (let i = 0; i < 6; i++) { await key('Minus', 40); mz.push(+(await j(`${S}.mp.zWant`)).toFixed(3)); } await t.run(1200); await snap('4-map-6-presses');
@@ -66,7 +67,7 @@ try {
   check('every body of the system is inside the frame at the far end', places === 0, places + ' outside');
   await wheel(-100, 8); await t.run(1200); const mw = await j(`${S}.mp.zWant`); note('after 8 wheel notches in: zoom ' + mw.toFixed(3)); check('the wheel zooms the map back in', mw > mf.zMin * 2, String(mw)); await snap('6-map-wheel-in');
   await wheel(100, 30); await t.run(1500); check('the wheel out goes to the same end and no further', Math.abs((await j(`${S}.mp.zWant`)) - mf.zMin) < 1e-6);
-  await key('KeyS', 40); await t.run(1200); check('S over the map closes the map and opens the cruiser list (a list\'s key does that; S is the cruiser list\'s since card space-game-keys2-cruiser)', (await j(`!${S}.mp`)) === true && (await j(`campPanelOpen(${S}.pn)`)) === 'cruiser', JSON.stringify(await j(`[!!${S}.mp, campPanelOpen(${S}.pn)]`))); await shut();
+  await key(await zr(), 40); await t.run(1200); check('Q over the map closes the map and opens the cruiser list (a list\'s key does that; Q is the cruiser list\'s since card space-game-keys5-qwe, it was S)', (await j(`!${S}.mp`)) === true && (await j(`campPanelOpen(${S}.pn)`)) === 'cruiser', JSON.stringify(await j(`[!!${S}.mp, campPanelOpen(${S}.pn)]`))); await shut();
   await key('Tab'); await t.run(700); note('the map opened again: ' + JSON.stringify(await j(`${S}.mp ? { z: ${S}.mp.z, zWant: ${S}.mp.zWant, whole: ${S}.mp.whole } : null`))); await key('Tab'); await t.run(300);
   const errs = await j(`window.__errors || []`); check('the game logged no error', !errs || errs.length === 0, JSON.stringify(errs).slice(0, 300));
 } catch (e) { console.log('  FAIL the walk stopped: ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); bad++; }

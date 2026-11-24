@@ -25,6 +25,7 @@ const log = []; const note = (...a) => { const s = a.join(' '); console.log('  '
 
 const t = await launch('?campaign=' + (part === '2' || part === 'zoom' ? '2' : '1') + (part === '3' ? '&debug=1' : ''), ROOT); // part 3 presses the tune kit's win key: the kit is off unless the address says &debug=1 (card space-game-debug-keys-off) // zoom: level 2, which has a goal off the screen (the arrow); the belt's goal is a mothership that has not come
 const j = async expr => JSON.parse(await t.ev(`JSON.stringify(${expr})`));
+const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
 const snap = async name => { // taken twice: the first capture after a step can be a frame behind
   for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); }
   note('picture', name);
@@ -57,12 +58,12 @@ const noRow = async row => {
   return false;
 };
 const shut = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); }; // every list closed (Esc goes back one step; it is pressed only while a list is open, so it never pauses)
-// S resets the zoom AND opens the cruiser list (card space-game-keys2-cruiser); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: S, the list closed again, and the map opened again when it was up
-const zreset = async map => { await keyOn('KeyS'); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
+// Q resets the zoom AND opens the cruiser list (card space-game-keys5-qwe; it was S); over the open map it closes the map first (a list's key does). For a picture of the zoom alone: Q, the list closed again, and the map opened again when it was up
+const zreset = async map => { await keyOn(await zr()); await shut(); if (map && !(await j(`!!${SC}.mp`))) { await t.key('TAB'); await t.run(300); } };
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
 const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;
-  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
   if (await j(`!!${SC}.pn.pick`)) await keyOn(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open: Esc until it is closed, the keys go back to the ship
   return true;

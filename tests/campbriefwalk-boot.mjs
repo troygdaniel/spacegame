@@ -13,11 +13,12 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
+const VK = { KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
 
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), HUB = `game.scene.getScene('CampHub')`;
+  const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
   const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Backspace|Arrow|Escape)/.test(code) ? code : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(250); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'briefwalk-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture briefwalk-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
@@ -50,8 +51,8 @@ try {
   await snap('4b-zoomed-in');
   await t.run(12000);
   check('left zoomed in for twelve seconds the walk is still on the fourth stop', (await where()).i === 3);
-  await key('KeyS'); await t.run(300);
-  check('S puts the zoom back to 100%, and the sound is not muted by any of it', await j(`${HUB}.bf.wk.z === 1`) && (await j('G.muted')) !== true);
+  await key(await zr()); await t.run(300);
+  check('Q puts the zoom back to 100%, and the sound is not muted by any of it', await j(`${HUB}.bf.wk.z === 1`) && (await j('G.muted')) !== true);
   await key('Enter'); await t.run(3200); await snap('5-leader-waits');
   const c = await words();
   check('Enter is page 3 (how): the leader waits near Ceres, the keys this mission needs and the readiness are in the strip under the map', (await where()).page === 2 && (await where()).i === 4 && c.some(x => /^A pirate leader waits near Ceres/.test(x)) && c.some(x => /^READINESS/.test(x)) && c.some(x => /^Arrows$/.test(x) || /thrust|turn/i.test(x)), JSON.stringify(c).slice(0, 500));

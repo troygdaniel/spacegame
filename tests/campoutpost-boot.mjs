@@ -20,6 +20,7 @@ const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5:
 const t = await launch('?campaign=1', ROOT);
 try {
   const SCN = `game.scene.getScene('Campaign')`, HUB = `game.scene.getScene('CampHub')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
+  const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
   const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(300); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'outpost-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture outpost-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
@@ -51,8 +52,8 @@ try {
   await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await t.run(500);
   const drawn = () => j(`${SCN}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`); // the rows of the open list as they are drawn: the words, and the word or two of state (src/campanelsdraw.js)
   const before = await drawn();
-  await key('KeyS'); await t.run(300); const crRows = await drawn(), crOpen = await j(`campPanelOpen(${SCN}.pn)`); await snap('2-cruiser-list-undocked'); await key('KeyS'); // S opens the cruiser list, S again closes it (the ship and dock lists are deleted: card space-game-delete-off-lists)
-  check('no list is drawn until its key is pressed, then S opens the cruiser list, which has the Dock row (its digit in the chip), and S again closes it', before.length === 0 && crOpen === 'cruiser' && (await j(`campPanelOpen(${SCN}.pn)`)) === '' && crRows.some(x => /^Dock at the outpost \|/.test(x)), before.join(' | ') + ' // ' + crRows.join(' // '));
+  await key(await zr()); await t.run(300); const crRows = await drawn(), crOpen = await j(`campPanelOpen(${SCN}.pn)`); await snap('2-cruiser-list-undocked'); await key(await zr()); // Q opens the cruiser list, Q again closes it (it was S until card space-game-keys5-qwe; the ship and dock lists are deleted: card space-game-delete-off-lists)
+  check('no list is drawn until its key is pressed, then Q opens the cruiser list, which has the Dock row (its digit in the chip), and Q again closes it', before.length === 0 && crOpen === 'cruiser' && (await j(`campPanelOpen(${SCN}.pn)`)) === '' && crRows.some(x => /^Dock at the outpost \|/.test(x)), before.join(' | ') + ' // ' + crRows.join(' // '));
   const yardRows = crRows, yardTitle = '';
   const dockRow = yardRows.find(x => /^Dock at the outpost \|/.test(x)) || '';
   check('the cruiser list undocked: no build row (in a level with outposts nothing is built), and the dock row is ready and names the outpost ("Occator Works")', yardRows.length > 0 && !yardRows.some(x => /^Build /.test(x)) && (await j(`campKeyVia('dock').id`)) === 'cruiser' && /\| Occator Works$/.test(dockRow), yardRows.join(' // '));
@@ -75,7 +76,7 @@ try {
   await key('Tab'); await t.run(400); for (let i = 0; i < 8; i++) { await key('Minus'); } await t.run(600); await snap('9-map-whole-outposts'); // - zooms the map out to the whole system
   check('the map marks the outposts (a frame round the place); the list says the goal first', await j(`campMapMarks(${SCN}.camp, true).filter(m => m.outpost).map(m => m.id).sort().join()`) === 'ceres,earth,mars,vesta');
   await key('Tab');
-  await key('KeyS'); await t.run(500); await snap('10-cruiser-list-hurt'); await key('KeyS'); // S the cruiser list, S again closes it
+  await key(await zr()); await t.run(500); await snap('10-cruiser-list-hurt'); await key(await zr()); // Q the cruiser list, Q again closes it
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
 finally { await t.close(); }
