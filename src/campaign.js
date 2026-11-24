@@ -165,7 +165,7 @@ const CAMP = {
     line: 26,                              // px: the order-key line at the foot of the target box ("E  Attack" for an enemy, "E  Guard" for a friendly, lit or grey; cards space-game-keys-panels, space-game-keys2-panels): it is this much taller than the who box
     bottom: 64,                            // px from the bottom edge to the box (the key line's strip is under it)
     count: 72,                             // px from the bottom edge to the top of the MISSILES count (bottom left): the FLEET corner (CAMP.corner.at.bl) ends at y 630, so this strip under it is free (cards space-game-missiles-line-overlap, space-game-layout-fleet)
-    w: 200, h: 200,                        // px: the box, about the radar's size (its disc was 196 across)
+    w: 260, h: 200,                        // px: the box (its width is the corner panel's, CAMP.corner.w; the target corners' room), about the radar's height
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
     bar: { w: 86, h: 8 },                  // px: the hull bar and the shield bar
@@ -174,12 +174,14 @@ const CAMP = {
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
   corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
-    w: 200,                                // px: a panel's width (its title row and its details)
+    edge: 18,                              // px: THE margin: from the screen's left and right edges to the corners' frames (the right ones end this far from the right edge: at.tr.x and at.br.x are W - edge - w), and where the glyphs of the bottom left texts start (the key line, the MISSILES count, the radio: x = edge - ink); card space-game-layout-align, Troy, 24 Nov 2026: the left corners and the bottom key strip shared no left edge
+    ink: 2,                                // px: a text with a 3 or 4 px stroke draws its first letter this far right of its x (half the stroke and the letter's side)
+    w: 260,                                // px: a panel's width (its title row and its details): room for the chips, FRIENDLIES and a name like Transport beside it (it was 200, and the name ran off the screen: card space-game-layout-align)
     depth: 64,                             // the draw order: over the edge arrows (62), under the lists (160)
     show: 4000,                            // ms the details stay open at full strength after the corner's keys are used (or campCornerOpen is called), then they fade
     hit: 4000,                             // ms they stay open after the corner says it was hit (FLEET: a pilot's hull went down)
     fade: 600,                             // ms the details take to fade out
-    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection
+    title: { h: 26, chipW: 22, chipH: 18, chipGap: 3, pad: 8, gap: 8, chips: 2 }, // the title row: its height, a key-cap chip's size and the space between two, the space at the left, and between the chips, the title and the selection; chips: the chip column is this many chips wide in EVERY corner (S has one, the others two), so every title starts at the same x
     gap: 4, pad: 8,                        // px between the title row and its details, and inside the details' frame
     item: { bar: 46, text: 20, key: 26, pic: 80 },  // px: the height of a detail line by its kind: a name with a number and a bar, a line of text, a key chip and its word, a picture row (src/camptcornerscene.js: the ship's picture, its type and its distance)
     bar: { dy: 22, h: 9 },                 // px: a bar's top below its item's top, and its height
@@ -187,8 +189,8 @@ const CAMP = {
     at: {                                  // where each corner's title row sits (x: its left edge; y: the edge of the row at the screen's edge side, the bottom edge for a bottom corner; dir: 1 the details open downward, -1 upward). Left and right are what you command and everything else
       tl: { x: 18, y: 62, dir: 1 },        // S CRUISER (card space-game-layout-cruiser): under its status (SHIELD and HULL bars and the ORE line, src/campcruiserhud.js: they end 4 px above this row), at the top of the screen; the S list opens under the row
       bl: { x: 18, y: 630, dir: -1 },      // Q W FLEET: the row ends where the who box used to (y 630), the MISSILES count is under it (CAMP.tdisp.count)
-      tr: { x: 1062, y: 150, dir: 1 },     // [ ] HOSTILES (a card of its own sets the place)
-      br: { x: 1062, y: 630, dir: -1 }     // O P FRIENDLIES (a card of its own sets the place)
+      tr: { x: 1002, y: 62, dir: 1 },      // [ ] HOSTILES: its title row level with S CRUISER's (it was 88 px lower: card space-game-layout-align); x is W - edge - w, the left margin mirrored
+      br: { x: 1002, y: 630, dir: -1 }     // O P FRIENDLIES: level with FLEET's row (the bottom pair end at 630, the top pair start at 62)
     }
   },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
@@ -386,7 +388,7 @@ const CAMP = {
     list: 9,                               // lines of the list on the map at once (a heading is a line)
     arrow: {
       margin: 40, min: 600,                // the edge arrow: px in from the screen edge, and the distance in px under which there is none
-      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [1056, 366, 1280, 664], [1056, 150, 1280, 180], [0, 430, 224, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
+      keep: [[0, 0, 360, 150], [908, 0, 1280, 104], [360, 0, 920, 152], [0, 656, 1220, 720], [996, 366, 1280, 664], [996, 62, 1280, 92], [0, 430, 284, 664]] // (the target corners, card space-game-layout-targets: O P FRIENDLIES, its title up from y 630 and its details above it, are inside the fifth one, where the radar was; the title row of [ ] HOSTILES is the sixth (its details open under it when the target held is a hostile: a label may sit on them for a few seconds, as on any list that opens); campTdispBox(false) in src/camptdispscene.js is the fifth's bottom part and the FLEET corner's room, campTdispBox(true), is inside the last) screen rectangles [x0, y0, x1, y1] it keeps out of: the gauges and the objective and autopilot lines (to 206), the radar, the message band, the key line, the panel tabs at the left (FLEET, SYSTEMS) and at the right (SHIP): tests/camplabels.mjs holds them to the tabs' own geometry
     }
   },
   alien: {

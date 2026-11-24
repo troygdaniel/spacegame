@@ -21,6 +21,7 @@
 //     campCornerNow(C, id)        what the scene draws now: { id, at, chips: ['Q', 'W'], title, selection, items (empty when closed), open (0..1) }
 //     campCornerGeom(pos, itemsH, dx)   the two rectangles { title, det } of a corner (det is null with no items); dx moves both sideways (out of an open list's way)
 //     campCornerItemsH(items)     the height of the items
+//     campCornerFit(text, room, width)   the text cut short with an ellipsis until width(text) is at most room px (the selection beside a title: card space-game-layout-align)
 const CAMP_CORNERS = []; // the registered corners, in the order they were added
 const CAMP_CORNER_STATE = new WeakMap(); // C -> { open: { id: { at, ms } }, mem: { id: {} } }: a new C (the next mission) starts with every corner closed
 function campCornerAdd(def) { const i = CAMP_CORNERS.findIndex(d => d.id === def.id); if (i >= 0) CAMP_CORNERS[i] = def; else CAMP_CORNERS.push(def); return def; }
@@ -39,6 +40,11 @@ const campCornerItemsH = items => (items || []).reduce((h, it) => h + (CAMP.corn
 function campCornerGeom(pos, itemsH, dx) { // the title row and the details' frame: the row sits at the corner, the details open away from the screen's edge
   const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0), th = K.title.h, ty = a.dir < 0 ? a.y - th : a.y, dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
   return { title: { x, y: ty, w: K.w, h: th }, det: dh ? { x, y: a.dir < 0 ? ty - K.gap - dh : ty + th + K.gap, w: K.w, h: dh } : null };
+}
+function campCornerFit(text, room, width) { // text cut short with an ellipsis until width(text) fits room (width: a function giving a text's width in px); a text that fits is returned as it is
+  const t = String(text || ''); if (width(t) <= room) return t;
+  for (let n = t.length - 1; n > 0; n--) { const c = t.slice(0, n).replace(/\s+$/, '') + '\u2026'; if (width(c) <= room) return c; }
+  return '\u2026';
 }
 function campCornerNow(C, id) {
   const d = campCornerDef(id); if (!d || !C) return null;

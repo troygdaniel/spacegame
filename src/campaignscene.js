@@ -87,13 +87,13 @@ class Campaign extends Phaser.Scene {
     const mid = (y, size, color) => t(CAMP.hud.text.x, y, size, color).setOrigin(0.5, 0); // the lines of the HUD column stand at the top centre (CAMP.hud.text), each centred on x; flowHud puts each one where the lines above it end (card space-game-layout-hud: wave, goal, Earth, repair and outpost lines moved from the top left, which is the cruiser's corner now; the three gauges and the ore line are gone)
     this.hudBelow = CAMP.hud.text.y + 2 * CAMP.hud.text.pitch; // where the column ends: the mothership's name and bar and the rival's bars stand under it (flowHud keeps it)
     this.hud = { earth: mid(14, 14, '#9fe9ff'), wave: mid(6, 14, '#ffd37a'), mother: t(W / 2 - 150, this.hudBelow, 14, '#ff9ec0'),
-      obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(24, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
+      obj: mid(28, 14, '#ffffff'), post: mid(102, 14, '#ffb454'), arrow: t(0, 0, 13, '#ffd37a').setOrigin(0.5), keys: this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - 44, campKeyLine(), uiFont(14, '#9fbdd1', { stroke: '#02060d', strokeThickness: 4 })).setScrollFactor(0).setDepth(100) };
     this.gaugeAnim = campGaugeAnimNew(this.camp.power.p); this.gaugeAt = performance.now(); // the bars' animation: only the power list's rows draw bars now (src/camphud.js; the three gauges are gone, card space-game-layout-hud)
     if (typeof campCruiserHudMake === 'function') Object.assign(this.hud, campCruiserHudMake(this, uiFont)); // the cruiser's status at the top left, over the S CRUISER title: SHIELD and HULL bars and the ORE line (src/campcruiserhud.js; card space-game-layout-cruiser): five texts in the HUD, so a result card hides them with the rest
     this.powerKey = this.camp.power.base.join(); // the setting as it was saved: a change of it is saved when it is made (update)
     this.hud.repair = mid(80, 14, '#9fe9ff'); // the fighters being mended in the bay (card space-game-fighter-repair): "REPAIR 2  7 s"
     this.radio = chatterNew(); this.orderSeen = Object.assign({}, this.camp.orders); this.chatUntil = 0; // the wing's radio (src/campchatter.js): its state, the orders seen so far, when its line goes
-    this.hud.chat = this.add.text(24, H - 112, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, beside the command strip (which starts at x 368)
+    this.hud.chat = this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - 112, '', uiFont(15, '#ffd37a', { stroke: '#02060d', strokeThickness: 3, wordWrap: { width: 330 } })).setScrollFactor(0).setDepth(101).setAlpha(0); // bottom left, beside the command strip (which starts at x 368)
     this.input.keyboard.on('keydown', e => this.onKey(e));
     if (typeof campPanelsInstall === 'function') campPanelsInstall(this); // the order lists: W the all-squads orders at the left, P the power list at the right (and O the autopilot, U the dock), hidden until asked for (src/camppanel.js, src/campanelsdraw.js)
     if (typeof campFocusInstall === 'function') campFocusInstall(this); // F glides the camera to the selected ship and follows it (src/campfocus.js)
@@ -522,7 +522,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, c = C.carrier, k = CAMP.missile, seen = {}, play = this.mode === 'play';
     if (!this.hud.missiles) { // made the first time: the missiles in flight, the turrets' reach ring and mounts, the magazine count (bottom left, above the key line)
       this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
-      this.hud.missiles = this.add.text(24, H - CAMP.tdisp.count, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
+      this.hud.missiles = this.add.text(CAMP.corner.edge - CAMP.corner.ink, H - CAMP.tdisp.count, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     }
     C.rockets.forEach(m => {
       const ux = Math.cos(m.rot), uy = Math.sin(m.rot);

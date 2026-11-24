@@ -6,6 +6,7 @@
 //   D  the reopen hook (campCornerOpen, with its own time) and the hit: a pilot's hull going down brings the details back by themselves for 4 s
 //   E  where: the title row and the details' frame (open upward from the bottom, downward from the top); the MISSILES count is clear of it
 //   F  the drawing on a stand-in scene: the chips, the title and the selection are always shown; the details only while open, fading; nothing behind a card or the map; an open left list moves the corner
+//   H  the alignment (card space-game-layout-align): the top pair level, the margins mirrored, one chip column in every corner, a long selection cut with an ellipsis
 //   G  the who box is gone: no fdisp, no campFdispSync, the scene calls campCornerSync and the keys hook; the script tags are in index.html
 // Run: node tests/campcorner.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -35,9 +36,9 @@ g.run(`
 // ---- A. the table and the words ----
 console.log('A. the table and the words');
 const camp = src('src/campaign.js');
-check('CAMP.corner: 200 wide; details open 4 s after the keys, 4 s after a hit, fade over 600 ms', J('CAMP.corner.w') === 200 && J('CAMP.corner.show') === 4000 && J('CAMP.corner.hit') === 4000 && J('CAMP.corner.fade') === 600);
+check('CAMP.corner: 260 wide (room for the chips, FRIENDLIES and a name beside it: card space-game-layout-align); details open 4 s after the keys, 4 s after a hit, fade over 600 ms', J('CAMP.corner.w') === 260 && J('CAMP.corner.show') === 4000 && J('CAMP.corner.hit') === 4000 && J('CAMP.corner.fade') === 600);
 check('the four corners have a place each: top left, bottom left, top right, bottom right (the bottom ones open upward, the top ones downward)', J('Object.keys(CAMP.corner.at).join()') === 'tl,bl,tr,br' && J('CAMP.corner.at.bl.dir') === -1 && J('CAMP.corner.at.br.dir') === -1 && J('CAMP.corner.at.tl.dir') === 1 && J('CAMP.corner.at.tr.dir') === 1 && J('CAMP.corner.at.bl.x') < 640 && J('CAMP.corner.at.br.x') > 640);
-check('every number has its comment in the table', /show: 4000, +\/\/ ms/.test(camp) && /hit: 4000, +\/\/ ms/.test(camp) && /fade: 600, +\/\/ ms/.test(camp) && /w: 200, +\/\/ px: a panel/.test(camp) && /at: \{ +\/\/ where each corner/.test(camp));
+check('every number has its comment in the table', /show: 4000, +\/\/ ms/.test(camp) && /hit: 4000, +\/\/ ms/.test(camp) && /fade: 600, +\/\/ ms/.test(camp) && /w: 260, +\/\/ px: a panel/.test(camp) && /edge: 18, +\/\/ px: THE margin/.test(camp) && /ink: 2, +\/\/ px: a text/.test(camp) && /at: \{ +\/\/ where each corner/.test(camp));
 check('the four titles and the pilot-in-the-bay word are content, not bare keys', J(`uiText('camp.corner.cruiser')`) === 'CRUISER' && J(`uiText('camp.corner.fleet')`) === 'FLEET' && J(`uiText('camp.corner.hostiles')`) === 'HOSTILES' && J(`uiText('camp.corner.friendlies')`) === 'FRIENDLIES' && J(`uiText('camp.corner.bay')`) === 'in the bay');
 
 // ---- B. the registry ----
@@ -106,13 +107,13 @@ check('the first look in a mission is not a hit (what it saw is only remembered)
 // ---- E. where ----
 console.log('E. where');
 const geo = J('campCornerGeom("bl", campCornerItemsH([{ share: 1 }, { share: 1 }, { share: 1 }]), 0)');
-check('FLEET\'s title row is at the bottom left, ending at y 630 (where the who box ended), and its details open above it with a gap', geo.title.x === 18 && geo.title.w === 200 && geo.title.y + geo.title.h === 630 && geo.det.y + geo.det.h === geo.title.y - 4 && geo.det.w === 200 && geo.det.h === 3 * 46 + 16, JSON.stringify(geo));
+check('FLEET\'s title row is at the bottom left, ending at y 630 (where the who box ended), and its details open above it with a gap', geo.title.x === 18 && geo.title.w === 260 && geo.title.y + geo.title.h === 630 && geo.det.y + geo.det.h === geo.title.y - 4 && geo.det.w === 260 && geo.det.h === 3 * 46 + 16, JSON.stringify(geo));
 const geoT = J('campCornerGeom("tl", 66, 0)');
 check('a top corner opens downward: the details start under the title row', geoT.det.y === geoT.title.y + geoT.title.h + 4 && geoT.title.y === J('CAMP.corner.at.tl.y'), JSON.stringify(geoT));
 check('with no items there is no frame, and dx moves both rectangles sideways', J('campCornerGeom("bl", 0, 0).det') === null && J('campCornerGeom("bl", 138, 40).title.x') === 58 && J('campCornerGeom("bl", 138, 40).det.x') === 58);
 check('the three details fit the room the corner is given (the rectangle the list dodge and the arrows\' labels use): from y 430 to 630', geo.det.y >= J('campTdispBox(true).y') && geo.title.y + geo.title.h <= J('campTdispBox(true).y + campTdispBox(true).h') && J('campTdispBox(true).x') === 18);
-{ const top = J('H - CAMP.tdisp.count'); check('the MISSILES count (bottom left, card space-game-missiles-line-overlap) is under the corner and clear of it, and over the key line\'s strip (its top is H - 48): the corner ends at 630, the count starts at ' + top, top >= 630 + 8 && top + 20 <= J('H') - 48 && /this\.add\.text\(24, H - CAMP\.tdisp\.count/.test(src('src/campaignscene.js'))); }
-check('the room the corner takes is inside a rectangle the edge arrows\' labels keep out of', J('CAMP.nav.arrow.keep').some(r => r[0] === 0 && r[1] <= 446 && r[2] >= 218 && r[3] >= 630));
+{ const top = J('H - CAMP.tdisp.count'); check('the MISSILES count (bottom left, card space-game-missiles-line-overlap) is under the corner and clear of it, and over the key line\'s strip (its top is H - 48): the corner ends at 630, the count starts at ' + top, top >= 630 + 8 && top + 20 <= J('H') - 48 && /this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - CAMP\.tdisp\.count/.test(src('src/campaignscene.js'))); }
+check('the room the corner takes is inside a rectangle the edge arrows\' labels keep out of', J('CAMP.nav.arrow.keep').some(r => r[0] === 0 && r[1] <= 446 && r[2] >= 18 + 260 && r[3] >= 630));
 
 // ---- F. the drawing ----
 console.log('F. the drawing');
@@ -148,6 +149,30 @@ check('an open left list (the squads list) moves the corner right of it, with th
   g.run(`S.pn = campPanelNew(); campCornerSync(S, 0);`);
   return dx > 0 && J('S.hud.corner.fleet.chips[0].x') < moved + 20 && G + J('CAMP.tdisp.beside') === 18 + dx && J('S.hud.corner.fleet.chips[0].x') === J('CAMP.corner.at.bl.x') + J('CAMP.corner.title.pad') + J('CAMP.corner.title.chipW') / 2;
 })());
+
+// ---- H. the alignment (card space-game-layout-align; Troy, 24 Nov 2026, from his screenshot) ----
+console.log('H. the alignment');
+{
+  const at = J('CAMP.corner.at'), K = J('CAMP.corner'), W = J('W'), scn = src('src/campaignscene.js');
+  check('(1) the two top corners start at the same y and the two bottom corners end at the same y: HOSTILES is level with S CRUISER (it was 88 px lower), FRIENDLIES with FLEET', at.tl.y === at.tr.y && at.bl.y === at.br.y && at.tl.y === 62 && at.bl.y === 630, JSON.stringify(at));
+  check('(4) one margin: the left corners start at CAMP.corner.edge and the right ones end the same distance from the right edge (x is W - edge - w)', at.tl.x === K.edge && at.bl.x === K.edge && at.tr.x === W - K.edge - K.w && at.br.x === W - K.edge - K.w && W - (at.tr.x + K.w) === at.tl.x, JSON.stringify(at));
+  check('(4) the key line, the MISSILES count and the radio line start where the frames do: x = edge - ink (the stroke and the letter\'s side put the first letter ink px right of x)', /keys: this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - 44/.test(scn) && /this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - CAMP\.tdisp\.count/.test(scn) && /this\.hud\.chat = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - 112/.test(scn) && K.edge === 18 && K.ink === 2 && !/add\.text\(24, H - /.test(scn));
+  check('(4) the target box\'s room is the right corners\' column: its width is the panel\'s and its right edge is the margin', J('CAMP.tdisp.w') === K.w && J('CAMP.tdisp.right') === K.edge && J('campTdispBox().x') === at.br.x && J('campTdispBox(true).w') === K.w);
+  check('(5) the top and bottom of the screen: the title rows are inside the screen with room for the details, and the arrows\' labels keep out of all four title rows', [['tl', 62], ['tr', 62], ['bl', 604], ['br', 604]].every(([c, y]) => J('CAMP.nav.arrow.keep').some(r => at[c].x >= r[0] && y >= r[1] && at[c].x + K.w <= r[2] && y + K.title.h <= r[3])), JSON.stringify(J('CAMP.nav.arrow.keep')));
+  g.run(`__new(); __scene(); campCornerAdd({ id: 'probe2', at: 'tr', keys: ['last', 'next'], title: 'camp.corner.hostiles', selection: C => 'Mothership Alpha', rows: () => [] }); campCornerSync(S, 0);`);
+  const T = id => J('S.hud.corner.' + id + '.title.x');
+  check('(3) the chip column is as wide in every corner: S CRUISER (one chip) and FLEET and HOSTILES (two) start their titles at the same distance from their left edge', T('cruiser') - at.tl.x === T('fleet') - at.bl.x && T('probe2') - at.tr.x === T('fleet') - at.bl.x && T('fleet') - at.bl.x === K.title.pad + K.title.chips * (K.title.chipW + K.title.chipGap) - K.title.chipGap + K.title.gap, [T('cruiser'), T('fleet'), T('probe2')].join());
+  check('(3) the chips are the same size and on the same baseline in every corner: the first chip starts at the same distance from the corner\'s edge and is as high', J('S.hud.corner.cruiser.chips[0].x') - at.tl.x === J('S.hud.corner.fleet.chips[0].x') - at.bl.x && J('S.hud.corner.cruiser.chips[0].y') - at.tl.y === J('S.hud.corner.fleet.chips[0].y') - (at.bl.y - K.title.h) && J('S.hud.corner.probe2.chips[0].y') - at.tr.y === J('S.hud.corner.cruiser.chips[0].y') - at.tl.y);
+  check('(2) a long selection is cut short with an ellipsis so that it ends inside the frame (the stand-in text is 10 px a letter here); it is worked out when the name changes, not every frame', (() => {
+    const V = 'S.hud.corner.probe2';
+    g.run(`(() => { const t = ${V}.sel; window.__sets = 0; t.setText = v => { window.__sets++; t.text = v; t.width = v.length * 10; return t; }; t.width = t.text.length * 10; })(); __SELKEY = 1; ${V}.selK = ''; campCornerSync(S, 0);`);
+    const shown = J(V + '.sel.text'), W1 = J(V + '.sel.width'), room = at.tr.x + K.w - K.title.pad - J(V + '.sel.x'), sets = J('__sets');
+    g.run(`campCornerSync(S, 0); campCornerSync(S, 0);`);
+    return shown.endsWith('\u2026') && shown.length < 'Mothership Alpha'.length && W1 <= room && room > 0 && J('__sets') === sets;
+  })());
+  check('campCornerFit: a text that fits is returned as it is, one that does not is cut with an ellipsis (no trailing space before it), and a room too small for a letter gives the ellipsis alone', J(`campCornerFit('Skiff 3', 100, s => s.length * 8)`) === 'Skiff 3' && J(`campCornerFit('Mothership Alpha', 100, s => s.length * 8)`) === 'Mothership\u2026' && J(`campCornerFit('Mothership Alpha', 6, s => s.length * 8)`) === '\u2026' && J(`campCornerFit('', 50, s => s.length * 8)`) === '');
+  g.run(`CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'probe2'), 1); campCornerHide(S.hud.corner.probe2);`);
+}
 
 // ---- G. the who box is gone ----
 console.log('G. the who box is gone');
