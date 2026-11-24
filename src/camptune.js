@@ -51,6 +51,7 @@ const CAMP_TUNE = {
     // time
     { id: 'pace', group: 'time', root: 'CAMP', path: 'pace.scale', min: 0.4, max: 1.6, step: 0.05, unit: 'x', when: 'next' },
     { id: 'fightpace', group: 'time', root: 'CAMP', path: 'pace.fight', min: 0.25, max: 1, step: 0.05, unit: 'x', when: 'now' },     // how fast the small ships fly and fire while a foe is near (card space-game-slower-fights); 1 is as fast as they travel
+    { id: 'targetrestart', group: 'foes', root: 'CAMP', path: 'target.restart', min: 500, max: 10000, step: 500, unit: 'ms', when: 'now' }, // how long a pause with no press of ] is before the next press starts again from the nearest hostile (card space-game-keys4-onekey)
     { id: 'marktime', group: 'time', root: 'CAMP', path: 'mark.show', min: 500, max: 10000, step: 500, unit: 'ms', when: 'now' },   // how long the squares on the pilots and on the target held stay before they fade (card space-game-pilot-squares-fade)
     { id: 'wavetime', group: 'time', root: 'CAMP', path: 'time.waves', min: 0.25, max: 3, step: 0.05, unit: 'x', when: 'now' },
     { id: 'startzoom', group: 'time', root: 'CAMPZOOM', path: 'view.startPresses', min: 0, max: 12, step: 1, unit: 'presses', when: 'next' },

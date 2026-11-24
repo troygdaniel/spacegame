@@ -6,4 +6,4 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 ## Strings
 | key | text |
 |---|---|
-| camp.nudge.attack | Enemies. Pick one with {keynear}, then {keyengage}: the pilots attack. |
+| camp.nudge.attack | Enemies. Pick one with {keynear}, then {keyorder}: the pilots attack. |

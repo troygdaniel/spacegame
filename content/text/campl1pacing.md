@@ -12,11 +12,11 @@ The words of the beats of missions 1.2 and 1.3 (card l1-pacing): the raids that 
 | camp.say.l1p.haulboats | A torpedo boat ahead. Tuck the haulers in, or run. |
 | camp.say.l1p.rear | Pirates on the last hauler. She is alone back there. |
 | camp.say.l1p.again | More of them, on the last hauler again. |
-| camp.hint.l1p.split | Two groups, two sides. One pilot each: {keywlast} {keywnext} pick a pilot, {keyengage} attack. |
+| camp.hint.l1p.split | Two groups, two sides. One pilot each: {keywho} picks a pilot, {keyorder} attack. |
 | camp.hint.l1p.boats | Torpedo boats! Tuck the miners in: say or type "tuck in". |
 | camp.hint.l1p.mend | Quiet for now. A hurt pilot goes home to be mended, then comes back. |
 | camp.hint.l1p.haulboats | A torpedo boat! Say or type "tuck in": it covers the haulers beside you. |
 | camp.hint.l1p.rear | The last hauler is alone. Send a squad back to her. |
-| camp.hint.l1p.contact | Not pirates. Pick one ({keynear}), then engage: {keyengage}. |
+| camp.hint.l1p.contact | Not pirates. Pick one ({keynear}), then engage: {keyorder}. |
 | camp.bf.1.2.w5 | Torpedo boats hunt the miners: tuck them in, or send a squad. |
 | camp.bf.1.3.w5 | Something else is out there. Be ready. |

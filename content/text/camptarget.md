@@ -6,9 +6,9 @@ The words of the Campaign's one target (card space-game-two-hands-keys): A, D an
 ## Strings
 | key | text |
 |---|---|
-| camp.no.notarget | No target, pilot. {keylast} or {keynext} picks one, {keynear} the nearest. |
+| camp.no.notarget | No target, pilot. {keyhostiles} picks one, {keynear} the nearest. |
 | camp.no.tgtrange | The target is out of missile range, pilot. |
 | camp.ui.tgt | TARGET  {name}  {km} km |
 | camp.ui.tgtnone | TARGET  none |
-| camp.ui.tgtkeys | {keylast} {keynext} {keynear} pick a target |
+| camp.ui.tgtkeys | {keyhostiles} {keynear} pick a target |
 | camp.ui.tgtclear | {keyclear} clear |
