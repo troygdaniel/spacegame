@@ -368,7 +368,8 @@ const CAMP = {
     hullBar: { y: 78, h: 7 },              // the old hull bar under the shield dial: its top, relative to the cell's top, and its height (not drawn)
     ore: { y: 74 },                        // the old ore line's place (not drawn)
     text: { x: 640, y: 6, pitch: 18 },     // the lines of text at the TOP CENTRE, each centred on x (card space-game-layout-hud; they were a column at the top left): the wave, the goal, Earth's shield, the fighters being mended, the outpost hint: the first one's y, and the step to the next (a line that has nothing to say gives its place back). The mothership's name and bar and the rival's bars stand under the last of them
-    plate: { w: 560, min: 40, pad: 4 }     // the dim plate under the column: its width (centred on text.x), its least height, and how far it reaches past the last line
+    plate: { w: 560, min: 40, pad: 4 },    // the dim plate under the column: its width (centred on text.x), its least height, and how far it reaches past the last line
+    toastGap: 6                            // px: a toast starts this far under the last thing at the top centre (the column of lines, or the mothership's or the rival's bars under it), src/campaignscene.js toastTop; card space-game-toast-over-topcentre: the column ended at y 108 with Earth, repair and the outpost line showing, and a toast at 86 covered its last line
   },
   nav: {                                   // the carrier's autopilot, the map's list and picking, and the arrow at the screen edge (src/campnav.js); the rule is the Long Haul autopilot's (src/autopilot.js AUTO)
     stop: 100,                             // px: a place is flown to until the edge of it (its radius plus this) is this near
