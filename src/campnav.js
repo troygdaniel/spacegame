@@ -253,11 +253,17 @@ function campNavFly(C, row, fast, how) {
   C.events.push({ type: 'nav', key: 'camp.nav.recalling', vars: { n: left } });
   return { ok: true, say: uiText('camp.nav.recalling', { n: left }), waiting: true };
 }
+// ---- Fly to the goal burns by itself (card space-game-keys2-cruiser; Troy, 23 Nov 2026: the fast drive folds into Fly to the goal, and has no key or row of its own) ----
+// The cruiser list's Fly to the goal (the row is marked fast: 'auto', src/data_controls.js campCruiserWire) burns by itself when the leg is long (CAMP.nav.auto.leg px), the wing is aboard and no hostile is within CAMP.nav.auto.near px;
+// a trip that began so is C.nav.auto, and drops to regular speed, saying so, the moment a hostile comes that near (campNavWait, once a tick). It does not start again by itself: press the row again. With a ship out it flies at regular speed (a burn would strand them, and the row never recalls the pilots by itself: they start each mission out, so R (recall) first).
+const campNavHostileNear = C => campAliens(C).some(u => campDist(u, C.carrier) <= CAMP.nav.auto.near);
+const campNavAuto = (C, dist) => dist >= CAMP.nav.auto.leg && !campNavOut(C) && !campNavHostileNear(C); // would a trip of dist px from here burn by itself?
 // once a tick: a burn waiting for the wing starts when the last ship is aboard, and is given up (naming who is still out) after CAMP.nav.recallWait s; a burn under way with a ship launched drops to regular
 function campNavWait(C) {
   if (!C) return;
   const W = C.navWait;
   if (C.nav && C.nav.fast && campNavOut(C) > 0) { C.nav.fast = false; C.nav.burn = 1; C.events.push({ type: 'nav', key: 'camp.nav.burnoff', vars: {} }); }
+  if (C.nav && C.nav.on && C.nav.fast && C.nav.auto && campNavHostileNear(C)) { C.nav.fast = false; C.nav.burn = 1; C.nav.auto = false; C.events.push({ type: 'nav', key: 'camp.nav.burnfoe', vars: {} }); } // a hostile came near: the burn that began by itself ends by itself
   if (!W) return;
   if (C.result) { C.navWait = null; return; }
   const out = campNavOut(C); W.n = out;

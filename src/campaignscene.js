@@ -3,7 +3,7 @@
 // file draws and listens and decides nothing about the game. It is not run by a test in plain Node (a scene is Phaser's): tests/campaign.mjs runs the sim.
 //   K on the title opens it (campaignStart); Enter begins a level; the arrow keys fly, Space (held) makes the eight turrets fire, Enter fires a homing missile at the target (the magazine is C.missiles);
 //   there is no other gun: the turrets aim themselves at the nearest alien in reach, always, and fire only while Space is held; the scene draws them, their reach and their flash (syncRockets)
-//   W opens the all-squads list, P the power list, O the autopilot, U dock and repair (the fleet list Q used to open and the ship list P used to open are switched off: CAMP_FLEET_LIST, CAMP_SHIP_LIST) (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
+//   S puts the view back on the cruiser and opens the cruiser list (it fades when untouched; card space-game-keys2-cruiser), P the power list, O the autopilot (the dock list is a row of the cruiser list; the fleet list Q used to open and the ship list P used to open are switched off: CAMP_FLEET_LIST, CAMP_SHIP_LIST) (Up, Down, Enter: src/camppanel.js); / types an order and . speaks one (the strip and the ship computer, src/shipcomputer.js, find this scene);
 //   Esc pauses (this scene's own pause, not Long Haul's: the Long Haul save is not touched here); after a win the story, the tech pick (1 2 3), then the next level.
 // Mode: 'intro' (the story before) -> 'play' <-> 'pause' -> 'won' (story after) -> 'pick' (one of three techs, when the level offers any) -> next level, or after the last level 'end' (back to the title);
 // or 'lost' (Enter tries again).
@@ -283,7 +283,7 @@ class Campaign extends Phaser.Scene {
   // ----- keys -----
   onKey(e) {
     const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
-    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); return; } // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
+    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (this.leaving) return;
     if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;

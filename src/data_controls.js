@@ -57,13 +57,13 @@ const CAMP_SHIP_LIST = false;
 const CAMP_VOICE = false;
 const CAMP_PANELS = {
   show: 11,                                // how many rows of a list are on the screen at once: a longer list scrolls with the highlight (the fleet list has eleven: the squads came in, card space-game-fighter-squads)
-  anim: { flash: 160 },                    // ms: a row lights up (two pulses) when Enter gives it
+  anim: { flash: 160, idle: 4000, out: 500 }, // ms: a row lights up (two pulses) when Enter gives it; a list marked `fades` (the cruiser's) closes after idle ms with no key and no click, and dims over its last out ms (card space-game-keys2-cruiser)
   panels: [
     { id: 'fleet', side: 'left', key: 'Q', code: 'KeyQ', title: 'FLEET ORDERS', tab: 'Fleet', name: 'the fleet list', rows: [
       { id: 'gsquads', open: 'squads', label: 'All squads', help: 'Orders for all three squads of fighters' },
       { id: 'gconvoy', open: 'convoy', when: 'convoy', label: 'Convoy', help: 'Orders for the ships you escort' }
     ] },
-    { id: 'cruiser', side: 'left', key: 'Q', code: 'KeyQ', title: 'CRUISER ORDERS', tab: 'Cruiser', name: 'the cruiser list', rows: [ // card space-game-keys-orders (Troy, 23 Nov 2026): Q opens the cruiser's own list, two rows: Mine and Dock and repair (the all-squads list is off: campSquadsListSet moves the Mine row here; U no longer docks)
+    { id: 'cruiser', side: 'left', key: 'S', code: 'KeyS', fades: 1, title: 'CRUISER ORDERS', tab: 'Cruiser', name: 'the cruiser list', rows: [ // card space-game-keys2-cruiser (Troy, 23 Nov 2026): S puts the view on the cruiser AND opens its list (it was Q's); the list fades after CAMP_PANELS.anim.idle ms untouched (fades: 1). Its rows in the game, top to bottom: Fly to the goal, Fly to the target, Mine ore, Dock and repair, Emergency shields, and the Warp blink with its tech: campCruiserWire moves the first two in from the autopilot list and the last two in from the power or ship list (the old lists are switched off, not removed). Card space-game-keys-orders: the Mine row comes from the all-squads list (campSquadsListSet)
       { id: 'gdock', open: 'yard', label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' }
     ] },
     { id: 'convoy', parent: 'fleet', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js). Voice and the strip: "tuck in", "run for it", "carry on", "haulers hold"
@@ -92,7 +92,7 @@ const CAMP_PANELS = {
       { id: 'engines', order: 'power', arg: 'engines', stay: 1, pip: 2, label: 'Engines: one more pip', help: 'A pip of power to the engines' },
       { id: 'weapons', order: 'power', arg: 'weapons', stay: 1, pip: 0, label: 'Weapons: one more pip', help: 'A pip of power to the weapons' },
       { id: 'balance', order: 'balance', stay: 1, label: 'Balance the power', help: 'Back to 2 / 2 / 2' },
-      { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Shields get 4 pips for 10 s' }
+      { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Fill the shields at once, for ore' } // card space-game-keys2-cruiser: it is a row of the cruiser list now (campCruiserWire); the power list keeps it only with the old lists on
     ] },
     { id: 'nav', parent: 'ship', side: 'right', key: 'I', code: 'KeyI', title: 'AUTOPILOT', tab: 'Autopilot', name: 'the autopilot list', rows: [
       { id: 'goal', fly: 'objective', label: 'Fly to the goal', help: 'Autopilot to the objective' },
@@ -105,12 +105,12 @@ const CAMP_PANELS = {
   // why a row cannot be done now, in a few plain words: the code of the game's own refusal (campNo in src/campaign.js) to the words beside the row's name; {need} is ore, {s} seconds
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', noearth: 'no Earth here', what: 'cannot do that now', mending: 'already being mended', farward: 'too far from the cruiser', noward: 'no ship of ours is hurt', nobuild: 'nothing is built now',
-    cnone: 'no escorted ships', cwhat: 'cannot do that now', nogoal: 'no objective', there: 'you are there', noguard: 'nothing to guard', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s',
+    cnone: 'no escorted ships', cwhat: 'cannot do that now', nogoal: 'no objective', there: 'you are there', noguard: 'nothing to guard', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', shieldfull: 'the shield is full', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s',
     notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech' },
   // the same, a word or two, beside a row of the list
   shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
     noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', what: 'not now', mending: 'mending', farward: 'too far', noward: 'none hurt', nobuild: 'no building',
-    nogoal: 'no goal', nofoe: 'none seen', nohostile: 'pick one', nofriend: 'pick one', there: 'there', noguard: 'none to guard', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
+    nogoal: 'no goal', nofoe: 'none seen', nohostile: 'pick one', nofriend: 'pick one', there: 'there', noguard: 'none to guard', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', shieldfull: 'shield full', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
     notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech' }
 };
 // the direct keys of the Campaign (the scene reads the codes here; a hint names the cap): { k: the cap or caps a hint prints, codes: the KeyboardEvent.codes that do it }. One key, one meaning, everywhere in flight
@@ -137,7 +137,7 @@ let campFleetOn = CAMP_FLEET_LIST, campShipOn = CAMP_SHIP_LIST; // the two switc
 function campFleetListSet(on) { // the switch (CAMP_FLEET_LIST): who has Q. On: the old FLEET list (its parts: the all-squads list on W, the convoy), the all-squads list is on and U opens the dock list. Off (the game): Q opens the CRUISER list (Mine, Dock and repair), W and U open nothing (card space-game-keys-orders)
   campFleetOn = !!on; const L = CAMP_PANELS.panels, p = L.find(x => x.id === 'fleet'), cr = L.find(x => x.id === 'cruiser'); if (!p || !cr) return on;
   p.key = on ? 'Q' : ''; p.code = on ? 'KeyQ' : ''; p.off = !on;
-  cr.key = on ? '' : 'Q'; cr.code = on ? '' : 'KeyQ'; cr.off = !!on;
+  cr.key = on ? '' : 'S'; cr.code = on ? '' : 'KeyS'; cr.off = !!on; // the cruiser list is S's (card space-game-keys2-cruiser: it was Q's; Q opens nothing now and, with the fleet list on, the fleet list)
   campSquadsListSet(on); // the all-squads list is part of the old fleet world
   return on;
 }
@@ -149,10 +149,22 @@ function campSquadsListSet(on) { // the switch for the W list (the all-squads li
   campListsWire();
   return on;
 }
+// the rows the cruiser list takes from the old lists (card space-game-keys2-cruiser; Troy, 23 Nov 2026): while BOTH old lists are off (the game) the autopilot list's Fly to the goal and Fly to the target, the power list's Emergency shields and the warp blink are the cruiser list's, and its Fly to the goal burns by itself on a long clear leg (`fast: 'auto'`, src/campnav.js campNavAuto).
+// With either old list on every row goes back where it was (the autopilot list's first two, the power list's emergency row, the warp blink to the ship list with the ship list on, else the power list), so the suites that turn the old lists on see the old layout. A row is one object that moves, so a table that lacks a list (a later card removes the power list) just leaves the row where it is.
+function campCruiserWire() {
+  const L = CAMP_PANELS.panels, cr = L.find(x => x.id === 'cruiser'), nv = L.find(x => x.id === 'nav'), pw = L.find(x => x.id === 'power'), sh = L.find(x => x.id === 'ship'); if (!cr) return;
+  const mine = !campFleetOn && !campShipOn, take = id => { for (const p of L) { const i = p.rows.findIndex(r => r.id === id); if (i >= 0) return p.rows.splice(i, 1)[0]; } return null; };
+  const goal = take('goal'), target = take('target'), emer = take('emergency'), blink = take('blink');
+  if (goal) { if (mine) goal.fast = 'auto'; else delete goal.fast; }
+  const at = mine ? cr : nv; if (at) { if (target) at.rows.unshift(target); if (goal) at.rows.unshift(goal); } else { if (goal) cr.rows.unshift(goal); if (target) cr.rows.splice(goal ? 1 : 0, 0, target); }
+  const eto = mine ? cr : pw || cr; if (emer) eto.rows.push(emer);
+  const bto = mine ? cr : campShipOn ? sh || pw || cr : pw || cr; if (blink) bto.rows.push(blink);
+}
 function campListsWire() { // what follows from the switches: the dock list's key (U with an old list on, none in the game) and its parent (the ship list, the cruiser list, or none), and the H page's lines for the lists
   const L = CAMP_PANELS.panels, yd = L.find(x => x.id === 'yard'); if (!yd) return;
   yd.key = campFleetOn || campShipOn ? 'U' : ''; yd.code = yd.key ? 'KeyU' : '';
   yd.parent = campShipOn ? 'ship' : campFleetOn ? '' : 'cruiser';
+  campCruiserWire();
   let C = null; try { C = CONTROLS; } catch (e) { C = null; } // the H page's tables: not made yet when this first runs
   if (C) { const l = C.find(x => x.id === 'panels'); if (l) l.rows.splice(0, l.rows.length, ...campPanelKeyRows()); }
 }
@@ -173,9 +185,7 @@ function campShipListSet(on) { // the switch (CAMP_SHIP_LIST): who has P. The sh
   pw.key = on ? 'O' : ''; pw.code = on ? 'KeyO' : ''; // while the ship list is off the power list has no key (O and P are the friendlies' since card space-game-keys2-select; J K L give the pips and the strip says Balance); with it on the keys are the old ones: P the ship list, O power, I the autopilot
   const nv = L.find(x => x.id === 'nav'); if (nv) { nv.key = on ? 'I' : ''; nv.code = on ? 'KeyI' : ''; } // the autopilot's list: no key while the ship list is off (it was O), I with it on
   campShipOn = !!on; ['power', 'nav'].forEach(id => { const x = L.find(y => y.id === id); if (x) x.parent = on ? 'ship' : ''; }); // the dock list's parent and key: campListsWire
-  const from = on ? pw : ship, to = on ? ship : pw, i = from.rows.findIndex(r => r.id === 'blink'); // the warp blink's row: the ship list's last row, or the power list's last row while the ship list is off
-  if (i >= 0) to.rows.push(from.rows.splice(i, 1)[0]);
-  campListsWire();
+  campListsWire(); // the warp blink's row too (campCruiserWire): the ship list's last row with the ship list on, else the cruiser list's, else the power list's
   return on;
 }
 campFleetListSet(CAMP_FLEET_LIST);
@@ -185,7 +195,7 @@ const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;
 const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: mine ore, dock and repair', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: goal, target, fast burn', power: 'Power: pips, balance, emergency', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { fleet: 'Fleet orders, and the lists below', cruiser: 'Cruiser: fly, mine, dock, shields', convoy: 'Convoy: tuck in, run, hold, carry on', squads: 'All squads: launch, attack, recall', ship: 'Ship orders, and the lists below', nav: 'Autopilot: the two fast burns', power: 'Power: pips and balance', yard: 'Dock, repair the hull and our ships' };
   return CAMP_PANELS.panels.filter(p => p.key).map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat([
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }, { k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }

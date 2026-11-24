@@ -32,7 +32,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.rank.togo | {n} points to the next rank |
 | camp.room.tech.shield | Damage the carrier takes: {from} to {to} percent |
 | camp.room.tech.beam | Turret damage x{dmg}, reach {from} to {to} px, and shots go through |
-| camp.room.tech.blink | Hop the carrier {dist} px ahead, ready again after {secs} seconds |
+| camp.room.tech.blink | {viablink} list: hop the carrier {dist} px ahead, ready again after {secs} seconds |
 | camp.room.tech.plating | Carrier hull: {from} to {to} |
 | camp.room.tech.bay2 | Wing strength: {from} to {to} fighters |
 | camp.room.tech.repair | The carrier and ships within {reach} px mend {rate} hit points a second |

@@ -177,7 +177,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.beam.name | Beam turrets |
 | camp.tech.beam.text | The turrets fire beams: twice the damage, further, and through what they hit. |
 | camp.tech.blink.name | Warp blink |
-| camp.tech.blink.text | Hop the carrier 1,500 px ahead. Ready again after 20 seconds. |
+| camp.tech.blink.text | Hop the carrier 1,500 px ahead: {viablink} list, {rowblink}. Ready again after 20 seconds. |
 | camp.tech.plating.name | Hull plating |
 | camp.tech.plating.text | The carrier's hull is half as strong again. |
 | camp.tech.bay2.name | Second bay |
