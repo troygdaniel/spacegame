@@ -4,7 +4,7 @@
 // src/camptdispscene.js (campFdispSync: the same code as the target display, in the other corner) and the marker is src/camptargetdraw.js (campTgtCorners).
 //   A. who is shown: All pilots with nothing picked (the default since card space-game-keys-select; a hostile target alone changes nothing here), a pilot, a ship you protect as the friendly is not who, a lost pilot is let go, X puts who back on All pilots
 //   B. what is read: a pilot by its name (Wedge, Kara, Apollo), its hull, no shield, how far, the order it is on; a ship you protect by the name the lists give it
-//   C. the box: the bottom left corner, the target display's size and height, inside a rectangle the edge arrows keep out of, and clear of the target display's box
+//   C. the box: the bottom left corner, the target display's size and top, inside a rectangle the edge arrows keep out of, and clear of the target display's box and of the MISSILES count under it (card space-game-missiles-line-overlap)
 //   D. the scene half on a stand-in: All pilots with nothing picked, one pilot shown when picked, in the friend's colour, on the left, both displays at once when a hostile and a friend are picked, hidden behind a card or the map
 //   E. Q (all three pilots picked; card space-game-q-all-pilots-panel): the display says All pilots with a row for each pilot out, its name and its hull, and nothing else; back to one ship and away again
 //   F. the square marker: the friend and the hostile and the fighters an order went to are all drawn by the one function; no ring is left in the scene; the scene calls the display every frame
@@ -77,9 +77,10 @@ console.log('B. what is read');
 console.log('C. the box');
 {
   const R = J('campTdispBox()'), L = J('campTdispBox(true)'), K = J('CAMP.tdisp'), keep = J('CAMP.nav.arrow.keep');
-  check('the friend display is in the bottom LEFT corner: its left edge ' + K.left + ' px from the edge, level with the target display at the bottom, 200 by 200 (the enemy\'s box is the order-key line taller)', L.x === K.left && L.y + L.h === R.y + R.h && L.w === R.w && L.h === 200 && R.h === 200 + K.line);
+  check('the friend display is in the bottom LEFT corner: its left edge ' + K.left + ' px from the edge, level with the target display at the top, 200 by 200 (the enemy\'s box is the order-key line taller)', L.x === K.left && L.y === R.y && L.w === R.w && L.h === 200 && R.h === 200 + K.line);
   check('it is the mirror of the target display: the same distance from the edge, the other side', L.x === 1280 - (R.x + R.w) && K.left === K.right);
   check('it is inside the rectangle the edge arrows keep out of, so no label is put on it', keep.some(r => L.x >= r[0] && L.y >= r[1] && L.x + L.w <= r[2] && L.y + L.h <= r[3]));
+  { const top = J('H - CAMP.tdisp.count'); check('the MISSILES count (bottom left, card space-game-missiles-line-overlap) is under the who box and clear of it, and over the key line\'s strip (its top is H - 48): ' + (L.y + L.h) + ' < ' + top + ', its 20 px end by ' + (top + 20), K.count === 72 && top >= L.y + L.h + 8 && top + 20 <= J('H') - 48 && /this\.add\.text\(24, H - CAMP\.tdisp\.count/.test(src('src/campaignscene.js'))); }
   check('it is clear of the target display\'s box and of the lines of text and the lists at the left top (they end at about y 262; the box starts below)', L.x + L.w < R.x && L.y > 262);
 }
 
@@ -163,7 +164,7 @@ console.log('G. an open list and the friend box (card space-game-w-list-covers-f
   const home = J('campTdispBox(true)'), V = 'S.hud.fdisp';
   check('no list open: the box is in its corner', J(`${V}.dx`) === 0 && J(`${V}.name.x`) === home.x + 10);
   const W = J(`(() => { const G = __open('fleet', 11); return { x: G.x, y: G.y, w: G.w, h: G.h, n: G.n }; })()`);
-  check('the longest left list (eleven rows, from y 150 down to y 520) reaches the top of the corner box (y 456): it would cover it where it stands; the W list\'s seven rows now end at y 416, above it', W.n === 11 && W.y + W.h > home.y && W.x < home.x + home.w && J('campPanelsGeometry(campPanelDef("squads"), 7).y + campPanelsGeometry(campPanelDef("squads"), 7).h') < home.y, JSON.stringify([W, home]));
+  check('the longest left list (eleven rows, from y 150 down to y 520) reaches the top of the corner box (y 430): it would cover it where it stands; the W list\'s seven rows now end at y 416, above it', W.n === 11 && W.y + W.h > home.y && W.x < home.x + home.w && J('campPanelsGeometry(campPanelDef("squads"), 7).y + campPanelsGeometry(campPanelDef("squads"), 7).h') < home.y, JSON.stringify([W, home]));
   g.run(`window.__c0 = ${V}.g.clears; campFdispSync(S, 1100);`);
   const sh = J(`campTdispBox(true, ${V}.dx)`);
   check('with that list open the box steps right of it, CAMP.tdisp.beside px from its edge, at the same height', J(`${V}.dx`) === W.x + W.w + J('CAMP.tdisp.beside') - home.x && sh.x === W.x + W.w + J('CAMP.tdisp.beside') && sh.y === home.y, JSON.stringify([sh, W]));
@@ -192,7 +193,7 @@ console.log('H. the one target box and its order-key line (cards space-game-keys
 {
   g.run('__out()'); g.run('window.S = __scene()');
   const K = J('CAMP.tdisp'), Tb = J('campTdispBox()'), Wh = J('campTdispBox(true)'), keep = J('CAMP.nav.arrow.keep');
-  check('the target box is in the bottom right, 200 wide and 200 + the key line tall; the who box in the bottom left is 200 tall; they end at the same height and do not touch', Tb.h === 200 + K.line && Wh.h === 200 && Tb.y + Tb.h === Wh.y + Wh.h && Tb.x > Wh.x + Wh.w, JSON.stringify([Tb, Wh]));
+  check('the target box is in the bottom right, 200 wide and 200 + the key line tall; the who box in the bottom left is 200 tall; they start at the same height (the who box ends the key line\'s height above the target box\'s foot) and do not touch', Tb.h === 200 + K.line && Wh.h === 200 && Tb.y === Wh.y && Tb.x > Wh.x + Wh.w, JSON.stringify([Tb, Wh]));
   check('both are inside a rectangle the edge arrows keep out of (the right one now runs from the target box\'s top, not up to the friendly\'s old place)', [Tb, Wh].every(b => keep.some(r => b.x >= r[0] && b.y >= r[1] && b.x + b.w <= r[2] && b.y + b.h <= r[3])) && !keep.some(r => r[0] >= 1000 && r[1] < Tb.y - 10 && r[1] > 150));
   check('there is no stacked friendly box any more: no campGdispSync, no gdisp, no stack number', J(`typeof campGdispSync`) === 'undefined' && J(`typeof campGdispSubject`) === 'undefined' && K.stack === undefined && !/gdisp|campGdispSync/.test(src('src/campaignscene.js') + src('src/camptdispscene.js')));
   check('nothing held: nothing is shown', J('campTdispSubject(C, P, 0)') === null);
@@ -247,7 +248,7 @@ console.log('F. the square marker, and no rings');
   check('with All pilots picked all three pilots\' squares are drawn (campTgtPaint draws every ship WHO is: whoShips), and with one pilot picked that pilot\'s', /pk\.whoShips/.test(draw) && /campTgtCorners\(g, v, col, z, al\)/.test(draw));
   check('no coloured ring is left on a friendly ship: the scene has no squadCircle and strokes no circle round a fighter (the squad colours still colour the map\'s dots and the display\'s picture)', !/squadCircle/.test(scene) && /squadMarks\(\) \{/.test(scene) && !/campRing\(sg/.test(scene) && !/strokeCircle/.test(scene.slice(scene.indexOf('squadMarks() {'), scene.indexOf('  sync() {'))));
   check('the scene calls the friend display every frame, right after the target display, and the file is the same one (no new script)', /campTdispSync\(this, this\.time\.now\);[^\n]*\n\s*if \(typeof campFdispSync === 'function'\) campFdispSync\(this, this\.time\.now\)/.test(scene) && /function campFdispSync\(/.test(tds));
-  check('the arrows\' keep list has the left corner\'s rectangle (a label is never put under the display)', J('CAMP.nav.arrow.keep.some(r => r[0] === 0 && r[1] === 450 && r[2] >= 218)'));
+  check('the arrows\' keep list has the left corner\'s rectangle (a label is never put under the display)', J('CAMP.nav.arrow.keep.some(r => r[0] === 0 && r[1] === 430 && r[2] >= 218)'));
   check('every number is in the table: the left edge has its comment', /left: 18, +\/\/ px from the left edge to the friend display/.test(src('src/campaign.js')));
 }
 
