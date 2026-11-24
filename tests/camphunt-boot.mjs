@@ -110,7 +110,7 @@ try {
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no way)'; }; // the keys of an order as they were pressed
     const done = [];
     for (const [act, what] of [[['launch'], 'launch'], [['attack'], 'attack (the fighters)'], [['escort'], 'escort (the convoy)'], [['guard'], 'guard'], [['recall'], 'recall (the wing is out)'], [['mine'], 'mine'], [['keep'], 'stance: keep distance'], [['ctuck'], 'convoy: tuck in'],
-      ['Backslash', '\\ nearest threat'], ['BracketRight', '] next enemy'], ['BracketLeft', '[ last enemy'], ['KeyD', 'D next who'], ['KeyA', 'A last who'], ['Period', '. next friendly'], ['Comma', ', last friendly'], [['target'], 'fly to the target'], [['burntarget'], 'fast burn to the target'], ['KeyX', 'X clear the target'],
+      ['Backslash', '\\ nearest threat'], ['BracketRight', '] next enemy'], ['BracketLeft', '[ last enemy'], ['KeyD', 'D next who'], ['KeyA', 'A last who'], ['KeyP', 'P next friendly'], ['KeyO', 'O last friendly'], [['target'], 'fly to the target'], [['burntarget'], 'fast burn to the target'], ['KeyX', 'X clear the target'],
       [['buildf'], 'build a fighter'], [['builde'], 'build an escort'], [['dock'], 'dock (away from it)'],
       ['KeyJ', 'J shields pip'], ['KeyK', 'K engines pip'], ['KeyL', 'L weapons pip'], [['emergency'], 'emergency shields'], [['balance'], 'balance (a row of the power list: the semicolon is gone)'], [['blink'], 'blink'],
       ['Digit1', '1 (no key of the flight)'], ['KeyF', 'F (no key of the flight)'], ['KeyG', 'G (no key of the flight)']]) {

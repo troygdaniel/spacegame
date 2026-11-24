@@ -73,7 +73,7 @@ check('the radio calls the arrival like the old one ("Convoy is through."), the 
 // A pilot who never sends the wing cannot win it (the sim's carrier-only and never-orders bots time out).
 const k12 = J('campBriefKeys(1, 1).map(k => k.id)');
 check('mission 1.2 lists E 1 (mine) and E 5 (dock) among its keys, zoom stays last and the box stays at 8 keys or fewer', k12.includes('mine') && k12.includes('dock') && k12[k12.length - 1] === 'zoom' && k12.length <= J('CAMPBRIEF.keysMax'), k12.join());
-check('and the rim\'s other missions still list the keys they need: the escort (G, the order key; no Launch box: the pilots start out) in 1.1 and 1.3, and every mission ends with the zoom keys; the missions of levels 2 and 3 are as they were',
+check('and the rim\'s other missions still list the keys they need: the escort (G, the order key; no Launch box: the pilots start out) in 1.1 and 1.3, and every mission ends with the zoom keys; the missions of levels 2 and 3 are as they were (the emergency-shields line is back: it is a row of the cruiser list, S)',
   ['campBriefKeys(1, 0)', 'campBriefKeys(1, 2)'].every(e => J(e + '.some(k => k.id === "escort")')) && [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]].every(([l, m]) => J(`campBriefKeys(${l}, ${m}).pop().id`) === 'zoom')
   && J('campBriefKeys(2, 1).map(k => k.id).join()') === 'fly,fire,map,attack,missile,shield,zoom' && J('campBriefKeys(3, 0).map(k => k.id).join()') === 'fly,fire,map,attack,zoom');
 
