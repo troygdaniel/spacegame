@@ -518,7 +518,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, c = C.carrier, k = CAMP.missile, seen = {}, play = this.mode === 'play';
     if (!this.hud.missiles) { // made the first time: the missiles in flight, the turrets' reach ring and mounts, the magazine count (bottom left, above the key line)
       this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
-      this.hud.missiles = this.add.text(24, H - 72, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
+      this.hud.missiles = this.add.text(24, H - CAMP.tdisp.count, '', uiFont(14, '#ffb454', { stroke: '#02060d', strokeThickness: 3 })).setScrollFactor(0).setDepth(101);
     }
     C.rockets.forEach(m => {
       const ux = Math.cos(m.rot), uy = Math.sin(m.rot);
