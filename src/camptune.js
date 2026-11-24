@@ -36,7 +36,8 @@ const CAMP_TUNE = {
     { id: 'sensorrange', group: 'guns', root: 'CAMP', path: 'sensor.range', min: 0, max: 20000, step: 500, unit: 'px', when: 'now' },
     { id: 'turretreach', group: 'guns', root: 'CAMP', path: 'carrier.pdRange', min: 150, max: 1500, step: 50, unit: 'px', when: 'now' },
     { id: 'missilecount', group: 'guns', root: 'CAMP', path: 'missile.magazine', min: 0, max: 12, step: 1, unit: '', when: 'next' },
-    { id: 'missilereload', group: 'guns', root: 'CAMP', path: 'missile.reload', min: 2000, max: 60000, step: 1000, unit: 'ms', when: 'now' },
+    { id: 'missilereload', group: 'guns', root: 'CAMP', path: 'missile.reload', min: 2000, max: 60000, step: 1000, unit: 'ms', when: 'now' },    // the BUILD time of a missile now (card space-game-missiles-cost-ore)
+    { id: 'missilecost', group: 'guns', root: 'CAMP', path: 'missile.cost', min: 0, max: 100, step: 5, unit: 'ore', when: 'now' },               // what a missile costs to build; 0: free
     { id: 'lasertank', group: 'guns', root: 'CAMP', path: 'tank.max', min: 20, max: 400, step: 10, unit: '', when: 'now' },
     { id: 'laserrefill', group: 'guns', root: 'CAMP', path: 'tank.refill', of: 2, min: 1, max: 40, step: 1, unit: 'a second', when: 'now' },
     // the wing and the ships you escort

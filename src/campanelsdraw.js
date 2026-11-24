@@ -57,7 +57,7 @@ function campPanelsPaint(s, now) {
   g.fillStyle(0x04101c, 0.9); g.fillRoundedRect(G.x, G.y, G.w, G.h, 7);
   g.lineStyle(2, col, 0.9); g.strokeRoundedRect(G.x, G.y, G.w, G.h, 7);
   if (heading) { g.fillStyle(col, 0.22); g.fillRoundedRect(G.x, G.y, G.w, G.head.h, 7); L.title.setVisible(true).setPosition(G.x + 12, G.y + G.head.h / 2).setText((def.key && !def.corner ? def.key + '   ' : '') + V.title).setColor(K.ink[def.side]); } // (V.title: the list's, or what is being picked)
-  const caps = V.rows.some(r => r.more), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
+  const caps = V.rows.some(r => r.more || r.key), nx = G.x + 14 + (caps ? K.cap.w + K.cap.gap : 0); // a list with parts: every row's words start after the cap's place, so they line up
   if (!def.corner) L.count.setVisible(true).setPosition(G.x + G.w - 12, G.y + B.head / 2).setText((V.first + V.at + 1) + ' / ' + V.total); // (a corner list has no 1 / 7 counter: card space-game-layout-cruiser)
   V.rows.forEach((st, i) => { // a row: its words, and at the right what it will do or why it cannot; the highlighted one has a bright bar
     const o = L.rows[i]; if (!o) return;

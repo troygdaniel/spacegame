@@ -140,6 +140,11 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
+  if (campKeyIs('reload', code)) { // R: build missiles up to the full rack, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
+    res.used = true; if (!C) return res;
+    const r = campOrder(C, 'reload', '', 'key');
+    res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
+  }
   if (!open && campKeyIs('missile', code)) { // Enter with no list open: a homing missile at the target
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
@@ -205,6 +210,7 @@ const campPanelCost = (C, row, short) => {
   const k = row.cost, K = CAMP.mend; if (!k || !C || !C.carrier) return '';
   if (k === 'hull') { const q = campMendQuote(C); return q.missing <= 0.5 ? 'hull sound' : q.cost + ' ore' + (short || C.docked ? '' : ', ' + Math.max(1, Math.round(K.hullSecs * q.missing / C.carrier.maxHp)) + ' s'); }
   if (k === 'ward') { const u = typeof campWardsNear === 'function' ? campWardsNear(C)[0] : null; return u ? campWardQuote(C, u).cost + ' ore' : ''; }
+  if (k === 'missiles') { const q = campReloadPlan(C); return q.ore + ' ore' + (short ? '' : ', ' + q.n + (q.n === 1 ? ' missile' : ' missiles')); } // the rack R would build now: what it spends ('60 ore, 3 missiles', short '60 ore'; src/campmissilebuild.js)
   return '';
 };
 function campPanelState(C, row) {
@@ -304,7 +310,7 @@ const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id) {
   if (!campPanelDef(id) || !C) return [];
-  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : '', more: !!part, marked: campPanelConvoyMarked(C, as), pip: as.pip === undefined ? -1 : as.pip }, campPanelRowState(C, row)); });
+  return campPanelList(C, id).map(row => { const as = campPanelAs(C, row); const part = as.open ? campPanelDef(as.open) : null; return Object.assign({ id: as.id, label: as.label, key: part ? part.key : as.cap && CAMP_KEYS[as.cap] ? CAMP_KEYS[as.cap].k : '', more: !!part, marked: campPanelConvoyMarked(C, as), pip: as.pip === undefined ? -1 : as.pip }, campPanelRowState(C, row)); });
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;
