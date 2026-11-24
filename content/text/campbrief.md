@@ -27,7 +27,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.enemy.tower.many | {n} defence towers |
 | camp.bf.enemy.mother.one | the mothership |
 | camp.bf.enemy.mother.many | {n} motherships |
-| camp.bf.ready.bay | Wing: Wedge, Kara, Apollo, {f} fighters strong |
+| camp.bf.ready.bay | Pilots: Wedge, Kara, Apollo |
 | camp.bf.ready.rank | Rank: {name} |
 | camp.bf.ready.stock | Missiles {missiles}    Ore {ore} |
 | camp.bf.ready.shield | Shield: full, {cap} points |

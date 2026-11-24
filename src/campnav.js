@@ -19,6 +19,14 @@ const CAMPNAV = {
 const campNavNorm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/'/g, ' ').replace(/\s+/g, ' ').trim();
 const campNavKm = d => hudFmt(Math.round(d / 10));
 
+// a convoy ship that has not left yet (ref: that one; none: the first to leave), as a goal: where she will start, under the id she will fly with ('freighter-' + the row's id, src/campaign.js), so a trip
+// begun before she leaves follows her after. null when every ship of the convoy is out (or there is none)
+function campNavBerth(C, ref) {
+  const L = C && C.L, pl = L && campPlaces(C.level); if (!L || !L.convoys || !C.convoys) return null;
+  const cv = L.convoys.filter((c, i) => C.convoys[i] && !C.convoys[i].started && (!ref || 'freighter-' + c.id === ref)).sort((a, b) => (a.at || 0) - (b.at || 0))[0], p = cv && pl[cv.from]; if (!p) return null;
+  const name = cv.name || (pl[cv.to] || {}).name || uiText('camp.nav.k.freighter'); // the name she will fly under (campConvoyName: her own, else where she is going)
+  return { id: 'convoy:freighter-' + cv.id, kind: 'convoy', name: uiText('camp.nav.convoy', { name }), x: p.x, y: p.y, r: 22, moving: true, ref: 'freighter-' + cv.id };
+}
 // the thing the level asks for next, or null
 function campNavGoal(C) {
   try {
@@ -36,7 +44,7 @@ function campNavGoal(C) {
       if (o.type === 'caches') { const k = near(C.caches.map((q, i) => Object.assign({ i }, q)).filter(q => !q.got)); return k ? { id: 'cache:' + k.i, kind: 'cache', name: uiText('camp.nav.cache', { n: k.i + 1 }), x: k.x, y: k.y, r: 0 } : null; }
       if (o.type === 'relic') return C.relic ? { id: 'relic', kind: 'relic', name: uiText('camp.nav.relic'), x: C.relic.x, y: C.relic.y, r: 0 } : null;
       if (o.type === 'ore' || o.type === 'cashin') return mineGoal(o.type); // the rim run's 1.2 (card space-game-l1-mine-goal): the nearest rock while ore is short, the Works for the sale
-      if (o.type === 'deliver') { const cv = near(campConvoys(C)); return cv ? ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) })) : null; }
+      if (o.type === 'deliver') { const cv = near(campConvoys(C)); return cv ? ship(cv, 'convoy', uiText('camp.nav.convoy', { name: campConvoyName(cv) })) : campNavBerth(C); } // none out yet: the one about to leave is the goal, where she waits (the first seconds of 1.1: Fly to the goal said there was none)
       if (o.type === 'hold') return C.earth ? { id: 'place:base', kind: 'place', name: String(C.earth.name || ''), x: C.earth.x, y: C.earth.y, r: C.earth.r || 60 } : null;
       if (o.what === 'mother') { const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0); return m ? ship(m, 'mother', uiText('camp.nav.mother')) : null; }
       if (o.what === 'towers') { const t = near(C.ships.filter(u => u.kind === 'tower' && u.hp > 0)); return t ? ship(t, 'tower', uiText('camp.nav.tower')) : null; }
@@ -96,6 +104,7 @@ function campNavTarget(C, N) {
   if (kind === 'pickup') { const p = (C.pickups || []).find(q => q.id === (N.ref || String(id).slice(7))); return p ? { x: p.x, y: p.y, r: 0 } : null; } // taken by a ship of yours (or gone: a wreck's ore fades)
   if (kind === 'rock') { const r = (C.rocks || []).find(q => q.id === (N.ref || String(id).slice(5))); return r && r.hp > 0 ? { x: r.x, y: r.y, r: r.r || 0 } : null; }
   const u = C.by[N.ref || String(id).replace(/^[a-z]+:/, '')] || C.ships.find(s => s.kind === kind && s.hp > 0 && (kind === 'mother' || s.id === N.ref));
+  if (!u && kind === 'convoy') { const w = campNavBerth(C, N.ref); if (w) return { x: w.x, y: w.y, r: w.r }; } // she has not left yet: the trip waits at her berth and follows her when she does
   return u && u.hp > 0 ? { x: u.x, y: u.y, r: u.r || 0, vx: u.vx || 0, vy: u.vy || 0 } : null; // vx, vy: a ship's own velocity, which the autopilot leads (campNavLead)
 }
 const campNavStop = (kind, t) => (kind === 'place' ? (t.r || 0) + CAMP.nav.stop : kind === 'anomaly' ? CAMP.anomaly.stop : kind === 'mother' || kind === 'tower' ? CAMP.nav.stopShip : kind === 'alien' || kind === 'guard' ? CAMP.nav.stopEnemy : kind === 'convoy' || kind === 'ship' || kind === 'neutral' ? CAMP.nav.stopFriend : kind === 'rock' ? CAMP.nav.stopRock : CAMP.nav.stopPoint);
@@ -244,6 +253,7 @@ function campNavFly(C, row, fast) {
 const campNavHostileNear = C => campAliens(C).some(u => campDist(u, C.carrier) <= CAMP.nav.auto.near);
 const campNavAuto = (C, dist) => dist >= CAMP.nav.auto.leg && !campNavHostileNear(C); // would a trip of dist px from here burn by itself?
 function campNavTick(C) { // once a tick (from campTick): a burn that began by itself ends by itself when a hostile comes near
+  if (typeof campStrayTick === 'function') campStrayTick(C); // the cruiser left behind by the ship she escorts is told so (src/campstray.js)
   if (C && C.nav && C.nav.on && C.nav.fast && C.nav.auto && campNavHostileNear(C)) { C.nav.fast = false; C.nav.burn = 1; C.nav.auto = false; C.events.push({ type: 'nav', key: 'camp.nav.burnfoe', vars: {} }); }
 }
 
