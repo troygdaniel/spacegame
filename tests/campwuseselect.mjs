@@ -87,7 +87,7 @@ sec('D. Guard with and without a selected friend', () => {
   const o2 = J(`__k('Enter')`);
   check('Enter sends all three squads to guard it at once: no sub-list (two ships to choose from), the list closes, the orders are guards at that ship', o2.ran && o2.ok && J('PP.pick') === null && J('PP.open') === '' && J(`__orders().every(x => x.type === 'guard' && x.at.id === 'freighter-h2')`), JSON.stringify(o2));
   g.run('__l1(); window.__t = __hauler("t1", "Transport", 500, 0, 9000, 0); C.fsel = "";');
-  check('with no friendly picked the row is grey with the hint to pick (the friendlies are the transport and the level\'s outposts: the pilots are not in that list)', row('fguardt').ok === false && J(`campFriList(C).every(e => e.kind === 'post' || e.kind === 'ward')`) && J(`campFriList(C).length`) > 1);
+  check('with no friendly picked the row is grey with the hint to pick (the friendlies O and P cycle are the ships you protect: no outpost, no pilot is in that list)', row('fguardt').ok === false && J(`campFriList(C).every(e => e.kind === 'ward')`) && J(`campFriList(C).length`) >= 1);
 });
 
 sec('E. the rest of the list is as it was', () => {

@@ -28,9 +28,9 @@ function campTdispSubject(C, P, now) { // the ONE target box (bottom right): a s
 }
 function campFdispSubject(C) {
   if (!C || !C.carrier || typeof campSelUnits !== 'function') return null;
-  const u = campSelUnits(C).who; // WHO (A D): one pilot's ship, or All pilots (the default; card space-game-keys-select)
+  const u = campSelUnits(C).who; // WHO (Q W): one pilot's ship, or All pilots (the default; card space-game-keys-select)
   if (u) return u.hp > 0 && !u.gone ? { u, side: 'friend' } : null;
-  const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // All pilots (A D's first stop, Q) (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
+  const f = typeof campSelNow === 'function' ? campSelNow(C) : null; // All pilots (Q W's first stop) (card space-game-q-selects-all): no one ship, the display shows All pilots and a row for each pilot out (card space-game-q-all-pilots-panel)
   return f && f.kind === 'all' ? { u: null, all: (f.units || []).filter(x => x && x.hp > 0 && !x.gone), side: 'friend' } : null;
 }
 function campTdispPostInfo(C, e) {
