@@ -192,7 +192,7 @@ const CAMPBRIEF_KEYS = {
   get fly() { return [CAMP_KEYS.fly.k]; }, get fire() { return [CAMP_KEYS.fire.k]; }, get map() { return [CAMP_KEYS.map.k]; }, get zoom() { return [CAMP_KEYS.zoomout.k, CAMP_KEYS.zoomin.k]; }, // the keys of the table (CAMP_KEYS in src/data_controls.js), read when asked
   get missile() { return [CAMP_KEYS.missile.k]; },
   get attack() { return [CAMP_KEYS.order.k]; }, get escort() { return [CAMP_KEYS.order.k]; }, get mine() { return campKeyCaps(campKeyVia('fmine').id); }, // an order of a list: the key of the list it is in (Q, or a part's own: E fighters, R escorts), read from the key table when asked (a remap is one change there)
-  get dock() { return campKeyCaps(campKeyVia('dock').id); }, get shield() { return campKeyCaps(campKeyVia('emergency').id); } // U dock and repair; the power list's key (none now: card space-game-keys2-select, so the line is left out)
+  get dock() { return campKeyCaps(campKeyVia('dock').id); }, get shield() { return campKeyCaps(campKeyVia('emergency').id); } // the cruiser list's key, S; the power list is deleted, so the line is left out
 };
 function campBriefKeys(level, i) {
   const L = campMissionRow(level, i); if (!L) return [];
@@ -204,7 +204,7 @@ function campBriefKeys(level, i) {
   if (bonus.indexOf('ore') >= 0 || kinds.indexOf('ore') >= 0) add('mine'); // the rim run's mining mission asks for ore as its goal (card space-game-night-hunt-l2-l3: its keys box did not list the mine row, and a pilot who never sends the wing to mine cannot win it)
   if (kinds.indexOf('cashin') >= 0) add('dock'); // and the ore is sold at the Works: docked
   if (bonus.indexOf('hull') >= 0) add('shield');
-  return ids.filter(id => CAMPBRIEF_KEYS[id].length).slice(0, CAMPBRIEF.keysMax - 1).concat('zoom').map(id => // a row with no key to show is left out (the power list has none since card space-game-keys2-select: its Emergency shields line)
+  return ids.filter(id => CAMPBRIEF_KEYS[id].length).slice(0, CAMPBRIEF.keysMax - 1).concat('zoom').map(id => // a row with no key to show is left out (Emergency shields is a row of the cruiser list now: it has S)
      ({ id, k: CAMPBRIEF_KEYS[id], text: uiText('camp.bf.key.' + id) }));
 }
 

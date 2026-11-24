@@ -32,7 +32,6 @@
 //   campPicksClear(C)           X: no target, WHO back on All pilots; true when there was something to let go
 //   campMarkNow(C)              { who, held }: the strength 0..1 of the squares now (card space-game-pilot-squares-fade): the pilots WHO is, and the target held (enemy or friendly); each is 1 for CAMP.mark.show ms after it was picked (campMarkTouch, called by every pick below, even a pick of what is picked already), an order was given (the wing counters of C.orders) or the mission began, then CAMP.mark.fade ms of fade, then 0; the numbers are in CAMP.mark, the clock is C.t, the state is kept per C
 //   campSelUnits(C)             { hostile, friendly, friendlyPost, who, whoShips }: the ships picked now (each a unit or null; friendlyPost is the entry of an outpost, which is no unit; who is the one ship of a pilot, null for All pilots; whoShips every ship WHO is: the three for All pilots); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
-//   campSelRowFor(C, kind)      the pick a W row acts on (card space-game-w-uses-selection): 'hostile' the enemy, 'friend' the friendly: { id, name, unit } or { code: 'nohostile' | 'nofriend' };   campSelWho(C)   'Kara' or 'all squads': who takes the order
 //   campSelOrder(C, verb, how, dry)   W is 'engage' (campWingOrder): the group is WHO's squad (a pilot), else all three; an enemy picked: attack it; a friendly picked: guard it; none: form up on the cruiser ({ verb: 'attack'|'guard', formup }); 'attack' and 'guard' alone are its halves (the target boxes' dry runs)
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
 function campTgtList(C) {
@@ -103,7 +102,7 @@ function campSelList(C) { // the stops of Q and W: All pilots, then the pilots a
   }).filter(Boolean);
   return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName() }].concat(pilots);
 }
-function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // Q (until the Q list returns): WHO is all three pilots
+function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // the first stop of Q: WHO is all three pilots
 function campSelNow(C) { // WHO now: never null with a cruiser; '' (nothing picked), or a pilot who was lost or is home, is All pilots
   if (!C || !C.carrier) return null;
   const list = campSelList(C), e = list.find(x => x.id === C.sel);
@@ -177,12 +176,6 @@ function campMarkNow(C) { // the strength of the squares now: what changed since
   const k = at => { const age = t - at; return age < K.show ? 1 : age < K.show + K.fade ? 1 - (age - K.show) / K.fade : 0; };
   return { who: k(m.who), held: k(m.held) };
 }
-// the pick a row of the W list acts on (card space-game-w-uses-selection): kind 'hostile' is the enemy [ ] \ picked, 'friend' the friendly O P picked; { id, name, unit } (unit: a ship, or the outpost's place) or { code: 'nohostile' | 'nofriend' } (the refusal) when there is none
-function campSelRowFor(C, kind) {
-  if (kind === 'hostile') { const u = campTgtNow(C); return u ? { id: u.id, name: campNavUnitName(u), unit: u } : { code: 'nohostile' }; }
-  const f = campFriNow(C); return f ? { id: f.id, name: f.name, unit: f.unit || { x: f.x, y: f.y, r: f.r } } : { code: 'nofriend' };
-}
-const campSelWho = C => { const f = campSelNow(C); return f && f.kind === 'pilot' ? f.name : uiText('camp.w.all'); }; // who takes the order of a W row: a selected pilot alone, else all squads
 function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (card space-game-keys2-orders): an enemy picked, attack it; a friendly picked, guard it; nothing picked, form up on the cruiser. 'attack' and 'guard' are its two halves (the target boxes' dry runs ask them); there is no recall (the pilots stay out; the Fast burn recalls them itself)
   if (!C) return campNo('what');
   if (verb === 'engage') {

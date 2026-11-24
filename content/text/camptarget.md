@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of the Campaign's one target (card space-game-two-hands-keys): A, D and S pick it, X lets it go; the fleet list's Attack row goes at it, the ship list's Fly to the target flies to it, Enter fires a missile at it. The words the target's line used to say (its display is in camptdisp.md now; these three are not drawn), and the refusals when there is none or it is out of reach. The keys are placeholders: they come from the key table in src/data_controls.js, so a remap changes every line.
+The words of the Campaign's one target (card space-game-two-hands-keys): ] and \ pick an enemy, [ a friendly, X lets it go; W gives the order, the cruiser list's Fly to the target flies to it, Enter fires a missile at it. The words the target's line used to say (its display is in camptdisp.md now; these three are not drawn), and the refusals when there is none or it is out of reach. The keys are placeholders: they come from the key table in src/data_controls.js, so a remap changes every line.
 
 ## Strings
 | key | text |

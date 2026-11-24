@@ -169,7 +169,7 @@ const CAMP = {
     every: 250,                            // ms between two readings of the ship: the numbers and the words are live four times a second (a new ship is read at once)
     pic: 76,                               // px: the picture's frame; the ship is drawn to fit it
     bar: { w: 86, h: 8 },                  // px: the hull bar and the shield bar
-    color: { hostile: 0xff4d6d, friend: 0x7fe9ff }, // the frame: a hostile's red (the target's bracket), the fleet lists' cyan for a ship of yours or a neutral you are picking
+    color: { hostile: 0xff4d6d, friend: 0x7fe9ff }, // the frame: a hostile's red (the target's bracket), the cyan of a ship of yours or a neutral you are picking
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
@@ -362,9 +362,9 @@ const CAMP = {
     refill: [2, 5, 8, 11, 14],             // charge a second, by the weapons' pips 0 to 4 (a turret at 2 pips fires 11.4 shots a second, so the default tank runs down in about half a minute of steady fire and then the turrets fire at 8 a second)
     low: 0.2                               // the computer says so when the charge falls under this share of the tank (and again after it has been over twice this)
   },
-  hud: {                                   // the HUD's places (src/camphud.js). The three round dials, the hull bar and the ore line at the top right are NOT drawn any more (card space-game-layout-hud, Troy, 24 Nov 2026: the cruiser's shield, hull and ore are written top left by src/campcruiserhud.js); their places below are what the power list's rows (CAMP.power.on, off in the game) still measure their bars by
+  hud: {                                   // the HUD's places (src/camphud.js). The three round dials, the hull bar and the ore line at the top right are NOT drawn any more (card space-game-layout-hud, Troy, 24 Nov 2026: the cruiser's shield, hull and ore are written top left by src/campcruiserhud.js); their places below are what the power bars (CAMP.power.on, off in the game) still measure their bars by
     right: 8, y: 8, cell: 118, plain: 76,  // the dials' distance from the screen's right edge, their top, and the width of a cell (three of them) with the pips on (cell) or off (plain)
-    r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius and a power segment (the power list's rows draw bars of this size)
+    r: 22, bar: { w: 10, h: 9, gap: 2 },   // the dial's radius and a power segment
     hullBar: { y: 78, h: 7 },              // the old hull bar under the shield dial: its top, relative to the cell's top, and its height (not drawn)
     ore: { y: 74 },                        // the old ore line's place (not drawn)
     text: { x: 640, y: 6, pitch: 18 },     // the lines of text at the TOP CENTRE, each centred on x (card space-game-layout-hud; they were a column at the top left): the wave, the goal, Earth's shield, the fighters being mended, the outpost hint: the first one's y, and the step to the next (a line that has nothing to say gives its place back). The mothership's name and bar and the rival's bars stand under the last of them
@@ -554,7 +554,7 @@ const CAMP = {
     chunk: 25                              // ore a chunk of the reward holds (the ore reward is that many chunks lying on the cache, for any ship of yours to pick up)
   },
   outpost: {                               // friendly outposts (card space-game-campaign-outposts, src/campoutpost.js): an outpost buys the ore and sells the refit, and mends the hull at half price; a level lists its `outposts`
-    range: 280,                            // px from the edge of an outpost within which the carrier can dock (the ship list's Dock row, "dock at Luna"): a place's own size is added
+    range: 280,                            // px from the edge of an outpost within which the carrier can dock (the cruiser list's Dock row, "dock at Luna"): a place's own size is added
     clear: 900,                            // px: no alien within this of the carrier, or the outpost keeps its doors shut (docking stops the battle: it must not be a free breather in a fight)
     retreatHull: 0.35                      // below this share of the hull, with no ship of the wing left (in the bay, out, launching or being mended), the HUD says where to retreat
   },

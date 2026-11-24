@@ -517,8 +517,6 @@ const UI_TEXT = {
   'camp.ui.listkeysub': '{keyup} {keydown}  {keypick} order  Left back  {keypause} close',
   'camp.ui.listnums': '1-{last}  does a row    {keypause} close',
   'camp.ui.candnums': '1-{last}  give the order    {keypause} back',
-  'camp.ui.cand.title.enemy': 'PICK A TARGET',
-  'camp.ui.cand.title.escort': 'WHICH TO ESCORT',
   'camp.ui.cand.title.field': 'WHICH ROCKS TO MINE',
   'camp.ui.cand.keys': '{keyup} {keydown}  {keypick} give the order  {keypause} back',
   'camp.ui.listkeyback': '{keyup} {keydown}  {keypick} order  {keypause} back',
@@ -529,9 +527,6 @@ const UI_TEXT = {
   'camp.ui.cand.state.field': '{name}, {km} km away',
   'camp.say.wing.guardlost': '{group}, {name} is lost. Back to the cruiser.',
   'camp.say.wing.guardsafe': '{group}, {name} is safe. Back to the cruiser.',
-  'camp.no.noguard': 'Nothing here for the squad to guard.',
-  'camp.ui.cand.title.guard': 'WHICH TO GUARD',
-  'camp.ui.cand.state.post': '{name}, {km} km away',
   'camp.no.nofoe': 'No hostiles in sight, pilot.',
   'camp.ui.blink': 'BLINK',
   'camp.no.notarget': 'No target, pilot. {keyhostiles} picks one, {keynear} the nearest.',
@@ -1308,13 +1303,6 @@ const UI_TEXT = {
   'camp.hud.focuscruiser': 'the cruiser',
   'camp.hud.focuscruiserfar': 'Cruiser {km} km',
   'camp.hud.focuslost': '{name} is gone. Back to the cruiser.',
-  'camp.w.attack': 'Attack {name}',
-  'camp.w.guard': 'Guard {name}',
-  'camp.w.all': 'all squads',
-  'camp.w.nohostile.state': 'pick one with {keyhostiles} or {keynear}',
-  'camp.w.nofriend.state': 'pick a friendly with {keyfriendlies}',
-  'camp.no.nohostile': 'No hostile selected. Pick one first.',
-  'camp.no.nofriend': 'No ship selected to guard. Pick one first.',
 };
 function uiText(key, vars) { return contentFill(CT_HAS(UI_TEXT, key) ? UI_TEXT[key] : key, vars); }
 function ctTextKeys() { // every string the game reads: key -> { get, set }

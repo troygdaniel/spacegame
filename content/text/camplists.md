@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of the two order lists (card one-list-keys): Q opens the fleet orders, P the ship orders; the foot of an open list names its keys. The rows' own words are in the key table (src/data_controls.js). A key may be in any file of this folder.
+The words of the order lists (card one-list-keys; the S list is the one a key opens, the fleet, ship, power, autopilot and all-squads lists are deleted: card space-game-delete-off-lists): the foot of an open list names its keys. The rows' own words are in the key table (src/data_controls.js). A key may be in any file of this folder.
 
 ## Strings
 | key | text |

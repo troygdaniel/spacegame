@@ -46,7 +46,7 @@ function campMapClose(s) {
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
-  if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open Q or P list closes
+  if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open list closes
   const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
   const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
   const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), box: campMapBounds(C.level, true, C.L), panned: false, dragging: false, z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)

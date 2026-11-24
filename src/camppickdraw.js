@@ -1,5 +1,5 @@
 // ---------- Campaign: the target pick shown in the flight view (card space-game-order-target-pick; Troy, 22 Nov 2026) ----------
-// The Phaser half of src/camppick.js. While a target sub-list is open, the candidate the highlight is on is REVEALED in the flight view: a clear bracket round it (cyan, the fleet lists' colour, and bigger and slower than the target's red
+// The Phaser half of src/camppick.js. While a target sub-list is open, the candidate the highlight is on is REVEALED in the flight view: a clear bracket round it (cyan, the lists' colour, and bigger and slower than the target's red
 // bracket of src/camptargetdraw.js, so a candidate is not taken for the target), and when it is off the screen the view zooms out just far enough to show it with the cruiser. The camera follows the cruiser, so zooming out is the way to
 // bring something far into view; it is never zoomed IN. Moving the highlight moves the reveal; leaving the list (an order, Esc, the list's key) puts the zoom back where the player had it (a zoom the player makes meanwhile, with + - or the
 // wheel, is the one that is put back). After an order the bracket stays CAMP_PICK.seen ms on what it was given at. A battle behind a card, the pause or the map shows none, and gives the zoom back.
