@@ -391,7 +391,6 @@ class Campaign extends Phaser.Scene {
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTdispSync === 'function') campTdispSync(this, this.time.now); // the target display in the bottom right corner: the target, or the ship an order's list is on (src/camptdispscene.js)
     if (typeof campFdispSync === 'function') campFdispSync(this, this.time.now); // the who display in the bottom left corner: the pilot A or D picked, or All pilots (card space-game-friendly-display; the same file)
-    if (typeof campGdispSync === 'function') campGdispSync(this, this.time.now); // the friendly display, stacked above the enemy's (card space-game-keys-panels; the same file)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
@@ -450,7 +449,7 @@ class Campaign extends Phaser.Scene {
     const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // a target sub-list opened from a squad's list leaves its list open as far as the panel's state goes (card space-game-order-target-pick), so the marks stay while it is picked
     sg.clear();
     if (!lit.length) return;
-    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse();
+    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(); // the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
     C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al); });
   }
   sync() {
