@@ -26,8 +26,8 @@ try {
   // park the ship in empty space (the police would shoot a pirate next to Halcyon) and drop a raider right beside it:
   // it must sit still and not fire for the whole grace
   // a clean slate first (night smoke 18 Nov: this check failed once under load and passed on every rerun): the scene ran in real time before the stepped clock took
-  // over, so a bullet or a ram from those unstepped seconds, or a pirate already on its way, could still be counted. The grace is about the raider dropped beside you.
-  await t.ev(`(() => { const s = ${S}; s.enemies.clear(true, true); s.eb.getChildren().forEach(b => b.disableBody(true, true)); G.hull = G.maxHull; s.ironUntil = 0; s.ship.setPosition(1500, 6500); s.ship.body.setVelocity(0, 0); const r = spawnPirate(s, 1800, 6500, 'raider'); r.rotation = Math.PI; r.nextShot = 0; return 1; })()`);
+  // over, so a bullet or a ram from those unstepped seconds, or a pirate already on its way, could still be counted. The 1.3 s launch lock (space.js: the ship thrusts forward by itself) can still be running too on an idle Mac: it flew the ship into the raider dropped 300 px ahead (hull 92 of 100), so the lock is cleared with the rest. The grace is about the raider dropped beside you.
+  await t.ev(`(() => { const s = ${S}; s.enemies.clear(true, true); s.eb.getChildren().forEach(b => b.disableBody(true, true)); G.hull = G.maxHull; s.ironUntil = 0; s.lockUntil = 0; s.ship.setPosition(1500, 6500); s.ship.body.setVelocity(0, 0); const r = spawnPirate(s, 1800, 6500, 'raider'); r.rotation = Math.PI; r.nextShot = 0; return 1; })()`);
   const hullGrace = await t.ev('G.hull');
   await go(19000);
   const grace = await t.ev(`(() => { const s = ${S}; return { calm: s.enemies.getChildren().every(d => !d.active || d.calm === true || Phaser.Math.Distance.Between(d.x, d.y, s.ship.x, s.ship.y) >= d.def.engage), shots: s.eb.countActive(), hull: G.hull, n: s.enemies.countActive(), cap: pirateCap(s, s.time.now) }; })()`);
