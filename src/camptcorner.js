@@ -27,10 +27,10 @@ function campTcornerRows(C, which) {
 }
 const campTcornerHit = (C, mem, which) => { const id = campTcornerSubjectId(C, which), was = mem.id || ''; mem.id = id; return !!id && id !== was; }; // true when the ship or the place shown is a new one: the details come back by themselves, whatever key picked it
 campCornerAdd({
-  id: 'hostiles', at: 'tr', keys: ['last', 'next'], title: C => campTcornerInfo(C, 'host').titleKey,
+  id: 'hostiles', at: 'tr', keys: ['hostiles'], title: C => campTcornerInfo(C, 'host').titleKey,
   selection: C => campTcornerInfo(C, 'host').name, rows: C => campTcornerRows(C, 'host'), hit: (C, mem) => campTcornerHit(C, mem, 'host')
 });
 campCornerAdd({
-  id: 'friendlies', at: 'br', keys: ['flast', 'fnext'], title: C => campTcornerInfo(C, 'fri').titleKey,
+  id: 'friendlies', at: 'br', keys: ['friendlies'], title: C => campTcornerInfo(C, 'fri').titleKey,
   selection: C => campTcornerInfo(C, 'fri').name, rows: C => campTcornerRows(C, 'fri'), hit: (C, mem) => campTcornerHit(C, mem, 'fri')
 });
