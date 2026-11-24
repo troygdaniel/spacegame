@@ -174,13 +174,13 @@ function campPanelRun(C, row, how, item) {
   else if (row.pick === 'enemy' && !campTgtNow(C) && !campTgtList(C).length) { const dry = row.wing ? campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key', true) : campCheck(C, row.order, ''); return dry.ok ? campNo('nofoe') : dry; } // Attack with no hostile and no target: nothing to attack (an order's own refusal, no fighters out, is said first)
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], campPanelWingTarget(C, row), how || 'key');
   if (row.blink) { const bw = typeof campBlinkWhy === 'function' ? campBlinkWhy(C) : ''; if (!bw) C.input.blink = true; return { ok: !bw, say: bw }; } // the warp blink: without the technology, or while it cools, the row says so
-  if (row.fly === 'target') { // the autopilot to the target (burn: fast, which needs the wing aboard): the one target held, an enemy, a ship you protect or a place clicked on the map
+  if (row.fly === 'target') { // the autopilot to the target (burn: fast): the one target held, an enemy, a ship you protect or a place clicked on the map
     const tr = typeof campHeldRow === 'function' ? campHeldRow(C) : null; if (!tr) return campNo('notarget');
     const t = campNavTarget(C, tr) || tr, d = Math.hypot(t.x - C.carrier.x, t.y - C.carrier.y);
     if (!tr.moving && d - campNavStop(tr.kind, t) <= CAMP.nav.arrive) return { ok: false, say: uiText('camp.nav.there', { name: tr.name }) };
     const r = campNavFly(C, tr, !!row.burn, how || 'key'); return r.ok ? { ok: true, say: uiText('camp.nav.say', { name: tr.name, km: campNavKm(d) }) } : r;
   }
-  if (row.fly === 'objective') { // the autopilot to the goal; a burn with a ship out is refused the first time (the list stays open) and the second Enter recalls the wing and burns (src/campnav.js)
+  if (row.fly === 'objective') { // the autopilot to the goal; a burn flies with the wing out (it is towed: src/campaign.js campTowSet)
     const r = campNavCheck(C, (row.burn ? 'fast ' : '') + 'the objective'); if (!r.ok || !r.row) return r;
     const auto = !row.burn && row.fast === 'auto' && campNavAuto(C, Math.hypot(r.row.x - C.carrier.x, r.row.y - C.carrier.y)); // the cruiser list's Fly to the goal burns by itself on a long clear leg (src/campnav.js campNavAuto; card space-game-keys2-cruiser)
     const f = campNavFly(C, r.row, !!r.fast || auto, how || 'key'); if (f.ok && C.nav) C.nav.auto = auto;
@@ -228,7 +228,7 @@ function campPanelState(C, row) {
     case 'ctuck': case 'chold': case 'crun': case 'ccarry': return campPanelConvoyMarked(C, row) ? 'in force' : campPanelShips(campConvoyShips(C).length); // the convoy orders: the one in force is marked (src/campconvoy.js)
     case 'emergency': return CAMP.emergency.ore + ' ore: the shields fill at once';
     case 'dock': { const n = typeof campOutpostNear === 'function' ? campOutpostNear(C) : null; return n ? 'dock at ' + n.o.name : ''; } // the outpost in range
-    case 'goal': case 'burn': { const g = campNavGoal(C); if (!g) return ''; const d = Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y), far = row.fast === 'auto' && d >= CAMP.nav.auto.leg && !campNavHostileNear(C); return g.name + '  ' + campNavKm(d) + ' km' + (C.nav && C.nav.on && C.nav.name === g.name ? ', flying there' : far ? (campNavOut(C) ? ', no burn: wing out' : ', burns') : ''); } // the cruiser list's goal row says whether it will burn by itself: on a long clear leg it does, with the wing aboard
+    case 'goal': case 'burn': { const g = campNavGoal(C); if (!g) return ''; const d = Math.hypot(g.x - C.carrier.x, g.y - C.carrier.y), far = row.fast === 'auto' && d >= CAMP.nav.auto.leg && !campNavHostileNear(C); return g.name + '  ' + campNavKm(d) + ' km' + (C.nav && C.nav.on && C.nav.name === g.name ? ', flying there' : far ? ', burns' : ''); } // the cruiser list's goal row says whether it will burn by itself: on a long clear leg it does, the wing out or aboard
     case 'target': case 'burntarget': { const tg = campPanelTarget(C); return tg ? tg.name + '  ' + tg.km + ' km' + (C.nav && C.nav.on && C.nav.name === tg.name ? ', flying there' : '') : ''; } // (card space-game-keys3-repair: the autopilot's line left the top left of the screen, so the rows say it)
     case 'blink': return campPanelBlinkWord(C);
   }

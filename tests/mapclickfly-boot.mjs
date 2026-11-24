@@ -1,6 +1,6 @@
 // not in the smoke: a boot of both games with the map's click-to-fly buttons, run by hand (one Chrome, muted, through the test lock; card space-game-map-click-fly)
 // The rules are in tests/mapclickfly.mjs (plain Node). This boots each game once and does what Troy does with a real mouse and real keys: opens the map, clicks a place, looks at the two buttons by it, and flies.
-//   node tests/mapclickfly-boot.mjs campaign     level 1 (the belt): Tab, a click on Vesta sets it, Fast flies at a burn (the speed passes 210), Shift+Enter and Enter, any steering key takes the wheel back
+//   node tests/mapclickfly-boot.mjs campaign     level 1 (the belt): Tab, a click on Vesta sets it, Fast flies at a burn (the speed passes 210), Shift+Enter and Enter (a burn with the wing out tows it), any steering key takes the wheel back
 //   node tests/mapclickfly-boot.mjs longhaul     the Space scene: the sector map, a click on the station sets it, Enter flies at regular speed (ap.local), Shift+Enter fast
 //   node tests/mapclickfly-boot.mjs              both, one after the other
 // Pictures go to the folder in MAPFLY_SHOTS (default ~/dev/spacegame-night/shots/mapfly-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -83,15 +83,11 @@ async function campaign() {
     check('the wing is out (the three pilots)', (await j(`campNavOut(${SC}.camp)`)) === 3);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);
-    check('with the wing out the Fast button says so', /wing is out/.test(await j(`${SC}.mp.btnFast.text`)), await j(`${SC}.mp.btnFast.text`));
+    check('with the wing out the Fast button is the same button: its key and its time, no "wing is out" (a burn tows the wing: card space-game-burn-with-wing-out)', /^FAST\s+Shift\+Enter/.test(await j(`${SC}.mp.btnFast.text`)) && !/wing is out/.test(await j(`${SC}.mp.btnFast.text`)), await j(`${SC}.mp.btnFast.text`));
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(200);
-    check('Shift+Enter is refused: no trip, and the press is remembered', (await j(`${SC}.camp.nav === null && !!${SC}.camp.fastAsk`)) === true, JSON.stringify(await j(`({ nav: ${SC}.camp.nav && ${SC}.camp.nav.id, ask: ${SC}.camp.fastAsk })`)));
-    await t.run(300);
-    check('the button now says what the next press does ("press again")', /press again/.test(await j(`${SC}.mp.btnFast.text`)), await j(`${SC}.mp.btnFast.text`));
-    await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(200);
-    check('the second press recalls the wing and waits for it', (await j(`!!${SC}.camp.navWait && ${SC}.camp.orders.recall >= 1`)) === true);
-    await settle(t, `${SC}.camp.nav && ${SC}.camp.nav.fast`, 80);
-    check('and when the last ship is aboard the burn starts by itself', (await j(`${SC}.camp.nav && ${SC}.camp.nav.fast === true && campNavOut(${SC}.camp) === 0`)) === true, JSON.stringify(await j(`[${SC}.camp.navWait && ${SC}.camp.navWait.n, campNavOut(${SC}.camp), campWing(${SC}.camp).map(u => u.kind + ':' + (u.order && u.order.type) + ':' + Math.round(Math.hypot(u.x - ${SC}.camp.carrier.x, u.y - ${SC}.camp.carrier.y))), ${SC}.camp.call && ${SC}.camp.call.log.slice(-3)]`)));
+    check('Shift+Enter burns at once with the wing out: the trip is on and fast, nobody is recalled, nothing waits', (await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === true && ${SC}.camp.orders.recall === 0 && !${SC}.camp.navWait`)) === true, JSON.stringify(await j(`({ nav: ${SC}.camp.nav && ${SC}.camp.nav.id, fast: ${SC}.camp.nav && ${SC}.camp.nav.fast })`)));
+    await t.run(3000);
+    check('and the three pilots are towed along with the cruiser: a lifted top speed, none left behind (within 450 px of it)', (await j(`campWing(${SC}.camp).length === 3 && campWing(${SC}.camp).every(u => u.tow > 1 && Math.hypot(u.x - ${SC}.camp.carrier.x, u.y - ${SC}.camp.carrier.y) < 450)`)) === true, JSON.stringify(await j(`[campNavOut(${SC}.camp), campWing(${SC}.camp).map(u => [u.tow, Math.round(Math.hypot(u.x - ${SC}.camp.carrier.x, u.y - ${SC}.camp.carrier.y))])]`)));
     check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
   } finally { await t.close(); }
 }
