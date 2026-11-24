@@ -174,6 +174,11 @@ const CAMP = {
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
+  mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
+    show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
+    fade: 600,                             // ms it then takes to fade out (the target stays held, the target box at the bottom right and the who box at the bottom left stay)
+    verbs: ['launch', 'attack', 'escort', 'guard', 'recall', 'mine']   // the counters of C.orders that are the pilots' orders and bring both squares back (a missile, a power change and the convoy's orders do not)
+  },
   charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
     red: 0.3,                              // the hull share at or under which the bar turns red (a ship that is nearly lost)
