@@ -48,7 +48,7 @@ try {
 
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 30000, 'the Campaign scene'); await belt(t); await t.clock(); await t.run(800);
   await key('Enter'); await key('Enter'); await settle(`${SCN}.mode === 'play'`); await t.ev(`(() => { const C = ${SCN}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); C.waves.forEach(w => { w.started = true; }); return 1; })()`);
-  check('the belt starts at Occator Works: the carrier is in range of that outpost, and its dock is in reach', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
+  check('the belt starts at Occator Works: the cruiser is in range of that outpost, and its dock is in reach', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
   await t.run(300); await snap('1-start-in-range');
   await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await t.run(500);
   const drawn = () => j(`${SCN}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`); // the rows of the open list as they are drawn: the words, and the word or two of state (src/campanelsdraw.js)
@@ -66,7 +66,7 @@ try {
   check('REPAIR: R mends the hull for ore, the battle\'s hull is whole', await j(`${SCN}.camp.carrier.hp === ${SCN}.camp.carrier.maxHp && ${SCN}.camp.ore < 100`));
   await t.run(1400); await snap('7-dock-room-undock');
   await key('KeyL');
-  check('L undocks: the room is gone, the battle runs again, the carrier is free', await settle(`!game.scene.isActive('CampHub') && game.scene.isActive('Campaign') && !${SCN}.scene.isPaused() && ${SCN}.camp.docked === '' && ${SCN}.docked === false`));
+  check('L undocks: the room is gone, the battle runs again, the cruiser is free', await settle(`!game.scene.isActive('CampHub') && game.scene.isActive('Campaign') && !${SCN}.scene.isPaused() && ${SCN}.camp.docked === '' && ${SCN}.docked === false`));
   // away from every outpost: the Fabricator builds anywhere; the retreat line when hurt and alone
   await t.ev(`(() => { const C = ${SCN}.camp; C.carrier.x = 3000; C.carrier.y = 3000; C.carrier.vx = 0; C.carrier.vy = 0; C.ore = 100; return 1; })()`); await t.run(600);
   await t.ev(`(() => { const C = ${SCN}.camp; C.bay.fighters = 0; C.bay.escorts = 0; C.launchQ.length = 0; C.ships.forEach(u => { if (u.team === 'earth' && u.kind !== 'carrier') u.hp = 0; }); C.carrier.hp = C.carrier.maxHp * 0.2; return 1; })()`); await t.run(1200);
