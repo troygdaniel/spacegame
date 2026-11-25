@@ -109,6 +109,7 @@ class Campaign extends Phaser.Scene {
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
     if (typeof campPlaceLabelsInstall === 'function') campPlaceLabelsInstall(this); // the two labels of a place keep clear of each other at every zoom (src/campplacelabels.js); after the zoom, which scales the labels, on the same event
+    if (typeof slookFxInstall === 'function') slookFxInstall(this); // the new ship look's engine trails and kills, once a frame after the ships' sprites are in place (src/shiplookfx.js; they draw only with the switch on)
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
   get camzoomHold() { return !!this.mp; } // with the map open the wheel is the map's (camzoomCanWheel, src/camzoom.js)
@@ -357,7 +358,7 @@ class Campaign extends Phaser.Scene {
 
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and its pew (src/audio.js, SFX.turret), never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
-    const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * CAMP_MOUNT.flash, e.y + Math.sin(e.aim) * CAMP_MOUNT.flash, 'ember').setBlendMode('ADD').setTint(0xffe9a0).setScale(CAMP_MOUNT.flashScale).setDepth(7);
+    const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * CAMP_MOUNT.flash, e.y + Math.sin(e.aim) * CAMP_MOUNT.flash, 'ember').setBlendMode('ADD').setTint(typeof slookGunTone === 'function' ? slookGunTone(0xffe9a0) : 0xffe9a0).setScale(CAMP_MOUNT.flashScale).setDepth(7);
     this.tweens.add({ targets: f, alpha: 0, scale: CAMP_MOUNT.flashScale * 0.4, duration: B.flash, onComplete: () => f.destroy() });
     if (!(C.t - this.blipAt < B.gap) && !campHas(C, 'beam')) { this.blipAt = C.t; sfx('turret', e.i); } // with the Beam turrets the hum is the sound (src/audio.js beamHum), not a pew a shot
   }
@@ -444,7 +445,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
-    else if (e.type === 'boom') { this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
+    else if (e.type === 'boom') { if (!(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
     else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } this.boom.explode(3, e.x, e.y); }
     else if (e.type === 'earthhit') { this.boom.explode(6, e.x, e.y); this.battleSound('earth', 'earthHit'); }
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
@@ -455,7 +456,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'anomaly') this.anomalyEvent(e);
     else if (e.type === 'power') beep(540, 0.06, 'triangle', 0.04, 120); // a pip moved (the ship's systems, src/campaign.js; only with CAMP.power.on): a blip
     else if (e.type === 'missile') sfx('missileLaunch');
-    else if (e.type === 'mboom') { this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
+    else if (e.type === 'mboom') { if (!(typeof slookKill === 'function' && slookKill(this, e.x, e.y, SLOOKFX.kill.blast, e.r))) this.boom.explode(44, e.x, e.y); sfx('missileBlast'); }
     else if (e.type === 'mfizzle') { this.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }
     else if (e.type === 'torpedo' || e.type === 'tboom') { if (typeof campTorpedoEvent === 'function') campTorpedoEvent(this, e); } // a torpedo boat arms, a torpedo is away, goes off, is shot down (src/camptorpedoscene.js)
     else if (e.type === 'convoy') { if (typeof campConvoyEvent === 'function') campConvoyEvent(this, e); } // an order for the escorted ships, a hit taken for one (src/campconvoyscene.js)
@@ -518,7 +519,7 @@ class Campaign extends Phaser.Scene {
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
       const kb = typeof campZoomShotScale === 'function' && this.cameras && this.cameras.main ? campZoomShotScale(this.cameras.main.zoom) : 1; // thicker when the view is far out (src/campzoom.js)
-      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture(b.team === 'earth' ? 'shot-earth' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet').setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
+      im.setVisible(true).setPosition(b.x, b.y).setRotation(b.rot).setTexture((typeof slookShotKey === 'function' && slookShotKey(b)) || (b.team === 'earth' ? 'shot-earth' : b.team === 'neutral' ? 'shot-neutral' : b.fac === 'pirate' ? 'shot-pirate' : 'ebullet')).setScale((b.beam ? 3 : b.pd ? 0.9 : 1) * kb, (b.beam ? 1.2 : 1) * kb);
       if (b.beam) im.setTint(0x7fe9ff); else im.clearTint(); // the Earth side's shots (turrets and pilots) are green as they are, no tint; the beam tech's keep their cyan tint (on the green, a teal), long and go through
     });
   }
@@ -548,6 +549,7 @@ class Campaign extends Phaser.Scene {
       this.msp = {}; this.reachG = this.add.graphics().setDepth(2); this.mountG = this.add.graphics().setDepth(6);
     }
     C.rockets.forEach(m => {
+      if (typeof slookRocket === 'function' && slookRocket(this, m, seen)) return; // the new ship look's dart and tail (src/shiplookfx.js, card space-game-ship-look-c-fire-trails): with the switch on it draws the missile
       const ux = Math.cos(m.rot), uy = Math.sin(m.rot);
       let r = this.msp[m.id];
       if (!r) r = this.msp[m.id] = { body: this.add.rectangle(m.x, m.y, 16, 5, 0xfff1d0).setDepth(5), flame: this.add.image(m.x, m.y, 'ember').setBlendMode('ADD').setTint(0xffa040).setScale(1.6).setDepth(5), puff: 0 };
@@ -559,16 +561,16 @@ class Campaign extends Phaser.Scene {
       }
     });
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
-    const g = this.reachG, mg = this.mountG; g.clear(); mg.clear();
+    const g = this.reachG, mg = this.mountG, tone = typeof slookGunTone === 'function' ? slookGunTone : c => c; g.clear(); mg.clear(); // tone: the new look's blue for the reach ring and the mounts' gold (src/shiplookfx.js), as it was with the switch off
     if (c.hp > 0) {
-      g.lineStyle(CAMP_REACH.w, CAMP_REACH.color, CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
+      g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
       const kc = campShipK(this, c.id); // the picture drawn up by the far view (card space-game-ships-bigger): the mounts sit where the picture's turrets are, and are drawn as much bigger
       C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
         const hot = C.t - tu.shotAt < 120, tx = c.x + (tu.x - c.x) * kc, ty = c.y + (tu.y - c.y) * kc;
         const M = CAMP_MOUNT;
-        mg.fillStyle(0x04101c, 0.9).fillCircle(tx, ty, M.base * kc); mg.fillStyle(hot ? 0xffffff : 0xffd37a, 1).fillCircle(tx, ty, (hot ? M.hot : M.dot) * kc);
+        mg.fillStyle(0x04101c, 0.9).fillCircle(tx, ty, M.base * kc); mg.fillStyle(hot ? 0xffffff : tone(0xffd37a), 1).fillCircle(tx, ty, (hot ? M.hot : M.dot) * kc);
         if (!tu.target) mg.lineStyle(M.width[0] * kc, M.stub[1], 0.95).lineBetween(tx, ty, tx + Math.cos(c.rot) * M.stub[0] * kc, ty + Math.sin(c.rot) * M.stub[0] * kc); // nothing in reach: a steel barrel along the heading, so the mount reads as a gun and not as a lit window
-        if (tu.target) mg.lineStyle((hot ? M.width[1] : M.width[0]) * kc, hot ? 0xffe9a0 : 0xffd37a, hot ? 0.95 : 0.7).lineBetween(tx, ty, tx + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc, ty + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc);
+        if (tu.target) mg.lineStyle((hot ? M.width[1] : M.width[0]) * kc, hot ? tone(0xffe9a0) : tone(0xffd37a), hot ? 0.95 : 0.7).lineBetween(tx, ty, tx + Math.cos(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc, ty + Math.sin(tu.aim) * (hot ? M.aim[1] : M.aim[0]) * kc);
       });
     }
   }
