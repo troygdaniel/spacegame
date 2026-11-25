@@ -3,7 +3,7 @@
 // The rule is in campWingAI (src/campaign.js), the number CAMP.flight.leash (3,000 px; 0 is no leash), the N panel row `pilotleash`.
 //   A. the number and its row
 //   B. a pilot guarding the cruiser, a runner 3,500 px out: it breaks off and flies back; inside the leash it still gives chase; with the leash at 0 it follows (the old game)
-//   C. an attack order: on a named foe that still fights the pilot keeps after it, however far; on a runner it breaks off, the order is over (guard), and the pilot comes back
+//   C. an attack order: on a foe that still fights (named or picked) the pilot keeps after it, however far; on a runner it breaks off, the order is over (guard), and the pilot comes back
 //   D. a pilot told to guard a ship (a miner) is measured from that ship, not from the cruiser
 //   E. the wiring: only the pilots' AI has it (the cruiser is the player's to fly), no new radio line
 // Run: node tests/camppilotleash.mjs   (exit code 1 on a failed check)
@@ -46,7 +46,11 @@ console.log('C. an attack order');
   const run = J('(() => { const C = __stage(3500, 3800, true, (C, p, f) => ({ type: "attack", target: f.id })); return __go(C, 90); })()');
   check('the same order on a runner: it breaks off and comes back, and the order is over (guard), so it does not go out again', run.toCruiser < -100 && run.toFoe > 100 && run.order === 'guard', JSON.stringify(run));
   const picked = J('(() => { const C = __stage(3500, 3800, false, { type: "attack" }); return __go(C, 90); })()');
-  check('an attack order with no named foe (the pilot picks the nearest) is on the leash too: it breaks off past it', picked.toCruiser < -100 && picked.order === 'guard', JSON.stringify(picked));
+  check('an attack order with no named foe (the pilot picks the nearest) that is still fighting is kept too: the pilots sent at the pirates on a miner 3,000 px from the cruiser do not turn back', picked.toCruiser > 100 && picked.order === 'attack', JSON.stringify(picked));
+  const pickedRun = J('(() => { const C = __stage(3500, 3800, true, { type: "attack" }); return __go(C, 90); })()');
+  check('and an attack order with no named foe whose foe has broken off is on the leash: it breaks off and the order is over', pickedRun.toCruiser < -100 && pickedRun.order === 'guard', JSON.stringify(pickedRun));
+  const noGuardLeash = J('(() => { const C = __stage(3500, 3800, false); return __go(C, 90); })()');
+  check('a GUARD pilot after a foe that is still fighting, picked by itself, 3,500 px from what it guards: the leash brings it back (it is acting by itself)', noGuardLeash.toCruiser < -100, JSON.stringify(noGuardLeash));
 }
 
 console.log('D. a pilot told to guard a ship is measured from that ship');
@@ -60,7 +64,7 @@ console.log('E. the wiring');
 {
   const src = readFileSync(ROOT + '/src/campaign.js', 'utf8'), a = src.indexOf('function campWingAI('), b = src.indexOf('\nfunction ', a + 10);
   const ai = src.slice(a, b);
-  check('the leash is in the pilots\' AI (campWingAI) only: guard and attack orders, from the guarded thing, no radio line', /CAMP\.flight\.leash/.test(ai) && /o\.type === 'guard' \|\| o\.type === 'attack'/.test(ai) && !/campSay/.test(ai.slice(ai.indexOf('THE LEASH'), ai.indexOf('THE LEASH') + 700)));
+  check('the leash is in the pilots\' AI (campWingAI) only: guard and attack orders, from the guarded thing, no radio line', /CAMP\.flight\.leash/.test(ai) && /o\.type === 'guard' \|\| \(o\.type === 'attack' && foe\.running\)/.test(ai) && !/campSay/.test(ai.slice(ai.indexOf('THE LEASH'), ai.indexOf('THE LEASH') + 700)));
   check('the cruiser\'s own movement does not read it (the player flies it)', !/flight\.leash/.test(src.slice(src.indexOf('function campCarrierStep') >= 0 ? src.indexOf('function campCarrierStep') : 0, src.indexOf('function campCarrierStep') >= 0 ? src.indexOf('function campCarrierStep') + 4000 : 0)));
 }
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
