@@ -7,7 +7,7 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | key | text |
 |---|---|
 | camp.say.patrolleave | Patrol turning back. You are on your own from here. |
-| camp.say.distress | Miner under attack, west of our course! Pirates on him. |
+| camp.say.distress | Pirates on me, west of you! Helping me leaves your transport open. |
 | camp.say.thanks | The miner is safe and sends {ore} ore. Thanks! |
 | camp.say.rimambush | Pirates and torpedo boats behind the rocks! Cover the transport. |
 | camp.b.rival | Destroy the pirate leader |
