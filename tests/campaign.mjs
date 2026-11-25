@@ -85,7 +85,7 @@ console.log('B. the five orders');
   check('before the first convoy leaves (10 s), the Escort order names nothing and says there is no convoy', J(`campOrder(C, 'escort', '')`).say === 'There is no convoy to escort.');
   g.run('__run(7)'); // 12 s in: the Mars convoy has been out for two seconds
   const e = J(`campOrder(C, 'escort', 'the Mars convoy')`);
-  check('Escort names the Mars convoy: the squads take it, and the answer says which', e.ok && e.say === 'The squads are with the Mars convoy.' && J(`campWing(C, 'fighter').every(u => u.order.type === 'escort' && u.order.target === 'freighter-mars')`));
+  check('Escort names the Mars convoy: the squads take it, and the answer says which', e.ok && e.say === 'The pilots are with the Mars convoy.' && J(`campWing(C, 'fighter').every(u => u.order.type === 'escort' && u.order.target === 'freighter-mars')`));
   const at = J(`campOrder(C, 'attack', '')`);
   check('Attack sends every squad at the nearest alien and replaces the escort', at.ok && J(`campWing(C, 'fighter').every(u => u.order.type === 'attack')`));
   check('Attack the mothership before it has come says so', J(`campOrder(C, 'attack', 'the mothership')`).say === 'The mothership has not come yet.' && J(`campWing(C, 'fighter').every(u => !u.order.target)`));
@@ -563,7 +563,7 @@ console.log('M. level 1, the belt: survey, haulers, the mothership; the refit');
   g.run('__new2(1, [], 1, 0); campOrder(C, "launch"); __run(5); campOrder(C, "mine"); __run(25)');
   const mid = J('C.ore'); g.run('__run(35)');
   check('mining goes on in the survey: launch at once and Mine, and the wing brings the store from empty to full (200) in about a minute, not in ten seconds', mid >= 40 && mid < 200 && J('C.ore') >= 160);
-  check('Escort with no hauler in the level keeps the squads close to the cruiser, and says so; there is no Earth in this level', J(`campOrder(C, 'escort', '').say`) === 'The squads are with the cruiser.' && J('C.earth') === null);
+  check('Escort with no hauler in the level keeps the squads close to the cruiser, and says so; there is no Earth in this level', J(`campOrder(C, 'escort', '').say`) === 'The pilots are with the cruiser.' && J('C.earth') === null);
   // 1.2 the haulers
   g.run('__new2(1, [], 1, 1)');
   check('1.2 the haulers: three ore haulers (Hauler 1, 2, 3) leave Deimos for Phobos (the two moons of Mars) at 3, 18 and 33 seconds after you arrive; two must arrive and none may be on its way; the raiders go for them', J('C.L.convoys.length') === 3 && J('C.L.convoys.map(c => c.name).join()') === 'Hauler 1,Hauler 2,Hauler 3' && J('C.L.convoys.every(c => c.from === "deimos" && c.to === "phobos")') && J('C.L.place') === 'mars' && J('C.L.objectives[0].n') === 2 && J('C.L.waves.every(w => /^convoy:h/.test(w.goal))'));
