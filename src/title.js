@@ -22,12 +22,15 @@ function titleKeyAct(S, e, now) {
 }
 // ---- the new title: direction A of docs/screens-mock.html, two doors (landing d of the new screens; card space-game-screens-d-title; Troy, 25 Nov 2026) ----
 // Behind the screens switch (scrOn, src/screens.js: off by default). With it on the title is page panels over the canvas (src/scrhost.js): the name, two cards (the Campaign with where you are in it, Long Haul), and Settings
-// as a chip at the top right; the canvas keeps the stars, the planet, the station and the ship that flies by. No key moves: K is the Campaign, Enter does the lit door (Long Haul at first, as it always was), the arrows
-// move the light, S is Settings, H the keys page; a click on a card or on the chip does what its key does. Every chip is a role of the key table's screens group (src/data_controls.js: start, pick, settings); the words are scr.title.*
+// as a chip at the top right; the canvas keeps the stars, the planet, the station and the ship that flies by. ONE key means something new here, Troy's own call (25 Nov 2026): the CAMPAIGN door is lit first, so Enter on the
+// new title starts the Campaign (on today's title, the switch off, Long Haul is lit first and Enter starts Long Haul, as it always did). Enter still does the lit door, the arrows still move the light, K is still the
+// Campaign, S Settings, H the keys page; the chips say it: the Enter chip is on the lit door, and Long Haul, which has no letter of its own, shows the arrows while it is not lit. a click on a card or on the chip does what its key does. Every chip is a role of the key table's screens group (src/data_controls.js: start, pick, door, settings); the words are scr.title.*
 // (content/text/scrtitle.md). The bottom line of Long Haul keys is not drawn: those keys are on the H page and in Settings > Controls.
 //   titleScrAt(P)          PURE: where the Campaign is: { n (the next mission, 1 to of), of (the missions of every level: 9), flown, frac (flown of them, 0 to 1) }
-//   titleScrModel(P, sel)  PURE: what the screen shows: { lab, name, doors: [{ id, go, chip, name, sub, on, at?, meter? }], settings: { chip, label } }; sel is the lit choice (an index of TITLE_CHOICES)
-const TITLE_SCR = { doors: [{ id: 'campaign', go: 'campaign', role: 'start', name: 'scr.title.camp.name', sub: 'scr.title.camp.sub' }, { id: 'long', go: 'longhaul', role: 'pick', name: 'scr.title.long.name', sub: 'scr.title.long.sub' }], settings: 'settings', refit: 500 }; // the doors in the order they are drawn (the mock's: the Campaign first), each with the role of its key; refit: ms between two fits of the panels to the canvas
+//   titleScrModel(P, sel)  PURE: what the screen shows: { lab, name, doors: [{ id, go, chips, name, sub, on, at?, meter? }], settings: { chip, label } }; sel is the lit choice (an index of TITLE_CHOICES)
+//   titleScrFirst()        the choice lit when the new title opens: the Campaign's index in TITLE_CHOICES
+const TITLE_SCR = { first: 'campaign', enter: 'pick', move: 'door', doors: [{ id: 'campaign', go: 'campaign', role: 'start', name: 'scr.title.camp.name', sub: 'scr.title.camp.sub' }, { id: 'long', go: 'longhaul', role: '', name: 'scr.title.long.name', sub: 'scr.title.long.sub' }], settings: 'settings', refit: 500 }; // first: the door lit when the title opens; enter: the role of the key that does the lit door; move: the role of the keys that move the light; the doors in the order they are drawn (the mock's: the Campaign first), each with the role of its own key ('' for Long Haul: it has none); refit: ms between two fits of the panels to the canvas
+const titleScrFirst = () => Math.max(0, TITLE_CHOICES.findIndex(c => c.go === TITLE_SCR.first));
 function titleScrAt(P) {
   const lv = typeof campHubLevels === 'function' ? campHubLevels() : [], count = l => (typeof campMissions === 'function' ? campMissions(l).length : 0), of = lv.reduce((a, l) => a + count(l), 0) || 9;
   const nx = typeof campHubNext === 'function' ? campHubNext(P) : { level: 1, i: 0 }, before = lv.filter(l => l < nx.level).reduce((a, l) => a + count(l), 0);
@@ -38,7 +41,7 @@ function titleScrModel(P, sel) {
   const at = titleScrAt(P), lit = (TITLE_CHOICES[sel | 0] || TITLE_CHOICES[0]).go;
   return {
     lab: uiText('scr.title.lab'), name: uiText('scr.title.name'),
-    doors: TITLE_SCR.doors.map(d => Object.assign({ id: d.id, go: d.go, chip: scrChip(d.role), name: uiText(d.name), sub: uiText(d.sub + (d.go === 'campaign' && P && P.revealed ? '.r' : '')), on: d.go === lit },
+    doors: TITLE_SCR.doors.map(d => Object.assign({ id: d.id, go: d.go, chips: scrChips((d.role ? [d.role] : []).concat(d.go === lit ? [TITLE_SCR.enter] : d.role ? [] : [TITLE_SCR.move])), name: uiText(d.name), sub: uiText(d.sub + (d.go === 'campaign' && P && P.revealed ? '.r' : '')), on: d.go === lit },
       d.go === 'campaign' ? { at: uiText('scr.title.camp.at', { n: at.n, of: at.of }), meter: scrMeter(at.frac, { tone: 'good' }) } : {})),
     settings: { chip: scrChip(TITLE_SCR.settings), label: uiText('scr.title.settings') }
   };
@@ -48,6 +51,7 @@ class Title extends Phaser.Scene {
   create() {
     this.leaving = false; this.born = performance.now(); this.sel = 0; this.focusAt = -1e9;
     this.scr = !!(typeof scrOn === 'function' && scrOn() && typeof scrHostMount === 'function' && scrHostMount(this)); // the new title (two doors, page panels: titleScr below) while the screens switch is on and the page has a place for them
+    if (this.scr === true) this.sel = titleScrFirst(); // the new title opens with the Campaign lit: Enter starts the Campaign (Troy, 25 Nov 2026); today's title keeps Long Haul
     if (this.events && this.events.on && typeof scrOn === 'function') { const want = scrOn(), flip = () => { if (!this.leaving && scrOn() !== want) this.scene.restart(); }; this.events.on('resume', flip); this.events.once('shutdown', () => this.events.off('resume', flip)); } // the switch was flipped in Settings: the title is made again in the other look
     if (typeof window !== 'undefined' && window.addEventListener && typeof document !== 'undefined') { // the window got its focus back: the keys of the next moments are the way back's (Alt+Tab), not a choice
       const back = () => { this.focusAt = performance.now(); }, vis = () => { if (!document.hidden) back(); };
@@ -159,8 +163,8 @@ class Title extends Phaser.Scene {
     set(el(R, 'div', 'sc-lab', head), 'text', M.lab); const name = el(R, 'div', 'sc-t1', head); set(name, 'fontSize', '4.2em'); set(name, 'letterSpacing', '.08em'); set(name, 'text', M.name);
     const row = el(R, 'div', 'sc-abs sc-r'); set(row, 'left', '50%'); set(row, 'top', '56%'); set(row, 'transform', 'translateX(-50%)'); set(row, 'gap', '1.4em');
     this.scrDoors = M.doors.map(d => {
-      const card = el(R, 'div', 'sc-p sc-c', row), r1 = el(R, 'div', 'sc-r', card), o = { el: card, go: d.go }; set(card, 'width', '19em'); card.setAttribute('data-door', d.id);
-      scrHostChip(R, r1, d.chip); set(el(R, 'span', 'sc-t2', r1), 'text', d.name); o.sub = el(R, 'div', 'sc-sm', card); set(o.sub, 'text', d.sub);
+      const card = el(R, 'div', 'sc-p sc-c', row), r1 = el(R, 'div', 'sc-r', card), o = { el: card, go: d.go, keys: el(R, 'span', 'sc-r', r1), sig: null }; set(card, 'width', '19em'); card.setAttribute('data-door', d.id); set(o.keys, 'gap', '.35em');
+      set(el(R, 'span', 'sc-t2', r1), 'text', d.name); o.sub = el(R, 'div', 'sc-sm', card); set(o.sub, 'text', d.sub);
       if (d.at) { const r2 = el(R, 'div', 'sc-r', card); o.at = el(R, 'span', 'sc-lab', r2); set(o.at, 'text', d.at); o.meter = scrHostMeter(R, r2, d.meter).firstChild; }
       return o;
     });
@@ -175,7 +179,11 @@ class Title extends Phaser.Scene {
       this.events.on('pause', away); this.events.on('resume', back); this.events.once('shutdown', () => { this.events.off('pause', away); this.events.off('resume', back); });
     }
   }
-  titleScrLit() { (this.scrDoors || []).forEach(o => scrHostSet(o.el, 'borderColor', o.go === TITLE_CHOICES[this.sel].go ? 'var(--sc-ink)' : '')); } // the lit door: the one Enter does
+  titleScrLit() { // the lit door, the one Enter does: its border, and the chips of both doors (the Enter chip goes with the light; made again only when they change)
+    const R = this.scrHost, M = titleScrModel(null, this.sel); if (!R) return;
+    (this.scrDoors || []).forEach(o => { const d = M.doors.find(x => x.go === o.go); if (!d) return; scrHostSet(o.el, 'borderColor', d.on ? 'var(--sc-ink)' : '');
+      const sig = d.chips.map(c => c.id).join(); if (sig === o.sig) return; o.sig = sig; while (o.keys.lastChild) o.keys.removeChild(o.keys.lastChild); d.chips.forEach(c => scrHostChip(R, o.keys, c)); });
+  }
   titleScrFresh() { // the Campaign card says where the save is now
     const P = typeof campProgressLoad === 'function' ? campProgressLoad() : null, M = titleScrModel(P, this.sel);
     (this.scrDoors || []).forEach(o => { const d = M.doors.find(x => x.go === o.go); if (!d) return; scrHostSet(o.sub, 'text', d.sub); if (o.at) { scrHostSet(o.at, 'text', d.at); scrHostSet(o.meter, 'width', d.meter.pct + '%'); } });

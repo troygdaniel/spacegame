@@ -148,7 +148,8 @@ const CAMP_SCREEN_KEYS = {
   clear: { k: 'X', codes: ['KeyX'], on: ['pick'], src: ['src/camphub.js'] },                                                                                                                  // the mission list: let go of the mission picked to fly again
   buy: { k: 'F', codes: ['KeyF'], on: ['refit'], src: ['src/camphub.js'] },                                                                                                                   // the refit: buy the choice
   giveback: { k: 'Backspace', codes: ['Backspace'], on: ['refit'], src: ['src/camphub.js'] },                                                                                                 // the refit: give the last thing back
-  zoomin: { same: 'zoomin', on: ['brief'], src: ['src/campzoom.js'] }, zoomout: { same: 'zoomout', on: ['brief'], src: ['src/campzoom.js'] }, zoomreset: { same: 'zoomreset', on: ['brief'], src: ['src/campzoom.js'] } // the briefing map's zoom
+  zoomin: { same: 'zoomin', on: ['brief'], src: ['src/campzoom.js'] }, zoomout: { same: 'zoomout', on: ['brief'], src: ['src/campzoom.js'] }, zoomreset: { same: 'zoomreset', on: ['brief'], src: ['src/campzoom.js'] }, // the briefing map's zoom
+  door: { k: 'Arrows', codes: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], on: ['title'], src: ['src/title.js'] }                                                                           // the title: move the light to the other door (Enter does the lit one: the Campaign at first on the new title, Troy, 25 Nov 2026; Long Haul on today's)
 };
 const CAMP_VOICEROW = { t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP', voice: 1 }; // the H page's row for the voice: on the page only while the voice has a key (campVoiceSet)
 function campVoiceSet(on, key) { // the switch (CAMP_VOICE): hold to speak. Off: no key and no row. On: the key given ({ k, codes }, e.g. from the card that brings the voice back) and its row after the strip's
