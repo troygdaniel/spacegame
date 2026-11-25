@@ -11,7 +11,24 @@ below come from runs that alternate old and new code in the same page.
 
 Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every piece of the new look (A the ships, B the ring and arc, C fire and trails, D the signal shapes, E the panel and briefing; scope report on card `space-game-ship-look-scope`) puts its before and after beside these lines. The Mac was quiet (load 3).
 - **The sim, no Chrome** (`node --expose-gc --max-semi-space-size=128 tools/perfcampaign.mjs sim busy1`, two runs): one step 0.46 ms median, 0.53 to 0.59 ms at the 95th percentile, 0.46 to 0.47 ms mean (2.8 percent of a 16.7 ms frame), 2.7 to 2.8 KB allocated a step. The new look does not touch the sim, so this should not move; if it does, the piece that moved it is wrong.
-- **The drawing, Chrome (NOT measured in this landing: the card said no Chrome)**: the number the pieces must hold is the stepped frame of JavaScript in the busiest fight, `node tools/perfcampaign.mjs frames busy1`. The card text gave 1.3 ms; this file's own table (22 Nov, below) has 2.27 ms mean and 5.9 ms max for the same measure, and 1.27 ms was the 20 Nov build. Whoever lands piece A takes `frames busy1` on `c0c5dd91` and on the piece in one page, swapping the code under test (the ratio method in "Measuring again"), and writes both here; B and C do the same against the new base.
+- **The drawing, Chrome** (taken by piece A, below): the base is the stepped frame of JavaScript in the busiest fight, `node tools/perfcampaign.mjs frames busy1`, on `c0c5dd91`: **1.1 to 2.3 ms mean** (1.09, 1.73, 2.19 and 2.32 ms in four runs on a Mac whose load was 5; the same code moves by a factor of two with the load). The card text gave 1.3 ms; this file's own table (22 Nov, below) has 2.27 ms mean and 5.9 ms max for the same measure, and 1.27 ms was the 20 Nov build. The ratio method (`PERF_ROOT=<checkout of the base>` and `PERF_PATCH='CAMP.flags.shiplook = true'`, run alternately, in "Measuring again") is how a piece's cost is read.
+
+### Piece A, the ships (card `space-game-ship-look-a-ships`, 25 Nov 2026)
+
+`node tools/perfcampaign.mjs frames busy1` in one muted headless Chrome through the lock, three times, each time the base (`PERF_ROOT` = a checkout of `c0c5dd91`), then this code with the switch off, then with it on (`PERF_PATCH='CAMP.flags.shiplook = true'`). Mac load 5 (other agents' tests), so read the ratios inside a trio, not the milliseconds between trios.
+
+| Stepped frame of JavaScript, mean ms (max) | base `c0c5dd91` | piece A, switch off | piece A, switch on |
+|---|---|---|---|
+| run 1 | 2.19 (5.1) | 2.33 (5.1) | 2.54 (12.4) |
+| run 2 | 1.73 (4.5) | 2.03 (4.8) | 1.64 (8.2) |
+| run 3 | 1.09 (3.0) | 1.23 (3.2) | 1.73 (8.5) |
+| the sync part (sprites), mean | 0.03 to 0.06 | 0.04 to 0.06 | 0.06 to 0.12 |
+| textures in the page | 191 | 191 | 200 (the nine kinds in this fight; 16 at most) |
+
+- **Switch off: nothing worth measuring.** The three runs are 0.1 to 0.3 ms above the base, which is inside the spread of a Mac at load 5 (the order of the three runs in a trio, base first, was the same each time). One call a ship into `slookSync` that returns at once, one `slookFrame` a frame, and the cruiser's mounts and the launch mouth asked once a step. The first version asked the switch once a ship and cost 0.06 ms a frame in sync (0.06 against 0.12); it is asked once a pass now.
+- **Switch on: a frame costs the same inside the noise** (the middle run is below the base). The ships are the same number of sprites with a different texture, one image a ship as today, so the drawing work is the same; no trail or ring is drawn in this piece (B and C add those).
+- **One long frame when it is turned on or at the first frame of a fight with it on: 8 to 12 ms.** The textures are painted in code on first use (16 small ones at most, 100 to 290 px); a player who has it on pays it in the first frame of a mission, a flip of the N panel's row pays it once.
+- **Memory:** heap 11.0 MB in all three, textures +9 (+16 at most), each a few KB to 90 KB.
 
 ## Campaign fights on this Mac (card `space-game-choppy-fights`, 22 Nov 2026)
 
