@@ -50,7 +50,7 @@ const KNOWN = {
   'campmapfire.js#ffd37a': 'the old amber of your volley, your missile and its blast (mint through cfOwn while the look is on: test 2)',
   'camptorpedoscene.js#ffa040': 'a pirate\'s torpedo\'s old amber (pink through slookTorpTone while the look is on, src/shiplookfx.js)',
   'campsightscene.js#ffb454': 'the edge arrow of a ship you protect (amber is theirs)', 'campsightscene.js#ffd37a': 'the words of that arrow',
-  'campmapdraw.js#ffd37a': 'place names, the goal and the legend\'s gold (gold is for goals and places)', 'campmapdraw.js#ffb454': 'a place\'s label and the convoy\'s mark (a ship you protect)', 'campmapdraw.js#ffd24a': 'the mission\'s goal ring',
+  'campmapdraw.js#ffd37a': 'place names, the goal and the legend\'s gold (gold is for goals and places)', 'campmapdraw.js#ffb454': 'a place\'s label and the convoy\'s mark (a ship you protect)', 'campmapdraw.js#ffd24a': 'the mission\'s goal ring', 'campmapdraw.js#e9b872': 'the word GOAL on the map: a gold pill (the page HUD\'s gold, for goals: card space-game-b3-f-tab-map-build)',
   'campmap.js#ffd37a': 'a cache\'s gold (and the old map colour table)', 'campmap.js#ffb454': 'the convoy\'s colour: a ship you protect', 'campmap.js#ff9a3a': 'the old tower dot (a sign in its side\'s colour while the look is on)', 'campmap.js#e8d24a': 'the old pirate dot (a sign in its side\'s colour while the look is on)',
   'campfarscene.js#ffd37a': 'the far view\'s marks of places and the goal (gold)',
   'shiplook.js#ffc857': 'the look\'s own colour for a ship you protect (C.protect) and the hull arc\'s middle band (the HUD\'s ring colours)',
