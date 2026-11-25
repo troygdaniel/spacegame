@@ -4,7 +4,7 @@
 // block "Copy my settings" puts on the clipboard so an agent can bake the values in as the new defaults (tools/apply-tuning.mjs reads it and prints the CAMP changes it means).
 //
 //   THE ROWS (CAMP_TUNE.rows): { id, kind, group, label (camp.ui.tune.row.<id>), when, ... }
-//     kind 'num' (the default): { root: 'CAMP' | 'CAMPZOOM', path: 'carrier.speed', min, max, step, unit }: a number of that table. An array with `of: 2` is a row of numbers by power pips: the row shows the
+//     kind 'num' (the default): { root: 'CAMP' | 'CAMPZOOM' | 'CAMPSTRAY' | 'CAMPMINER', path: 'carrier.speed', min, max, step, unit }: a number of that table (a path may go through a list by its place: 'levels.1.missions.0.waves.2.ships.tboat'). An array with `of: 2` is a row of numbers by power pips: the row shows the
 //         value at pip 2 (the default setting) and every pip of the array is scaled with it, so the shape of the curve stays.
 //     kind 'flag': { flag: 'distress' }: a switch of CAMP.flags (src/campaign.js), one place that the missions and the systems read (campFlag).
 //     when: 'now' the change is felt at once; 'next' from the next mission start (the number is copied into a ship or a rock when the mission is made).
@@ -46,8 +46,17 @@ const CAMP_TUNE = {
     { id: 'repairbelow', group: 'wing', root: 'CAMP', path: 'repair.below', min: 0.05, max: 0.9, step: 0.05, unit: '', when: 'now' },     // card space-game-keys2-orders: the hull a pilot breaks off at and returns home by itself
     { id: 'repairtime', group: 'wing', root: 'CAMP', path: 'repair.time', min: 2, max: 90, step: 2, unit: 's', when: 'now' },                  // and the seconds its mend takes before it comes back out whole
     { id: 'convoyspeed', group: 'wing', root: 'CAMP', path: 'convoy.speedScale', min: 0.3, max: 3, step: 0.05, unit: 'x', when: 'next' },
+    // what the radio tells you (card space-game-stray-n-rows: the numbers of src/campstray.js and src/campminer.js; each is read every tick, so a change is felt at once)
+    { id: 'strayfar', group: 'wing', root: 'CAMPSTRAY', path: 'far', min: 300, max: 6000, step: 100, unit: 'px', when: 'now' },            // how far the nearest ship you escort is before the radio says you are left behind (1500 px is 150 km on the HUD)
+    { id: 'straygrace', group: 'wing', root: 'CAMPSTRAY', path: 'grace', min: 0, max: 30, step: 1, unit: 's', when: 'now' },              // how long she must have been that far before the first warning
+    { id: 'strayagain', group: 'wing', root: 'CAMPSTRAY', path: 'again', min: 5, max: 120, step: 5, unit: 's', when: 'now' },             // and how long before it says so again while it lasts
+    { id: 'minergone', group: 'wing', root: 'CAMPMINER', path: 'gone', min: 300, max: 3000, step: 100, unit: 'px', when: 'now' },         // the miner's call of mission 1.1: how far from the cruiser a pilot is to count as away
+    { id: 'minernear', group: 'wing', root: 'CAMPMINER', path: 'near', min: 300, max: 3000, step: 100, unit: 'px', when: 'now' },         // and how near the miner he must be to count as away at him
+    { id: 'minerwait', group: 'wing', root: 'CAMPMINER', path: 'wait', min: 0, max: 10, step: 0.5, unit: 's', when: 'now' },              // how long the price line waits after the first pilot is seen away (so three sent together are counted together)
     { id: 'haulgap', group: 'wing', root: 'CAMP', path: 'l13.gapFar', min: 300, max: 4000, step: 100, unit: 'px', when: 'now' },                // card space-game-13-radio-lines: how far the last hauler may be behind the next one before the radio says so (the haulers leave 12 s apart: 744 px)
     // the enemy
+    { id: 'baittboats', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.tboat', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // the THIRD wave of mission 1.1 (the bait: it goes for the transport ten seconds after the miner's call): its torpedo boats. The wave reads its ships when it comes, so a change is felt unless it has come
+    { id: 'baitskiffs', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.skiff', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // and its skiffs
     { id: 'enemyhull', group: 'foes', root: 'CAMP', path: 'alien.hpScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     { id: 'enemydamage', group: 'foes', root: 'CAMP', path: 'alien.damageScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     // time
@@ -88,8 +97,10 @@ const campTuneRows = group => CAMP_TUNE.rows.filter(r => !group || r.group === g
 const campTuneIsFlag = row => !!row && row.kind === 'flag';
 
 // where a row's number lives: its table and path
-function campTuneRoot(name) { // the tables a row can live in: the Campaign's own (src/campaign.js), the flight view's zoom (src/campzoom.js)
+function campTuneRoot(name) { // the tables a row can live in: the Campaign's own (src/campaign.js), the flight view's zoom (src/campzoom.js), the radio's two rules' numbers (src/campstray.js, src/campminer.js: card space-game-stray-n-rows)
   if (name === 'CAMPZOOM') return typeof CAMPZOOM === 'object' ? CAMPZOOM : null;
+  if (name === 'CAMPSTRAY') return typeof CAMPSTRAY === 'object' ? CAMPSTRAY : null;
+  if (name === 'CAMPMINER') return typeof CAMPMINER === 'object' ? CAMPMINER : null;
   return typeof CAMP === 'object' ? CAMP : null;
 }
 function campTuneSlot(row) { // { obj, key } of the row's number (the parent object and its key), or null when the table has no such place

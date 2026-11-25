@@ -35,7 +35,7 @@ console.log('the arrow\'s label');
   const b = L(640, 400, 170, 18);
   check('a label in the clear stays where it was put', b.x === 640 && b.y === 400);
   for (const [x, y] of [[100, 60], [640, 40], [60, 700], [1250, 10], [20, 360], [1270, 700]]) { const p = L(x, y, 170, 18); check(`wanted at ${x},${y}: it ends on the screen and out of every keep rectangle`, p.x - 85 >= 0 && p.x + 85 <= W && p.y - 9 >= 0 && p.y + 9 <= H && !K.some(r => inside(p, 170, 18, r)), JSON.stringify(p)); }
-  check('the scene uses it for the arrow\'s label, with the keep rectangles of CAMP.nav.arrow', /campNavLabelAt\(ar\.x - Math\.cos\(a\) \* 64, ar\.y - Math\.sin\(a\) \* 28, this\.hud\.arrow\.width/.test(src('src/campaignscene.js')) && /CAMP\.nav\.arrow\.keep/.test(src('src/campaignscene.js')));
+  check('the scene puts the arrow\'s label by it (through the edge spread, src/campedgespread.js: the label\'s own place is 64 px back and 28 off the arrow, out of the keep rectangles of CAMP.nav.arrow)', /campEdgeSpread\(\[\{ x: ar\.x, y: ar\.y, angle: ar\.angle, w: aw, h: ah, want \}\], \{ keep: this\.arrowKeep\(\)/.test(src('src/campaignscene.js')) && /x: px - Math\.cos\(an\) \* 64, y: py - Math\.sin\(an\) \* 28/.test(src('src/campaignscene.js')) && /campNavLabelAt\(wx, wy, w, h, K, W_, H_\)/.test(src('src/campedgespread.js')) && /CAMP\.nav\.arrow\.keep/.test(src('src/campaignscene.js')));
 }
 
 console.log('the keep-out rectangles hold the target display and the left HUD rows (8-GEN: the label sat under the SHIP tab and over the AUTOPILOT line; the tabs are gone, the lists open on a key)');

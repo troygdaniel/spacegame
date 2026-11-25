@@ -7,16 +7,16 @@ The words of the beats of missions 1.2 and 1.3 (card l1-pacing): the raids that 
 | key | text |
 |---|---|
 | camp.say.l1p.west | Pirates from the south-west. They want the miners. |
-| camp.say.l1p.second | A second group, north-east. Split the squads. |
-| camp.say.l1p.boats | Torpedo boats, heading for the miners. Tuck them in. |
-| camp.say.l1p.haulboats | A torpedo boat ahead. Tuck the haulers in, or run. |
+| camp.say.l1p.second | A second group, north-east. A pilot to each side. |
+| camp.say.l1p.boats | Torpedo boats, heading for the miners. Send the pilots. |
+| camp.say.l1p.haulboats | A torpedo boat ahead of the haulers. Send the pilots. |
 | camp.say.l1p.rear | Pirates on the last hauler. She is alone back there. |
 | camp.say.l1p.again | More of them, on the last hauler again. |
 | camp.hint.l1p.split | Two groups, two sides. One pilot each: {keywho} picks a pilot, {keyorder} attack. |
-| camp.hint.l1p.boats | Torpedo boats! Tuck the miners in: say or type "tuck in". |
+| camp.hint.l1p.boats | Torpedo boats! Pick one ({keynear}), then {keyorder}: the pilots attack. |
 | camp.hint.l1p.mend | Quiet for now. A hurt pilot goes home to be mended, then comes back. |
-| camp.hint.l1p.haulboats | A torpedo boat! Say or type "tuck in": it covers the haulers beside you. |
-| camp.hint.l1p.rear | The last hauler is alone. Send a squad back to her. |
+| camp.hint.l1p.haulboats | A torpedo boat! Pick it ({keynear}), then {keyorder}: the pilots attack. |
+| camp.hint.l1p.rear | The last hauler is alone. Pick her ({keyfriendlies}), then {keyorder}: the pilots guard. |
 | camp.hint.l1p.contact | Not pirates. Pick one ({keynear}), then engage: {keyorder}. |
-| camp.bf.1.2.w5 | Torpedo boats hunt the miners: tuck them in, or send a squad. |
+| camp.bf.1.2.w5 | Torpedo boats hunt the miners: send the pilots at them. |
 | camp.bf.1.3.w5 | Something else is out there. Be ready. |
