@@ -57,8 +57,8 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.key.mine | Cruiser list: {rowfmine} |
 | camp.bf.key.dock | Dock to build, mend and sell |
 | camp.bf.key.shield | Cruiser list: {rowemergency} |
-| camp.bf.keys.next | Enter or Right: next    Left: back    L: launch now    Esc: the board |
-| camp.bf.keys.launch | Enter or L: launch    Left: back    Esc: the board |
+| camp.bf.keys.next | Enter or Right: next    Left: back    {keyready}: launch now    Esc: the board |
+| camp.bf.keys.launch | Enter or {keyready}: launch    Left: back    Esc: the board |
 | camp.bf.keys.zoom | {keyzoomout} {keyzoomin} zoom |
 | camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
 | camp.bf.1.1.w2 | Pirates wait in the rocks ahead. Shoot the torpedo boats first. |

@@ -49,7 +49,7 @@ try {
   check('the rank overlay shows the rank and the ranks above', (await shown()).some(x => /^THE RANKS$/.test(x)));
   await key('Digit4'); const arrived = await settle(`Math.abs(${HUB}.player.x - 1028) < 4 && Math.abs(${HUB}.player.y - 394) < 4`, 80); await t.run(300); await snap('5-launch');
   check('4: the pilot walks to the pad and its sentence says what launching does', arrived && (await shown()).some(x => /Take the cruiser out on mission 2 of 3/.test(x)), await j(`JSON.stringify([${HUB}.player.x, ${HUB}.player.y])`));
-  await key('KeyL');
+  await key('KeyL'); await t.run(400); await key('KeyL'); // (card space-game-ready-l-briefing-first: the first L opens the briefing, the second launches)
   check('L launches: the Campaign scene starts on mission 2 via the hub, and goes straight to the flight (no second briefing)', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp`) && await j(`${CAMPS}.via === 'hub' && ${CAMPS}.mi === 1 && ${CAMPS}.level === 1`) && await settle(`${CAMPS}.mode === 'play'`), await j(`${CAMPS}.mode`));
   check('the wing is the one bought in the room: the three pilots are out beside the cruiser from the first second (card space-game-keys-orders), none left in the bay, with a strength of 11 fighters\' worth at the start (8 and the 3 bought: card space-game-three-pilots)', await j(`campWing(${CAMPS}.camp).length === 3 && ${CAMPS}.camp.bay.fighters === 0 && ${CAMPS}.camp.strength === 11`), await j(`JSON.stringify({ out: campWing(${CAMPS}.camp).length, bay: ${CAMPS}.camp.bay, strength: ${CAMPS}.camp.strength })`));
   await t.run(1500); await snap('6-flight');
@@ -68,7 +68,7 @@ try {
   await t.ev(`localStorage.setItem('longhaul.campaign', JSON.stringify({ level: 2, mission: 0, techs: ['shield'], ore: 0, bonus: { fighters: 0, escorts: 0 }, results: {} }))`);
   await t.run(900); await key('KeyK');
   check('K opens the room of level 2: Proxima Gate, the warp station', await settle(`game.scene.isActive('CampHub') && ${HUB}.look && ${HUB}.look.name === 'Proxima Gate'`)); await t.run(900); await snap('9-level2');
-  await key('KeyL');
+  await key('KeyL'); await t.run(400); await key('KeyL'); // (card space-game-ready-l-briefing-first: the first L opens the briefing, the second launches)
   check('Launch at the start of level 2 plays the warp cinematic', await settle(`game.scene.isActive('CampWarp')`));
   await t.run(1200); await key('Enter'); // any key skips the cinematic
   check('after the warp the Campaign scene shows the level\'s story (via the hub), and Enter then goes straight to the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.mode === 'intro'`) && await j(`${CAMPS}.via === 'hub'`) && (await key('Enter'), await settle(`${CAMPS}.mode === 'play'`)));

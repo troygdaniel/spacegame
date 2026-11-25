@@ -122,7 +122,8 @@ const CAMP_KEYS = {
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '', codes: [] },                    // type an order; hold to speak one is OFF (CAMP_VOICE: no key; campVoiceSet gives it one when it comes back). src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign
   help: { k: 'H', codes: ['KeyH'] }, settings: { k: 'S', codes: ['KeyS'] }, restart: { k: 'Backspace', codes: ['Backspace'] }, pause: { k: 'Esc', codes: ['Escape'] }, // restart: the pause card's restart of the mission, a key that means nothing in flight (card space-game-pause-restart-key; it was R, which queues a missile in play, so a stray R after Esc lost the run).  // S: Settings, from the pause card only (card space-game-keys6-enter: mute lives there, M fires a missile in a battle)
   focus: { k: 'F', codes: ['KeyF'] },                                                // look at the selected ship: the camera glides to it and follows (src/campfocus.js); S comes back
-  tune: { k: 'N', codes: ['KeyN'] }                                                  // the tuning panel (card space-game-tuning-panel, src/camptunedraw.js): in flight and in the ready room; numbers and switches, changed live. Nothing else uses N
+  tune: { k: 'N', codes: ['KeyN'] },                                                 // the tuning panel (card space-game-tuning-panel, src/camptunedraw.js): in flight and in the ready room; numbers and switches, changed live. Nothing else uses N
+  ready: { k: 'L', codes: ['KeyL'], room: 1 }                                               // the READY ROOM's L (card space-game-ready-l-briefing-first, Troy, 25 Nov 2026): in the hall the first L opens the briefing of the mission Launch flies, the next L (in the briefing) launches it; in a dock L undocks, as ever. Src/camphub.js, src/campbrief.js and src/campbriefwalk.js read the code here, every hint of it the cap ({keyready})
 };
 const CAMP_VOICEROW = { t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP', voice: 1 }; // the H page's row for the voice: on the page only while the voice has a key (campVoiceSet)
 function campVoiceSet(on, key) { // the switch (CAMP_VOICE): hold to speak. Off: no key and no row. On: the key given ({ k, codes }, e.g. from the card that brings the voice back) and its row after the strip's
@@ -295,7 +296,7 @@ const CONTROLS = [
     { k: ['W', 'S'], t: 'Move the row, or move in an open one', sub: 'THE READY ROOM' },
     { k: ['Enter', 'D'], t: 'Open the row; in it, do the thing', sub: 'THE READY ROOM' },
     { k: ['A'], t: 'Close an open row (Left, Esc too)', sub: 'THE READY ROOM' },
-    { k: ['L'], t: 'Launch the mission, or the replay', sub: 'THE READY ROOM' },
+    { k: [CAMP_KEYS.ready.k], t: 'Open the briefing, again to launch', sub: 'THE READY ROOM' }, // (the first press opens the briefing of the mission Launch flies, a second one in it launches; in a dock it undocks)
     { k: ['R'], t: 'Missions: pick it, open briefing', sub: 'THE READY ROOM' },
     { k: ['X'], t: 'Missions: back to the next one', sub: 'THE READY ROOM' },
     { k: ['Click'], t: 'Missions: click picks, again opens', sub: 'THE READY ROOM' }, // the mouse on the Missions list (card space-game-click-mission): one click moves the cursor, a second on the chosen mission is Enter

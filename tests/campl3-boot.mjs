@@ -33,7 +33,7 @@ try {
   await key('Enter'); await t.run(900); const brief = await shown(); note('missions overlay: ' + brief.join(' | ').slice(0, 500)); await snap('p' + PART + '-2-briefing'); await key('ArrowLeft'); await t.run(300); // the ready room is four rows and an overlay (card space-game-ready-room-simple): Enter opens the missions, Left closes the overlay
   await key('Digit3'); await key('Enter'); await t.run(700); note('rank: ' + (await shown()).join(' | ').slice(0, 300)); await key('ArrowLeft'); await t.run(300);
   await key('Digit4'); await settle(`Math.abs(${HUB}.player.x - 1028) < 4 && Math.abs(${HUB}.player.y - 394) < 4`, 80); await t.run(300);
-  await key('KeyL');
+  await key('KeyL'); await t.run(400); await key('KeyL'); // (card space-game-ready-l-briefing-first: the first L opens the briefing, the second launches)
   const warp = await settle(`game.scene.isActive('CampWarp')`, 30);
   note('warp cinematic for this start: ' + warp);
   if (warp) { await t.run(1200); await snap('p' + PART + '-3-warp'); await key('Enter'); }
