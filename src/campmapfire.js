@@ -26,6 +26,7 @@ const CAMPFIRE = {
   earth: ['carrier', 'fighter', 'freighter'] // the kinds on Earth's side; anything else that blows up is theirs
 };
 const cfFoe = c => typeof slookOn === 'function' && slookOn() ? slookInt(SLOOK.C.foe) : c; // the new ship look (card space-game-ship-look-map-fire-pink; Troy, 25 Nov 2026: every hostile mark pink, red retired): a hostile ring, flash or bullet on the map is pink while the switch is on, else the colour it was
+const cfOwn = c => typeof slookOn === 'function' && slookOn() ? slookInt(SLOOK.C.own) : c; // the new ship look (card space-game-ship-look-map-own-fire-mint; decision 4: amber only ever means a ship you protect, your fire is mint #7df0c0): your own side's volleys, bullets, missiles and their blasts on the map are mint while the switch is on, else the colour they were
 const CF_TMP = { t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }; // the scratch the clip writes into: one object for ever
 const CF_NONE = [];
 
@@ -40,9 +41,9 @@ function campFireHear(P, C, e, now) {
   if (!P || !e) return false;
   const t = e.type, K = CAMPFIRE.color;
   let kind = '', color = 0, r = 0, life = 0, x1 = 0, y1 = 0;
-  if (t === 'turret') { if (!Number.isFinite(e.tx) || !Number.isFinite(e.ty)) return false; kind = 'volley'; color = K.volley; life = CAMPFIRE.life.volley; x1 = e.tx; y1 = e.ty; }
+  if (t === 'turret') { if (!Number.isFinite(e.tx) || !Number.isFinite(e.ty)) return false; kind = 'volley'; color = cfOwn(K.volley); life = CAMPFIRE.life.volley; x1 = e.tx; y1 = e.ty; }
   else if (t === 'boom') { kind = 'ring'; r = e.big ? CAMPFIRE.ring.big : CAMPFIRE.ring.small; life = CAMPFIRE.life.ring; color = CAMPFIRE.earth.indexOf(e.kind) >= 0 ? K.ringFriend : cfFoe(K.ringFoe); }
-  else if (t === 'mboom') { kind = 'ring'; r = e.r > 0 ? e.r : 100; life = CAMPFIRE.life.ring; color = K.blast; }
+  else if (t === 'mboom') { kind = 'ring'; r = e.r > 0 ? e.r : 100; life = CAMPFIRE.life.ring; color = cfOwn(K.blast); }
   else if (t === 'hit') { const u = C && C.by ? C.by[e.id] : null; kind = 'flash'; r = CAMPFIRE.flash; life = CAMPFIRE.life.flash; color = u && u.team === 'earth' ? K.friend : cfFoe(K.foe); }
   else if (t === 'shieldhit') { kind = 'flash'; r = CAMPFIRE.flash + 2; life = CAMPFIRE.life.flash; color = K.shield; }
   else return false;
@@ -89,7 +90,7 @@ function cfLine(g, F, x0, y0, x1, y1, color, a) {
 // the whole fight on the map, once a frame. P: the pool; C: the battle; g: the map's Graphics; F: the frame; f: the fit { s, cx, cy }. Returns how many things it drew
 function campFirePaint(P, C, g, F, f, now) {
   if (!P || !C || !g) return 0;
-  const K = CAMPFIRE.color, s = f.s, pk = cfFoe(0);
+  const K = CAMPFIRE.color, s = f.s, pk = cfFoe(0), own = cfOwn(0);
   let n = 0;
   // the marks: volleys, rings, flashes
   for (let k = 0; k < P.slots.length; k++) {
@@ -111,7 +112,7 @@ function campFirePaint(P, C, g, F, f, now) {
     const x0 = cfX(F, f, b.x), y0 = cfY(F, f, b.y); if (x0 < F.x || x0 > F.x + F.w || y0 < F.y || y0 > F.y + F.h) continue;
     const sp = Math.hypot(b.vx, b.vy); if (!(sp > 0)) continue;
     const tl = Math.min(CAMPFIRE.tailMax, Math.max(CAMPFIRE.tailMin, sp * CAMPFIRE.tail * s)); // the tail in px: a few, never a streak
-    n += cfLine(g, F, x0, y0, x0 - b.vx / sp * tl, y0 - b.vy / sp * tl, b.team === 'earth' ? (b.beam ? K.beam : K.wing) : b.team === 'neutral' ? K.patrol : pk || (b.fac === 'pirate' ? K.pirate : K.alien), 0.9);
+    n += cfLine(g, F, x0, y0, x0 - b.vx / sp * tl, y0 - b.vy / sp * tl, b.team === 'earth' ? (b.beam ? K.beam : own || K.wing) : b.team === 'neutral' ? K.patrol : pk || (b.fac === 'pirate' ? K.pirate : K.alien), 0.9);
     drawn++;
   }
   // the missiles: a dot and a short trail behind it
@@ -120,8 +121,8 @@ function campFirePaint(P, C, g, F, f, now) {
     const m = rk[k]; if (!m) continue;
     const x = cfX(F, f, m.x), y = cfY(F, f, m.y); if (x < F.x || x > F.x + F.w || y < F.y || y > F.y + F.h) continue;
     const tl = Math.min(CAMPFIRE.trailMax, Math.max(CAMPFIRE.trailMin, CAMPFIRE.trail * s));
-    n += cfLine(g, F, x, y, x - Math.cos(m.rot) * tl, y - Math.sin(m.rot) * tl, K.missile, 0.8);
-    g.fillStyle(K.missile, 1); g.fillCircle(x, y, 2); n++;
+    n += cfLine(g, F, x, y, x - Math.cos(m.rot) * tl, y - Math.sin(m.rot) * tl, own || K.missile, 0.8);
+    g.fillStyle(own || K.missile, 1); g.fillCircle(x, y, 2); n++;
   }
   // the mining lasers: a steady line from the ship to the rock, fading in as the beam begins; a turret's shot at an alien is a pulse (a volley), not a beam
   const ls = C.lasers || CF_NONE, by = C.by || CF_NONE, rocks = C.rocks || CF_NONE;
