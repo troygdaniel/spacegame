@@ -81,7 +81,9 @@ try {
   await t.run(500); await keyUp('ArrowUp'); await t.run(300);
   check('held past 350 ms it does', !(await cam()).panned);
   // a drag that starts on an open list is the list's click, not a pan
-  await key(await zr()); await t.run(300); const lp = await j(`(() => { const def = campPanelDef(campPanelOpen(${S}.pn)), V = campPanelView(${S}.pn, ${S}.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()`);
+  if (!(await j(`!!campPanelOpen(${S}.pn)`))) { await key(await zr()); await t.run(300); } // the Q that recentred the flight view above opened the cruiser list too, and a held arrow since kept it from fading: a second Q would shut it, so it is opened only when it is not open (the walk stopped here on the batch of 25 Nov: no list, no geometry)
+  check('the cruiser list is open for the drag that starts on it', !!(await j(`campPanelOpen(${S}.pn)`)), String(await j(`campPanelOpen(${S}.pn)`)));
+  const lp = await j(`(() => { const def = campPanelDef(campPanelOpen(${S}.pn)), V = campPanelView(${S}.pn, ${S}.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()`);
   await drag(lp.x, lp.y, lp.x + 150, lp.y + 20); check('a drag that starts on the open list does not pan the view', !(await cam()).panned, JSON.stringify(lp));
   // card space-game-q-recentre-map: the cruiser list is open (it has the digits, the arrows fly): a held arrow still brings a dragged view back
   await drag(700, 300, 400, 300); check('dragged with the cruiser list open: off the cruiser', (await cam()).panned);
