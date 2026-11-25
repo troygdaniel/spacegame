@@ -15,18 +15,23 @@ function campSightSync(scene) {
   const V = scene.hud.sight, g = V.g, z = cam.zoom > 0 ? cam.zoom : 1; g.clear();
   const on = scene.mode === 'play' && !scene.mp && !(typeof scene.hudHides === 'function' && scene.hudHides());
   const arrows = on ? campSightArrows(C, { x: cam.scrollX, y: cam.scrollY }, W, H, z).concat(typeof campSightFriends === 'function' ? campSightFriends(C, { x: cam.scrollX, y: cam.scrollY }, W, H, z) : []) : [];
-  let n = 0;
-  arrows.forEach(a => {
-    const blink = a.fresh && Math.floor(C.t / 250) % 2 === 1; // a group just seen: the arrow blinks
-    const al = blink ? 0.35 : 0.95, ca = Math.cos(a.angle), sa = Math.sin(a.angle);
-    const tri = [{ x: a.x + ca * K.tri, y: a.y + sa * K.tri }, { x: a.x + Math.cos(a.angle + 2.5) * K.tri * 0.8, y: a.y + Math.sin(a.angle + 2.5) * K.tri * 0.8 }, { x: a.x + Math.cos(a.angle - 2.5) * K.tri * 0.8, y: a.y + Math.sin(a.angle - 2.5) * K.tri * 0.8 }];
-    g.fillStyle(a.friend ? K.friend.color : K.color, al).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
+  const keep = typeof scene.arrowKeep === 'function' ? scene.arrowKeep() : CAMP.nav.arrow.keep; // the places the labels keep out of, as the goal's label does (the gauges, the corner panels, the message band, the key line)
+  const its = arrows.map((a, n) => { // the label of each arrow: its words and its size first, so that all of them can be put together
     let t = V.t[n]; if (!t) { t = V.t[n] = scene.add.text(0, 0, '', uiFont(K.font, K.text, { stroke: '#02060d', strokeThickness: 3 })).setOrigin(0.5).setScrollFactor(0).setDepth(K.depth + 1); }
     const s = a.friend ? uiText('camp.sight.friend', { name: a.what, pct: a.pct, km: campNavKm(a.dist) }) : uiText('camp.sight.arrow', { what: a.what, km: campNavKm(a.dist) });
     campLabel(t, s, a.friend ? K.friend.text : K.text); // (set only when the words or the colour change)
-    const w = t.width || 120, h = t.height || 16, back = K.tri * 0.8 + K.gap + Math.abs(ca) * w / 2 + Math.abs(sa) * h / 2; // the label's middle: back from the arrow by its own half-size along the arrow, so its near edge clears the triangle's tail
-    const keep = typeof scene.arrowKeep === 'function' ? scene.arrowKeep() : CAMP.nav.arrow.keep, lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(a.x - ca * back, a.y - sa * back, w, h, keep, W, H) : { x: Math.max(w / 2 + 6, Math.min(W - w / 2 - 6, a.x - ca * back)), y: Math.max(h / 2 + 6, Math.min(H - h / 2 - 40, a.y - sa * back)) }; // out of the gauges, the radar, the message band and the key line, as the goal's label is
-    t.setPosition(lp.x, lp.y).setAlpha(blink ? 0.5 : 1).setVisible(true); n++;
+    return { x: a.x, y: a.y, angle: a.angle, tx: a.tx, ty: a.ty, w: t.width || 120, h: t.height || 16 };
   });
+  // the hostile groups first (nearest first), then the ships you protect: each next arrow that would touch one put before it slides along the edge until it does not (src/campedgespread.js; card space-game-edge-labels-overlap)
+  const put = typeof campEdgeSpread === 'function' ? campEdgeSpread(its, { keep, W, H, m: CAMP.nav.arrow.margin, tri: K.tri, gap: K.gap }) : its.map((it, i) => { const ca = Math.cos(it.angle), sa = Math.sin(it.angle), back = K.tri * 0.8 + K.gap + Math.abs(ca) * it.w / 2 + Math.abs(sa) * it.h / 2; return { x: it.x, y: it.y, angle: it.angle, lx: Math.max(it.w / 2 + 6, Math.min(W - it.w / 2 - 6, it.x - ca * back)), ly: Math.max(it.h / 2 + 6, Math.min(H - it.h / 2 - 40, it.y - sa * back)), boxes: [] }; });
+  V.boxes = []; // the rectangles the arrows and labels take: the goal's arrow (src/campaignscene.js paintHud) keeps out of them
+  arrows.forEach((a, n) => {
+    const p = put[n], blink = a.fresh && Math.floor(C.t / 250) % 2 === 1, al = blink ? 0.35 : 0.95;
+    const tri = [{ x: p.x + Math.cos(p.angle) * K.tri, y: p.y + Math.sin(p.angle) * K.tri }, { x: p.x + Math.cos(p.angle + 2.5) * K.tri * 0.8, y: p.y + Math.sin(p.angle + 2.5) * K.tri * 0.8 }, { x: p.x + Math.cos(p.angle - 2.5) * K.tri * 0.8, y: p.y + Math.sin(p.angle - 2.5) * K.tri * 0.8 }];
+    g.fillStyle(a.friend ? K.friend.color : K.color, al).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
+    V.t[n].setPosition(p.lx, p.ly).setAlpha(blink ? 0.5 : 1).setVisible(true); // out of the gauges, the corner panels, the message band and the key line, and off the others
+    (p.boxes || []).forEach(b => V.boxes.push(b));
+  });
+  const n = arrows.length;
   for (let i = n; i < V.t.length; i++) V.t[i].setVisible(false);
 }
