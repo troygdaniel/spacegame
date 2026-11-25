@@ -12,6 +12,7 @@ const CAMP_TORP = {
   arm: { ring: [10, 4, 160], glow: 9, alpha: 0.9 }                    // a boat that arms: a ring round it (px beyond its hit circle, the swell, ms of a pulse) and the glow at its nose (px radius at the full windup)
 };
 
+const campTorpTone = c => typeof slookTorpTone === 'function' ? slookTorpTone(c) : c; // the new ship look turns both torpedoes' amber and red to the hostile pink (src/shiplookfx.js); with its switch off the colour is what it was
 function campTorpedoTexture(scene) { // made once
   const key = CAMP_TORP.tex; if (scene.textures.exists(key)) return key;
   const [w, h] = CAMP_TORP.size, g = scene.make.graphics({ x: 0, y: 0, add: false });
@@ -30,7 +31,7 @@ function campTorpedoSync(scene, ms) {
   const T = scene.hud.tp, g = T.g, h = T.h, play = scene.mode === 'play', seen = {}, now = C.t; g.clear(); h.clear();
   C.torpedoes.forEach(t => {
     if (t.dead) return;
-    const col = K.color[t.fac] || K.color.pirate, ux = Math.cos(t.rot), uy = Math.sin(t.rot);
+    const col = campTorpTone(K.color[t.fac] || K.color.pirate), ux = Math.cos(t.rot), uy = Math.sin(t.rot);
     let r = T.sp[t.id];
     if (!r) r = T.sp[t.id] = { body: scene.add.image(t.x, t.y, K.tex).setScale(K.scale).setDepth(5), flame: scene.add.image(t.x, t.y, 'ember').setBlendMode('ADD').setTint(col).setScale(K.flame.scale).setDepth(5), puff: 0 };
     r.body.setPosition(t.x, t.y).setRotation(t.rot); r.flame.setPosition(t.x - ux * K.flame.back, t.y - uy * K.flame.back).setTint(col); seen[t.id] = true;
@@ -43,7 +44,7 @@ function campTorpedoSync(scene, ms) {
   Object.keys(T.sp).forEach(id => { if (!seen[id]) { T.sp[id].body.destroy(); T.sp[id].flame.destroy(); delete T.sp[id]; } });
   C.ships.forEach(u => { // a boat that arms: the glow at its tube grows with the windup and a ring pulses round it
     if (!u.boat || u.hp <= 0 || !(u.arming > 0)) return;
-    const bk = CAMP.torpedo.boats[u.kind], col = K.color[u.faction] || K.color.pirate, left = Math.max(0, Math.min(1, (u.arming - C.t) / bk.tube.windup)), pulse = Math.sin(now / K.arm.ring[2] * Math.PI * 2);
+    const bk = CAMP.torpedo.boats[u.kind], col = campTorpTone(K.color[u.faction] || K.color.pirate), left = Math.max(0, Math.min(1, (u.arming - C.t) / bk.tube.windup)), pulse = Math.sin(now / K.arm.ring[2] * Math.PI * 2);
     const nx = u.x + Math.cos(u.rot) * (u.r + 4), ny = u.y + Math.sin(u.rot) * (u.r + 4);
     h.fillStyle(col, K.arm.alpha * (1 - left * 0.6)).fillCircle(nx, ny, 3 + K.arm.glow * (1 - left)); h.fillStyle(K.hot, 0.8 * (1 - left)).fillCircle(nx, ny, 2 + 3 * (1 - left));
     g.lineStyle(K.width, col, 0.45 + 0.4 * (1 - left)).strokeCircle(u.x, u.y, u.r + K.arm.ring[0] + K.arm.ring[1] * pulse);
@@ -51,7 +52,7 @@ function campTorpedoSync(scene, ms) {
 }
 
 function campTorpedoEvent(scene, e) {
-  if (e.type === 'tboom') { scene.boom.explode(Math.max(40, (e.r || 90) * 0.7), e.x, e.y); sfx('missileBlast'); const c = scene.camp.carrier; if (c && Math.hypot(c.x - e.x, c.y - e.y) < 400) scene.cameras.main.shake(260, 0.006); return; }
+  if (e.type === 'tboom') { if (!(typeof slookKill === 'function' && slookKill(scene, e.x, e.y, SLOOKFX.kill.blast, e.r || 90))) scene.boom.explode(Math.max(40, (e.r || 90) * 0.7), e.x, e.y); sfx('missileBlast'); const c = scene.camp.carrier; if (c && Math.hypot(c.x - e.x, c.y - e.y) < 400) scene.cameras.main.shake(260, 0.006); return; }
   if (e.stage === 'arming') beep(240, 0.16, 'sawtooth', 0.04, 90); // a low warning growl as the tube arms
   else if (e.stage === 'launch') sfx('missileLaunch');
   else if (e.stage === 'fizzle') { scene.boom.explode(6, e.x, e.y); sfx('missileFizzle'); }

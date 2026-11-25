@@ -30,6 +30,17 @@ Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every pie
 - **Switch on: a frame costs the same inside the noise** (the middle run is below the base). The ships are the same number of sprites with a different texture, one image a ship as today, so the drawing work is the same; no trail or ring is drawn in this piece (B and C add those).
 - **One long frame when it is turned on or at the first frame of a fight with it on: 8 to 12 ms.** The textures are painted in code on first use (16 small ones at most, 100 to 290 px); a player who has it on pays it in the first frame of a mission, a flip of the N panel's row pays it once.
 - **Memory:** heap 11.0 MB in all three, textures +9 (+16 at most), each a few KB to 90 KB.
+- **Piece C, fire, trails, missile and kill (card `space-game-ship-look-c-fire-trails`, 25 Nov 2026).** The stepped frame of JavaScript in `busy1` (`node tools/perfcampaign.mjs frames busy1`, 600 frames), the same checkout (`d1794dec` plus piece C) with the switch flipped in the page after the fight is set up (`PERF_PATCH='CAMP.flags.shiplook = false'` or `true`), four runs back to back, off, on, on, off, Mac load 5.6 to 6.2, headless Chrome with the GPU, 1 in line at the lock each time:
+
+  | Run | frame mean (median, p95, max) ms | sprites in the display list | tweens | textures | heap |
+  |---|---|---|---|---|---|
+  | off 1 | 1.24 (1.2, 1.9, 3.9) | 274 | 35 | 191 | 11.05 MB |
+  | **on 1** | **1.24** (1.1, 2.1, 4.1) | 295 | 2 | 204 | 10.7 MB |
+  | **on 2** | **1.25** (1.2, 1.8, 3.6) | 295 | 2 | 204 | 10.7 MB |
+  | off 2 | 1.58 (1.5, 2.1, 4.6) | 274 | 35 | 191 | 11.05 MB |
+
+  The switch costs nothing you can measure in the frame: on is 1.24 and 1.25 ms against 1.24 and 1.58 ms off (the second off run caught a busier Mac). What it changes is the count of things: the display list is 295 sprites against 274 (a look at the same fight with the switch on counted about 30 trail sprites, one for each ship that moves, and three kill records of eight sprites made in 9 seconds; the missiles' and torpedoes' smoke puffs are no longer made, which is why the tweens are 2 against 35), 13 more textures (the bolts, the dart and its tail, the four trails, the two rings, the core and the shard, baked once at the first use), and the heap is 0.35 MB lower with it on. With the switch off the only new work in a frame is the `postupdate` handler's first line (`slookOn()` false: a flag lookup) and a `typeof` guard in each of the six places the scene calls. The kill pool is at most 12 effects, 96 sprites, hidden when done. The sim is not touched (`sim busy1` unchanged by construction: no rule file reads the look).
+
 
 ## Campaign fights on this Mac (card `space-game-choppy-fights`, 22 Nov 2026)
 
