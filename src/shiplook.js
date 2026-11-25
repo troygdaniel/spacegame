@@ -7,11 +7,12 @@
 //   slookOn()                 is the new look on now: the flag or ?shiplook=1, unless ?shiplook=0          slookAddrOn(s) / slookAddrOff(s)  what an address says (s: a search string, else the page's own)
 //   SLOOK.C                   the colours (hex): friend, friendHi, protect, foe, alien, neutral, own, dark   slookColor(side) / slookInt(hex)  a side's colour as hex, and a hex as a number for Phaser
 //   SLOOK.K[kind]             a kind's look: { name, side (its usual one), px (play size, measured on main bc8ad3e), p (the outline: points in units of the length, nose at +x, length 1), d (the facet), g (its signal shape),
-//                             s (1: drawn with curves, the aliens'), hot (1: the facet is white, the torpedo boat's warhead) }
-//   slookKinds()              the kinds, in the mock's order (the thirteen it draws, then the lancer, the mothership and the towers, which it does not: the proposals of the scope report)
+//                             s (1: drawn with curves, the aliens'), hot (1: the facet is white, the torpedo boat's warhead), e (more facets, each a list of points: the mothership's two wing lobes), still (1: it never moves: no engine trail, the tower) }
+//   slookKinds()              the kinds, in the mock's order (the thirteen it first drew, then, since card space-game-b3-a-alien-ships, the alien family the mock's second round drew: the lancer, the tower and the mothership)
 //   slookSide(u, prot)        the side of a UNIT, from the sim: 'friend' (your cruiser and pilots), 'protect' (a ship you protect: prot is true when campConvoyShips has it; a freighter always is, and so is every living neutral miner), 'neutral',
 //                             'foe' (the pirates) or 'alien'. slookSideOf(C, u) asks the sim who is protected; slookKindSide(kind) is the usual side where there is no unit (the briefing, the target panel)
 //   slookFacet(side, hot)     the facet's colour: the side's colour mixed 55 percent toward SLOOK.C.dark, white for a warhead
+//   slookLobe(side)          the colour of a kind's extra facets (its `e` list): the side's colour mixed 35 percent toward the dark, lighter than the facet;  slookLobePolygons(kind, L, n): those facets as flat point lists, none for a kind without them
 //   slookPolygon(kind, L, n)  the outline in px at length L as a flat list of points (nose at +x); a smooth kind is its quadratic curves cut into n steps each (default 6), so a Phaser Graphics can fill it;  slookFacetPolygon: the facet, the same way
 //   slookTexKey(kind, side)   the key of a kind's baked texture as a side (default its usual one), 'look-<kind>-<side>' (landing A makes them; a unit whose side is not its kind's usual one, which the sim does not make today, gets its own)
 //   slookFireColor(side)      the colour of a shot: your side's mint, pink for hostile fire (amber only ever means a ship you protect), the neutrals' own grey-blue
@@ -22,13 +23,14 @@ const SLOOK = {
   C: { friend: '#cfe6ff', friendHi: '#6fd6ff', protect: '#ffc857', foe: '#ff6fa8', alien: '#d58bff', neutral: '#9fb3c8', own: '#7df0c0', dark: '#0b1220' }, // the mock's C table: yours, the glow of your engines, a ship you protect, hostile (pirates), alien, neutral, your fire, the facet's dark
   sides: ['friend', 'protect', 'neutral', 'foe', 'alien'],  // the five sides a ship can be drawn as (each a key of C)
   facet: 0.55,                                              // the facet is the side's colour mixed this far toward C.dark
+  lobe: 0.35,                                               // the extra facets of a kind (its `e` list: the mothership's two wing lobes) are the side's colour mixed this far toward C.dark: lighter than the facet (the mock's .35)
   rim: { color: 'rgba(5,8,14,.9)', k: 0.03, least: 1 },     // the thin dark rim: its colour, its width as a share of the length, and its least width (px)
   hot: '#ffffff',                                           // the torpedo boat's warhead tip
   arc: { good: '#4fe0a6', warn: '#ffc857', foe: '#ff6fa8', ok: 0.6, crit: 0.3, track: 'rgba(255,255,255,.13)', w: 2 }, // the hull arc: green above `ok`, amber down to `crit`, pink under; a faint full ring behind it; its line width (times w)
   ring: { color: '#e6edf7', k: 0.66, pad: 4, gap: 4.5, w: 1.6 }, // the picked ship's bright ring: the arc's radius is k times the length plus pad (times w); the ring sits gap outside the arc, its line is w wide
   text: { foe: '#ffb3d1' },                                 // the words of a hostile mark, a light pink (the edge arrow's label; its red was #ff9aae)
   glyph: { under: 0.26, over: 0.3 },                         // the far zoom (card space-game-ship-look-d-glyphs): a ship is drawn as its signal shape when the camera zoom is under `under` (two presses of the zoom-out key from the start zoom of 0.335) and goes back to its picture over `over` (the least-size rule applies at the start zoom too: a pilot is drawn 16 px long there, so it is not the rule that says far)
-  glyphs: ['chev', 'bar', 'cap', 'capdot', 'tri', 'trinotch', 'tribar', 'hex', 'diamond', 'cres', 'disc', 'ringdot', 'ringring', 'square'], // the signal shapes (direction 4, the mock's glyph function: landing D draws them); the last two are the scope report's, for the mothership and the towers
+  glyphs: ['chev', 'bar', 'cap', 'capdot', 'tri', 'trinotch', 'tribar', 'hex', 'diamond', 'cres', 'disc', 'ringdot', 'ring2', 'square'], // the signal shapes (direction 4, the mock's glyph function: landing D draws them); the last two are for the mothership (a ring in a ring) and the towers (a filled square)
   K: {
     carrier: { name: 'Cruiser', side: 'friend', px: 58, p: [[.5, 0], [.38, .09], [.1, .11], [.05, .24], [-.3, .24], [-.34, .12], [-.5, .1], [-.5, -.1], [-.34, -.12], [-.3, -.24], [.05, -.24], [.1, -.11], [.38, -.09]], d: [[.36, 0], [.1, .05], [-.44, .05], [-.44, -.05], [.1, -.05]], g: 'bar' },
     fighter: { name: 'Pilot', side: 'friend', px: 19, p: [[.5, 0], [-.1, .28], [-.5, .44], [-.32, .1], [-.42, 0], [-.32, -.1], [-.5, -.44], [-.1, -.28]], d: [[.3, 0], [0, .09], [-.16, 0], [0, -.09]], g: 'chev' },
@@ -42,11 +44,11 @@ const SLOOK = {
     pirateleader: { name: 'Pirate leader', side: 'foe', px: 56, p: [[.5, 0], [.3, .12], [.12, .12], [0, .32], [-.36, .38], [-.5, .2], [-.4, .08], [-.5, 0], [-.4, -.08], [-.5, -.2], [-.36, -.38], [0, -.32], [.12, -.12], [.3, -.12]], d: [[.28, 0], [.1, .07], [-.34, .2], [-.3, 0], [-.34, -.2], [.1, -.07]], g: 'diamond' },
     raider: { name: 'Alien raider', side: 'alien', px: 25, s: 1, p: [[.5, 0], [.1, .2], [-.3, .46], [-.5, .4], [-.22, .1], [-.3, 0], [-.22, -.1], [-.5, -.4], [-.3, -.46], [.1, -.2]], d: [[.2, 0], [0, .08], [-.14, 0], [0, -.08]], g: 'cres' },
     drone: { name: 'Alien drone', side: 'alien', px: 26, s: 1, p: [[.5, 0], [.3, .3], [0, .42], [-.3, .3], [-.42, 0], [-.3, -.3], [0, -.42], [.3, -.3]], d: [[.16, 0], [0, .16], [-.16, 0], [0, -.16]], g: 'disc' },
-    gunship: { name: 'Alien gunship', side: 'alien', px: 34, s: 1, p: [[.5, 0], [.25, .15], [.2, .4], [-.1, .48], [-.3, .3], [-.5, .2], [-.4, 0], [-.5, -.2], [-.3, -.3], [-.1, -.48], [.2, -.4], [.25, -.15]], d: [[.2, 0], [0, .14], [-.2, 0], [0, -.14]], g: 'ringdot' },
-    // the kinds the mock does not draw: the scope report's proposals (card space-game-ship-look-scope, section 4). px: the lancer is the torpedo boat's size (CAMP.size gives both 44); the mothership's and the towers' are not measured (null): landing A reads each length off what is drawn today (src/ships.js times CAMP_LOOK)
-    lancer: { name: 'Alien torpedo boat', side: 'alien', px: 31, s: 1, p: [[.5, 0], [.3, .08], [-.05, .1], [-.28, .3], [-.5, .3], [-.42, .08], [-.5, 0], [-.42, -.08], [-.5, -.3], [-.28, -.3], [-.05, -.1], [.3, -.08]], d: [[.5, 0], [.3, .08], [.2, 0], [.3, -.08]], hot: 1, g: 'tribar' },
-    mother: { name: 'Alien mothership', side: 'alien', px: null, s: 1, p: [[.5, 0], [.2, .14], [.02, .3], [-.1, .48], [-.34, .44], [-.4, .24], [-.5, .18], [-.46, 0], [-.5, -.18], [-.4, -.24], [-.34, -.44], [-.1, -.48], [.02, -.3], [.2, -.14]], d: [[.3, 0], [0, .14], [-.26, .16], [-.38, 0], [-.26, -.16], [0, -.14]], g: 'ringring' },
-    tower: { name: 'Alien tower', side: 'alien', px: null, p: [[.5, -.06], [.5, .06], [.3, .06], [.24, .24], [0, .34], [-.24, .24], [-.34, 0], [-.24, -.24], [0, -.34], [.24, -.24], [.3, -.06]], d: [[.22, .06], [.14, .16], [0, .2], [-.14, .16], [-.2, 0], [-.14, -.16], [0, -.2], [.14, -.16], [.22, -.06]], g: 'square' }
+    // the alien family (card space-game-b3-a-alien-ships; the mock's section The alien family, flat cut: its K table wins over what was built before, which was the scope report's proposal): the lancer is the torpedo boat's plan drawn with curves and a little narrower, with the white warhead tip; the tower is eight-sided with one short barrel and straight edges (no `s`), and it is `still`: it never moves, so it has no engine trail; the mothership is a wide swept hull with a pointed nose, two swept wings and a deep notch in the tail, a dark spine (d) and a lighter lobe on each wing (e: more facets, drawn after d). px: the mock's play size (the tower's and the mothership's were worked out from the game's scale numbers, not measured): only the trail and the kill effect read it, the hull is drawn as long as it is drawn today (SLOOKDRAW.len, CAMP.size)
+    lancer: { name: 'Lancer', side: 'alien', px: 31, s: 1, p: [[.5, 0], [.3, .07], [-.08, .09], [-.24, .3], [-.5, .32], [-.4, .08], [-.5, 0], [-.4, -.08], [-.5, -.32], [-.24, -.3], [-.08, -.09], [.3, -.07]], d: [[.5, 0], [.34, .07], [.22, 0], [.34, -.07]], hot: 1, g: 'tribar' },
+    tower: { name: 'Tower', side: 'alien', px: 46, still: 1, p: [[.5, .07], [.5, -.07], [.2, -.07], [.18, -.3], [0, -.42], [-.22, -.42], [-.42, -.22], [-.42, .22], [-.22, .42], [0, .42], [.18, .3], [.2, .07]], d: [[.06, 0], [-.12, .2], [-.3, 0], [-.12, -.2]], g: 'square' },
+    mother: { name: 'Mothership', side: 'alien', px: 97, s: 1, p: [[.56, 0], [.2, .13], [.06, .5], [-.5, .52], [-.24, .2], [-.5, 0], [-.24, -.2], [-.5, -.52], [.06, -.5], [.2, -.13]], d: [[.4, 0], [.12, .06], [-.26, .09], [-.34, 0], [-.26, -.09], [.12, -.06]], e: [[[0, .3], [-.14, .42], [-.3, .4], [-.16, .26]], [[0, -.3], [-.14, -.42], [-.3, -.4], [-.16, -.26]]], g: 'ring2' },
+    gunship: { name: 'Alien gunship', side: 'alien', px: 34, s: 1, p: [[.5, 0], [.25, .15], [.2, .4], [-.1, .48], [-.3, .3], [-.5, .2], [-.4, 0], [-.5, -.2], [-.3, -.3], [-.1, -.48], [.2, -.4], [.25, -.15]], d: [[.2, 0], [0, .14], [-.2, 0], [0, -.14]], g: 'ringdot' }
   }
 };
 
@@ -73,6 +75,7 @@ function slookMix(a, b, t) { // two '#rrggbb' colours, a mixed t of the way towa
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
 const slookFacet = (side, hot) => hot ? SLOOK.hot : slookMix(slookColor(side), SLOOK.C.dark, SLOOK.facet);
+const slookLobe = side => slookMix(slookColor(side), SLOOK.C.dark, SLOOK.lobe); // an extra facet's colour (the `e` list)
 const slookKindSide = kind => (SLOOK.K[kind] || SLOOK.K.drone).side;
 function slookSide(u, prot) { // the side a unit is drawn as, from the sim's own fields (team, faction, kind); prot: the sim says it is a ship you protect
   if (!u) return 'neutral';
@@ -99,6 +102,7 @@ function slookPoly(P, smooth, L, n) { // points in units of the length (nose at 
 }
 const slookPolygon = (kind, L, n) => SLOOK.K[kind] ? slookPoly(SLOOK.K[kind].p, !!SLOOK.K[kind].s, L, n) : []; // the outline of a kind at length L px, for a Phaser Graphics to fill (a smooth kind is cut into n steps a curve, default 6)
 const slookFacetPolygon = (kind, L, n) => SLOOK.K[kind] ? slookPoly(SLOOK.K[kind].d, !!SLOOK.K[kind].s, L, n) : []; // the facet inside it, the same way
+const slookLobePolygons = (kind, L, n) => SLOOK.K[kind] ? (SLOOK.K[kind].e || []).map(q => slookPoly(q, !!SLOOK.K[kind].s, L, n)) : []; // the extra facets of a kind (the mothership's wing lobes), each the same way: none for a kind with no `e` list
 const slookTexKey = (kind, side) => 'look-' + kind + '-' + (side || slookKindSide(kind)); // the key of the baked texture of a kind as a side (landing A makes them; the target panel and the briefing ask for them by this name)
 const slookFireColor = side => side === 'foe' || side === 'alien' ? SLOOK.C.foe : side === 'neutral' ? SLOOK.C.neutral : SLOOK.C.own; // hostile fire is pink; amber only ever means a ship you protect
 const slookArcColor = frac => frac > SLOOK.arc.ok ? SLOOK.arc.good : frac > SLOOK.arc.crit ? SLOOK.arc.warn : SLOOK.arc.foe;
