@@ -25,7 +25,7 @@ g.run(`
   window.__l3 = () => { window.C = campNew(3, [], { seed: 5, god: false }); C.arrivedAt = 0; C.L.waves = []; C.waves = []; campOrder(C, 'launch'); __run(8); return C; };
   window.__pn = () => { window.PP = campPanelNew(); return PP; };
   window.__k = (c, t) => campPanelKey(PP, C, c, t || 0);
-  window.__ko = () => campPanelKey(PP, C, 'KeyE', 0); // the order key is W (card space-game-keys4-onekey)
+  window.__ko = () => campPanelKey(PP, C, 'Enter', 0); // the order key is W (card space-game-keys4-onekey)
 `);
 
 

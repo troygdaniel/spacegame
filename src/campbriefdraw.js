@@ -14,6 +14,8 @@
 const CAMPBRIEF_COL = { where: { x: 806, w: 412 }, goals: { x: 62, w: 580 }, bonus: { x: 690, w: 528 }, how: { x: 62, w: 556 }, foes: { x: 660, w: 558 } }; // px: the text columns of the three screens (the map is CAMPBRIEF.frame, which ends at 778)
 const CAMPBRIEF_ZOOM = ['camp.bf.zoomroute', 'camp.bf.zoomarea', 'camp.bf.zoomwhole']; // the words of the key line for the view M goes to: the route, the mission area, the whole system
 const campBriefIsOpen = s => !!s && !!s.bf && s.bf.open === true;
+// card space-game-keys6-enter (Troy, 24 Nov 2026): M fires a missile in a Campaign battle, so it does not mute there (mute is in Settings, reached from the pause card with S); meta.js asks
+const campHoldsM = game => !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(sc => sc.scene && sc.scene.key === 'Campaign'));
 const campBriefHoldsM = game => !!(game && game.scene && typeof game.scene.getScenes === 'function' && game.scene.getScenes(true).some(campBriefIsOpen)); // meta.js: M mutes the sound everywhere, except while the briefing is up: there it zooms the map
 const campBriefProj = (fit, F) => (x, y) => campMapPoint(fit, F, x, y);
 const campBriefGone = list => { list.forEach(o => { try { o.destroy(); } catch (e) { /* gone with the scene */ } }); list.length = 0; };

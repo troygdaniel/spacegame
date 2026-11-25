@@ -21,14 +21,14 @@ check('a digit with no list open does nothing (no pick)', (() => { const r = k('
 k('KeyW'); k('Digit1');
 check('W then 1 picks Wedge; W then 3 Apollo; W then 4 all pilots', J('C.sel') === 'pilot:red' && (k('KeyW'), k('Digit3'), J('C.sel')) === 'pilot:yellow' && (k('KeyW'), k('Digit4'), J('C.sel')) === 'all');
 k('BracketRight'); const held = J('C.tgt');
-k('KeyE');
+k('Enter');
 check('E at the enemy held: all pilots attack', held !== '' && J(`['red', 'green', 'yellow'].every(q => campWingShips(C, q).every(u => u.order.type === 'attack'))`));
 k('KeyW'); const f5 = k('Digit5');
 check('W then 5 forms up at once: the order is given, the pick closes, the target stays held', f5.ran && f5.ok && f5.row === 'whoform' && J('C.tgt') === held && J(`['red', 'green', 'yellow'].every(q => campWingShips(C, q).every(u => u.order.type === 'guard'))`));
-k('KeyW'); k('Digit1'); k('KeyE');
+k('KeyW'); k('Digit1'); k('Enter');
 k('KeyW'); k('Digit5');
-check('5 goes to who is picked: with Wedge picked only Wedge forms up, the others keep what they had', (() => { k('KeyW'); k('Digit4'); k('KeyE'); k('KeyW'); k('Digit2'); k('KeyW'); k('Digit5'); return ord('green') === 'guard' && ord('red') === 'attack'; })());
-check('E with nothing held forms up (as before)', (() => { g.run(`C.tgt = ''; C.fsel = ''; C.sel = 'all'`); const r = k('KeyE'); return r.ran && r.ok && ord('red') === 'guard'; })());
+check('5 goes to who is picked: with Wedge picked only Wedge forms up, the others keep what they had', (() => { k('KeyW'); k('Digit4'); k('Enter'); k('KeyW'); k('Digit2'); k('KeyW'); k('Digit5'); return ord('green') === 'guard' && ord('red') === 'attack'; })());
+check('E with nothing held forms up (as before)', (() => { g.run(`C.tgt = ''; C.fsel = ''; C.sel = 'all'`); const r = k('Enter'); return r.ran && r.ok && ord('red') === 'guard'; })());
 const x = k('KeyX');
 check('X is no key: not used, nothing changes', !x.used && J(`campKeyIs('clear', 'KeyX')`) === false);
 check('] and [ wrap with no empty stop: three presses with two enemies end on a ship, never on none', (() => { g.run(`C.tgt = ''; C.fsel = ''; C.tgtAt = 0;`); const seen = [1, 2, 3, 4].map(() => (k('BracketRight'), J('C.tgt'))); return seen.every(t => t !== ''); })());

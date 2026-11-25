@@ -3,7 +3,7 @@
 //   A. the table: the lines are a column at the top centre (CAMP.hud.text x 640, y 6, pitch 18), the plate is centred
 //   B. flowHud: the order wave, goal, Earth (with its bar), repair, outpost; a line with nothing to say gives its place back; the mothership's name goes 2 px under the column and its bar 20 px under
 //   C. the scene's source: no dial, no gauge texts, no ore text, nothing at the top left, the missile count where it was
-//   D. the bottom key line: Arrows fly  Space turrets  Enter missile  Tab Map  H Keys, no list key, no S Cruiser; and it fits
+//   D. the bottom key line: Arrows fly  Space turrets  M missile  Tab Map  H Keys, no list key, no S Cruiser; and it fits
 //   E. the rival's bars stand under the column, wherever it ends
 // Run: node tests/camplayouthud.mjs   (exit code 1 on a failed check)
 import { readFileSync, existsSync } from 'node:fs';
@@ -51,7 +51,7 @@ console.log('C. the scene');
 console.log('D. the bottom key line');
 {
   const k = J('campKeyLine()');
-  check('it is Arrows fly  Space turrets  Enter missile  Tab Map  H Keys, from the table\'s keys', k === 'Arrows fly  Space turrets  Enter missile  Tab Map  H Keys' && k === J(`uiText('camp.ui.keys')`), k);
+  check('it is Arrows fly  Space turrets  M missile  Tab Map  H Keys, from the table\'s keys', k === 'Arrows fly  Space turrets  M missile  Tab Map  H Keys' && k === J(`uiText('camp.ui.keys')`), k);
   check('it has no list key and no S Cruiser, no placeholder, and fits the screen (8.6 px a letter from x 24 to 1272)', !/Cruiser|Fleet|Power|Autopilot|Dock|[{}]/.test(k) && 24 + k.length * 8.6 <= 1272, k.length + ' letters');
   check('the text file and the default say the same, with no {panels}', /\| camp\.ui\.keys \| \{keyfly\} fly  \{keyfire\} turrets  \{keymissile\} missile  \{keymap\} Map  \{keyhelp\} Keys \|/.test(src('content/text/ui.md')) && !/\{panels\}/.test(src('content/text/ui.md')) && !/'camp\.ui\.keys': '\{panels\}/.test(src('src/contenttables.js')));
   check('the lists\' keys are still read from the table (campPanelKeyLine), for the ship computer and the H page', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet    ', J('campPanelKeyLine()'));

@@ -39,15 +39,15 @@ g.run(`
 {
   g.run(`__new(); __foe('gunship', 1500, 0); campPanelHold(P, 1000);`);
   const m0 = J('C.missiles'), o0 = J('C.orders.missiles');
-  const held = J(`__k('Enter', 1100)`), held2 = J(`__k('NumpadEnter', 1399)`);
-  check('Enter 100 ms after a card closed is taken (used) and does nothing: no order, no words, no missile', held.used === true && held.ran === false && held.say === '' && J('C.missiles') === m0 && J('C.orders.missiles') === o0 && J('C.rockets.length') === 0, JSON.stringify(held));
-  check('the keypad\'s Enter too, up to the last millisecond of the lock', held2.used === true && held2.ran === false && J('C.missiles') === m0);
-  const free = J(`__k('Enter', 1400)`);
-  check('at 1400 Enter fires the missile as it always did (it says Missile away, the rack is one less)', free.ran === true && free.ok === true && free.say === 'Missile away.' && J('C.missiles') === m0 - 1 && J('C.orders.missiles') === o0 + 1, JSON.stringify(free));
+  const held = J(`__k('KeyM', 1100)`), held2 = J(`__k('KeyM', 1399)`);
+  check('M 100 ms after a card closed is taken (used) and does nothing: no order, no words, no missile', held.used === true && held.ran === false && held.say === '' && J('C.missiles') === m0 && J('C.orders.missiles') === o0 && J('C.rockets.length') === 0, JSON.stringify(held));
+  check('M again, up to the last millisecond of the lock', held2.used === true && held2.ran === false && J('C.missiles') === m0);
+  const free = J(`__k('KeyM', 1400)`);
+  check('at 1400 M fires the missile as it always did (it says Missile away, the rack is one less)', free.ran === true && free.ok === true && free.say === 'Missile away.' && J('C.missiles') === m0 - 1 && J('C.orders.missiles') === o0 + 1, JSON.stringify(free));
   g.run(`__new(); campPanelHold(P, 1000);`);
   const s = J(`__k('KeyQ', 1100)`);
   check('only the missile key is held: S opens the cruiser list in the same moment, and a digit does its row', s.used === true && J('campPanelOpen(P)') === 'cruiser' && J(`__k('Digit5', 1150).used`) === true);
-  g.run(`__new(); __foe('gunship', 1500, 0); campPanelHold(P, 1000); __k('Enter', 1100);`);
+  g.run(`__new(); __foe('gunship', 1500, 0); campPanelHold(P, 1000); __k('KeyM', 1100);`);
   check('a held press is not remembered: it does not fire when the lock ends (a key is a press, not a hold)', J('C.orders.missiles') === 0 && J('C.rockets.length') === 0);
 }
 
@@ -60,7 +60,7 @@ g.run(`
   check('closing the card held the missile key (the panel state has a hold, 400 ms past the scene clock)', J('F.pn.hold') === 5400 && J('campPanelHeld(F.pn, 5100)') === true);
   g.run(`F.time.now = 5100; F.onKey({ code: 'Enter' });`);
   check('a second Enter 100 ms later (a double tap) fires nothing and says nothing', J('C.missiles') === m0 && J('C.orders.missiles') === 0 && J('__toasts.length') === 0 && J('C.rockets.length') === 0);
-  g.run(`F.time.now = 5450; F.onKey({ code: 'Enter' });`);
+  g.run(`F.time.now = 5450; F.onKey({ code: 'KeyM' });`);
   check('after the lock Enter fires a missile through the scene as it did', J('C.missiles') === m0 - 1 && J('C.orders.missiles') === 1 && J('__toasts[0]') === 'Missile away.', J('__toasts.join()'));
 
   g.run(`__new(); __foe('gunship', 1500, 0); window.F = __fake(); F.mode = 'intro'; F.via = 'hub'; __card(F); __toasts.length = 0; F.onKey({ code: 'Enter' }); F.onKey({ code: 'Enter' });`);
