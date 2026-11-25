@@ -48,8 +48,14 @@ function slookProt(scene) { // the ids of the ships you protect (src/campconvoy.
   scene._slp = { c: C, t: C.t, n: C.ships.length, set };
   return set;
 }
+function slookIsOn(scene) { // the switch, asked once a frame (every ship of a frame has the same answer; a stand-in scene with no game loop is asked each time)
+  const f = scene.game && scene.game.loop && typeof scene.game.loop.frame === 'number' ? scene.game.loop.frame : -1;
+  if (f < 0) return slookOn();
+  if (scene._sloF !== f) { scene._sloF = f; scene._sloOn = slookOn(); }
+  return scene._sloOn;
+}
 function slookSync(scene, u, sp) { // one ship's sprite, once a frame: the new picture of its side while the switch is on, today's when it is off (the N panel's row is felt at once)
-  if (!slookOn()) {
+  if (!slookIsOn(scene)) {
     if (sp._sl) { // it was on: back to today's picture, its tint and its scale
       const look = (typeof CAMP_LOOK === 'object' && (CAMP_LOOK[u.kind] || CAMP_LOOK.drone)) || { scale: 1 };
       sp._sl = ''; sp._ls = 0; sp.setTexture(scene.texOf(u.kind)); if (look.tint) sp.setTint(look.tint); else sp.clearTint(); sp.setScale(look.scale * (sp._k > 1 ? sp._k : 1));

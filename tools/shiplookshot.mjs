@@ -1,7 +1,7 @@
 // not in the smoke: the new ship look's pictures, taken by hand (card space-game-ship-look-a-ships; the mock is docs/ship-look-mock.html direction 1, flat cut)
 // One Chrome (muted, through the test lock: tests/cdp.mjs), the game clock stepped by hand, a window of 1578 by 1000 px like the mock's stage. The SAME page is shown today's ships and the new ones: the N panel's switch (CAMP.flags.shiplook) is
 // flipped in the page between two pictures, so the two differ in nothing but the look. Pictures go OUTSIDE the repository: ~/dev/spacegame-night/shiplook/ (SHIPLOOK_SHOTS=<folder> for another), named <TAG>-<picture>.png (TAG default a).
-//   node tools/shiplookshot.mjs        the busy moment (the cruiser, the wing, a transport, pirates close by), then every kind in a strip, small and big, each with the switch off and on, and a launch (the tubes lit)
+//   node tools/shiplookshot.mjs        the busy moment (the cruiser, the wing, the transport of mission 1.1, pirates close by), then every kind (the transport is the mission's own: a hand-made one has no road to follow) in a strip, small and big, each with the switch off and on, and a launch (the tubes lit)
 // Exit code 1 when a picture could not be taken, the game logged an error, or a ship was left on an old picture with the switch on.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -35,23 +35,23 @@ const check = async (label, on) => {
   if (olds.length) { bad++; note('FAIL', label, 'ships on the wrong picture:', JSON.stringify(olds.slice(0, 6))); } else note('ok', label, L.length + ' ships, all on the ' + (on ? 'new' : 'old') + ' pictures');
 };
 
-// 1. the busy moment: the cruiser and its wing out, a transport, and the pirates close, as the mock stages it
+// 1. the busy moment: the cruiser and its wing out, the mission's transport, and the pirates close, as the mock stages it
 await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.god = true;
   const at = (k, dx, dy) => { const u = campSpawn(C, k, c.x + dx, c.y + dy); if (u) u.rot = Math.atan2(-dy, -dx); return u; };
-  at('freighter', -70, 90); at('skiff', 260, -90); at('skiff', 340, 0); at('cutter', 300, 120); at('tboat', 420, 150); at('brute', 360, -170); return 1; })()`);
+  at('skiff', 260, -90); at('skiff', 340, 0); at('cutter', 300, 120); at('tboat', 420, 150); at('brute', 360, -170); return 1; })()`);
 await t.run(400);
 await flip(false); await t.run(150); await check('busy moment, today\'s ships', false); await snap('busy-0-today');
 await flip(true); await t.run(150); await check('busy moment, the new look', true); await snap('busy-1-new');
 
 // 2. every kind in a strip, up close: the small ones, then the big ones (the aliens, the pirate leader, the mothership, a tower)
 const strip = async (name, kinds, zoom, dx0, step) => {
-  await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.ships.filter(u => u.team !== 'earth' || u.kind === 'freighter').forEach(u => { u.hp = 0; }); CAMZOOM.want = ${zoom}; return 1; })()`);
+  await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; C.ships.filter(u => u.team !== 'earth').forEach(u => { u.hp = 0; }); CAMZOOM.want = ${zoom}; return 1; })()`);
   await t.run(200);
   await t.ev(`(() => { const C = ${SC}.camp, c = C.carrier; ${JSON.stringify(kinds)}.forEach((k, i) => { const u = campSpawn(C, k, c.x + ${dx0} + i * ${step}, c.y - 150); if (u) { u.rot = -0.0; u.vmax = 0; u.vx = 0; u.vy = 0; u.hold = true; } }); return 1; })()`);
   await t.run(60);
   await flip(false); await t.run(100); await snap(name + '-0-today'); await flip(true); await t.run(100); await check(name + ', the new look', true); await snap(name + '-1-new');
 };
-await strip('strip-small', ['fighter', 'skiff', 'cutter', 'brute', 'tboat', 'lancer', 'patrol', 'miner', 'freighter', 'raider', 'drone', 'gunship'], 1.1, -330, 62);
+await strip('strip-small', ['fighter', 'skiff', 'cutter', 'brute', 'tboat', 'lancer', 'patrol', 'miner', 'raider', 'drone', 'gunship'], 1.1, -330, 62);
 await strip('strip-big', ['pirateleader', 'tower', 'mother'], 0.9, -300, 280);
 
 // 3. a launch: the tubes at the front of the pods lit, with the new look on

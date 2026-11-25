@@ -70,6 +70,8 @@ check('19 the switch off again (the N panel\'s row, felt at once): today\'s pict
 check('20 the protected ships are listed once for a state of the game, not once a ship: asking again for the same state gives the very same list', J(`(() => { const S2 = __scene(__new()); const a = slookProt(S2); const b = slookProt(S2); return a === b && a instanceof Set; })()`) === true);
 g.run('CAMP.flags.shiplook = false;');
 
+check('21a the switch is asked once a frame, not once a ship: with a game loop that is on the same frame the answer is kept (a flip shows from the next frame), with none it is asked each time', (() => { g.run(`window.S = __scene(__new()); S.game = { loop: { frame: 5 } }; window.S2 = __scene(__new()); window.__asked = 0; Object.defineProperty(CAMP.flags, 'shiplook', { get() { __asked++; return false; }, set() {}, configurable: true }); for (let i = 0; i < 10; i++) slookIsOn(S); S.game.loop.frame = 6; for (let i = 0; i < 10; i++) slookIsOn(S); const kept = __asked; __asked = 0; for (let i = 0; i < 10; i++) slookIsOn(S2); window.__keptAndAlways = [kept, __asked]; Object.defineProperty(CAMP.flags, 'shiplook', { value: false, writable: true, enumerable: true, configurable: true });`); return J('__keptAndAlways').join() === '2,10' && J('CAMP.flags.shiplook') === false; })());
+
 console.log('D. the cruiser on the new hull');
 const bays = J('slookBays()'), hull = J('SLOOK.K.carrier.p'), Lc = J('CAMP.size.carrier.len'), mounts0 = J('CAMP.carrier.mounts'), mounts = J('CAMP.carrier.mountsFlat'), mouth = J('CAMP.bay.mouthFlat');
 const polyC = J(`slookPolygon('carrier', ${Lc}, 1)`);
