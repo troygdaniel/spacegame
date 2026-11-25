@@ -1,7 +1,7 @@
 ---
 type: text
 ---
-The words of the cards in the Campaign scene, in the new look (card space-game-screens-a-cards, piece a of the new screens; Troy, 25 Nov 2026; the mock is docs/screens-mock.html). scr.card.* are the pause, mission won, mission lost, level won, Earth refit, tech pick and end cards' words: short, a heading, a label or a chip's word; the key chips are never words of this file (they are read from the key table). scr.tech.* are the numbers a technology's tile shows, scr.b.* the bonus lines in their short form ("Under 6:40", "No ships lost"): the old camp.b.* keys keep their words for the screens of today, which are still drawn while the switch is off. Shown, never said.
+The words of the Campaign scene's cards in the new look (card space-game-screens-a-cards, piece a of the new screens; the mock is docs/screens-mock.html). scr.card.*: the pause, mission won, mission lost, level won, Earth refit, tech pick and end cards. scr.tech.*: a technology's numbers. scr.b.*: the bonus lines in their short form (the old camp.b.* keep their words for the screens of today). Key chips are never words of this file: they are read from the key table. Shown, never said.
 
 ## Strings
 | key | text |

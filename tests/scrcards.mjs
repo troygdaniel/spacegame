@@ -165,7 +165,7 @@ g.run(`
   window.__scene = (extra) => { const ch = { setScrollFactor() { return ch; }, setDepth() { return ch; }, destroy() { ch.gone = true; } };
     const s = Object.assign({ mode: '', camp: C, P: __P(), level: 1, mi: 0, calls: [], said: null, scrHost: null, scrCard: null, scrCardEvents: false, scrCovered: false, card: null, panel: false, handlers: {},
       hideCard() { if (this.card) this.card.forEach(x => x.destroy()); this.card = null; this.panel = false; }, cardPrep() { this.hideCard(); }, showCard(...a) { this.calls.push(a); }, say(l) { this.said = l; },
-      newCard: Campaign.prototype.newCard, bonusText: Campaign.prototype.bonusText, game: { canvas: { getBoundingClientRect: () => ({ left: 10, top: 20, width: 1280, height: 720 }) } },
+      bonusText: Campaign.prototype.bonusText, game: { canvas: { getBoundingClientRect: () => ({ left: 10, top: 20, width: 1280, height: 720 }) } },
       events: { on(nm, f) { s.handlers[nm] = f; }, once(nm, f) { s.handlers['once.' + nm] = f; } }, add: { rectangle: (...a) => { ch.args = a; __rects.push(ch); return ch; } } }, extra || {}); return s; };
 `);
 {
@@ -225,7 +225,7 @@ console.log('K. the scene: the switch off draws the old cards, on draws the new,
 }
 {
   const cs = code('src/campaignscene.js');
-  check('every use of the new look in the scene is behind newCard (scrOn): no other call of the models or the drawing', (cs.match(/scr(Pause|Won|Lost|LevelWon|Refit|Pick|End)Model/g) || []).length === 7 && (cs.match(/newCard\(/g) || []).length === 8 && !/scrCardShow\(/.test(cs.replace(/newCard\(model[\s\S]*?\n/, '')));
+  check('every use of the new look in the scene is behind campNewCard (scrOn): no other call of the models or the drawing', (cs.match(/scr(Pause|Won|Lost|LevelWon|Refit|Pick|End)Model/g) || []).length === 7 && (cs.match(/campNewCard\(this, /g) || []).length === 7 && (cs.match(/scrCardShow\(/g) || []).length === 1);
   check('no key, rule, number or sound of the scene changed: the key handler and the keys of the cards are as they were (refitKey, pickKey, the mode checks of onKey)', /refitKey\(c\)/.test(cs) && /Digit4' && R\.f < CAMP\.refit\.most/.test(cs) && /this\.mode === 'pause'/.test(cs) && /this\.mode === 'lost'/.test(cs));
 }
 
