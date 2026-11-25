@@ -12,6 +12,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0;
 const check = (name, cond, detail = '') => { if (cond) console.log('  ok   ' + name + (detail ? '  ' + detail : '')); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run('campBlinkSet(true)'); // card space-game-keys7-trim: the warp blink (its row and its tech) is switched off in the game; this suite is about it, so it switches it on
 const J = e => JSON.parse(g.run(`JSON.stringify(${e})`));
 
 console.log('1. the lost card names the mission');

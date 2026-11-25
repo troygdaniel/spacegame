@@ -202,6 +202,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     const near = !h && !dry ? campTgtNearest(C) : null; // nothing picked: the nearest hostile is picked now, as \ would (it is THE target: the bracket, the display, Fly to the target and the missile follow it)
     return campWingOrder(C, group, 'attack', h ? h.id : near ? near.id : null, how || 'key', dry);
   }
-  if (verb === 'formup') return campWingOrder(C, group, 'guard', null, how || 'key', dry); // W, then 5 (card space-game-keys5-qwe, Troy): form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
+  if (verb === 'formup') return campWingOrder(C, 'fighters', 'guard', null, how || 'key', dry); // the Q list's last row (card space-game-keys7-trim, Troy): ALL pilots form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
   const fr = campFriNow(C); return campWingOrder(C, group, 'guard', fr ? fr.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser
 }
