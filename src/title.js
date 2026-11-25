@@ -20,10 +20,35 @@ function titleKeyAct(S, e, now) {
   const act = Object.prototype.hasOwnProperty.call(TITLE_KEYS.other, e.code) ? TITLE_KEYS.other[e.code] : '';
   return act ? { act, sel: S.sel } : none;
 }
+// ---- the new title: direction A of docs/screens-mock.html, two doors (landing d of the new screens; card space-game-screens-d-title; Troy, 25 Nov 2026) ----
+// Behind the screens switch (scrOn, src/screens.js: off by default). With it on the title is page panels over the canvas (src/scrhost.js): the name, two cards (the Campaign with where you are in it, Long Haul), and Settings
+// as a chip at the top right; the canvas keeps the stars, the planet, the station and the ship that flies by. No key moves: K is the Campaign, Enter does the lit door (Long Haul at first, as it always was), the arrows
+// move the light, S is Settings, H the keys page; a click on a card or on the chip does what its key does. Every chip is a role of the key table's screens group (src/data_controls.js: start, pick, settings); the words are scr.title.*
+// (content/text/scrtitle.md). The bottom line of Long Haul keys is not drawn: those keys are on the H page and in Settings > Controls.
+//   titleScrAt(P)          PURE: where the Campaign is: { n (the next mission, 1 to of), of (the missions of every level: 9), flown, frac (flown of them, 0 to 1) }
+//   titleScrModel(P, sel)  PURE: what the screen shows: { lab, name, doors: [{ id, go, chip, name, sub, on, at?, meter? }], settings: { chip, label } }; sel is the lit choice (an index of TITLE_CHOICES)
+const TITLE_SCR = { doors: [{ id: 'campaign', go: 'campaign', role: 'start', name: 'scr.title.camp.name', sub: 'scr.title.camp.sub' }, { id: 'long', go: 'longhaul', role: 'pick', name: 'scr.title.long.name', sub: 'scr.title.long.sub' }], settings: 'settings', refit: 500 }; // the doors in the order they are drawn (the mock's: the Campaign first), each with the role of its key; refit: ms between two fits of the panels to the canvas
+function titleScrAt(P) {
+  const lv = typeof campHubLevels === 'function' ? campHubLevels() : [], count = l => (typeof campMissions === 'function' ? campMissions(l).length : 0), of = lv.reduce((a, l) => a + count(l), 0) || 9;
+  const nx = typeof campHubNext === 'function' ? campHubNext(P) : { level: 1, i: 0 }, before = lv.filter(l => l < nx.level).reduce((a, l) => a + count(l), 0);
+  const flown = Math.min(of, typeof campHubFlown === 'function' ? campHubFlown(P) : 0);
+  return { n: Math.max(1, Math.min(of, before + nx.i + 1)), of, flown, frac: of ? flown / of : 0 };
+}
+function titleScrModel(P, sel) {
+  const at = titleScrAt(P), lit = (TITLE_CHOICES[sel | 0] || TITLE_CHOICES[0]).go;
+  return {
+    lab: uiText('scr.title.lab'), name: uiText('scr.title.name'),
+    doors: TITLE_SCR.doors.map(d => Object.assign({ id: d.id, go: d.go, chip: scrChip(d.role), name: uiText(d.name), sub: uiText(d.sub + (d.go === 'campaign' && P && P.revealed ? '.r' : '')), on: d.go === lit },
+      d.go === 'campaign' ? { at: uiText('scr.title.camp.at', { n: at.n, of: at.of }), meter: scrMeter(at.frac, { tone: 'good' }) } : {})),
+    settings: { chip: scrChip(TITLE_SCR.settings), label: uiText('scr.title.settings') }
+  };
+}
 class Title extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
     this.leaving = false; this.born = performance.now(); this.sel = 0; this.focusAt = -1e9;
+    this.scr = !!(typeof scrOn === 'function' && scrOn() && typeof scrHostMount === 'function' && scrHostMount(this)); // the new title (two doors, page panels: titleScr below) while the screens switch is on and the page has a place for them
+    if (this.events && this.events.on && typeof scrOn === 'function') { const want = scrOn(), flip = () => { if (!this.leaving && scrOn() !== want) this.scene.restart(); }; this.events.on('resume', flip); this.events.once('shutdown', () => this.events.off('resume', flip)); } // the switch was flipped in Settings: the title is made again in the other look
     if (typeof window !== 'undefined' && window.addEventListener && typeof document !== 'undefined') { // the window got its focus back: the keys of the next moments are the way back's (Alt+Tab), not a choice
       const back = () => { this.focusAt = performance.now(); }, vis = () => { if (!document.hidden) back(); };
       window.addEventListener('focus', back); document.addEventListener('visibilitychange', vis);
@@ -56,14 +81,16 @@ class Title extends Phaser.Scene {
 
     // title block
     const mono = (size, color) => ({ fontFamily: 'monospace', fontSize: size + 'px', color });
+    if (this.scr !== true) { // (the new title has its own name, in a panel)
     this.add.rectangle(W / 2, 214, 640, 2, CYAN, 0.7);
     this.add.rectangle(W / 2, 332, 640, 2, CYAN, 0.7);
     this.add.rectangle(W / 2 - 320, 214, 22, 2, AMBER, 1).setOrigin(0, 0.5);
     this.add.rectangle(W / 2 + 320, 332, 22, 2, AMBER, 1).setOrigin(1, 0.5);
     this.add.text(W / 2, 273, 'L O N G   H A U L', mono(70, '#38e1ff')).setOrigin(0.5).setPadding(40, 30, 40, 30).setShadow(0, 0, '#38e1ff', 22, false, true); // padding gives the glow room
     this.add.text(W / 2, 372, 'HALCYON STATION   >   KEPLER-4B', mono(18, '#ffb454')).setOrigin(0.5).setPadding(16, 12, 16, 12).setShadow(0, 0, '#ffb454', 8, false, true);
+    }
     this.modeChoices(); // two choices, each a key and a click: Long Haul (Enter) and the Campaign (K); the arrows move the highlight, Enter does it
-    this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    S settings    (V ship voice, C NPC chat, O mods: optional)    Up Down choose    K Campaign', mono(14, '#5b7a92')).setOrigin(0.5);
+    if (this.scr !== true) this.add.text(W / 2, H - 34, 'W A S D move    E use    Esc pause    M mute    S settings    (V ship voice, C NPC chat, O mods: optional)    Up Down choose    K Campaign', mono(14, '#5b7a92')).setOrigin(0.5);
     this.settingsChip();
 
     const start = () => this.startLongHaul();
@@ -90,6 +117,7 @@ class Title extends Phaser.Scene {
   // the two choices of the title (card space-game-title-modes): a glass panel each, a key cap, the name and one line of what it is; a click on a panel does what its key does.
   // The words are in content/text/title.md; where they go is TITLE_CHOICES (the key shown, the colour, the left edge of the panel, what it does).
   modeChoices() {
+    if (this.scr === true) { this.titleScr(); return; } // the new title: two cards in page panels
     const w = 380, h = 100, y = 462, mono = c => ({ fontFamily: 'monospace', fontSize: '28px', color: c, fontStyle: 'bold' });
     this.choiceBox = []; this.pick = this.add.graphics().setDepth(24); // the highlight: a thin frame round the choice Enter would do (the arrows move it)
     TITLE_CHOICES.forEach((c, i) => {
@@ -110,11 +138,13 @@ class Title extends Phaser.Scene {
     this.pickChoice(this.sel || 0);
   }
   pickChoice(i) { // the highlight goes to choice i
-    this.sel = i; const b = this.choiceBox && this.choiceBox[i]; if (!b || !this.pick) return;
+    this.sel = i; if (this.scr === true) { this.titleScrLit(); return; }
+    const b = this.choiceBox && this.choiceBox[i]; if (!b || !this.pick) return;
     this.pick.clear(); this.pick.lineStyle(2, b.color, 0.95); this.pick.strokeRoundedRect(b.left - 5, b.y - 5, b.w + 10, b.h + 10, 13);
   }
   // a small glass chip at the top right: [S] SETTINGS. A click opens Settings; it is not "press any key"
   settingsChip() {
+    if (this.scr === true) return; // the new title made its own (titleScr)
     const label = this.add.text(0, 0, 'SETTINGS', uiFont(13, '#9fe9ff', { fontStyle: 'bold', letterSpacing: 1 })).setOrigin(0, 0.5), cap = keyCap(this, 'S', CYAN);
     const w = Math.ceil(label.width) + 30 + cap.kw + 8, h = 30, left = W - 28 - w, y = 8, g = this.add.graphics(); // above the Settings panel's top edge, so the chip never shows through it
     hudPanel(g, left, y, w, h, 8, 0.92, CYAN); g.setAlpha(0.8).setDepth(20);
@@ -122,7 +152,39 @@ class Title extends Phaser.Scene {
     const zone = this.add.zone(left + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true }).setDepth(22);
     zone.on('pointerdown', () => settingsOpen(this, 'sound')); zone.on('pointerover', () => g.setAlpha(1)); zone.on('pointerout', () => g.setAlpha(0.8));
   }
+  // the new title's panels (src/scrhost.js makes the pieces): built once; a click goes through the panels to a zone of the canvas laid under each card and under the chip (the root takes no click)
+  titleScr() {
+    const R = this.scrHost, el = scrHostEl, set = scrHostSet, P = typeof campProgressLoad === 'function' ? campProgressLoad() : null, M = titleScrModel(P, this.sel);
+    const head = el(R, 'div', 'sc-abs sc-c sc-ctr'); set(head, 'left', '0'); set(head, 'right', '0'); set(head, 'top', '22%');
+    set(el(R, 'div', 'sc-lab', head), 'text', M.lab); const name = el(R, 'div', 'sc-t1', head); set(name, 'fontSize', '4.2em'); set(name, 'letterSpacing', '.08em'); set(name, 'text', M.name);
+    const row = el(R, 'div', 'sc-abs sc-r'); set(row, 'left', '50%'); set(row, 'top', '56%'); set(row, 'transform', 'translateX(-50%)'); set(row, 'gap', '1.4em');
+    this.scrDoors = M.doors.map(d => {
+      const card = el(R, 'div', 'sc-p sc-c', row), r1 = el(R, 'div', 'sc-r', card), o = { el: card, go: d.go }; set(card, 'width', '19em'); card.setAttribute('data-door', d.id);
+      scrHostChip(R, r1, d.chip); set(el(R, 'span', 'sc-t2', r1), 'text', d.name); o.sub = el(R, 'div', 'sc-sm', card); set(o.sub, 'text', d.sub);
+      if (d.at) { const r2 = el(R, 'div', 'sc-r', card); o.at = el(R, 'span', 'sc-lab', r2); set(o.at, 'text', d.at); o.meter = scrHostMeter(R, r2, d.meter).firstChild; }
+      return o;
+    });
+    const st = el(R, 'div', 'sc-abs sc-r'); set(st, 'right', '1.4em'); set(st, 'top', '1.3em'); st.setAttribute('data-door', 'settings'); scrHostChip(R, st, M.settings.chip); set(el(R, 'span', 'sc-lab', st), 'text', M.settings.label);
+    this.titleScrLit();
+    const rr = R.root.getBoundingClientRect(), k = rr.width > 0 ? rr.width / W : 0; // a zone of the canvas under each thing a click may land on, in game px
+    const zone = (node, pad, fn) => { if (!k) return; const b = node.getBoundingClientRect(), z = this.add.zone((b.left - rr.left + b.width / 2) / k, (b.top - rr.top + b.height / 2) / k, b.width / k + pad, b.height / k + pad).setInteractive({ useHandCursor: true }).setDepth(22); z.on('pointerdown', fn); };
+    this.scrDoors.forEach(o => zone(o.el, 0, () => { if (o.go === 'campaign') campaignStart(this); else this.startLongHaul(); }));
+    zone(st, 12, () => settingsOpen(this, 'sound'));
+    if (this.events && this.events.on) { // Settings (and the screens it opens) pause the title and draw on the canvas: the panels step aside, and come back with the save as it is then (a reset)
+      const away = () => set(R.root, 'visibility', 'hidden'), back = () => { if (this.scr === true && this.scrHost) { set(this.scrHost.root, 'visibility', ''); this.titleScrFresh(); } };
+      this.events.on('pause', away); this.events.on('resume', back); this.events.once('shutdown', () => { this.events.off('pause', away); this.events.off('resume', back); });
+    }
+  }
+  titleScrLit() { (this.scrDoors || []).forEach(o => scrHostSet(o.el, 'borderColor', o.go === TITLE_CHOICES[this.sel].go ? 'var(--sc-ink)' : '')); } // the lit door: the one Enter does
+  titleScrFresh() { // the Campaign card says where the save is now
+    const P = typeof campProgressLoad === 'function' ? campProgressLoad() : null, M = titleScrModel(P, this.sel);
+    (this.scrDoors || []).forEach(o => { const d = M.doors.find(x => x.go === o.go); if (!d) return; scrHostSet(o.sub, 'text', d.sub); if (o.at) { scrHostSet(o.at, 'text', d.at); scrHostSet(o.meter, 'width', d.meter.pct + '%'); } });
+  }
   update(time, dt) {
+    if (this.scr === true && this.scrHost) { // the panels follow the canvas (a window that changed size) and step aside for the keys page, which is drawn on the canvas
+      if (time - (this.scrFitAt || 0) > TITLE_SCR.refit) { this.scrFitAt = time; scrHostMount(this); }
+      scrHostSet(this.scrHost.root, 'visibility', typeof campKeysIsOpen === 'function' && campKeysIsOpen(this) ? 'hidden' : '');
+    }
     this.s1.tilePositionX += dt * 0.006; this.s1.tilePositionY += dt * 0.0015;
     this.s2.tilePositionX += dt * 0.014; this.s2.tilePositionY += dt * 0.0035;
   }
