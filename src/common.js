@@ -90,6 +90,7 @@ function toastKeep(s, top) { // the box that is up moves to the scene's toastTop
   (s.toasts || []).forEach(o => { if (!o || !o.t || !o.t.active || o.top === undefined || o.top === top) return; const d = top - o.top; o.top = top; o.y += d; o.t.y += d; o.bg.y += d; o.tab.y += d; });
 }
 function toast(s, msg, color = '#ffd37a', hold = 0) { // hold: ms this one stays up when longer than TOAST.hold (a radio line the player must read: src/campsayhold.js)
+  if (typeof s.toastPanel === 'function' && s.toastPanel(msg, color, hold) === true) return; // a scene whose page HUD has a panel for it (the Campaign's radio panel, src/camppagehud.js; card space-game-b3-c-radio-panel) shows the message there, and no box is made
   const now = s.time && typeof s.time.now === 'number' ? s.time.now : 0;
   const old = (s.toasts || []).filter(o => o && o.t && o.t.active);
   const prev = old.length ? old[old.length - 1] : null;
