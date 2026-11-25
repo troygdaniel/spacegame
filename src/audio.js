@@ -35,6 +35,7 @@ function audioReady() {
       AUD.master = AC.createGain();
       AUD.master.connect(comp); comp.connect(AC.destination);
       AUD.master.gain.value = G.muted ? 0 : G.volume;
+      AC.onstatechange = () => resumeAudio(); // the system took the output, or the browser held the context: it is woken at once, not at the next tick
     }
     return true;
   } catch (e) { return false; }
@@ -54,7 +55,11 @@ function fxSync() {
   a.want = want; a.out.gain.setTargetAtTime(want, AC.currentTime, 0.8);
 }
 
-function resumeAudio() { if (AC && AUD.gesture && AC.state === 'suspended' && !G.muted) AC.resume(); }
+// A context that is not running is woken: 'suspended' (the browser held it, the output went away) and 'interrupted' (the system took the output); a closed one cannot be. The browser may refuse (no key or click yet, which AUD.gesture covers, or the device is gone): that is tried again at the next tick, and is never an error
+function resumeAudio() {
+  if (!AC || !AUD.gesture || G.muted || AC.state === 'running' || AC.state === 'closed') return;
+  try { const p = AC.resume(); if (p && typeof p.catch === 'function') p.catch(() => { /* the next tick asks again */ }); } catch (e) { /* the next tick asks again */ }
+}
 
 function noiseBuf() {
   if (!AUD.noise) {
@@ -487,6 +492,7 @@ function installAudio(game) {
       if (sc.scene.key === 'Space') startEngine(sc); else stopEngine();
     });
     sc.events.on('shutdown', () => {
+      AUD.ducked = false; // a scene stopped while it was paused (Pause > Title, Restart, New game) never resumes: the duck went with it, or the Campaign (no pad of its own to reset it) started with the sound down
       if (AUD.amb && AUD.amb.kind === kind) stopAmbient();
       if (sc.scene.key === 'Space') stopEngine();
     });

@@ -43,7 +43,7 @@ function voiceLine(event, builtin) {
 // two (the strip shows it all); full: everything; off: never aloud. The key moments of a run (launch, hull, docking) are short lines of their own and are not affected.
 const VOICE_SPOKEN_MODES = [['short', 'SHORT'], ['full', 'FULL'], ['off', 'OFF']], VOICE_SPOKEN_LIMIT = { min: 45, max: 120 }; // a first sentence under min takes the next one too; never past max
 const VOICE = { key: '', on: true, voice: VOICE_MODEL, bad: false, playing: false, queue: [], cache: new Map(), fails: 0, pauseUntil: 0, said: {}, calls: 0,
-  spoken: 'short', gen: 0, src: null, cur: null, finish: null, stopping: '', stops: 0 }; // gen: a stop bumps it, so a line still on its way never plays; src and cur: what is playing now
+  spoken: 'short', gen: 0, src: null, cur: null, finish: null, stopping: '', stops: 0, wait: 10000 }; // gen: a stop bumps it, so a line still on its way never plays; src and cur: what is playing now
 
 // ---------- the key (localStorage is optional: every call is wrapped) ----------
 function voiceLoad() {
@@ -139,7 +139,13 @@ function voiceStop(how) {
 function voiceSpoke(info) { return info; }
 async function voiceRun(line) {
   VOICE.playing = true; VOICE.cur = line;
-  try { const buf = await voiceBuffer(line.text, line.voice, line.pack); if (buf && voiceOkFor(line) && line.gen === VOICE.gen) await voicePlay(buf, line.onStart, line); } catch (e) { /* the voice must never break the game */ }
+  try {
+    // a call that never answers (the network is down, the service hangs) must not hold the voice for ever: VOICE.playing stays set while a line is on its way, and nothing else is said and the music stays ducked until it ends
+    let late = false;
+    const buf = await new Promise((res, rej) => { const t = setTimeout(() => { late = true; res(null); }, VOICE.wait); voiceBuffer(line.text, line.voice, line.pack).then(b => { clearTimeout(t); res(b); }, e => { clearTimeout(t); rej(e); }); });
+    if (late) voiceFailed(); // three in a row and the voice rests for a minute, as for any other failure
+    if (buf && voiceOkFor(line) && line.gen === VOICE.gen) await voicePlay(buf, line.onStart, line);
+  } catch (e) { /* the voice must never break the game */ }
   if (line.gen !== VOICE.gen) return; // stopped meanwhile: voiceStop has already put everything back, and a newer line may be running
   VOICE.playing = false; VOICE.cur = null; VOICE.src = null; VOICE.finish = null;
   const now = performance.now(); let next = null;
