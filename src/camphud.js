@@ -48,9 +48,10 @@ function campHudGeom() {
 }
 // whether the WAVE n OF m line is shown in this mission: not in the kinds CAMP.hud.noWave names (an escort: card space-game-escort-no-wave-line), decided from the mission's kind and nothing else
 const campWaveLineOn = C => !!C && CAMP.hud.noWave.indexOf(C.L && C.L.kind) < 0;
-// the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none
-function campHudFlow(items) {
-  const T = CAMP.hud.text, ys = {}; let y = T.y;
+// the lines of text under the gauges, top to bottom: each one that shows takes its pitch (and `h` more, a line with a bar under it), the others none. y0: where the first may start at the earliest (the page HUD's goal panel stands over the top of the column:
+// the lines that are still drawn are put under it, card space-game-goal-panel-hides-text); none: CAMP.hud.text.y
+function campHudFlow(items, y0) {
+  const T = CAMP.hud.text, ys = {}; let y = y0 > T.y ? y0 : T.y;
   (items || []).forEach(it => { if (!it || !it.show) return; ys[it.id] = y; y += T.pitch + (it.h || 0); });
   return { ys, bottom: y };
 }

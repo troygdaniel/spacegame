@@ -579,7 +579,9 @@ class Campaign extends Phaser.Scene {
   flowHud(bar) {
     const C = this.camp, H = this.hud, ids = ['wave', 'obj', 'earth', 'repair', 'post'];
     if (typeof campHudFlow !== 'function') return;
-    const F = campHudFlow(ids.map(id => ({ id, show: !!(H[id] && H[id].text), h: id === 'earth' ? 12 : 0 })));
+    const top = this.pageHudStack > 0 ? this.pageHudStack + CAMP.hud.pageGap : 0, gh = top > 0; // a goal panel of the page HUD is up (pageHudStack, src/camppagehud.js): it has the wave and goal lines: they take no place in the column, and what is left of it starts under that panel (card space-game-goal-panel-hides-text)
+    const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
+    if (top > 0 && !items.some(i => i.show)) F.bottom = this.pageHudStack; // nothing left in the column: it ends where the panel does, as it did
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     this.hudBelow = F.bottom;
