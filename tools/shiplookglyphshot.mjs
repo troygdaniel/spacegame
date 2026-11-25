@@ -16,7 +16,7 @@ const up = `!!(window.game && game.scene.isActive('Campaign'))`;
 const note = (...a) => console.log('  ' + a.join(' '));
 let bad = 0;
 
-const t = await launch('?campaign=1', ROOT);
+const t = await launch('?campaign=1&shiplook=flag', ROOT); // shiplook=flag: neither on nor off, so the switch flipped in the page decides (the boot helper adds shiplook=0 to an address that does not name it)
 const j = async expr => JSON.parse(await t.ev(`JSON.stringify(${expr})`));
 await t.send('Emulation.setDeviceMetricsOverride', { width: 1578, height: 1000, deviceScaleFactor: 1, mobile: false });
 const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `${TAG}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(34); } note('picture', name); };

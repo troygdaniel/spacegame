@@ -58,7 +58,8 @@ check('the launch tube of a pod is in its front face and the landing bay in its 
 const bays = J(`campArtBays('cruiser')`);
 check('the scene is told where the bays are, one on each side: four places in the carrier\'s frame', bays.launch.length === 2 && bays.land.length === 2 && bays.launch[0][1] === -bays.launch[1][1] && bays.land[0][1] === -bays.land[1][1]);
 const mouth = J('CAMP.bay.mouth');
-check('ships are launched from just in front of the launch tube (CAMP.bay.mouth: 1 to 6 units ahead of it, level with it)', mouth[0] - cr.launch[0] >= 1 && mouth[0] - cr.launch[0] <= 6 && Math.abs(mouth[1] - cr.launch[1]) < 0.01, JSON.stringify(mouth));
+const flatTube = J('SLOOKDRAW.bays.launch'); // the launch tube of the flat-cut hull (src/shiplookdraw.js): the new look is the game\'s look since card space-game-ship-look-default-on, and the mouth sits just in front of ITS tube (the old picture\'s, at x 18, is a few px ahead of the mouth: today\'s pictures are kept only for ?shiplook=0)
+check('ships are launched from just in front of the launch tube of the flat-cut hull (CAMP.bay.mouth: 1 to 6 units ahead of SLOOKDRAW.bays.launch, level with it within a px)', mouth[0] - flatTube[0] >= 1 && mouth[0] - flatTube[0] <= 6 && Math.abs(mouth[1] - flatTube[1]) <= 1, JSON.stringify([mouth, flatTube]));
 check('the hull is as long as the table says: the engine block at the stern and the head at the bow make len, and the scene scales it to CAMP.size.carrier.len', Math.abs(ex1 + cr.len / 2) < 1e-9 && Math.max(...core.map(p => p[0])) === cr.len / 2 && J('CAMP_LOOK.carrier.scale * CAMP_LOOK.carrier.w') === J('CAMP.size.carrier.len'));
 // the bridge tower reads as a tower and not as a crate (the blind critic): a shadow on the hull under it, two decks, a row of lit windows across its front
 (() => {

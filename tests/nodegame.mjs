@@ -43,9 +43,11 @@ const BROWSER = ['Phaser', 'document', 'navigator', 'location', 'history', 'scre
   'matchMedia', 'Worker', 'WebSocket', 'Notification', 'speechSynthesis', 'SpeechSynthesisUtterance', 'Event', 'CustomEvent', 'KeyboardEvent', 'MouseEvent',
   'ResizeObserver', 'MutationObserver', 'DOMParser', 'Path2D', 'createImageBitmap', 'alert', 'prompt', 'confirm'];
 
+// shiplook: the new ship look has been ON in the table since card space-game-ship-look-default-on (25 Nov 2026), and a node test that has no word of it asks about today's pictures, which are still in the code: the game is made with
+// the flag OFF (the node twin of the address ?shiplook=0). A test of the look sets the flag itself (CAMP.flags.shiplook = true), and one that wants the table's own value asks for nodeGame({ shiplook: 'table' }).
 // pagehud: the page HUD has been ON in the table since card space-game-page-hud-default-on (25 Nov 2026), and a node test that has no word of it asks about the canvas HUD, which is still in the code: the game
 // is made with the flag OFF (the node twin of the address ?pagehud=0). A test of the page HUD sets the flag itself (CAMP.flags.pagehud = true), and one that wants the table's own value asks for nodeGame({ pagehud: 'table' }).
-export function nodeGame({ root = ROOT, replace = {}, boot = true, store = new Map(), pagehud = false } = {}) {
+export function nodeGame({ root = ROOT, replace = {}, boot = true, store = new Map(), pagehud = false, shiplook = false } = {}) {
   const noop = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : noop), apply: () => noop, construct: () => noop });
   const errors = [], box = {};
   BROWSER.forEach(k => { box[k] = noop; });
@@ -72,6 +74,7 @@ export function nodeGame({ root = ROOT, replace = {}, boot = true, store = new M
   }
   if (typeof run('ContentLib') !== 'object') throw new Error('nodeGame: src/content.js did not put ContentLib in place, so no content would be applied');
   if (pagehud !== 'table') run("if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.pagehud = false");
+  if (shiplook !== 'table') run("if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.shiplook = false");
   if (boot) { run('loadGame()'); run('contentApply()'); } // main.js and Boot.create, in the page: the saved game, then the content merge before anything reads a table
   // like t.ev in tests/cdp.mjs: a plain value, an array or a plain object by value; a Phaser sprite or a class instance comes back as null
   const ev = expr => {
