@@ -132,6 +132,18 @@ check('the scene installs it once and ticks it every frame', /campDragInstall\(t
 check('S is the reset in campZoomPress and recentres', /campViewRecentre|campMapRecentre/.test(zoom));
 check('the zoom frame puts the scroll back for an anchor', /camzoomAnchorScroll/.test(cz));
 check('the map\'s click is read on release, so a drag that starts on a mark is not a click on it (campMapClick is called by the drag code, not by a pointerdown)', !/s\.input\.on\('pointerdown', mp\.onPointer\)/.test(mapdraw) && /campdrag\.js/.test(mapdraw));
+// ---- G. card space-game-q-recentre-map: Q on the Tab map, and a held arrow with the cruiser list open ----
+console.log('G. Q on the map, a held arrow with the list open');
+R(`window.__kd = (up) => ({ UP: { isDown: !!up }, DOWN: { isDown: false }, LEFT: { isDown: false }, RIGHT: { isDown: false } }); window.__sf = __scene(0.5); __sf.pn = campPanelNew(); __sf.camp = __C; __sf.k = __kd(true); campPanelClose(__sf.pn);`);
+check('a flying key held counts as flying with no list open', J('campDragFlying(__sf)') === true);
+R(`campPanelGo(__sf.pn, __C, 'cruiser');`);
+check('and with the numbered cruiser list open (it has the digits, the arrows fly): the held arrow still brings a dragged view back', J('campDragFlying(__sf)') === true && J('campDragFlyTick(Object.assign(__sf, { panned: true, dragFly: 0 }), 400, campDragFlying(__sf))') === true);
+R(`campPanelGo(__sf.pn, __C, 'convoy'); __sf.panned = true; __sf.dragFly = 0;`);
+check('with a list that has the arrows open (the convoy list, opened by data) it does not: the arrows are the list\'s', J('campDragFlying(__sf)') === false);
+const scn = read('src/campaignscene.js');
+check('Q on the open Tab map is the map\'s reset and goes no further: no list opens, the map stays (the scene returns after campZoomPress when the map is open)', /campZoomPress\(this, zk, e\.repeat\); if \(!zk\.reset \|\| e\.repeat \|\| this\.mp\) return;/.test(scn));
+R(`window.__sm = __scene(0.5); __sm.pn = campPanelNew(); __sm.camp = __C; __sm.mp = { zWant: 3, panned: true, fit: { cx: 1, cy: 2, s: 1 }, rows: [], recentre: { visible: true } }; campPanelClose(__sm.pn); window.__zk = campZoomKey('KeyQ');`);
+check('campZoomPress with the map open resets the map zoom to 1 (the reset key is the table\'s)', J('__zk && __zk.reset === true') && (R('campZoomPress(__sm, __zk, false)'), J('__sm.mp.zWant') === 1));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `DRAG VIEW FAIL (${failed} of ${n})` : `DRAG VIEW PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

@@ -290,7 +290,7 @@ class Campaign extends Phaser.Scene {
   // ----- keys -----
   onKey(e) {
     const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
-    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
+    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat || this.mp) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (this.leaving) return;
     if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;
@@ -587,8 +587,8 @@ class Campaign extends Phaser.Scene {
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
     return b;
   }
-  // the y a toast starts at (src/common.js toast and toastKeep): the band's own top, or under the HUD lines at the top centre when they reach further (card space-game-toast-over-topcentre)
-  toastTop() { return Math.max(TOAST.top, Math.ceil((this.hudStack || 0) + CAMP.hud.toastGap)); }
+  // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
+  toastTop() { return this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; }
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
