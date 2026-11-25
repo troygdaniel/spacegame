@@ -90,7 +90,7 @@ function campPanelKey(P, C, code, now) {
   const pk = code ? CAMP_PANELS.panels.find(p => p.code && p.code === code) : null;
   if (pk) { // a list's key (S): open that list at its first row, or close it when it is the one open
     res.used = true;
-    if (pk.step && C && typeof campSelStep === 'function') { campSelStep(C, 1); if (campPanelOpen(P) !== pk.id) campPanelGo(P, C, pk.id); res.open = campPanelOpen(P); res.sel = C.sel || ''; return res; } // the fleet pick's key (card space-game-keys7-trim, Troy, 24 Nov 2026): each press steps who (Wedge, Kara, Apollo, all, round again) and keeps the pick open; a digit still jumps there; Esc or the fade closes it
+    if (pk.step && C && typeof campSelStep === 'function') { campSelStep(C, 1); if (campPanelOpen(P) !== pk.id) campPanelGo(P, C, pk.id); else { P.at = 0; P.top = 0; } res.open = campPanelOpen(P); res.sel = C.sel || ''; return res; } // the fleet pick's key (card space-game-keys7-trim, Troy, 24 Nov 2026): each press steps who (Wedge, Kara, Apollo, all, round again) and keeps the pick open; a digit still jumps there; Esc or the fade closes it
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
   }
