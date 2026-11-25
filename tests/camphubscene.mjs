@@ -92,6 +92,15 @@ check('the answer fades from the overlay after a few seconds (the scene repaints
 g.run(`__key(S, 'Digit3'); __key(S, 'KeyF');`);
 check('F on another row buys nothing, and a digit closes the overlay (the keys of the refit are its overlay\'s)', saved().ore === 100 && saved().bonus.fighters === 0 && J('S.hub.open') === '' && J('S.ovGlass.vis') === false);
 
+// the answer of a purchase stays on the refit: the rank overlay opened a moment later has its own foot (card space-game-rank-foot-stale-line: "A fighter joins the wing" stood on the rank's foot for 3 s)
+const saved0 = g.run(`localStorage.getItem(CAMP.store)`); // (section D goes on with the save of section C)
+g.run(`localStorage.setItem(CAMP.store, JSON.stringify({ level: 1, mission: 1, techs: [], ore: 100, bonus: { fighters: 0, escorts: 0 }, results: {} })); var S6 = __scene(); __key(S6, 'Digit2'); __key(S6, 'Enter'); __key(S6, 'KeyF');`);
+check('the answer of a purchase is on the refit overlay\'s foot, with the overlay still open', J('S6.hub.open') === 'refit' && J('__shown(S6)').some(t => /^A fighter joins the wing/.test(t)), J('__shown(S6)').join(' | '));
+g.run(`__key(S6, 'Digit3'); __key(S6, 'Enter');`); // the same second: the rank overlay opens
+check('the rank overlay opened at once after a purchase has its own foot ("Nothing to buy here"), not the refit\'s answer, and the foot of the refit still says the answer when it is opened again', J('S6.hub.open') === 'rank' && J('__shown(S6)').some(t => /^Nothing to buy here\./.test(t)) && !J('__shown(S6)').some(t => /joins the wing/.test(t)) && (() => { g.run(`__key(S6, 'Digit2'); __key(S6, 'Enter');`); return J('S6.hub.open') === 'refit' && J('__shown(S6)').some(t => /^A fighter joins the wing/.test(t)); })(), J('__shown(S6)').join(' | '));
+check('the board overlay\'s foot is its own after a purchase too (Digit1 then Enter opens it)', (() => { g.run(`__key(S6, 'Digit1'); __key(S6, 'Enter');`); return J('S6.hub.open') === 'board' && !J('__shown(S6)').some(t => /joins the wing/.test(t)); })(), J('__shown(S6)').join(' | '));
+g.run(`localStorage.setItem(CAMP.store, ${JSON.stringify(saved0)})`);
+
 // ---- D. the board and the briefing of a campaign in progress ----
 g.run(`var S2 = __scene(); __key(S2, 'Enter');`);
 check('the missions overlay: mission 1 is done with its score and its bonus count, mission 2 is next, the later levels are listed below, and the foot says how to close it', (() => { const t = J('__shown(S2)'); return J('S2.hub.open') === 'board' && t.some(x => /\[x\] 1 {2}Belt survey/.test(x)) && t.some(x => /^900 pts {2}2 of 4 bonus$/.test(x)) && t.some(x => /\[>\] 2 {2}Ore haulers/.test(x)) && t.some(x => /^LEVEL 2 {2}- {2}Alpha Centauri$/.test(x)) && t.some(x => /^Left or Esc {2}close$/.test(x)); })());
