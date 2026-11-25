@@ -315,3 +315,30 @@ Troy said yes to both (from the cloud session's audit). Doing nothing never ende
 | 1.2 swift bonus (`bonus` `swift`, `secs`) | 380 s | 300 s |
 
 To undo it: delete the `lose` row, put both 380s back (1.3's par 380 and 1.1's swift 400 did not move). Bots (Normal, `--level 1 --mission 2`): idle now LOSES (6 of 6 seeds, cause miners; it used to run to the clock); plain and plainm win every seed. The 300 s swift bonus is within reach but not certain, as Troy wanted: the plain bot earns it on 8 of 10 seeds (times 277 309 284 333 272 267 211 289 269 272 s; the two misses are fights that pull the pilots off the rocks); with par 380 it was never at risk. Pins: `tests/campl1tune.mjs` section D (the rule, the par in both places, one miner or a pilot lost does not end it, the second miner does, the card's words, 1.1 untouched, idle loses, plain wins and earns the bonus on at least half of six seeds). The N panel row for the par is not added: the panel's tool needs to write a number inside the missions list, which card `space-game-stray-n-rows` (paused, b8a4d416) adds.
+
+## Mission 1.3: all three haulers can come home (card `space-game-13-all-haulers-savable`, 24 Nov 2026; base main a18a5367 for the old numbers, 7cdf85f5 for the new ones)
+
+Troy asked for good play to bring all three haulers home in 1.3. The first lever, the departure gap (12 s between haulers), was measured and is **not** the lever: gaps of 4, 6, 8, 10, 12, 14, 16, 20 and 24 s, 12 seeds each, Normal, gave "all three home" in 0 to 67 per cent of runs with no trend (the plain bot: 33, 0, 0, 58, 50, 25, 42, 25 and 17), and the ship lost was the LEAD hauler (h1) in 7 to 12 of 12 runs at every gap, never the rear one: at about 240 s, 20 s after the first-contact aliens arrive, killed by a gunship (most runs) or a drone. Moving the contact cue later (lane 0.82 to 0.90 or 0.96) did not change it. So Troy chose the first-contact force as the ONE lever, and the gap stays 12 s (haulers leave at 4, 16 and 28 s).
+
+| What | Old | New |
+|---|---|---|
+| drones in the first-contact wave (`CAMP.levels[1].missions[2].waves[5].ships.drone`) | 2 | 1 |
+| gunships in the first-contact wave (`...ships.gunship`) | 2 | 1 |
+| raiders in the wave | 4 | 4 (the force is six ships, it was eight) |
+| N panel (group Foes) | | two rows, "First contact (1.3): drones" and "First contact (1.3): gunships" (0 to 6, felt when the wave comes) |
+
+The table (`node tools/campaign-bot.mjs --level 1 --mission 3 --bots idle,carrier,guard,plain,plainr --seeds 12 --pace normal`; **all three haulers home**, per cent of 12 seeds; the mission is won in every row but idle, which loses every convoy):
+
+| Bot | Old force 4,2,2 (raiders, drones, gunships) | New force 4,1,1 |
+|---|---|---|
+| idle (does nothing) | 0 | 0 |
+| carrier (flies and shoots, no wing: the "only flies to the goal" player) | 8 | 42 |
+| guard (launches, the wing guards the cruiser: one order) | 8 | 42 |
+| plain (the sensible player: escort, attack every 5 s) | 50 | **83** |
+| plainr (plain, and Kara guards the rear hauler once it leaves; new bot) | 17 | **67** |
+
+Other forces tried, same seeds (carrier / plain / plainr): 4,2,1 gave 17 / 58 / 50; 4,2,0 gave 42 / 92 / 67; 2,2,1 gave 50 / 75 / 50; 3,1,1 gave 50 / 83 / 75; 2,1,1 gave 50 / 75 / 92.
+
+So careful play (plain, or plain with a pilot posted on the rear) brings all three home on 10 and 8 of 12 seeds, where it was 6 and 2. A player who only flies the cruiser still loses a hauler on 7 of 12 seeds (it was 11 of 12), and one who does nothing loses them all. The noise is about plus or minus 14 points at 12 seeds, so read the rows as a band: the force 4, 1, 1 was picked as the smallest change (one ship less of each of the two heavy kinds) that puts both careful players at two thirds or more. The all-delivered bonus (`all`) stays a bonus.
+
+To undo it: `drone: 2, gunship: 2` in the wave (or set both N rows back to 2). The bots in the tuning doc: `plainr`, and `--runs` (one line per run: result, haulers delivered and lost, which hauler was lost and by what, the bonuses) are new in `tools/campaign-bot.mjs`; its summary has an `allHome` column in `--json`.

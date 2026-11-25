@@ -50,6 +50,7 @@ const BOTS = {
   plaini: { name: 'plaini', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'ignore' },              // plain, but the miner's call of 1.1 is ignored: no pilot is sent at the pirates on him
   plaing: { name: 'plaing', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'guard' },               // plain, and at the miner's call of 1.1 one pilot (Kara) is sent to guard the miner
   plaina: { name: 'plaina', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'all' },                 // plain, and at the miner's call all three pilots are sent at the pirates on him
+  plainr: { name: 'plainr', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, rear: true },               // plain, and when the last hauler leaves one pilot (Kara) is posted on it to guard it (card space-game-13-all-haulers-savable): a player who sends a pilot to the rear
   thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp' },   // a player who directs the fleet: helps the miner and uses the convoy orders (and scouts the fork)
   thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp', noroute: true } // the same on the default lane
 };
@@ -69,7 +70,9 @@ g.run(`(() => {
   campHurt = function (C, u, dmg, byId) {
     const M = window.__M;
     if (M && u.kind === 'carrier' && u.hp > 0 && !C.result && !C.god) { const d = dmg * (campHas(C, 'shield') ? CAMP.tech.shield.taken : 1); const k = kindOf(byId); M.hitC[k] = (M.hitC[k] || 0) + d; }
-    return hurt0.apply(null, arguments);
+    const was = u.kind === 'freighter' && u.hp > 0, r0 = hurt0.apply(null, arguments);
+    if (M && was && u.hp <= 0) M.dead.push((u.cid || u.id) + '@' + Math.round(C.t / 1000) + ':' + kindOf(byId)); // which convoy ship was lost, and when (card space-game-13-all-haulers-savable)
+    return r0;
   };
   const clampi = v => Math.max(-1, Math.min(1, v));
   // --keys: an order as a player gives it. The row is found in the key table (campKeyVia), its list is opened with the list's own key, Down goes to the row, Enter gives it (src/camppanel.js campPanelKey);
@@ -106,6 +109,7 @@ g.run(`(() => {
   window.__botStep = (C, s, B, sk, st) => {
     if (B.idle) return; // (an idle player gives no order)
     callTick(C, B);
+    if (B.rear) { const last = C.L.convoys.length - 1, rr = last >= 0 && C.convoys[last] && C.convoys[last].started ? C.by['freighter-' + C.L.convoys[last].id] : null; if (rr && rr.hp > 0) { if (!st.rearPost) { st.rearPost = true; campWingOrder(C, 'green', 'guard', rr.id, 'bot'); } callHeld.green = 1; } } // the pilot posted on the rear ship stays there: the attack order leaves Kara be
     if (B.help && !st.helped && C.beats && !C.beats.thanked) { const w = C.L.waves.findIndex(x => x.beat === 'distress'), foes = w >= 0 && C.waves[w] && C.waves[w].started ? C.ships.filter(u => u.team === 'alien' && u.hp > 0 && u.wave === w) : []; if (foes.length) { st.helped = true; minerAnswer(C, B.help, foes[0]); } } // the miner is under attack (the radio says so, one plain line): a player who reads it sends the Red squad at the pirates on him, an ordinary squad order
     if (C.arrivedAt == null) return; // the trip first, with the wing aboard (a Fast burn needs it: card space-game-campaign-fast-board); the plan runs from the arrival, as a player's does
     s -= C.arrivedAt / 1000;
@@ -172,7 +176,7 @@ g.run(`(() => {
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
     const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank, power: ${JSON.stringify(POWER)}, pace: window.__PACE });
-    const M = window.__M = { hitC: {}, drainE: {}, waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
+    const M = window.__M = { hitC: {}, drainE: {}, dead: [], waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;
     for (let i = 0; i < total && !C.result; i++) {
@@ -193,7 +197,7 @@ g.run(`(() => {
     }
     M.recalls = st.recalls || 0;
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
-      kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
+      kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, convoyDead: M.dead.join('+'), shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
       hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
     window.__M = null; return r;
@@ -220,7 +224,7 @@ export function summarise(rs) {
   const sum = (key) => { const o = {}; rs.forEach(r => Object.entries(r[key] || {}).forEach(([k, v]) => { o[k] = (o[k] || 0) + v; })); Object.keys(o).forEach(k => { o[k] = Math.round(o[k] / rs.length); }); return o; };
   return { n: rs.length, won: pct(rs, r => r.result === 'won'), lost: pct(rs, r => r.result === 'lost'), timeout: pct(rs, r => r.result === 'timeout'), tWin: med(won.map(r => r.t)), tAll: med(rs.map(r => r.t)),
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
- minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), idle: med(rs.map(r => r.idle)),
+ minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
 
@@ -235,6 +239,7 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs')) {
       const key = level + '.' + (m + 1); keys.push([key, level, m]); out[key] = {};
       for (const b of botList) {
         const rs = []; for (let seed = 1; seed <= SEEDS; seed++) rs.push(run(level, seed, b, SKILL, techs, MAXSEC, m));
+        if (arg('runs', false)) rs.forEach(r => console.error(`run ${key} ${b} seed ${r.seed}: ${r.result} ${r.t}s delivered ${r.delivered} convoyLost ${r.convoyLost} (${r.convoyDead || '-'}) bonus ${r.bonus || '-'}`)); // --runs: one line per run on stderr (card space-game-13-all-haulers-savable: the haulers home, one by one)
         out[key][b] = summarise(rs);
       }
     }
