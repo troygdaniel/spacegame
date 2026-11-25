@@ -58,7 +58,7 @@ console.log('D. the Long Haul and the map');
   const boot = src('src/boot.js'), sp = src('src/space.js'), fire = src('src/campmapfire.js');
   check('the game\'s own bullet is as it was (pale yellow 0xfff1a8, 14 by 4) and the Long Haul still fires it: boot.js unchanged, space.js\' group keyed \'bullet\'', /mk\('bullet', 14, 4, g => \{ g\.fillStyle\(0xfff1a8, 1\)/.test(boot) && /defaultKey: 'bullet', maxSize: 60/.test(sp));
   check('the Long Haul has no word of the new texture (shot-earth lives in the Campaign scene only)', !/shot-earth/.test(boot) && !/shot-earth/.test(sp) && !/shot-earth/.test(src('src/surface.js')) && !/shot-earth/.test(src('src/traffic.js')));
-  check('the Tab map already draws the wing\'s shots in its green (K.wing) and the beam in cyan: not changed', /b\.team === 'earth' \? \(b\.beam \? K\.beam : K\.wing\)/.test(fire));
+  check('the Tab map already draws the wing\'s shots in its green (K.wing) and the beam in cyan: not changed with the ship look off (mint for the wing\'s shots while it is on: cfOwn, card space-game-ship-look-map-own-fire-mint)', /b\.team === 'earth' \? \(b\.beam \? K\.beam : own \|\| K\.wing\)/.test(fire) && /own = cfOwn\(0\)/.test(fire));
 }
 
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nAll ${n} checks passed`);
