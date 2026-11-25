@@ -6,7 +6,7 @@
 // Behind the same switch as the ships (slookOn(): on for everyone since card space-game-ship-look-default-on; ?shiplook=0 is the tests' and the comparison's way back): with it off nothing here runs and the old boulders are drawn.
 //   slookRockPoints(i)         PURE: the outline of variant i (0 to 2) as [[x, y], ...] in the 64 by 64 picture, clockwise, from a seeded generator (no Math.random: the same rock every run)
 //   slookRockFacet(i)          PURE: the darker facet: the corners of the outline that face away from the light (the lower right), joined by a straight cut: [[x, y], ...], each of them a corner of the outline
-//   slookRockColors()          PURE: { fill, facet } as '#rrggbb': the grey is the new look's neutral (SLOOK.C.neutral) toward the dark, so a rock is not mistaken for a neutral ship; the facet is that grey toward the dark again
+//   slookRockColors()          PURE: { fill, facet } as '#rrggbb': a neutral grey (#7b8591) and the darker facet (#4a525d), the world look mock's rock colours, so a rock is not mistaken for a neutral ship (SLOOK.C.neutral is a blue-grey)
 //   slookRockTexture(scene, i) the texture key of variant i, made on first use ('' when the scene has no Phaser to draw with)
 //   slookRockKey(scene, id)    the texture key for the rock or pickup whose id is 'rock-<n>' while the look is on, '' when it is off (the caller keeps the old boulder's key then): variant n mod 3
 const SLOOKROCK = {
@@ -17,7 +17,7 @@ const SLOOKROCK = {
   seed: 515,                     // the generator's seed (the boulders' too, plus 7 for each variant)
   light: Math.PI / 4,            // the direction the facet faces, as an angle on the screen (y runs down): the lower right, the boulders' light came from the upper left
   span: 1.5,                     // how far (rad) from that direction a corner may be and still belong to the facet: about 86 degrees either side (a cap of the rock a fifth to a third of its area)
-  grey: 0.25, dark: 0.45,        // the grey is the neutral colour mixed this far toward the dark; the facet is the grey mixed this far toward the dark
+  fill: '#7b8591', facet: '#4a525d', // the grey and the darker facet: the world look mock's own rock and rockD (docs/world-look-mock.html, its C table; the first pick was the neutral blue-grey #9fb3c8 toward the dark, and the mock's grey is the same family without the blue): a neutral grey, not a ship's colour, so a rock is not taken for a neutral ship
   rim: { k: 0.03, least: 1 }     // the dark rim's width: a share of the picture's side, and its least (px); its colour is the ships' (SLOOK.rim)
 };
 function slookRockRng(seed) { // a small seeded generator (mulberry32): the same list of numbers for the same seed
@@ -39,10 +39,7 @@ function slookRockFacet(i) {
   const pick = near.length >= 3 ? near : P.map((p, k) => ({ k, d: turn(Math.atan2(p[1] - c, p[0] - c)) })).sort((a, b) => a.d - b.d).slice(0, 3).map(q => q.k).sort((a, b) => a - b);
   return pick.map(k => P[k].slice());
 }
-function slookRockColors() {
-  const g = slookMix(slookColor('neutral'), SLOOK.C.dark, SLOOKROCK.grey);
-  return { fill: g, facet: slookMix(g, SLOOK.C.dark, SLOOKROCK.dark) };
-}
+function slookRockColors() { return { fill: SLOOKROCK.fill, facet: SLOOKROCK.facet }; }
 function slookRockTexture(scene, i) {
   if (!scene || !scene.textures || !scene.make) return '';
   const K = SLOOKROCK, n = ((i | 0) % K.n + K.n) % K.n, key = 'look-rock-' + n;

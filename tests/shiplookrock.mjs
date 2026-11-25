@@ -3,7 +3,7 @@
 // circle, its ore and the effect of its breaking are not touched; the Long Haul keeps its boulders (src/art_world.js).
 //   A  the outline: nine corners, 20 to 28 px from the middle of a 64 px picture, in order round it, three variants that differ, the same every run, no random number
 //   B  the facet: ONE, made of corners of the outline on the side away from the light, a share of the rock's area
-//   C  the colours: the new look's neutral toward the dark, a facet darker still; none of the boulder's gradient, craters or glowing veins
+//   C  the colours: a neutral grey and a facet darker still (the world look mock's rock and rockD); none of the boulder's gradient, craters or glowing veins
 //   D  the texture: painted once, named look-rock-<n>, 64 by 64, fills and plain paths only, the ships' rim; none without Phaser
 //   E  the key: the variant is the rock's number mod 3, the new keys while the look is on, '' when it is off (the boulder stays); the scene and the briefing use it; the script is in the page
 // Run: node tests/shiplookrock.mjs   (exit code 1 on a failed check)
@@ -37,7 +37,7 @@ check('7 it is a part of the rock, not all and not a sliver: 12 to 50 percent of
 
 console.log('C. the colours');
 const col = J('slookRockColors()'), hex = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16)), lum = h => { const c = hex(h); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
-check('8 the grey is the new look\'s neutral mixed a quarter toward the dark (a rock is not mistaken for a neutral ship, which is the neutral itself), the facet that grey mixed 45 percent toward the dark: darker, same family', col.fill === J(`slookMix(SLOOK.C.neutral, SLOOK.C.dark, 0.25)`) && col.fill !== J('SLOOK.C.neutral') && col.facet === J(`slookMix(slookRockColors().fill, SLOOK.C.dark, 0.45)`) && lum(col.facet) < lum(col.fill) && Math.max(...hex(col.fill)) - Math.min(...hex(col.fill)) < 60, JSON.stringify(col));
+check('8 the grey is the world look mock\'s rock (#7b8591) and the facet its rockD (#4a525d), read from the mock file: a neutral grey (red, green and blue within 30 of one another), not the neutral side\'s blue-grey (#9fb3c8: a rock is not mistaken for a neutral ship), the facet darker, same family', (() => { const mk = src('docs/world-look-mock.html'), m = mk.match(/rock:'(#[0-9a-f]{6})',rockD:'(#[0-9a-f]{6})'/); return !!m && col.fill === m[1] && col.facet === m[2] && col.fill !== J('SLOOK.C.neutral') && lum(col.facet) < lum(col.fill) && Math.max(...hex(col.fill)) - Math.min(...hex(col.fill)) < 30; })(), JSON.stringify(col));
 const cr = code('src/shiplookrock.js');
 check('9 none of the boulder\'s look: no gradient, no craters, no speckle, no glow or ore veins, no random number (a seeded generator), no image file', !/createRadialGradient|createLinearGradient|ellipse|shadowBlur|Math\.random|\.png|\.jpg|new Image|fetch\(/.test(cr) && /mulberry|0x6D2B79F5/.test(cr));
 
