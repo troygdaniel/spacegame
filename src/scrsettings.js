@@ -54,6 +54,8 @@ function scrSetKeys(s) {
   rows.push({ label: uiText('scr.sett.k.chat'), items: [scrSP(uiText('scr.sett.k.on'), { on: !!CHAT.on, act: 'chaton', arg: true }), scrSP(uiText('scr.sett.k.off'), { on: !CHAT.on, act: 'chaton', arg: false })] });
   rows.push({ label: uiText('scr.sett.k.provider'), items: [['', uiText('scr.sett.k.auto')], ['openai', uiText('scr.sett.k.openai')], ['anthropic', uiText('scr.sett.k.anthropic')]].map(([id, name]) => scrSP(name, { on: (CHAT.provider || '') === id, act: 'provider', arg: id })) });
   rows.push({ label: uiText('scr.sett.k.model'), items: [{ t: 'field', id: 'model', text: CHAT_PROVIDERS[chatProvider()].model }] });
+  const strip = typeof scrKeysCap === 'function' ? scrKeysCap('strip') : ''; // the key page's strip row moved here (the mock's cut list): the key that types an order, read from the key table, and what it needs
+  if (strip) rows.push({ label: uiText('scr.sett.k.strip'), items: [{ t: 'chip', chip: { id: 'strip', k: strip } }, scrST(uiText('scr.sett.k.striphint'), { cls: 'sm', dim: true })] });
   return rows;
 }
 function scrSetListen() {

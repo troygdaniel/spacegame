@@ -55,6 +55,7 @@ check('a saved key: the pill says Saved (a tick), the field says Paste to replac
 g.run(`VOICE.bad = true;`);
 check('a key the service refused: Rejected (pink)', J(`__M('keys')`).body[1].items[0].text === 'Rejected' && J(`__M('keys')`).body[1].items[0].tone === 'pink');
 g.run(`__reset();`);
+check('the strip\'s row moved here from the keys page (the mock\'s cut list): the / chip, from the key table, and "Needs a chat key."', J(`(() => { const r = __M('keys').body.find(x => x.label === 'Type an order'); return !!r && r.items[0].chip.id === 'strip' && r.items[0].chip.k === CAMP_KEYS.strip.k && scrKeysChipOk(r.items[0].chip) && r.items[1].text === 'Needs a chat key.'; })()`));
 check('Get a key is there when the key\'s page is one the game can open, and the Copy button of today is gone', J(`__M('keys').body.slice(1, 4).every(r => r.items.some(i => i.text === 'Get a key')) && !__shown(__M('keys')).includes('Copy')`));
 
 M = J(`__M('listen')`);

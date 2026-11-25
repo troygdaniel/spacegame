@@ -699,6 +699,8 @@ const UI_TEXT = {
   'scr.sett.k.provider': 'Provider',
   'scr.sett.k.auto': 'Auto',
   'scr.sett.k.model': 'Model',
+  'scr.sett.k.strip': 'Type an order',
+  'scr.sett.k.striphint': 'Needs a chat key.',
   'scr.sett.l.hold': 'Hold to talk',
   'scr.sett.l.how': 'Hold until the ring is full, then speak.',
   'scr.sett.l.listening': 'Listening',
