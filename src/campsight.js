@@ -102,16 +102,17 @@ function campSightArrows(C, scroll, W_, H_, zoom) {
 }
 
 // the ships you protect that are in trouble and off the screen (card space-game-target-display: the radar showed every ship of the convoy, and it is gone): one that is under attack (the full health bar, src/campcharge.js: hit in the
-// last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, tx, ty, dist, what: its name, pct, friend: true, fresh: just hit }.
-// While the page HUD is on, a MINER has none (card space-game-page-hud-miner-edge-label, Troy, 25 Nov 2026): it has its ring in the left panel and, at the edge, the page's pill; the other ships you protect keep theirs, and with the page HUD off every ship has one as before.
-function campSightFriends(C, scroll, W_, H_, zoom) {
+// last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, tx, ty, dist, what: its name, pct, friend: true, fresh: just hit, id, kind, hot: under attack or nearly lost }.
+// While the page HUD is on the canvas draws NONE (cards space-game-page-hud-miner-edge-label and space-game-page-hud-friend-edge-pill, Troy, 25 Nov 2026): every ship you protect that is off the screen has its pill at the edge of the page instead (src/camppagehud.js campPageHudFriendEdges), which asks for ALL of them with `all` (not only the ones in trouble, no cap here; `hot` says which are); with the page HUD off every ship in trouble has its arrow as before.
+function campSightFriends(C, scroll, W_, H_, zoom, all) {
   if (!C || !C.carrier || typeof campChargeBars !== 'function') return [];
-  const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [], ring = typeof campPageHudHides === 'function' && campPageHudHides('friendlies'); // ring: the page HUD is on and has the ships you protect as rings in its left panel
-  campChargeBars(C).filter(b => (b.loud > 0 || b.band === 'red') && !(ring && b.kind === 'miner')).sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier)).forEach(b => {
+  const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [], ring = typeof campPageHudHides === 'function' && campPageHudHides('friendlies'); // ring: the page HUD is on and has the ships you protect as rings in its left panel and pills at the edge
+  if (ring && !all) return [];
+  campChargeBars(C).filter(b => all || b.loud > 0 || b.band === 'red').sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier)).forEach(b => {
     const sx = (b.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (b.y - scroll.y - H_ / 2) * z + H_ / 2;
     if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
     const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
-    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0 });
+    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0, id: b.id, kind: b.kind, hot: b.loud > 0 || b.band === 'red' });
   });
-  return out.slice(0, K.friends);
+  return all ? out : out.slice(0, K.friends);
 }

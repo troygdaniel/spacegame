@@ -7,6 +7,7 @@
 //   H  round 2 (card space-game-page-hud-2): words on the meters, the pick's outline and lit digit (dim only for rest), W then a digit closes the menu, no Red 1 to 3, no radio contact sentence while it is on
 //   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
 //   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
+//   O  an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)
 //   E  the rules: no web font, two weights, no image files, the script and the style are in the page
 // Run: node tests/camppagehud.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -394,6 +395,47 @@ g.run(`CAMP.flags.pagehud = false; C.missiles = 3; C.queued = 0; C.reloadAt = 0;
 check('N the page HUD off: no element, the canvas status line (+n on its missiles line) is the rule it was', J('__rN') === false && !J('SN.pageHud') && J('campCruiserMissileLine(campCruiserStatus(C))') === 'MISSILES  3/6');
 const cssN = src('src/camppagehud.css'), pjN = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
 check('N the style and the script: the build pip is a plain gradient on --p (no image, no web font), the time is read from campReload (no number typed), no new text key', /\.ph-pip\.build \{[^}]*linear-gradient[^}]*var\(--p/.test(cssN) && /\.ph-q \{/.test(cssN) && !/url\(|@font-face/.test(cssN) && /campReload\(C\)/.test(pjN) && !/\b(10000|15000)\b/.test(pjN));
+g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('O. an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)');
+g.run(`CAMP.flags.pagehud = true; window.CO = campNew(1, [], { seed: 5, mission: 2 }); window.C = CO; C.god = true; for (let i = 0; i < 450 && !C.result; i++) campStep(C, 1 / 30); C.t = 100000; C.ships = C.ships.filter(u => u.team !== 'alien'); campOrder; window.VO = { x: C.carrier.x - 640, y: C.carrier.y - 360, zoom: 1 };
+  window.__far = (u, dx, dy) => { u.x = C.carrier.x + dx; u.y = C.carrier.y + dy; return u; };
+  window.__mine = (dx, dy) => { const u = campSpawn(C, 'miner', C.carrier.x + dx, C.carrier.y + dy); u.team = 'neutral'; return u; };
+  window.__rect = f => { const z = campPageHudPillSize(f.text); return [f.x - z.w / 2, f.y - z.h / 2, f.x + z.w / 2, f.y + z.h / 2]; };
+  window.__touch = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];`);
+g.run(`window.HO = campFriNumbered(C).map(e => e.unit).find(u => u && u.kind === 'freighter'); __far(HO, 4000, 10);`);
+const f1 = J('campPageModel(C, VO).fedges');
+check('O one hauler off the screen: ONE pill with its E digit, its name and how far (the words of the numbered list and of the hostiles\' km), at the east edge', f1.length === 1 && f1[0].text === J(`campFriNumbered(C).find(e => e.unit === HO).number + ' ' + campFriNumbered(C).find(e => e.unit === HO).name + ' · ' + uiText('camp.tdisp.km', { km: campNavKm(campDist(HO, C.carrier)) })`) && f1[0].n === J('campFriNumbered(C).find(e => e.unit === HO).number') && f1[0].x > 1100 && f1[0].hot === false, JSON.stringify(f1));
+g.run(`HO.x = C.carrier.x + 100; HO.y = C.carrier.y;`);
+check('O a ship that is on the screen has none; one that is lost (dark in the list) has none; the model gives none without a camera', J('campPageModel(C, VO).fedges.length') === 0 && (g.run(`__far(HO, 4000, 10);`), J('campPageModel(C).fedges.length') === 0) && (g.run(`HO.hp = 0; HO.gone = true;`), J('campPageModel(C, VO).fedges.length') === 0) && (g.run(`HO.hp = HO.maxHp || 100; HO.gone = false;`), J('campPageModel(C, VO).fedges.length') === 1));
+g.run(`HO.hurtAt = C.t - 100;`);
+check('O one that is hit (or nearly lost) is hot: the bar\'s own words', J('campPageModel(C, VO).fedges[0].hot') === true);
+g.run(`HO.hurtAt = 0; window.M1 = __mine(4040, 20); window.M2 = __mine(4080, 40); window.M3 = __mine(4120, 60); campFriRegister(C);`);
+const f3 = J('campPageModel(C, VO).fedges'), r3 = f3.map(f => J(`__rect(${JSON.stringify(f)})`));
+check('O four ships in the same direction: four pills, nearest first, no two touch, each on the screen', f3.length === 4 && f3[0].id === J('HO.id') && r3.every((a, i) => r3.every((b, j) => i === j || !J(`__touch(${JSON.stringify(a)}, ${JSON.stringify(b)})`))) && r3.every(a => a[0] >= 0 && a[2] <= 1280 && a[1] >= 0 && a[3] <= 720), JSON.stringify(f3.map(f => [f.text, Math.round(f.x), Math.round(f.y)])));
+check('O the first keeps its place (the arrow\'s point); the ones that were slid along the edge point at their ship from where they end (not the way the arrow pointed)', f3[0].x === J(`Math.max(campPageHudPillSize(${JSON.stringify(f3[0].text)}).w / 2 + 6, Math.min(W - campPageHudPillSize(${JSON.stringify(f3[0].text)}).w / 2 - 6, campSightFriends(C, VO, W, H, 1, true)[0].x))`) && f3.slice(1).every(f => Math.cos(f.angle) > 0.5), JSON.stringify(f3.map(f => f.angle)));
+g.run(`window.RA = campSpawn(C, 'raider', C.carrier.x + 4100, C.carrier.y + 30); window.RB = campSpawn(C, 'raider', C.carrier.x + 4140, C.carrier.y + 20); for (const r of [RA, RB]) r.vx = r.vy = 0; C.t = 100000; campSightStep(C);`);
+const m5 = J('campPageModel(C, VO)'), hr = J(`__rect({ x: Math.max(70, Math.min(W - 70, ${JSON.stringify(m5.edge && m5.edge.x)})), y: Math.max(30, Math.min(H - 30, ${JSON.stringify(m5.edge && m5.edge.y)})), text: m5.edge.n + ' · ' + m5.edge.km })`.replace('m5.edge.n', JSON.stringify(m5.edge && m5.edge.n)).replace('m5.edge.km', JSON.stringify(m5.edge && m5.edge.km)));
+check('O the hostiles\' pill on the same side keeps its place and the ships\' pills keep clear of it too', !!m5.edge && m5.fedges.length === 4 && m5.fedges.every(f => !J(`__touch(${JSON.stringify(J(`__rect(${JSON.stringify(f)})`))}, ${JSON.stringify(hr)})`)), JSON.stringify([m5.edge, m5.fedges.map(f => [Math.round(f.x), Math.round(f.y)])]));
+g.run(`window.M4 = __mine(4160, 80); window.M5 = __mine(4200, 100); campFriRegister(C);`);
+check('O at most CAMP_PAGEHUD.fedges pills at once (the nearest ones)', J('campPageModel(C, VO).fedges.length') === J('CAMP_PAGEHUD.fedges') && J('CAMP_PAGEHUD.fedges') === 4);
+g.run(`[M3, M4, M5].forEach(u => { u.hp = 0; u.gone = true; }); C.ships = C.ships.filter(u => u.team !== 'alien'); window.SO = __scene(); SO.cameras = { main: { scrollX: VO.x, scrollY: VO.y, zoom: 1 } }; campPageHudSync(SO, 0);`);
+const vO = J(`SO.pageHud.fedges.map(p => ({ d: p.el.style.display, cls: p.el._cls, text: p.text._text, l: p.el.style.left, t: p.el.style.top, a: p.ic.style.getPropertyValue ? p.ic.style.getPropertyValue('--a') : p.ic._ph['--a'] }))`);
+check('O the view: one pill for each ship (three: the hauler and two miners), the amber class, its words, put at its place on the canvas (the canvas is 1:1 here, so its game px), the arrow turned to its ship; none left over is drawn', vO.filter(p => p.d === '').length === 3 && vO.filter(p => p.d === 'none').length === vO.length - 3 && vO.every(p => p.d === 'none' || (/ph-fedge/.test(p.cls) && p.text.length > 0 && /px$/.test(p.l) && /px$/.test(p.t) && /deg$/.test(p.a))), JSON.stringify(vO));
+g.run(`window.__w0 = __writes; campPageHudSync(SO, 300);`);
+check('O the same frame again writes nothing (only what changed)', J('__writes') === J('__w0'));
+g.run(`HO.hurtAt = C.t - 100; campPageHudSync(SO, 500);`);
+check('O a ship hit: its pill turns hot (a class), nothing else about it changes', /\bhot\b/.test(J('SO.pageHud.fedges[0].el._cls')) && !/\bhot\b/.test(J('SO.pageHud.fedges[1].el._cls')));
+g.run(`window.__sf = { hit: campSightFriends(C, VO, W, H, 1), all: campSightFriends(C, VO, W, H, 1, true) }; HO.hurtAt = 0;`);
+check('O the canvas draws no arrow for a ship you protect while the page HUD is on (a hit one included); the page asks for all of them', J('__sf.hit.length') === 0 && J('__sf.all.length') === 3);
+g.run(`SO.mode = 'pause'; window.__rO = campPageHudSync(SO, 800);`);
+check('O under a full card (the pause card here) the pills are hidden with the rest: the root is hidden, nothing is written', J('__rO') === false && J('SO.pageHud.root.style.display') === 'none');
+g.run(`SO.mode = 'play'; CAMP.flags.pagehud = false; window.__rO2 = campPageHudSync(SO, 1000); window.__sf2 = campSightFriends(C, VO, W, H, 1);`);
+check('O the page HUD off: no element, and the canvas arrow of a ship in trouble is as before (one that is hit has it)', J('__rO2') === false && !J('SO.pageHud') && (g.run(`HO.hurtAt = C.t - 100; window.__sf3 = campSightFriends(C, VO, W, H, 1);`), J('__sf3.length') === 1 && J('__sf3[0].friend') === true));
+g.run(`HO.hurtAt = 0; CAMP.flags.pagehud = true;`);
+check('O the fit rule on its own: items at one spot slide apart along the edge; a fixed pill is not moved onto; a screen with no room gives each its own place back', (() => { const it = [{ x: 1210, y: 360, w: 200, h: 36 }, { x: 1210, y: 360, w: 200, h: 36 }, { x: 1210, y: 360, w: 200, h: 36 }], out = J(`campPageHudEdgeFit(${JSON.stringify(it)}, [])`), out2 = J(`campPageHudEdgeFit(${JSON.stringify(it.slice(0, 1))}, [{ x: 1210, y: 360, w: 200, h: 36 }])`); return out[0].moved === false && out[1].moved === true && out[2].moved === true && out.every((a, i) => out.every((b, j) => i === j || Math.abs(a.y - b.y) >= 36 || Math.abs(a.x - b.x) >= 200)) && out2[0].moved === true; })());
+const cssO = src('src/camppagehud.css'), pjO = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
+check('O the style and the script: the pill is amber (the convoy\'s, the canvas arrow\'s colour), no image or web font; the words are the numbered list\'s and the existing km key (no new text key); the pills are written only through the diff-writer', /\.ph-fedge \{[^}]*255, 180, 84/.test(cssO) && /\.ph-fedge\.hot \{/.test(cssO) && !/url\(|@font-face/.test(cssO) && /camp\.tdisp\.km/.test(pjO) && !/uiText\('camp\.pagehud\./.test(pjO.slice(pjO.indexOf('function campPageHudFriendEdges'), pjO.indexOf('function campPageHudPlaces'))) && !/\.style\.(left|top)\s*=/.test(pjO));
 g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('E. the rules');
