@@ -31,3 +31,16 @@
 .ph-pilot.pick small { color: var(--ph-ink); font-weight: 600; }
 .ph-doing { margin-left: auto; text-align: right; font-size: .82em; color: var(--ph-good); }
 .ph-doing em { display: block; font-style: normal; color: var(--ph-mute); font-size: .86em; }
+/* top centre: the goal; one line (a label and its value) and one meter under it; no wave count */
+.ph-goal { left: 50%; top: 1.3em; transform: translateX(-50%); width: 19em; display: flex; flex-direction: column; gap: .5em; padding: .7em 1em; }
+.ph-between { justify-content: space-between; font-size: .9em; }
+.ph-goal b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ph-fixed { flex: none; }
+.ph-fill.ph-ore { background: var(--ph-ore); }
+.ph-fill.ph-good { background: var(--ph-good); }
+/* top right: the stock; the ore as a meter, the missiles as one pip each and the reload key's chip */
+.ph-stock { right: 1.3em; top: 1.3em; width: 15em; display: flex; flex-direction: column; gap: .65em; }
+.ph-pips { display: flex; gap: .28em; flex: 1; }
+.ph-pip { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); }
+.ph-pip.on { background: var(--ph-ink); }
+.ph-pip.build { background: var(--ph-mute); }

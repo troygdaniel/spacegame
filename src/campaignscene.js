@@ -586,7 +586,7 @@ class Campaign extends Phaser.Scene {
     const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
     if (H.mother && H.mother.text) b = Math.max(b, col + 20 + 12);
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
-    return b;
+    return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
   toastTop() { return this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; }
@@ -600,9 +600,9 @@ class Campaign extends Phaser.Scene {
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
     const waves = C.L.waves;
-    this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
+    this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(typeof campPageHudHides === 'function' && campPageHudHides('goal') ? '' : campObjective(C));
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
-    this.hud.wave.setText(typeof campWaveLineOn === 'function' && !campWaveLineOn(C) ? '' : uiText('camp.ui.wave', { n: wc.n, total: wc.total })); // no wave line in an escort mission (CAMP.hud.noWave: the goal line stands first)
+    this.hud.wave.setText(typeof campPageHudHides === 'function' && campPageHudHides('goal') ? '' : typeof campWaveLineOn === 'function' && !campWaveLineOn(C) ? '' : uiText('camp.ui.wave', { n: wc.n, total: wc.total })); // no wave line in an escort mission (CAMP.hud.noWave: the goal line stands first)
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
     if (this.hud.repair) { const rp = campRepairState(C); this.hud.repair.setText(rp.n ? uiText('camp.ui.repair', { n: rp.n, s: rp.next }) : ''); } // (a stand-in scene in a test may have no repair text)
     // an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3); the autopilot's readout under the goal line is gone with its line (card space-game-hud-topleft-trim)
