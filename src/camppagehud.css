@@ -76,3 +76,9 @@
 .ph-first { left: 50%; bottom: 1.1em; transform: translateX(-50%); display: flex; align-items: center; gap: 1.2em; padding: .4em 1em; border-radius: 2em; white-space: nowrap; opacity: .72; }
 .ph-fc { display: flex; align-items: center; gap: .45em; }
 .ph-first .ph-lab { font-size: .68em; }
+/* the picked target's hull and shield meters and what it does (card space-game-page-hud-target-details), inside the hostiles panel, in the look of the cruiser's meters */
+.ph-tg { display: flex; flex-direction: column; gap: .35em; margin-top: .15em; padding-top: .4em; border-top: 1px solid var(--ph-line); }
+.ph-tgm { align-items: flex-start; gap: .8em; }
+.ph-tgm .ph-m { flex: 1; width: auto; }
+.ph-tgm .ph-none { flex: 1; align-self: center; letter-spacing: .06em; text-transform: none; }
+.ph-act { font-size: .82em; color: #f3bcd2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

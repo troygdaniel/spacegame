@@ -54,7 +54,7 @@ g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('D. the files');
 check('campsightscene.js still hides only the hostiles\' arrows for the page HUD and draws the friends\' as given (the rule is in campsight.js)', /campPageHudHides\('sight'\) \? \[\]/.test(src('src/campsightscene.js')) && !/miner/.test(src('src/campsightscene.js').replace(/^\s*\/\/.*$/gm, '')));
-check('this card adds nothing to the page HUD\'s hides list (it is the list as it was, plus box:fleet from card space-game-page-hud-canvas-leftovers: the W box)', J('CAMP_PAGEHUD.hides.join()') === 'status,cruiser,fleet,goal,stock,hostiles,friendlies,sight,contact,places,keys,box:friendlies,box:fleet');
+check('this card adds nothing to the page HUD\'s hides list: it still begins as it was (later cards added the boxes of the pilots\' pick and of the hostiles after it)', J('CAMP_PAGEHUD.hides.join()').indexOf('status,cruiser,fleet,goal,stock,hostiles,friendlies,sight,contact,places,keys,box:friendlies') === 0);
 
 console.log(failed ? `\nMINER EDGE LABEL FAIL: ${failed} of ${n} checks failed` : `\nMINER EDGE LABEL PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
