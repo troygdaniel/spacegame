@@ -46,7 +46,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.ui.debriefstats | Time {time}   Hull {hull}   Ships lost {lost} |
 | camp.ui.debriefnext | Enter  ready room |
 | camp.ui.retrymission | Enter  fly the mission again     T  title |
-| camp.ui.pauseretry | R  restart the mission |
+| camp.ui.pauseretry | {keyrestart}  restart the mission |
 | camp.m.1.1.title | Rim escort |
 | camp.m.1.1.b1 | Escort the transport from the Lunar Base to Ceres. |
 | camp.m.1.1.b2 | Pirates lie in wait. Keep your pilots close to her. |
