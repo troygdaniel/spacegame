@@ -13,14 +13,15 @@ const SCR = {
   addr: 'screens',                                       // the address's name for the switch: ?screens=1 is on whatever the flag says, ?screens=0 is off
   store: 'longhaul.screens',                             // the browser's memory of the Settings row ('1' or '0'; kept apart from the save, like the volume)
   memo: { s: null, v: null },                            // the page's address, read again only when it changed (the switch is asked many times)
-  screens: ['title', 'ready', 'refit', 'rank', 'pick', 'brief', 'story', 'won', 'lost', 'pause', 'keys', 'settings', 'tech', 'end'], // the screens the key table names (story is removed by the new look, kept so its keys can be tested till then)
+  screens: ['title', 'ready', 'refit', 'earthrefit', 'rank', 'pick', 'brief', 'story', 'won', 'lvlwon', 'lost', 'pause', 'keys', 'settings', 'setkeys', 'setlisten', 'setcontrols', 'setflight', 'setcontent', 'setreset', 'tech', 'end'], // the screens the key table names: the mock's sections (round two added the level-won card, the Earth refit and the six other Settings tabs; 'settings' is its Sound tab); story is removed by the new look, kept so its keys can be tested till then
   tones: { low: 0.6, crit: 0.3 },                        // a ring or meter: good above low, warn down to crit, foe under (the page HUD's: CAMP_PAGEHUD.low and .crit)
   slack: { k: 1.25, add: 6 }                             // a screen's word budget: the mock's count times k plus add
 };
-// the number of words and numbers each screen shows, today and in the mock's recommended version (docs/screens-mock.html: today's from its own table, the new counted from the version's markup, a word or a number to a count)
+// the number of words and numbers each screen shows, today and in the mock's recommended version (docs/screens-mock.html: today's from its own table, the new counted from the version's markup by the same rule as scrWords; the story card has none: it goes, its one line is the ready room's)
 const SCR_BUDGET = {
   title: { today: 72, mock: 28 }, ready: { today: 92, mock: 45 }, refit: { today: 167, mock: 23 }, rank: { today: 163, mock: 29 }, pick: { today: 282, mock: 61 }, brief: { today: 192, mock: 43 },
-  story: { today: 55, mock: 0 }, won: { today: 68, mock: 35 }, lost: { today: 39, mock: 21 }, pause: { today: 84, mock: 16 }, keys: { today: 360, mock: 62 }, settings: { today: 227, mock: 40 }
+  story: { today: 55, mock: 0 }, won: { today: 68, mock: 35 }, lost: { today: 39, mock: 21 }, pause: { today: 84, mock: 16 }, keys: { today: 360, mock: 62 }, settings: { today: 227, mock: 40 },
+  lvlwon: { today: 55, mock: 28 }, earthrefit: { today: 56, mock: 35 }, setkeys: { today: 272, mock: 80 }, setlisten: { today: 205, mock: 41 }, setcontrols: { today: 162, mock: 64 }, setflight: { today: 101, mock: 43 }, setcontent: { today: 41, mock: 19 }, setreset: { today: 147, mock: 50 } // round two of the mock (the tabs' counts include the seven tab names)
 };
 
 // ---- the switch ----

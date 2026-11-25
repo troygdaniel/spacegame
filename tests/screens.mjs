@@ -83,8 +83,8 @@ check('a chip not in the table is caught: a made-up cap, a made-up role, a chang
 console.log('D. the word budget');
 check('scrWords counts what the white space cuts: a text, a list, an object, a number; a tag is not a word', J(`scrWords('Two doors')`) === 2 && J(`scrWords(['a b', 'c'])`) === 3 && J(`scrWords({ t: 'x y z', n: 5 })`) === 4 && J(`scrWords('<b>Hull</b> 40%')`) === 2 && J(`scrWords(null)`) === 0 && J(`scrWords('')`) === 0 && J(`scrWords('  spaced   out  ')`) === 2);
 const B = J('SCR_BUDGET');
-check('the budget has the twelve screens of the mock, today\'s counts add to 1801 (the mock\'s total)', Object.keys(B).length === 12 && Object.keys(B).reduce((a, k) => a + B[k].today, 0) === 1801);
-check('every new count is far under today\'s, and the story card, which goes, has none', Object.keys(B).every(k => B[k].mock < B[k].today) && B.story.mock === 0 && Object.keys(B).reduce((a, k) => a + B[k].mock, 0) < 450);
+check('the budget has every section of the mock (twelve, and the level-won card, the Earth refit and the six other Settings tabs of its second round), today\'s counts add to 2,840 (the mock\'s own table: 1,801 and 1,039)', Object.keys(B).length === 20 && Object.keys(B).reduce((a, k) => a + B[k].today, 0) === 2840);
+check('every new count is far under today\'s, and the story card, which goes, has none', Object.keys(B).every(k => B[k].mock < B[k].today) && B.story.mock === 0 && Object.keys(B).reduce((a, k) => a + B[k].mock, 0) < 800);
 check('the most a screen may show is the mock\'s count plus a slack (a quarter and six): title 41, keys 83', J(`scrWordsMax('title')`) === 41 && J(`scrWordsMax('keys')`) === 84 && J(`scrWordsMax('nope')`) === null);
 check('scrWithin says whether a model fits', J(`scrWithin('pause', 'Paused ' + 'x '.repeat(10))`) === true && J(`scrWithin('pause', 'x '.repeat(60))`) === false);
 
