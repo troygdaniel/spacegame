@@ -180,7 +180,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.tech.plating.name | Hull plating |
 | camp.tech.plating.text | The cruiser's hull is half as strong again. |
 | camp.tech.bay2.name | Second bay |
-| camp.tech.bay2.text | Four more fighters in the bay. |
+| camp.tech.bay2.text | Wing strength goes up by four. |
 | camp.tech.repair.name | Repair field |
 | camp.tech.repair.text | The cruiser and the ships beside it mend as they fly. |
 | camp.l2.before.1 | We are through the warp. This is Alpha Centauri. |

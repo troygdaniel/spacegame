@@ -28,7 +28,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.refit.techs | FITTED TECH |
 | camp.room.refit.notech | None yet. You pick one after each level, and the pick shows its numbers. |
 | camp.room.rank.ladder | THE RANKS |
-| camp.room.rank.rung | {name}   from {at} points   fighters +{f} |
+| camp.room.rank.rung | {name}   from {at} points   wing strength +{f} |
 | camp.room.rank.togo | {n} points to the next rank |
 | camp.room.tech.shield | Damage the cruiser takes: {from} to {to} percent |
 | camp.room.tech.beam | Turret damage x{dmg}, reach {from} to {to} px, and shots go through |
