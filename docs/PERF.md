@@ -44,6 +44,20 @@ Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every pie
   The switch costs nothing you can measure in the frame: on is 1.24 and 1.25 ms against 1.24 and 1.58 ms off (the second off run caught a busier Mac). What it changes is the count of things: the display list is 295 sprites against 274 (a look at the same fight with the switch on counted about 30 trail sprites, one for each ship that moves, and three kill records of eight sprites made in 9 seconds; the missiles' and torpedoes' smoke puffs are no longer made, which is why the tweens are 2 against 35), 13 more textures (the bolts, the dart and its tail, the four trails, the two rings, the core and the shard, baked once at the first use), and the heap is 0.35 MB lower with it on. With the switch off the only new work in a frame is the `postupdate` handler's first line (`slookOn()` false: a flag lookup) and a `typeof` guard in each of the six places the scene calls. The kill pool is at most 12 effects, 96 sprites, hidden when done. The sim is not touched (`sim busy1` unchanged by construction: no rule file reads the look).
 
 
+### The pilots' rings and the reach ring (card `space-game-b3-b-rings-reach`, 25 Nov 2026)
+
+`node tools/perfcampaign.mjs frames busy1` in one muted headless Chrome through the lock, six runs in turn: three of the base (`PERF_ROOT` = a checkout of `main` at `9c7d68d2`), three of this code, the same page address for both with the new look switched on in the page (the boot helper puts `?shiplook=0` on every address, so `PERF_PATCH='history.replaceState(null,"","?campaign=1&pagehud=0&shiplook=1")'`). Mac load 5 to 6.
+
+| Stepped frame of JavaScript in the busiest fight | base `9c7d68d2` | this code |
+|---|---|---|
+| mean ms, run 1, 2, 3 | 1.74, 1.65, 1.61 | 1.86, 1.68, 1.56 |
+| max ms | 7.9, 7.5, 6.8 | 6.8, 7.4, 6.6 |
+| update (the scene's own part), mean ms | 1.32, 1.25, 1.22 | 1.45, 1.31, 1.22 |
+| display list, textures, heap | 284, 213, 10.8 MB | 284, 213, 10.8 MB |
+
+- **No difference you can measure** (1.67 against 1.70 ms mean over the three runs, inside the run-to-run spread): the three pilots draw no ring while All pilots is picked (three polygon strokes fewer a frame), and the reach ring is one stroke at a different alpha with one `Math.exp` for its glow a frame.
+- The rings and the reach ring are Graphics strokes: no sprite, no texture and no object is added (the counts above are the same).
+
 ### Piece D, the signal shapes (card `space-game-ship-look-d-glyphs`, 25 Nov 2026)
 
 `node tools/perfcampaign.mjs frames busy1`, one muted headless Chrome through the lock; base = a checkout of `main` at `eb079034` (pieces F, A, B, C on it, `PERF_ROOT`), then piece D with the switch off, then on (`PERF_PATCH='CAMP.flags.shiplook = true'`). The tool's `frames` mode ignores `PERF_ZOOM`, so the far view is set with `PERF_PATCH='CAMZOOM.want = 0.1'`. Mac load 4.5 to 5.8.

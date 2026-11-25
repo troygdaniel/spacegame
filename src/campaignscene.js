@@ -24,7 +24,14 @@ const CAMP_SHOT = { pirate: 0xffa83a, neutral: 0x7fe9ff, earth: 0x6dff9c }; // t
 function campShotTextures(scene) { // made once, 14 by 4 like the game's own bullet
   Object.keys(CAMP_SHOT).forEach(k => { const key = 'shot-' + k; if (scene.textures.exists(key)) return; const g = scene.make.graphics({ x: 0, y: 0, add: false }); g.fillStyle(CAMP_SHOT[k], 1); g.fillRect(0, 0, 14, 4); g.generateTexture(key, 14, 4); g.destroy(); });
 }
-const CAMP_REACH = { w: 2, alpha: 0.4, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is, its colour (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN)
+const CAMP_REACH = { w: 2, alpha: 0.4, rest: 0.33, up: 80, down: 320, color: 0xffd37a }; // the ring that shows how far the point guns reach (CAMP.carrier.pdRange): its line width, how solid it is while the turrets fire (it was 1 px at 0.16, too faint to find: 6-GEN and 8-GEN), the share of that it rests at (the cloud brief 3, decision 3: about a third), the ms it takes to come up when the fire key is pressed and to go back when it is let go, its colour
+// how bright the reach ring is now, 0 (resting) to 1 (the turrets are firing: the fire key is held, or the autofire switch is on): it comes up quickly and goes back slowly, by the clock of the scene (a stand-in without one reads performance.now)
+function campReachGlow(s, C) {
+  const R = CAMP_REACH, now = s.time && typeof s.time.now === 'number' ? s.time.now : (typeof performance !== 'undefined' ? performance.now() : 0), dt = Math.max(0, Math.min(200, now - (s.reachAt === undefined ? now : s.reachAt)));
+  s.reachAt = now;
+  const want = campFiring(C) ? 1 : 0, k = s.reachK || 0;
+  return (s.reachK = k + (want - k) * (1 - Math.exp(-dt / (want > k ? R.up : R.down))));
+}
 const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, flashScale: 0.9, stub: [6.5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is and how big (it was 1.3 on the 140 px carrier and hid the bow of the 98 px one), and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
 const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
@@ -565,7 +572,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG, tone = typeof slookGunTone === 'function' ? slookGunTone : c => c; g.clear(); mg.clear(); // tone: the new look's blue for the reach ring and the mounts' gold (src/shiplookfx.js), as it was with the switch off
     if (c.hp > 0) {
-      g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
+      g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha * (CAMP_REACH.rest + (1 - CAMP_REACH.rest) * campReachGlow(this, C))).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
       const kc = campShipK(this, c.id); // the picture drawn up by the far view (card space-game-ships-bigger): the mounts sit where the picture's turrets are, and are drawn as much bigger
       C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
         const hot = C.t - tu.shotAt < 120, tx = c.x + (tu.x - c.x) * kc, ty = c.y + (tu.y - c.y) * kc;
