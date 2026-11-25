@@ -123,14 +123,15 @@ function campPanelKey(P, C, code, now) {
     }
   }
   const tk = typeof campTgtStep === 'function' ? (campKeyIs('hostiles', code) ? 'hostiles' : campKeyIs('friendlies', code) ? 'friendlies' : campKeyIs('near', code) ? 'near' : '') : '';
-  if (tk) { // ] the next enemy, [ the next friendly, \ the nearest threat: one key and one direction each, each cycle with an empty stop after the last ship (src/camptarget.js; cards space-game-keys4-onekey and space-game-keys5-qwe: W is the fleet pick, a list's key; X is gone)
+  if (tk) { // ] the next enemy, E the next friendly, \ the nearest threat: one key and one direction each, each cycle going round with no empty stop (src/camptarget.js; cards space-game-keys4-onekey, space-game-keys5-qwe and space-game-keys6-enter: W is the fleet pick, a list's key; X is gone)
     res.used = true; res.fleet = true; if (!C) return res;
     if (tk === 'near') campTgtNearest(C); else if (tk === 'friendlies') campFriStep(C, 1); else campTgtCycle(C);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
   }
   const ok = typeof campSelOrder === 'function' && campKeyIs('order', code) ? 'engage' : '';
-  if (ok) { // W: the pilots attack the enemy, guard the friend, or form up on the cruiser, by what is picked; a selected pilot takes the order alone (src/camptarget.js campSelOrder; card space-game-keys2-orders)
-    res.used = true; if (!C) return res;
+  if (ok && open && !nums) return res; // an open list that takes Enter (not a numbered one) has had it above: the order is not given through it
+  if (ok) { // Enter: the pilots attack the enemy, guard the friend, or form up on the cruiser, by what is picked; a selected pilot takes the order alone (src/camptarget.js campSelOrder; cards space-game-keys2-orders and space-game-keys6-enter)
+    res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the Enter that closed it gives no order
     const f = campSelNow(C), r = campSelOrder(C, ok, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = r && r.verb || ok; res.fleet = true;
     if (res.ok) campSquadsKeep(P, f && f.kind === 'pilot' ? f.squad : 'squads', now); // the pilot (or all three) keep the ring a while
@@ -147,7 +148,7 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'reload', '', 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
   }
-  if ((!open || nums) && campKeyIs('missile', code)) { // Enter with no list open (or a numbered one: it does not take Enter): a homing missile at the target
+  if (campKeyIs('missile', code)) { // M: a homing missile at the target (card space-game-keys6-enter: it was Enter; a letter takes no list's key, so it fires with a list open too)
     res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the press that closed it, or a second one at once, fires nothing and says nothing
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'missile'; return res;

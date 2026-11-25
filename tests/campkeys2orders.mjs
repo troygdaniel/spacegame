@@ -27,9 +27,9 @@ g.run(`
 `);
 
 sec('A. the table', () => {
-  check('E is the one order key: CAMP_KEYS.order is E (KeyE; the old engage is gone); recall is not in the table; attack and guard are only the letter the target boxes read (E, no code: they take no key)', J(`CAMP_KEYS.order.k`) === 'E' && J(`CAMP_KEYS.order.codes.join()`) === 'KeyE' && J(`!CAMP_KEYS.engage`) && J(`!!CAMP_KEYS.recall`) === false && J(`['attack', 'guard'].every(id => CAMP_KEYS[id].k === 'E' && CAMP_KEYS[id].codes.length === 0)`) === true);
+  check('Enter is the one order key: CAMP_KEYS.order is Enter (Enter, NumpadEnter; the old engage is gone); recall is not in the table; attack and guard are only the letter the target boxes read (Enter, no code: they take no key)', J(`CAMP_KEYS.order.k`) === 'Enter' && J(`CAMP_KEYS.order.codes.join()`) === 'Enter,NumpadEnter' && J(`!CAMP_KEYS.engage`) && J(`!!CAMP_KEYS.recall`) === false && J(`['attack', 'guard'].every(id => CAMP_KEYS[id].k === 'Enter' && CAMP_KEYS[id].codes.length === 0)`) === true);
   check('G is on no key of the table (it is free); R is the missiles\' (card space-game-missiles-cost-ore: only CAMP_KEYS.reload has it)', J(`Object.keys(CAMP_KEYS).every(id => !CAMP_KEYS[id].codes.some(c => c === 'KeyG'))`) === true && J(`Object.keys(CAMP_KEYS).filter(id => CAMP_KEYS[id].codes.some(c => c === 'KeyR')).join()`) === 'reload');
-  check('{keyorder} is E in the hints (no text names {keyengage}, {keyattack}, {keyguard} or {keyrecall} any more: build-content and the suites read them)', J(`campKeyVar('keyorder')`) === 'E' && J(`campKeyVar('keyengage')`) === '' && J(`campKeyVar('keyrecall')`) === '');
+  check('{keyorder} is E in the hints (no text names {keyengage}, {keyattack}, {keyguard} or {keyrecall} any more: build-content and the suites read them)', J(`campKeyVar('keyorder')`) === 'Enter' && J(`campKeyVar('keyengage')`) === '' && J(`campKeyVar('keyrecall')`) === '');
 });
 
 sec('B. E does the fitting order', () => {
@@ -59,7 +59,7 @@ sec('B. E does the fitting order', () => {
   check('one pilot picked (Kara): she alone attacks, the other two keep guarding the cruiser', d.ok === true && J(`__out().filter(u => u.order.type === 'attack').map(u => campPilotName(u)).join()`) === 'Kara' && J(`__out().filter(u => u.order.type === 'guard').length`) === 2);
   // the key itself
   g.run('C.sel = "all"; C.tgt = ""; C.fsel = ""; __pn();');
-  const e = J(`__k('KeyE')`), e0 = J(`__k('KeyG')`);
+  const e = J(`__k('Enter')`), e0 = J(`__k('KeyG')`);
   check('the key E in the panel code gives the order (form up with nothing picked; G is free: it is used by nothing)', e.used === true && e.ran === true && e.ok === true && e0.used === false && e0.ran === false, JSON.stringify(e));
 });
 

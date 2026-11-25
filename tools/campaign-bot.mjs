@@ -100,7 +100,7 @@ g.run(`(() => {
     if (ROW[name]) return give(C, ROW[name]);
     if (name === 'reload') return campPanelKey(campPanelNew(), C, 'KeyR', 0); // R builds the rack (card space-game-missiles-cost-ore): a key, not a row of a list
     if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
-    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; if (name === 'attack' && !m) campTgtNearest(C); else aim(C, m ? m.id : ''); return name === 'attack' ? (pilotKey(C, 'red', campKeyCodes('order')[0]), pilotKey(C, 'green', campKeyCodes('order')[0])) : campPanelKey(campPanelNew(), C, 'Enter', 0); }
+    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; if (name === 'attack' && !m) campTgtNearest(C); else aim(C, m ? m.id : ''); return name === 'attack' ? (pilotKey(C, 'red', campKeyCodes('order')[0]), pilotKey(C, 'green', campKeyCodes('order')[0])) : campPanelKey(campPanelNew(), C, campKeyCodes('missile')[0], 0); }
     return campOrder(C, name, arg);
   };
   window.__botStep = (C, s, B, sk, st) => {
