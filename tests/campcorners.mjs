@@ -128,20 +128,20 @@ console.log('H. the details');
 {
   g.run('__new(); __look(); window.R1 = __foe("raider", 1200, 0); campTgtStep(C, 1);');
   const kinds = J('NOW("hostiles").items.map(i => i.kind)');
-  check('an enemy held: a picture row, HULL, SHIELD or its absence, what it is doing (in the panel\'s order, top to bottom); no order chip: the W chip is in the FLEET row, card space-game-fleet-sentence', JSON.stringify(kinds) === JSON.stringify(['pic', 'bar', 'text', 'text']) || JSON.stringify(kinds) === JSON.stringify(['pic', 'bar', 'bar', 'text']), JSON.stringify(kinds));
+  check('an enemy held: a picture row, HULL, SHIELD or its absence, what it is doing (in the panel\'s order, top to bottom); no order chip: the E chip is in the FLEET row, card space-game-fleet-sentence', JSON.stringify(kinds) === JSON.stringify(['pic', 'bar', 'text', 'text']) || JSON.stringify(kinds) === JSON.stringify(['pic', 'bar', 'bar', 'text']), JSON.stringify(kinds));
   const it = J('NOW("hostiles").items');
   check('the picture row has the ship\'s kind, its type ("Hostile raider") and how far; no name (it is beside the title)', it[0].ship === 'raider' && it[0].type === 'Hostile raider' && /^[\d,.]+ km$/.test(it[0].km) && it[0].name === '' && it[0].side === 'hostile', JSON.stringify(it[0]));
   check('HULL is the ship\'s hull (now / max, its share, a colour of the charge table)', it[1].name === 'HULL' && it[1].num === J('Math.ceil(R1.hp) + " / " + Math.round(R1.maxHp)') && it[1].share === 1 && it[1].color === J('CAMP.charge.color[campChargeBand(1)]'));
   check('no shield: a line that says so, grey', it[2].kind === 'text' && it[2].text === 'no shield' && it[2].ink === '#7f95a8');
   check('the line of what it is doing is in the side\'s ink', it[3].text === J('campTdispDoing(C, R1)') && it[3].ink === J('CAMP.tdisp.ink.hostile'));
-  check('there is no order chip in the details: the W chip is in the FLEET row (card space-game-fleet-sentence), and it is W Attack from the key table there', it.length === 4 && !it.some(i => i.kind === 'key') && J('campTdispOrder(C, "attack").key') === 'W' && J('campFleetLine(C)[2].key') === 'order' && J('campFleetLine(C)[3].text') === 'Attack ' + J('campHeldNow(C).name'));
+  check('there is no order chip in the details: the E chip is in the FLEET row (cards space-game-fleet-sentence and space-game-keys5-qwe), and it is E Attack from the key table there', it.length === 4 && !it.some(i => i.kind === 'key') && J('campTdispOrder(C, "attack").key') === 'E' && J('campFleetLine(C)[2].key') === 'order' && J('campFleetLine(C)[3].text') === 'Attack ' + J('campHeldNow(C).name'));
   g.run('R1.hp = R1.maxHp / 4;');
   check('the hull follows the ship', J('NOW("hostiles").items[1].share') === 0.25);
   g.run('window.RV = campSpawn(C, "pirateleader", C.carrier.x + 1200, C.carrier.y); C.tgt = RV.id;');
   check('the rival has a shield bar of its own (the cyan), not the line', J('NOW("hostiles").items[2].kind') === 'bar' && J('NOW("hostiles").items[2].name') === 'SHIELD' && J('NOW("hostiles").items[2].color') === 0x7fe9ff);
-  g.run('campFriStep(C, 1);');
+  g.run('C.t += 100; campFriStep(C, 1);'); // (a moment later: one corner of a side has its details open at a time, the one opened last)
   const f = J('NOW("friendlies").items');
-  check('a friendly ship held: the same rows, in the friendly\'s ink, and no order chip (W Guard is in the FLEET row)', f[0].kind === 'pic' && f[0].side === 'friend' && !f.some(i => i.kind === 'key') && J('campFleetLine(C)[3].text') === 'Guard ' + J('campHeldNow(C).name'), JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
+  check('a friendly ship held: the same rows, in the friendly\'s ink, and no order chip (E Guard is in the FLEET row)', f[0].kind === 'pic' && f[0].side === 'friend' && !f.some(i => i.kind === 'key') && J('campFleetLine(C)[3].text') === 'Guard ' + J('campHeldNow(C).name'), JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
   g.run(`campFriHold(C, 'place:luna');`);
   const p = J('NOW("friendlies").items');
   check('an outpost held (a click on the Tab map): its type and its distance as lines, no picture, no bars, no chip (the FLEET row says Guard and its name)', JSON.stringify(p.map(i => i.kind)) === JSON.stringify(['text', 'text']) && p[0].text === 'Friendly post' && /km$/.test(p[1].text) && /^Guard /.test(J('campFleetLine(C)[3].text')), JSON.stringify(p));

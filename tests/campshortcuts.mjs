@@ -1,6 +1,6 @@
 // smoke: the dock and repair list's rows come from a table (CAMP_YARD), and the cruiser list's Dock row is one of them (plain Node, no Chrome)
 // Card space-game-ship-shortcuts-o-power (Troy, 22 Nov 2026: the U list renamed and built from data, as prep for repairing ships in space); the O, I, U and P lists it made are deleted (card space-game-delete-off-lists).
-//   A. the lists as the game has them: S the cruiser list (nine rows, the dock row the fourth), the convoy list and the dock list with no key; none of P O I U W Q is a list's key
+//   A. the lists as the game has them: Q the cruiser list (nine rows, the dock row the fourth), W the fleet pick (card space-game-keys5-qwe), the convoy list and the dock list with no key; none of P O I U is a list's key
 //   B. the names: the dock list is DOCK AND REPAIR; nothing says DOCK AND BUILD any more in the table, the words or the key line
 //   C. the table: the rows of the dock list and the cruiser's Dock row ARE CAMP_YARD (id, label, help, when, cost, does): same ids, same orders, same `when`; a row of the table changed (a stand-in for a Repair row) is the list's row, and its cost words in the list read the table's `cost`
 //   D. nothing else moved: the rows of the lists, the same keys for J K L
@@ -17,8 +17,8 @@ const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`window.__camp = (level, seed) => campNew(level, [], { seed: seed || 1 }); window.C1 = __camp(1); window.C3 = __camp(3);`);
 
 // ---- A. the keys ----
-check('the lists as the game has them: the cruiser list has S (and the nine rows, the dock row the fourth), the convoy list and the dock list have no key, and no list has P, O, I, U, W or Q', J(`campKeyList('cruiser').key`) === 'S' && J(`campKeyList('cruiser').rows.map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,gdock,emergency,blink' && J(`['convoy', 'yard'].map(id => campKeyList(id).key + '|' + campKeyList(id).code).join()`) === '|,|' && J(`CAMP_PANELS.panels.map(p => p.key).join('')`) === 'S' && J(`campPanelKeyLine()`) === 'S Cruiser    ');
-check('the hints follow the table: {cruiserkey} S, {yardkey} S (the dock list is reached through the cruiser list\'s row), {viadock} S, {viaemergency} S; the old list keys say nothing', J(`['cruiserkey', 'yardkey', 'viadock', 'viaemergency', 'viagoal', 'fleetkey', 'shipkey', 'powerkey', 'navkey'].map(campKeyVar).join()`) === 'S,S,S,S,S,,,,');
+check('the lists as the game has them: the cruiser list has Q (and the nine rows, the dock row the fourth), the fleet pick has W, the convoy list and the dock list have no key, and no list has P, O, I or U', J(`campKeyList('cruiser').key`) === 'Q' && J(`campKeyList('cruiser').rows.map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,gdock,emergency,blink' && J(`['convoy', 'yard'].map(id => campKeyList(id).key + '|' + campKeyList(id).code).join()`) === '|,|' && J(`CAMP_PANELS.panels.map(p => p.key).join('')`) === 'QW' && J(`campPanelKeyLine()`) === 'Q Cruiser  W Fleet    ');
+check('the hints follow the table: {cruiserkey} Q, {yardkey} Q (the dock list is reached through the cruiser list\'s row), {viadock} Q, {viaemergency} Q; the old list keys say nothing', J(`['cruiserkey', 'yardkey', 'viadock', 'viaemergency', 'viagoal', 'fleetkey', 'shipkey', 'powerkey', 'navkey'].map(campKeyVar).join()`) === 'Q,Q,Q,Q,Q,W,,,');
 
 
 // ---- B. the names ----
@@ -37,7 +37,7 @@ check('the table is the one place: change a row of it (a stand-in for another Re
 check('camppanel.js has no per-row case for the builds any more (the cost words come from the row\'s cost)', !/case 'buildf'|case 'builde'/.test(src('src/camppanel.js')));
 
 // ---- D. nothing else moved ----
-check('the lists have the rows they had after the five lists went (card space-game-delete-off-lists): 9 cruiser (the dock list\'s row is switched off: 8 live), 4 convoy, 2 dock (repair the hull, repair a ship we protect); the direct keys J K L are as they were, and the semicolon\'s balance key is gone', J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '9,4,2' && J(`['shields', 'engines', 'weapons'].map(id => CAMP_KEYS[id].codes[0]).join()`) === 'KeyJ,KeyK,KeyL' && J(`'balance' in CAMP_KEYS`) === false && !J(`CAMP_PANELS.panels.some(p => p.rows.some(r => r.id === 'balance'))`));
+check('the lists have the rows they had after the five lists went (card space-game-delete-off-lists): 9 cruiser (the dock list\'s row is switched off: 8 live), 5 fleet pick, 4 convoy, 2 dock (repair the hull, repair a ship we protect); the direct keys J K L are as they were, and the semicolon\'s balance key is gone', J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '9,5,4,2' && J(`['shields', 'engines', 'weapons'].map(id => CAMP_KEYS[id].codes[0]).join()`) === 'KeyJ,KeyK,KeyL' && J(`'balance' in CAMP_KEYS`) === false && !J(`CAMP_PANELS.panels.some(p => p.rows.some(r => r.id === 'balance'))`));
 check('the bots and the shot tool use the table (rows by id, lists by campKeyVia), not a letter: no KeyO or KeyI in tools/campaign-bot.mjs', !/Key[OI]\b/.test(src('tools/campaign-bot.mjs')));
 
 console.log(failed ? `\nCAMP SHORTCUTS FAIL (${failed} of ${n})` : `\nCAMP SHORTCUTS PASS (${n} checks)`); process.exit(failed ? 1 : 0);

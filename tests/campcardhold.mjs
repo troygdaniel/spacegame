@@ -45,7 +45,7 @@ g.run(`
   const free = J(`__k('Enter', 1400)`);
   check('at 1400 Enter fires the missile as it always did (it says Missile away, the rack is one less)', free.ran === true && free.ok === true && free.say === 'Missile away.' && J('C.missiles') === m0 - 1 && J('C.orders.missiles') === o0 + 1, JSON.stringify(free));
   g.run(`__new(); campPanelHold(P, 1000);`);
-  const s = J(`__k('KeyS', 1100)`);
+  const s = J(`__k('KeyQ', 1100)`);
   check('only the missile key is held: S opens the cruiser list in the same moment, and a digit does its row', s.used === true && J('campPanelOpen(P)') === 'cruiser' && J(`__k('Digit5', 1150).used`) === true);
   g.run(`__new(); __foe('gunship', 1500, 0); campPanelHold(P, 1000); __k('Enter', 1100);`);
   check('a held press is not remembered: it does not fire when the lock ends (a key is a press, not a hold)', J('C.orders.missiles') === 0 && J('C.rockets.length') === 0);
