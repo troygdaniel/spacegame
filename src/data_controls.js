@@ -109,7 +109,7 @@ const CAMP_KEYS = {
   shields: { k: '', codes: [], sys: 'shields' }, engines: { k: '', codes: [], sys: 'engines' }, weapons: { k: '', codes: [], sys: 'weapons' }, // OFF (card space-game-power-removed, Troy, 23 Nov 2026: "he never uses it"): J K L gave a pip to the shields, the engines, the weapons; no key now (CAMP.power.on is false). The ship's power (docs/CAMPAIGN.md "Ship systems"): a pip to a system, in the dials' order; the semicolon (balance, 2 / 2 / 2) is gone: Balance is a row of the POWER list and an order for the strip (card space-game-keys-select)
   zoomin: { k: '=', codes: ['Equal', 'NumpadAdd'] }, zoomout: { k: '-', codes: ['Minus', 'NumpadSubtract'] }, zoomreset: { k: 'Q', codes: ['KeyQ'] }, // src/campzoom.js reads these codes; Q resets the zoom AND brings the view back to the cruiser (it was S until card space-game-keys5-qwe) (it was Backspace; card space-game-keys-select)
   strip: { k: '/', codes: ['Slash'] }, voice: { k: '', codes: [] },                    // type an order; hold to speak one is OFF (CAMP_VOICE: no key; campVoiceSet gives it one when it comes back). src/cmdstrip.js, src/shipcomputer.js, src/listen.js read these in the Campaign
-  help: { k: 'H', codes: ['KeyH'] }, settings: { k: 'S', codes: ['KeyS'] }, pause: { k: 'Esc', codes: ['Escape'] }, // S: Settings, from the pause card only (card space-game-keys6-enter: mute lives there, M fires a missile in a battle)
+  help: { k: 'H', codes: ['KeyH'] }, settings: { k: 'S', codes: ['KeyS'] }, restart: { k: 'Backspace', codes: ['Backspace'] }, pause: { k: 'Esc', codes: ['Escape'] }, // restart: the pause card's restart of the mission, a key that means nothing in flight (card space-game-pause-restart-key; it was R, which queues a missile in play, so a stray R after Esc lost the run).  // S: Settings, from the pause card only (card space-game-keys6-enter: mute lives there, M fires a missile in a battle)
   focus: { k: 'F', codes: ['KeyF'] },                                                // look at the selected ship: the camera glides to it and follows (src/campfocus.js); S comes back
   tune: { k: 'N', codes: ['KeyN'] }                                                  // the tuning panel (card space-game-tuning-panel, src/camptunedraw.js): in flight and in the ready room; numbers and switches, changed live. Nothing else uses N
 };
@@ -273,7 +273,7 @@ const CONTROLS = [
     { k: ['S'], t: 'Pause card: Settings (sound, mute)', sub: 'ANYWHERE' },
     { k: ['N'], t: 'Tuning panel: numbers and switches', sub: 'ANYWHERE' }, // src/camptunedraw.js
     { k: ['T'], t: 'Title, from the pause or end card', sub: 'ON A CARD' },
-    { k: ['R'], t: 'Pause card: restart the mission', sub: 'ON A CARD' },
+    { k: ['Backspace'], t: 'Pause card: restart the mission', sub: 'ON A CARD' }, // (card space-game-pause-restart-key: it was R; R does nothing on the pause card now)
     { k: ['Enter'], t: 'Cards: begin, continue, try again', sub: 'ON A CARD' },
     { k: ['1-3'], t: 'Tech card: pick a technology', sub: 'ON A CARD' }, // after a level, not in flight
     { k: ['4'], t: 'Refit card: buy a fighter', sub: 'ON A CARD' }
