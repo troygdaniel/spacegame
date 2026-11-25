@@ -1689,7 +1689,7 @@ function campMissiles(C, dt) {
 }
 
 // ---------- tech, story and the save ----------
-function campTechChoices(level, P) { return Object.keys(CAMP.tech).filter(id => CAMP.tech[id].after === level).concat(P ? campAnomTechs(P.found, P.techs) : []); } // the level's own, then the items looted from the cloaked caches that are not picked yet (src/campanomaly.js)
+function campTechChoices(level, P) { return Object.keys(CAMP.tech).filter(id => CAMP.tech[id].after === level && (id !== 'blink' || (typeof CAMP_BLINK === 'undefined' || CAMP_BLINK))).concat(P ? campAnomTechs(P.found, P.techs) : []); } // the level's own, then the items looted from the cloaked caches that are not picked yet (src/campanomaly.js)
 function campPick(P, id) {
   if (!CAMP.tech[id] || P.techs.indexOf(id) >= 0) return false;
   P.techs.push(id); return true;
