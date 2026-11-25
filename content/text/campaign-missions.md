@@ -18,6 +18,7 @@ The words of the Campaign's missions (card space-game-campaign-missions): what t
 | camp.say.raid2 | More raiders. Cover the last hauler. |
 | camp.o.scan | Scan the points: {got} of {need}. |
 | camp.o.deliver | Haulers delivered: {got} of {need}. |
+| camp.o.deliver.of | Haulers delivered: {got} of {total}, need {need}. |
 | camp.o.kill.mother | Destroy the mothership. |
 | camp.o.kill.towers | Destroy the towers. |
 | camp.o.kill.guards | Destroy the guards. |

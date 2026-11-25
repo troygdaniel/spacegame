@@ -1834,7 +1834,7 @@ function campScore(C) {
 }
 
 // the key of an objective's words: its type, then what is killed (a kill) or an optional word for what is delivered (a deliver row says `word: 'transport'` when it is one ship and not haulers: card space-game-hunt-l1-fleet)
-const campObjKey = o => 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : o.type === 'deliver' && o.word ? '.' + o.word : '');
+const campObjKey = (o, flying) => 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : o.type === 'deliver' && o.word ? '.' + o.word : '') + (o.type === 'deliver' && !o.word && flying > (o.need != null ? o.need : o.n) ? '.of' : ''); // flying: how many haulers the mission sends; more than it needs and the goal says both ("0 of 3, need 1": card space-game-b3-d-panel-cap-pill-goal; how the goal is written, not the rule)
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
 function campObjective(C) {
   const L = C.L, win = L.win;
@@ -1842,7 +1842,7 @@ function campObjective(C) {
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
     if (o.type === 'deliver' && C.delivered >= o.need) return uiText('camp.o.deliverleft', { n: C.delivered, left: campConvoys(C).length + C.L.convoys.filter((cv, k) => !C.convoys[k].started).length }); // the haulers needed are home but the mission waits for the rest of them: say so (it read "0 of 1" with two haulers home; card space-game-night-hunt-l1-rim)
-    return uiText(campObjKey(o), { got: o.got, need: o.need, secs: o.need });
+    return uiText(campObjKey(o, C.L.convoys.length), { got: o.got, need: o.need, total: C.L.convoys.length, secs: o.need });
   }
   if (win === 'mother') return uiText(C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'camp.obj.mother' : 'camp.obj.motherwait'); // the mothership comes with the last wave: until then the goal is to hold
   if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });

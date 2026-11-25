@@ -6,7 +6,7 @@
 // table has no row for. The side's colour is baked in, so no tint is put on them (today's squad colour and tints are for today's pictures). Nothing here decides anything.
 //   slookPic(scene, kind, u, F)   the new picture of a kind for a panel or a briefing: { key, scale, side } (the texture key; the scale that makes its hull as long as the ship is drawn in the battle; the side it is drawn as) or null for today's.
 //                                 u: the ship, when there is one (its side is from the sim, and a ship you protect is amber); none: the kind's usual side (src/shiplook.js slookKindSide). F: the switch asked once for the pass (slookFrame); none: asked now.
-//   slookPicSvg(kind, side)       the same picture as markup for the page HUD's panels, which are page elements and have no Phaser (card space-game-page-hud-target-picture): an inline <svg> of the kind's outline, its thin dark rim and its facet, nose UP, in a square box, from the same table the textures are baked from
+//   slookPicSvg(kind, side)       the same picture as markup for the page HUD's panels, which are page elements and have no Phaser (card space-game-page-hud-target-picture): an inline <svg> of the kind's outline, its thin dark rim and its facet (and its other facets, the mothership's lobes), nose UP, in a square box, from the same table the textures are baked from
 //                                 (slookPolygon and slookFacetPolygon, slookColor and slookFacet: src/shiplook.js), so it is the same ship; '' for a kind that is not in the table. No image, no web.
 function slookPicSvg(kind, side) {
   const k = typeof SLOOK === 'object' && SLOOK ? SLOOK.K[kind] : null; if (!k) return '';
@@ -14,7 +14,8 @@ function slookPicSvg(kind, side) {
   const pts = flat => { const o = []; for (let i = 0; i < flat.length; i += 2) o.push(Math.round(flat[i] * 1000) / 1000 + ',' + Math.round(flat[i + 1] * 1000) / 1000); return o.join(' '); };
   return '<svg class="ph-pic" viewBox="-0.58 -0.58 1.16 1.16" aria-hidden="true"><g transform="rotate(-90)">'
     + '<polygon points="' + pts(slookPolygon(kind, 1, 8)) + '" fill="' + slookColor(side) + '" stroke="' + SLOOK.rim.color + '" stroke-width="' + SLOOK.rim.k + '" stroke-linejoin="round"/>'
-    + '<polygon points="' + pts(slookFacetPolygon(kind, 1, 8)) + '" fill="' + slookFacet(side, !!k.hot) + '"/></g></svg>';
+    + '<polygon points="' + pts(slookFacetPolygon(kind, 1, 8)) + '" fill="' + slookFacet(side, !!k.hot) + '"/>'
+    + slookLobePolygons(kind, 1, 8).map(q => '<polygon points="' + pts(q) + '" fill="' + slookLobe(side) + '"/>').join('') + '</g></svg>'; // (the mothership's wing lobes: the kind's other facets)
 }
 function slookPic(scene, kind, u, F) {
   if (typeof slookOn !== 'function' || typeof slookTexture !== 'function' || !SLOOK.K[kind]) return null;
