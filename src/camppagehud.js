@@ -5,7 +5,7 @@
 //   THE LANDINGS  1 the cruiser and the pilots (this file's first panel); 2 the goal and the stock (ore, missiles); 3 the hostiles, the friendlies and the pills in space. Each is a piece of CAMP_PAGEHUD.hides and a panel below.
 //   THE RULES     no image files, no libraries, no web font (the typeface is the system one, two weights, 400 and 600: src/camppagehud.css); every key chip reads the key table (src/data_controls.js), no letter is written here;
 //                 the HUD is updated 10 times a second at most (CAMP_PAGEHUD.every) and an element is written only when its value changed (a repainted label every frame was a large cost); sizes are em of one font size set from the canvas width
-//   campPageHudOn()                    is the page HUD on: the flag of the N panel, or the address
+//   campPageHudOn()                    is the page HUD on: always, for a player (the flag CAMP.flags.pagehud is true in the table; no row of the N panel, nothing is remembered: card space-game-page-hud-default-on); off only by ?pagehud=0 (also off, false, no) in the address, for the tests and a comparison, or by a test setting the flag false; ?pagehud=1 is on whatever the flag says
 //   campPageHudHides(id)               true when the page HUD has what the canvas shows under this name ('status', or a corner's id): the canvas leaves it out
 //   campPageModel(C)                   PURE: what each panel shows now: { ship: { key, label, shield: { frac, n, show }, hull: {...} }, pilots: { key, items: [{ id, name, initial, digit, frac, color, on, pick }], doing, who },
 //                                      goal: { label, value, frac (null: no meter), tone } | null, stock: { ore: { frac }, missiles: { n, cap, building, key } },
@@ -18,7 +18,8 @@ const CAMP_PAGEHUD = {
   em: 0.0112,              // the HUD's font size: this share of the canvas width (about 1.1 percent), so it scales with the window
   every: 100,              // ms between two updates: 10 a second
   low: 0.6, crit: 0.3,     // a pilot's ring: the good colour, the warning colour under 60 percent of the hull, the hostile colour under 30
-  addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
+  addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=0 draws the canvas HUD (tests and comparison only); =1 is on whatever the flag says
+  memo: { s: null, v: null }, // the address as last read and its value (campPageHudAddrVal)
   pills: 6,                // the most place pills at once
   fedges: 4,               // the most pills at the edge for the ships you protect (card space-game-page-hud-friend-edge-pill): the nearest first
   first: { level: 1, mission: 0, secs: 60, fade: 3, ids: ['fly', 'fire', 'missile'] }, // the first-minute chips (card space-game-page-hud-first-minute-chips): mission 1.1 only (level 1, mission index 0), the mission clock's first 60 s, faded out over the last 3; the ids are the key table's, in the order they sit
@@ -26,13 +27,18 @@ const CAMP_PAGEHUD = {
 };
 
 // ---- the switch ----
-function campPageHudAddr(search) { // ?pagehud, ?pagehud=1, =on, =true, =yes
+function campPageHudAddrVal(search) { // the value of ?pagehud in the address, lower case: null when it is not there, '' for a bare ?pagehud (the last one counts); the page's own address is read again only when it changed (this is asked many times a frame)
   try {
-    const s = typeof search === 'string' ? search : (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '');
-    return s.replace(/^[?#]/, '').split('&').some(p => { const eq = p.indexOf('='), k = (eq < 0 ? p : p.slice(0, eq)).trim().toLowerCase(), v = eq < 0 ? '' : p.slice(eq + 1).trim().toLowerCase(); return k === CAMP_PAGEHUD.addr && (v === '' || v === '1' || v === 'on' || v === 'true' || v === 'yes'); });
-  } catch (e) { return false; }
+    const own = typeof search !== 'string', s = own ? (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '') : search, M = CAMP_PAGEHUD.memo;
+    if (own && M.s === s) return M.v;
+    let v = null; s.replace(/^[?#]/, '').split('&').forEach(p => { const eq = p.indexOf('='), k = (eq < 0 ? p : p.slice(0, eq)).trim().toLowerCase(); if (k === CAMP_PAGEHUD.addr) v = eq < 0 ? '' : p.slice(eq + 1).trim().toLowerCase(); });
+    if (own) { M.s = s; M.v = v; }
+    return v;
+  } catch (e) { return null; }
 }
-const campPageHudOn = () => (typeof campFlag === 'function' && campFlag('pagehud')) || campPageHudAddr();
+function campPageHudAddr(search) { return ['', '1', 'on', 'true', 'yes'].indexOf(campPageHudAddrVal(search)) >= 0; } // ?pagehud, ?pagehud=1, =on, =true, =yes: on whatever the flag says
+function campPageHudAddrOff(search) { return ['0', 'off', 'false', 'no'].indexOf(campPageHudAddrVal(search)) >= 0; } // ?pagehud=0, =off, =false, =no: off whatever the flag says (the tests' and the comparison's way to the canvas HUD; not shown to a player)
+const campPageHudOn = () => !campPageHudAddrOff() && ((typeof campFlag === 'function' && campFlag('pagehud')) || campPageHudAddr());
 const campPageHudHides = id => CAMP_PAGEHUD.hides.indexOf(id) >= 0 && campPageHudOn();
 
 // ---- the model (pure) ----
