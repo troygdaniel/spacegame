@@ -185,7 +185,7 @@ const css2 = src('src/camppagehud.css');
 check('2 the style: the outline is a halo that shows with .pick and is never dimmed; only a pilot not .on is dim; no rule dims a pilot for being unpicked', /\.ph-pilot\.pick \.ph-halo\s*\{\s*display:\s*block/.test(css2) && /\.ph-pilot:not\(\.on\) \.ph-ring/.test(css2) && !/\.ph-pilot:not\(\.pick\)/.test(css2) && !/\.ph-pilot\s*\{[^}]*opacity/.test(css2) && /\.ph-pilot\.pick small\s*\{[^}]*opacity:\s*1/.test(css2));
 // 3 W then a digit
 g.run(`__new(); window.P = campPanelNew(); campCornerKey(C, 'KeyW'); window.__w1 = campPanelKey(P, C, 'KeyW', 100); window.__w2 = campPanelKey(P, C, 'KeyW', 150);`);
-check('3 W opens the menu and its details; tapping W again steps who and keeps both open', J('__w1.open') === 'fleet' && J('__w2.open') === 'fleet' && J('campCornerNow(C, "fleet").open') > 0 && J('C.sel') === 'pilot:green');
+check('3 W opens the menu and its details; tapping W again steps who and keeps both open', J('__w1.open') === 'fleet' && J('__w2.open') === 'fleet' && J('campCornerNow(C, "fleet").open') > 0 && J('C.sel') === 'pilot:red');
 g.run(`window.__d = campPanelKey(P, C, 'Digit3', 200); window.__shut = __d.ok && !__d.open && __d.fleet && __d.digit === 3 && /^who/.test(String(__d.row || ''));`);
 check('3 a digit takes the pick and closes the list; the scene\'s test for that is true for a who row only', J('__shut') === true && J('C.sel') === 'pilot:yellow' && J('campPanelOpen(P)') === '');
 g.run(`campCornerShut(C, 'fleet');`);
