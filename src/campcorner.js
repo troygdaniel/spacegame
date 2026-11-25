@@ -31,6 +31,8 @@
 const CAMP_CORNERS = []; // the registered corners, in the order they were added
 const CAMP_CORNER_STATE = new WeakMap(); // C -> { open: { id: { at, ms } }, mem: { id: {} } }: a new C (the next mission) starts with every corner closed
 function campCornerAdd(def) { const i = CAMP_CORNERS.findIndex(d => d.id === def.id); if (i >= 0) CAMP_CORNERS[i] = def; else CAMP_CORNERS.push(def); return def; }
+// a corner that is one HALF of a row (part 'a': the first CAMP.corner.split px; part 'b': the rest, less CAMP.corner.splitGap): [x offset, width] in the row; null for a corner that has the whole row. Its details are as wide as the whole row
+const campCornerSpan = d => { const K = CAMP.corner; return d && d.part === 'a' ? [0, K.split] : d && d.part === 'b' ? [K.split + K.splitGap, K.w - K.split - K.splitGap] : null; };
 const campCornerDef = id => CAMP_CORNERS.find(d => d.id === id) || null;
 const campCornerDrawsList = id => !!id && CAMP_CORNERS.some(d => d.list === id); // an order list that a corner draws as its details (src/campanelsdraw.js leaves it out)
 const campCornerClock = C => +(C && C.t) || 0; // (a stand-in in a test may have no clock: 0)
@@ -52,19 +54,19 @@ function campCornerShown(C, d) {
   }
   return s0;
 }
-// how far down a row sits: the second row of a stack (bl under tl, br under tr) slides down by the first row's details (their frame and the gap) while they are open, and back as they fade; Ns: the frame's campCornerNow of every corner; ext: { h, k } for what hangs under the first row that this file does not know (the cruiser list)
+// how far down a row sits: the second row of the left stack (bl under tl) slides down by the first row's details (their frame and the gap) while they are open, and back as they fade; Ns: the frame's campCornerNow of every corner; ext: { h, k } for what hangs under the first row that this file does not know (the cruiser list)
 function campCornerSlide(id, Ns, ext) {
-  const d = campCornerDef(id), first = d ? ({ bl: 'tl', br: 'tr' })[d.at] : '', f = first ? CAMP_CORNERS.find(x => x.at === first) : null; if (!f) return 0;
-  const N = Ns && Ns[f.id], K = CAMP.corner; let dy = 0;
-  if (N && N.items && N.items.length) dy = (campCornerItemsH(N.items) + K.pad * 2 + K.gap) * N.open;
+  const d = campCornerDef(id), first = d ? ({ bl: 'tl' })[d.at] : '', fs = first ? CAMP_CORNERS.filter(x => x.at === first) : []; if (!fs.length) return 0;
+  const K = CAMP.corner; let dy = 0;
+  fs.forEach(f => { const N = Ns && Ns[f.id]; if (N && N.items && N.items.length) dy = Math.max(dy, (campCornerItemsH(N.items) + K.pad * 2 + K.gap) * N.open); }); // (the row above may be two halves: the one with details open slides this row)
   if (ext && ext.h > 0 && ext.k > 0) dy = Math.max(dy, ext.h * ext.k);
   return dy;
 }
 const campCornerKind = it => it.kind || (it.share !== undefined ? 'bar' : 'text');
 const campCornerItemsH = items => (items || []).reduce((h, it) => h + (CAMP.corner.item[campCornerKind(it)] || CAMP.corner.item.text), 0);
-function campCornerGeom(pos, itemsH, dx, dy) { // the title row and the details' frame: the row sits at the corner, the details open away from the screen's edge (all four open downward since card space-game-keys5-corners); dy: the row is slid down (the row above has its details open)
+function campCornerGeom(pos, itemsH, dx, dy, span) { // the title row and the details' frame: the row sits at the corner, the details open away from the screen's edge (all four open downward since card space-game-keys5-corners); dy: the row is slid down (the row above has its details open)
   const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0), th = K.title.h, ty = (a.dir < 0 ? a.y - th : a.y) + (dy || 0), dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
-  return { title: { x, y: ty, w: K.w, h: th }, det: dh ? { x, y: a.dir < 0 ? ty - K.gap - dh : ty + th + K.gap, w: K.w, h: dh } : null };
+  return { title: { x: x + (span ? span[0] : 0), y: ty, w: span ? span[1] : K.w, h: th }, det: dh ? { x, y: a.dir < 0 ? ty - K.gap - dh : ty + th + K.gap, w: K.w, h: dh } : null };
 }
 function campCornerFit(text, room, width) { // text cut short with an ellipsis until width(text) fits room (width: a function giving a text's width in px); a text that fits is returned as it is
   const t = String(text || ''); if (width(t) <= room) return t;
@@ -72,7 +74,11 @@ function campCornerFit(text, room, width) { // text cut short with an ellipsis u
   return '\u2026';
 }
 const campCornerCap = k => { if (k && typeof k === 'object') return String(k.cap || ''); const v = typeof CAMP_KEYS === 'object' && CAMP_KEYS[k] ? CAMP_KEYS[k].k : ''; return Array.isArray(v) ? String(v[0] || '') : String(v || ''); }; // a segment's key: an id of the table, or { cap }
-function campCornerLineLayout(segs, T0, measure) { // left to right from the frame's inner edge: a chip, a gap, a word, a gap; the word marked fit is cut short to the room left (to the inner right edge, less the segments after it)
+function campCornerLineLayout(segs, T0, measure) {
+  if (segs && segs.alt) { // a line with a SHORTER form (segs.alt): used when the long one does not fit the room (the pilots' names, then only their digits)
+    const T = CAMP.corner.title, room = T0.w - T.pad * 2, w = a => a.reduce((s, g) => s + (g.key ? T.chipW : measure(String(g.text || ''), g)) + T.gap, 0) - T.gap;
+    if (w(segs) > room) segs = segs.alt;
+  } // left to right from the frame's inner edge: a chip, a gap, a word, a gap; the word marked fit is cut short to the room left (to the inner right edge, less the segments after it)
   const T = CAMP.corner.title, right = T0.x + T0.w - T.pad, chips = [], words = []; let x = T0.x + T.pad;
   (segs || []).forEach((sg, i) => {
     if (sg.key) { chips.push({ x, cap: campCornerCap(sg.key), ok: sg.ok !== false }); x += T.chipW + T.gap; return; }
@@ -85,17 +91,17 @@ function campCornerNow(C, id) {
   const d = campCornerDef(id); if (!d || !C) return null;
   const st = campCornerState(C); if (d.hit && d.hit(C, st.mem[id] || (st.mem[id] = {}))) campCornerOpen(C, id, CAMP.corner.hit); // it was hit: the details come back for a while
   const open = campCornerShown(C, d);
-  return { id, at: d.at, chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', line: d.line ? d.line(C) || null : null, items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
+  return { id, at: d.at, span: campCornerSpan(d), chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', line: d.line ? d.line(C) || null : null, items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
 }
-// ---- FLEET, the second row of the left stack (cards space-game-layout-fleet, space-game-fleet-sentence and space-game-keys5-corners): the row is one LINE that never fades: W (the fleet pick's key), who (Red 2 Kara, or All pilots), E (the order key) and the order with its target; the details are the fleet pick ----
-// the FLEET row as one line (card space-game-fleet-sentence; Troy, 24 Nov 2026), with the keys of card space-game-keys5-qwe: W Red 2 Kara  E Attack Raider 9, W All pilots  E Guard Transport, E Form up with nothing held;
-// the E part is grey, and says why, when the order cannot be given (E Attack, no pilot out). The target held is the one corner that holds it; the order and its reason are campTdispOrder's dry run.
+// ---- FLEET, the second half of the row at 78 (cards space-game-layout-fleet, space-game-fleet-sentence, space-game-keys5-corners and space-game-keys6-layout): the W chip and the pilots, one line that never fades; the details are the fleet pick ----
+// the fleet's half of the row (card space-game-keys6-layout; Troy, 24 Nov 2026: "Q CRUISER and W with the pilots on ONE row (W 1 Wedge 2 Kara 3 Apollo 4 All; if too tight at 320 px show W 1 2 3 4 and the names when W is pressed)"): the W chip, then each stop of the fleet pick with its digit, the picked one lit, a pilot who is lost grey;
+// the long form has the names, and its .alt the digits alone (campCornerLineLayout takes it when the names do not fit the room). The order sentence that was here (who, the order chip, the order and the target) is gone: no chip but R and the corners' own keys (card space-game-keys6-layout)
 function campFleetLine(C) {
-  const f = typeof campSelNow === 'function' ? campSelNow(C) : null, who = f ? (f.kind === 'pilot' ? (f.label || f.name) : uiText('camp.sel.all')) : '';
-  const h = typeof campHeldNow === 'function' ? campHeldNow(C) : null, verb = h && h.kind === 'hostile' ? 'attack' : 'guard', ord = typeof campTdispOrder === 'function' ? campTdispOrder(C, verb) : { ok: true, code: '', label: '' };
-  const word = h ? uiText('camp.corner.' + verb, { name: h.name }) : uiText('camp.corner.formup');
-  const why = ord.ok ? '' : uiText('camp.corner.why.' + ({ nofighters: 1, launching: 1, nofoe: 1, over: 1 }[ord.code] ? ord.code : 'else')), what = h ? ord.label : uiText('camp.corner.formup'); // blocked: the order's word alone and the reason (the target is in its own corner)
-  return [{ key: 'who' }, { text: who, ink: '#ffffff', bold: true, size: 14 }, { key: 'order', ok: ord.ok }, ord.ok ? { text: word, ink: '#e8f6ff', size: 13, fit: true } : { text: uiText('camp.corner.blocked', { what, why }), ink: '#7f95a8', size: 13, fit: true }];
+  const rows = typeof campPanelList === 'function' && typeof campPanelDef === 'function' && campPanelDef('fleet') ? campPanelList(C, 'fleet').filter(r => r.who) : [], stops = typeof campSelList === 'function' ? campSelList(C) : [], now = typeof campSelNow === 'function' ? campSelNow(C) : null;
+  const part = (r, i) => { const e = stops.find(x => x.id === r.who), all = r.who === 'all', lost = !all && !e, on = !!now && now.id === r.who; return { n: String(i + 1), name: all ? uiText('camp.corner.allshort') : e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), ink: on ? '#ffffff' : lost ? '#4d5f70' : '#8fa6b8' }; };
+  const ps = rows.map(part), line = [{ key: 'who' }].concat(ps.map(p => ({ text: p.n + ' ' + p.name, ink: p.ink, size: 13 })));
+  line.alt = [{ key: 'who' }].concat(ps.map(p => ({ text: p.n, ink: p.ink, size: 13 })));
+  return line;
 }
 // the panel that is open now, '' for none; null when the scene has not said (a test): the digits are then taken as working
 function campCornerPanelId() {
@@ -117,7 +123,7 @@ function campFleetRows(C) {
   });
 }
 campCornerAdd({
-  id: 'fleet', at: 'bl', keys: ['who'], title: 'camp.corner.fleet', line: campFleetLine, list: 'fleet',
+  id: 'fleet', at: 'tl', part: 'b', keys: ['who'], title: 'camp.corner.fleet', line: campFleetLine, list: 'fleet',
   selection: C => { const f = typeof campSelNow === 'function' ? campSelNow(C) : null; return f ? (f.kind === 'pilot' ? (f.label || f.name) : uiText('camp.sel.all')) : ''; },
   rows: campFleetRows,
   block: C => { const id = campCornerPanelId(), def = id && typeof campPanelDef === 'function' ? campPanelDef(id) : null; return !!def && id !== 'fleet' && def.side === 'left'; }, // the cruiser list (and the parts it opens) is open: it has the room under the row above

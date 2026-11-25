@@ -93,4 +93,4 @@ function campCruiserHudPaint(g, H, C) {
 }
 
 // ---- the corner itself: the title row is the shared corner panel's (src/campcorner.js); its S chip is the zoom-reset key's (src/data_controls.js), which also opens the Q list; no selection and no details of its own: the list is the details (src/campanelsdraw.js) ----
-campCornerAdd({ id: 'cruiser', at: 'tl', keys: ['zoomreset'], title: 'camp.corner.cruiser', selection: () => '', rows: () => [] });
+campCornerAdd({ id: 'cruiser', at: 'tl', part: 'a', keys: ['zoomreset'], title: 'camp.corner.cruiser', selection: () => '', rows: () => [] });

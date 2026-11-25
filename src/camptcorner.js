@@ -30,6 +30,6 @@ campCornerAdd({
   selection: C => campTcornerInfo(C, 'host').name, rows: C => campTcornerRows(C, 'host'), hit: (C, mem) => campTcornerHit(C, mem, 'host')
 });
 campCornerAdd({
-  id: 'friendlies', at: 'br', keys: ['friendlies'], title: C => campTcornerInfo(C, 'fri').titleKey,
+  id: 'friendlies', at: 'bl', keys: ['friendlies'], title: C => campTcornerInfo(C, 'fri').titleKey,
   selection: C => campTcornerInfo(C, 'fri').name, rows: C => campTcornerRows(C, 'fri'), hit: (C, mem) => campTcornerHit(C, mem, 'fri')
 });

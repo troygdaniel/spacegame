@@ -12,6 +12,7 @@ The words of the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 
 | camp.corner.friendlies | FRIENDLIES |
 | camp.corner.bay | in the bay |
 | camp.corner.lost | lost |
+| camp.corner.allshort | All |
 | camp.corner.attack | Attack {name} |
 | camp.corner.guard | Guard {name} |
 | camp.corner.formup | Form up |
