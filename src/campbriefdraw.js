@@ -160,19 +160,20 @@ function campBriefZoomView(s) {
 
 // ---------- screen 2: what to do ----------
 // a sprite of a picture: the game's own texture of that kind, at k times the size it has in the battle
-function campBriefSprite(s, look) {
+function campBriefSprite(s, look, F) { // F: the new ship look's state for this picture (src/shiplookpic.js; card space-game-ship-look-e-panel-brief): with the switch on a ship is the flat-cut one of its usual side, the same texture the flight view has, with no tint
   if (look === 'pod' || look === 'rock' || look === 'ore') return { key: look === 'rock' ? 'asteroid' : look, scale: 1, tint: 0 };
   const L = typeof CAMP_LOOK !== 'undefined' ? CAMP_LOOK[look] : null; if (!L) return null;
+  const np = typeof slookPic === 'function' ? slookPic(s, look, null, F) : null; if (np) return { key: np.key, scale: np.scale, tint: 0, np: true };
   const key = L.art ? campShipTexture(s, L.art) : L.tex; return { key, scale: L.scale, tint: L.tint || 0 };
 }
 // the parts of a picture at (cx, cy) in a box scaled by sc: the shapes into the glass's graphics, the sprites as images over them
 function campBriefDrawPic(s, parts, cx, cy, sc) {
-  const bf = s.bf, g = bf.g, T = (p, a) => a === 'x' ? cx + p.x * sc : cy + p.y * sc;
+  const bf = s.bf, g = bf.g, T = (p, a) => a === 'x' ? cx + p.x * sc : cy + p.y * sc, F = typeof slookFrame === 'function' && s.camp ? slookFrame(s) : null; // F: the switch asked once for the picture, not for each ship in it
   parts.forEach(p => {
     const x = T(p, 'x'), y = T(p, 'y');
     if (p.look) {
-      const sp = campBriefSprite(s, p.look); if (!sp || (s.textures && s.textures.exists && !s.textures.exists(sp.key))) return;
-      const im = s.add.image(x, y, sp.key); im.setScale(sp.scale * p.k * sc).setRotation(p.rot).setScrollFactor(0).setDepth(135); if (p.tint || sp.tint) im.setTint(p.tint || sp.tint); bf.pics.push(im);
+      const sp = campBriefSprite(s, p.look, F); if (!sp || (s.textures && s.textures.exists && !s.textures.exists(sp.key))) return;
+      const im = s.add.image(x, y, sp.key); im.setScale(sp.scale * p.k * sc).setRotation(p.rot).setScrollFactor(0).setDepth(135); if (!sp.np && (p.tint || sp.tint)) im.setTint(p.tint || sp.tint); bf.pics.push(im);
     } else if (p.ring) {
       if (p.fill) g.fillStyle(p.color, p.a).fillCircle(x, y, p.r * sc);
       else if (p.dash) { g.lineStyle(1.5, p.color, p.a); for (let a = 0; a < 6.283; a += 0.5) { g.beginPath(); g.arc(x, y, p.r * sc, a, a + 0.28); g.strokePath(); } } // a dashed ring, in arcs

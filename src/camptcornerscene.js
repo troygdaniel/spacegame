@@ -11,22 +11,23 @@ function campTcornerMake(s) {
 function campTcornerHide(V) { if (!V.gkey && !V.on) return; V.g.clear(); V.gkey = ''; V.on = false; V.ship = ''; [V.pic, V.name, V.type, V.km].forEach(o => o.setVisible(false)); }
 function campTcornerSync(s, now) {
   const C = s.camp; if (!C || !s.hud || !s.add || typeof campCornerNow !== 'function') return;
-  const all = s.hud.tcorner || (s.hud.tcorner = {}), on = campTdispOn(s);
+  const all = s.hud.tcorner || (s.hud.tcorner = {}), on = campTdispOn(s), F = typeof slookFrame === 'function' ? slookFrame(s) : null; // F: the new ship look's state, asked once for this pass (src/shiplookpic.js; card space-game-ship-look-e-panel-brief)
   CAMP_TCORNER_IDS.forEach(id => {
     const V = all[id] || (all[id] = campTcornerMake(s)), N = on ? campCornerNow(C, id) : null, it = N && N.open > 0 ? N.items.find(x => x.kind === 'pic') : null;
-    if (!it) campTcornerHide(V); else campTcornerDraw(s, V, N, it);
+    if (!it) campTcornerHide(V); else campTcornerDraw(s, V, N, it, F);
   });
 }
-function campTcornerDraw(s, V, N, it) {
+function campTcornerDraw(s, V, N, it, F) {
   const K = CAMP.corner, P = CAMP.tdisp.pic, left = N.at.charAt(1) === 'l', G = campCornerGeom(N.at, campCornerItemsH(N.items), campBoxDx(s, left)), D = G.det; if (!D) return campTcornerHide(V);
   let y = D.y + K.pad; for (const x of N.items) { if (x === it) break; y += K.item[campCornerKind(x)] || K.item.text; } // the row's top: under the items above it
   const x0 = D.x + K.pad, o = N.open, col = CAMP.tdisp.color[it.side === 'hostile' ? 'hostile' : 'friend'], ink = CAMP.tdisp.ink[it.side === 'hostile' ? 'hostile' : 'friend'], tx = x0 + P + 8, py = y + 2; V.on = true;
   const gkey = [x0, py, it.side, Math.round(o * 20)].join('|');
   if (V.gkey !== gkey) { V.gkey = gkey; V.g.clear(); V.g.fillStyle(0x0a1a2a, 0.95 * o).fillRect(x0, py, P, P); V.g.lineStyle(1, col, 0.5 * o).strokeRect(x0, py, P, P); } // the picture's frame
-  const sk = it.ship + '|' + it.id;
+  const sk = it.ship + '|' + it.id + (F && F.on ? '|n' : ''); // (the switch is part of what the picture is: a switch flipped on the N panel is felt at once)
   if (V.ship !== sk && s.textures && typeof s.texOf === 'function') { // the picture: the ship's own art, its nose up, to fit the frame (and in its squad's colour for a fighter)
     V.ship = sk; const look = (typeof CAMP_LOOK === 'object' && CAMP_LOOK[it.ship]) || {}, u = s.camp.by[it.id], sq = u && u.kind === 'fighter' && u.team === 'earth' && u.squad ? CAMP.wing.squadColor[u.squad] : 0;
-    V.pic.setTexture(s.texOf(it.ship)); V.pic.setRotation(-Math.PI / 2); if (sq || look.tint) V.pic.setTint(sq || look.tint); else V.pic.clearTint();
+    const np = F && F.on && typeof slookPic === 'function' ? slookPic(s, it.ship, u, F) : null; // the new ship look: the flat-cut outline of the ship's side, the ships' own texture, with no tint (its colour is in it)
+    V.pic.setTexture(np ? np.key : s.texOf(it.ship)); V.pic.setRotation(-Math.PI / 2); if (!np && (sq || look.tint)) V.pic.setTint(sq || look.tint); else V.pic.clearTint();
     V.pic.setScale((P - 8) / Math.max(1, V.pic.width, V.pic.height));
   }
   V.pic.setPosition(x0 + P / 2, py + P / 2).setAlpha(o).setVisible(true);
