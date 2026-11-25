@@ -65,6 +65,32 @@ R(`window.__sp = __scene(0.5); __sp.pn = campPanelNew(); window.__C = campNew(1,
 const L = J('(() => { const def = campPanelDef(campPanelOpen(__sp.pn)), V = campPanelView(__sp.pn, __C), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()');
 check('not on an open list: a press on its rows is the list\'s click, a press beside it is the view\'s', J(`campDragCanStart(__sp, ${L.x}, ${L.y})`) === false && J('campDragCanStart(__sp, 640, 360)') === true, JSON.stringify(L));
 
+// card space-game-drag-on-list-pans: the list's own handler (campPanelsInstall) runs BEFORE the drag's (campDragInstall) on the same press, and a click on a row gives the row's order and closes the list: the drag's guard then saw no list, so the press began a drag of the view (and a plain click was a ship click under the list). The list now says it took the press.
+R(`
+  window.__any = () => new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : __any()), apply: () => __any() });
+  window.__wire = (listFirst, mode) => { const hs = {}, calls = [], s = __scene(0.5); s.mode = mode || 'play'; s.camp = campNew(1, [], { seed: 1 }); s.pn = campPanelNew(); s.time = { now: 1000 }; s.add = __any(); s.tweens = __any(); s.events = { once() {} };
+    s.input = { on: (nm, f) => { (hs[nm] = hs[nm] || []).push(f); }, off() {}, mouse: { disableContextMenu() {} } }; s.shipClick = (x, y, b) => { calls.push([x, y, b]); };
+    if (listFirst) { campPanelsInstall(s); campDragInstall(s); } else { campDragInstall(s); campPanelsInstall(s); }
+    s.fire = (nm, p) => (hs[nm] || []).forEach(f => f(p)); s.calls = calls; s.hs = hs; return s; };
+  window.__ptr = (x, y, b, t) => ({ x, y, downTime: t || 1, leftButtonDown: () => b !== 'right', rightButtonDown: () => b === 'right' });
+`);
+for (const listFirst of [true, false]) {
+  const tag = listFirst ? 'the scene\'s order (list handler first)' : 'the other order';
+  R(`window.__w = __wire(${listFirst}); campPanelGo(__w.pn, __w.camp, 'cruiser');`);
+  const W = J('(() => { const def = campPanelDef(campPanelOpen(__w.pn)), V = campPanelView(__w.pn, __w.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20, open: campPanelOpen(__w.pn) }; })()');
+  const Wf = J('(() => { const G = campPanelsGeometry(campPanelDef("cruiser"), campPanelView(__w.pn, __w.camp).total); return { x: G.x + 20, y: G.foot.y + G.foot.h / 2 }; })()');
+  R(`__w.fire('pointerdown', __ptr(${W.x}, ${W.y}, 'left', 5)); __w.fire('pointermove', __ptr(${W.x + 60}, ${W.y + 30}, 'left', 5)); __w.fire('pointerup', __ptr(${W.x + 60}, ${W.y + 30}, 'left', 5));`);
+  check(`${tag}: a press on a row of the open cruiser list and a move does not pan the view (the list took the press)`, J('__w.panned') === false && J('__w.cameras.main.following') === true && J('__w.calls.length') === 0, JSON.stringify([W, J('__w.panned'), J('__w.calls')]));
+  R(`window.__w = __wire(${listFirst}); campPanelGo(__w.pn, __w.camp, 'cruiser'); __w.fire('pointerdown', __ptr(${Wf.x}, ${Wf.y}, 'left', 4)); __w.fire('pointermove', __ptr(${Wf.x + 150}, ${Wf.y + 20}, 'left', 4)); __w.fire('pointerup', __ptr(${Wf.x + 150}, ${Wf.y + 20}, 'left', 4));`);
+  check(`${tag}: a drag that starts on the list's foot (no row) does not pan the view and leaves the list open`, J('__w.panned') === false && J('campPanelOpen(__w.pn)') === 'cruiser' && J('__w.calls.length') === 0, JSON.stringify([Wf, J('__w.panned'), J('campPanelOpen(__w.pn)')]));
+  R(`window.__w = __wire(${listFirst}); campPanelGo(__w.pn, __w.camp, 'cruiser'); __w.fire('pointerdown', __ptr(${W.x}, ${W.y}, 'right', 6)); __w.fire('pointerup', __ptr(${W.x}, ${W.y}, 'right', 6));`);
+  check(`${tag}: a right press on a row is no right click on the ship under the list`, J('__w.calls.length') === 0, JSON.stringify(J('__w.calls')));
+  R(`window.__w = __wire(${listFirst}); __w.fire('pointerdown', __ptr(640, 360, 'left', 7)); __w.fire('pointermove', __ptr(700, 380, 'left', 7)); __w.fire('pointerup', __ptr(700, 380, 'left', 7));`);
+  check(`${tag}: with no list open a press and a move in open space still pans the view`, J('__w.panned') === true);
+  R(`window.__w = __wire(${listFirst}); campPanelGo(__w.pn, __w.camp, 'cruiser'); __w.fire('pointerdown', __ptr(640, 360, 'left', 8)); __w.fire('pointermove', __ptr(700, 380, 'left', 8)); __w.fire('pointerup', __ptr(700, 380, 'left', 8));`);
+  check(`${tag}: a press beside the open list is the view's: it pans`, J('__w.panned') === true);
+}
+
 // ---- C. coming back ----
 console.log('C. coming back');
 R(`window.__s = __scene(0.5); campViewPan(__s, 100, 0); campViewRecentre(__s);`);
