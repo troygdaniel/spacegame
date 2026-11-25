@@ -264,7 +264,7 @@ check('10 the word and the chip are not written in the HUD: the verb is what cam
 g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'KeyE'); window.__off = campCornerNow(C, 'friendlies');`);
 const offBox = J('__off.open'), offItems = J('__off.items.length');
 g.run(`CAMP.flags.pagehud = true; window.__on = campCornerNow(C, 'friendlies'); window.__ow = (campCornerKey(C, 'KeyW'), campCornerNow(C, 'fleet'));`);
-check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the other corners are not touched', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') > 0 && J('__ow.items.length') > 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
+check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the hostiles\' box is hidden too (card space-game-page-hud-target-details: its details are in the page panel)', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') > 0 && J('__ow.items.length') > 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === true);
 g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = ''; CAMP.flags.pagedigit = true;`);
 check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 40000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
 
@@ -326,6 +326,36 @@ g.run(`CAMP.flags.pagehud = false; __m(1, 0, 1000); window.SM2 = __scene(); wind
 check('K the page HUD off: unchanged, no element', J('__ro') === false && !J('SM2.pageHud'));
 const cssK = src('src/camppagehud.css'), pjK = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
 check('K the words and the caps are not written in the HUD code (the key table and the text keys), and the style is plain: dim, no image, no web font', !/['"](Arrows|Space|Fly|Fire|Missile)['"]/.test(pjK) && /\.ph-first \{[^}]*opacity: \.72/.test(cssK) && !/url\(|@font-face/.test(cssK) && /camp\.corner\.chip\.fly\b/.test(src('content/text/campcorner.md')) && /camp\.corner\.chip\.missile\b/.test(src('src/contenttables.js')));
+g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('M. the picked target\'s details in the page hostiles panel (card space-game-page-hud-target-details)');
+g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.PM = campPanelNew(); campTcornerLook(PM, 0); window.RM = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); campTgtNearest(C); window.SMT = __scene(); campPageHudSync(SMT, 0);`);
+const tg0 = J('campPageModel(C).foes.target');
+check('M a hostile picked: the foes panel carries its hull (a meter with the word Hull, no percentage at full), no shield (the words say so) and what it is doing, first letter up', tg0 && tg0.hull.word === 'Hull' && tg0.hull.frac === 1 && tg0.hull.show === false && tg0.shield === null && tg0.noshield === 'no shield' && /^Attacking /.test(tg0.doing), JSON.stringify(tg0));
+g.run(`RM.hp = RM.maxHp * 0.5;`);
+const tg1 = J('campPageModel(C).foes.target.hull');
+check('M the hull share is the ship\'s (half: 50, shown below 100, as the cruiser\'s meters do)', tg1.frac > 0.49 && tg1.frac < 0.51 && tg1.pct === 50 && tg1.show === true, JSON.stringify(tg1));
+g.run(`RM.rival = { sh: 30, shMax: 60, ph: 'stalk' };`);
+const tg2 = J('campPageModel(C).foes.target');
+check('M a ship that has a shield (the rival): a Shields meter in the same look, and the doing is what the canvas box said', tg2.shield && tg2.shield.word === 'Shields' && tg2.shield.pct === 50 && tg2.noshield === '' && tg2.doing === J('(() => { const d = campTdispDoing(C, RM); return d.charAt(0).toUpperCase() + d.slice(1); })()'), JSON.stringify(tg2));
+g.run(`delete RM.rival; campPageHudSync(SMT, 400);`);
+const vw = J(`(() => { const T = SMT.pageHud.foes.tg; return { show: T.el.style.display || '', hull: T.hull.word._text + '|' + T.hull.pct._text, shieldHidden: T.shield.el.style.display, none: T.none.style.display + '|' + T.none._text, act: T.act._text }; })()`);
+check('M the view: the target block shows its hull word and percentage, the shield meter is hidden, the "no shield" word and the action are written', vw.show === '' && vw.hull === 'Hull|50%' && vw.shieldHidden === 'none' && vw.none === '|no shield' && /^Attacking /.test(vw.act), JSON.stringify(vw));
+g.run(`window.__w0 = __writes; campPageHudSync(SMT, 600);`);
+check('M the same frame again writes nothing (only what changed, at most 10 a second)', J('__writes') === J('__w0'));
+check('M the Enter chip with Attack is as it was', J('campPageModel(C).foes.enter.word') === 'Attack' && J('SMT.pageHud.foes.ent.word._text') === 'Attack');
+g.run(`C.tgt = ''; campPageHudSync(SMT, 800);`);
+check('M nothing picked: the panel is its short form (the target block hidden, the model has none)', J('campPageModel(C).foes.target') === null && J('SMT.pageHud.foes.tg.el.style.display') === 'none');
+g.run(`campTgtNearest(C); RM.hp = 0;`);
+check('M a target that is gone has no details', J('campPageModel(C).foes === null || campPageModel(C).foes.target === null') === true);
+g.run(`RM.hp = RM.maxHp; window.__sg = campSightGroups; campSightGroups = () => []; campTgtNearest(C);`);
+check('M a picked ship that nothing groups (always seen) is its own group: the panel is there with its details', J('campPageModel(C).foes !== null && campPageModel(C).foes.target !== null && campPageModel(C).foes.target.id === RM.id'));
+g.run(`campSightGroups = __sg; C.tgt = '';`);
+g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'BracketRight'); campTgtNearest(C); window.__offH = campCornerNow(C, 'hostiles').open; CAMP.flags.pagehud = true; window.__onH = campCornerNow(C, 'hostiles').open;`);
+check('M the canvas hostile box: drawn as it was with the switch off, hidden while the page HUD is on (its details are in the panel)', J('__offH') > 0 && J('__onH') === 0 && J('CAMP_PAGEHUD.hides.indexOf("box:hostiles")') >= 0);
+check('M the cruiser\'s own two meters are as they were (the same word, percentage and fill as the target\'s: one helper)', J('campPageModel(C).ship.shield.word') === 'Shields' && J('campPageModel(C).ship.hull.word') === 'Hull' && /campPageHudPaintMeter\(S\[id\], M\.ship\[id\]\)/.test(src('src/camppagehud.js')) && /campPageHudPaintMeter\(T\.hull, tm\.hull\)/.test(src('src/camppagehud.js')));
+const cssM = src('src/camppagehud.css');
+check('M the style: the target block is inside the foes panel, plain (no image, no web font, sizes in em)', /\.ph-tg \{/.test(cssM) && /\.ph-act \{/.test(cssM) && !/url\(|@font-face/.test(cssM));
 g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('E. the rules');

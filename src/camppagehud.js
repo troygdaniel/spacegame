@@ -21,7 +21,7 @@ const CAMP_PAGEHUD = {
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
   pills: 6,                // the most place pills at once
   first: { level: 1, mission: 0, secs: 60, fade: 3, ids: ['fly', 'fire', 'missile'] }, // the first-minute chips (card space-game-page-hud-first-minute-chips): mission 1.1 only (level 1, mission index 0), the mission clock's first 60 s, faded out over the last 3; the ids are the key table's, in the order they sit
-  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
+  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:hostiles'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
 };
 
 // ---- the switch ----
@@ -90,9 +90,15 @@ function campPageHudStock(C) {
 
 // the hostiles (landing 3): drawn ONLY when a hostile is seen: the nearest group, what it is ("3 Skiffs" or "6 hostiles", the sight's own words), where (a compass point, the sight's words) and how far
 function campPageHudFoes(C) {
-  const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : []; if (!gs.length) return null;
-  const g = gs[0], c = C.carrier;
-  return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campSightWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }) };
+  const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : [], t = campPageHudTarget(C); if (!gs.length && !t) return null;
+  const c = C.carrier, g = gs[0] || { kinds: { [t.u.kind]: 1 }, x: t.u.x, y: t.u.y, dist: Math.hypot(t.u.x - c.x, t.u.y - c.y) }; // a picked ship nothing groups (a tower: always seen) is its own group
+  return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campSightWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }), target: t };
+}
+// the picked target's details (card space-game-page-hud-target-details; Troy, 25 Nov 2026): what the canvas box of the HOSTILES showed (it is hidden while the page HUD is on), as meters in the look of the cruiser's: its hull, its shield (a word saying "no shield" when it has none) and what it is doing, in a few words (campTdispDoing: "Attacking the cruiser"). The ship the canvas box shows: the target held, or the ship an order's list is on (campTcornerInfo 'host'); null when there is none, and the panel is its short form
+function campPageHudTarget(C) {
+  const info = typeof campTcornerInfo === 'function' ? campTcornerInfo(C, 'host') : null, sub = info && info.subject, u = sub && sub.side === 'hostile' ? sub.u : null; if (!u || !(u.hp > 0)) return null;
+  const sh = typeof campTdispShield === 'function' ? campTdispShield(C, u) : null, doing = typeof campTdispDoing === 'function' ? String(campTdispDoing(C, u) || '') : '';
+  return { id: u.id, u, hull: campPageHudBar({ frac: campTdispHull(u).share }, 'hull'), shield: sh ? campPageHudBar({ frac: sh.share }, 'shield') : null, noshield: sh ? '' : uiText('camp.tdisp.noshield'), doing: doing.charAt(0).toUpperCase() + doing.slice(1) };
 }
 // the Enter chip and the word of the order Enter gives now: the SAME function the key runs (campSelOrder 'engage', asked as a dry run: it gives no order), so the word is the order model's, the chip is the key table's; shown with a picked hostile (attack) or a picked friendly (guard); with nothing picked Enter forms up and there is no hint
 function campPageHudEnter(C, verb) {
@@ -129,11 +135,16 @@ const CAMP_PAGEHUD_ICON = { // inline SVG (no image files): the shield and the h
 };
 function campPageHudEl(doc, tag, cls, parent) { const e = doc.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
 function campPageHudEnterRow(doc, parent, cls) { const row = campPageHudEl(doc, 'div', cls || 'ph-row ph-enter', parent); return { el: row, key: campPageHudEl(doc, 'span', 'ph-k', row), word: campPageHudEl(doc, 'span', 'ph-lab', row) }; } // the Enter chip and the word of what Enter does (Attack, Guard)
+function campPageHudMeterEl(doc, parent, id) { // a meter with its word and its percentage (id: shield or hull: the fill's colour): the cruiser's two, and the target's two (card space-game-page-hud-target-details)
+  const m = campPageHudEl(doc, 'div', 'ph-m', parent), head = campPageHudEl(doc, 'span', 'ph-lab ph-mh', m), word = campPageHudEl(doc, 'span', '', head), pct = campPageHudEl(doc, 'b', '', head), track = campPageHudEl(doc, 'div', 'ph-meter', m), fill = campPageHudEl(doc, 'i', 'ph-fill ph-' + id, track);
+  return { el: m, word, pct, fill };
+}
+function campPageHudPaintMeter(Me, b) { const set = campPageHudSet; set(Me.fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(Me.word, 'text', b.word); set(Me.pct, 'text', b.show ? b.pct + '%' : ''); }
 function campPageHudBuild(doc) {
   // the left panel, option D of docs/hud-mock-2.html (card space-game-page-hud-3): two thin rows: the Q chip with Shields and Hull; then the W chip with a small ring for each pilot, a divider, the E chip with a small ring for each ship you protect
   const root = campPageHudEl(doc, 'div', 'ph-root'), ship = campPageHudEl(doc, 'div', 'ph-p ph-ship', root), R = { root, ship: { el: ship } };
   const top = campPageHudEl(doc, 'div', 'ph-row', ship); R.ship.key = campPageHudEl(doc, 'span', 'ph-k', top);
-  ['shield', 'hull'].forEach(id => { const m = campPageHudEl(doc, 'div', 'ph-m', top), head = campPageHudEl(doc, 'span', 'ph-lab ph-mh', m), word = campPageHudEl(doc, 'span', '', head), pct = campPageHudEl(doc, 'b', '', head), track = campPageHudEl(doc, 'div', 'ph-meter', m), fill = campPageHudEl(doc, 'i', 'ph-fill ph-' + id, track); R.ship[id] = { word, pct, fill }; });
+  ['shield', 'hull'].forEach(id => { R.ship[id] = campPageHudMeterEl(doc, top, id); });
   campPageHudEl(doc, 'div', 'ph-hr', ship);
   const fl = campPageHudEl(doc, 'div', 'ph-row ph-fleet', ship); R.fleet = { el: fl, pilots: [], ships: [] };
   R.fleet.pkey = campPageHudEl(doc, 'span', 'ph-k', fl); R.fleet.pBox = campPageHudEl(doc, 'div', 'ph-grp', fl); campPageHudEl(doc, 'span', 'ph-sep', fl);
@@ -143,7 +154,7 @@ function campPageHudBuild(doc) {
   const stock = campPageHudEl(doc, 'div', 'ph-p ph-stock', root), o1 = campPageHudEl(doc, 'div', 'ph-row', stock), oic = campPageHudEl(doc, 'span', 'ph-icw', o1), olab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', o1), ometer = campPageHudEl(doc, 'div', 'ph-meter', o1); oic.innerHTML = CAMP_PAGEHUD_ICON.ore;
   const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1), mlab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
   const foes = campPageHudEl(doc, 'div', 'ph-p ph-foes', root), f1 = campPageHudEl(doc, 'div', 'ph-row', foes);
-  R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) }; R.foes.ent = campPageHudEnterRow(doc, foes);
+  R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) }; R.foes.ent = campPageHudEnterRow(doc, foes); const tg = campPageHudEl(doc, 'div', 'ph-tg', foes), tgm = campPageHudEl(doc, 'div', 'ph-row ph-tgm', tg); R.foes.tg = { el: tg, hull: campPageHudMeterEl(doc, tgm, 'hull'), shield: campPageHudMeterEl(doc, tgm, 'shield'), none: campPageHudEl(doc, 'span', 'ph-lab ph-none', tgm), act: campPageHudEl(doc, 'div', 'ph-act', tg) }; // the picked target's meters and what it does (only while one is picked)
   R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = [];
@@ -173,7 +184,7 @@ function campPageHudPaint(R, M, doc) {
   const G = R.goal; set(G.el, 'display', M.goal ? '' : 'none');
   if (M.goal) { set(G.label, 'text', M.goal.label); set(G.value, 'text', M.goal.value); set(G.meter, 'display', M.goal.frac === null ? 'none' : ''); set(G.fill, 'width', M.goal.frac === null ? '0%' : Math.round(M.goal.frac * 1000) / 10 + '%'); set(G.fill, 'cls', 'ph-fill ph-' + M.goal.tone); }
   const F = R.foes; set(F.el, 'display', M.foes ? '' : 'none');
-  if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); }
+  if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); const tm = M.foes.target, T = F.tg; set(T.el, 'display', tm ? '' : 'none'); if (tm) { campPageHudPaintMeter(T.hull, tm.hull); set(T.shield.el, 'display', tm.shield ? '' : 'none'); if (tm.shield) campPageHudPaintMeter(T.shield, tm.shield); set(T.none, 'display', tm.shield ? 'none' : ''); set(T.none, 'text', tm.noshield); set(T.act, 'text', tm.doing); } }
   const E = R.edge; set(E.el, 'display', M.edge ? '' : 'none');
   if (M.edge) { set(E.text, 'text', M.edge.n + ' \u00b7 ' + M.edge.km); set(E.ic, '--a', String(Math.round(M.edge.angle * 180 / Math.PI)) + 'deg'); }
   const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
@@ -183,7 +194,7 @@ function campPageHudPaint(R, M, doc) {
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
   T.pips.forEach((p, i) => set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (i === k.missiles.n && k.missiles.building ? ' build' : ''))); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
   set(S.key, 'text', M.ship.key);
-  ['shield', 'hull'].forEach(id => { const b = M.ship[id]; set(S[id].fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(S[id].word, 'text', b.word); set(S[id].pct, 'text', b.show ? b.pct + '%' : ''); });
+  ['shield', 'hull'].forEach(id => campPageHudPaintMeter(S[id], M.ship[id]));
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);
   campPageHudPaintRings(doc, F2.pBox, F2.pilots, M.pilots); campPageHudPaintRings(doc, F2.sBox, F2.ships, M.friends); campPageHudPaintEnter(F2.ent, M.friends.enter);
 }
