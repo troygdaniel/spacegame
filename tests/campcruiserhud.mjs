@@ -115,8 +115,8 @@ g.run(`
   const def = J('campCornerDef("cruiser")');
   check('the cruiser corner is registered once, at the top left, with CRUISER for its title', def && def.at === 'tl' && def.title === 'camp.corner.cruiser' && J('CAMP_CORNERS.filter(d => d.id === "cruiser").length') === 1 && J('uiText("camp.corner.cruiser")') === 'CRUISER', JSON.stringify(def));
   const N = J('campCornerNow(campNew("home", [], { seed: 1, god: true }), "cruiser")');
-  check('its title row has the S chip (the zoom-reset key\'s cap from the key table), the title CRUISER, no selection and no details of its own', N && N.chips.join() === J('CAMP_KEYS.zoomreset.k') && N.chips.join() === 'S' && N.title === 'CRUISER' && N.selection === '' && N.items.length === 0, JSON.stringify(N));
-  check('the S key opens the corner (campCornerKey) and the S list: the same key, the one table', J('CAMP_KEYS.zoomreset.codes.includes("KeyS")') && J('campPanelDef("cruiser").code') === 'KeyS' && J('campPanelDef("cruiser").corner') === 'tl');
+  check('its title row has the Q chip (the zoom-reset key\'s cap from the key table), the title CRUISER, no selection and no details of its own', N && N.chips.join() === J('CAMP_KEYS.zoomreset.k') && N.chips.join() === 'Q' && N.title === 'CRUISER' && N.selection === '' && N.items.length === 0, JSON.stringify(N));
+  check('the Q key opens the corner (campCornerKey) and the S list: the same key, the one table', J('CAMP_KEYS.zoomreset.codes.includes("KeyQ")') && J('campPanelDef("cruiser").code') === 'KeyQ' && J('campPanelDef("cruiser").corner') === 'tl');
   const G = J('campPanelsGeometry(campPanelDef("cruiser"), 5)');
   check('the S list opens right under the corner\'s title row (its gap), at the title row\'s left, with no heading', G.x === T.x && G.y === T.y + Th + gap && G.head.h === 0 && G.w === B.w, JSON.stringify(G));
   const G0 = J('(() => { const q = campPanelsGeometry(campPanelDef("cruiser"), 5); return { r0: q.rowY(0), list: q.list, y: q.y }; })()');
@@ -127,13 +127,13 @@ g.run(`
   check('the other lists keep their own places and headings (the dock list at the right under the top, the convoy list at the left edge)', Gr.head.h === B.head && Gf.head.h === B.head && Gf.y === J('CAMPPANELS_LOOK.top') && Gf.x === J('CAMPPANELS_LOOK.edge'), JSON.stringify([Gr.head, Gf.head]));
   g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelsPaint(S, 1000);`);
   check('with no key pressed the list is not drawn at all (the corner\'s title row is the corner panel\'s)', J('S.pnl.title.visible') === false && J('S.pnl.count.visible') === false && J('S.pnl.rows.every(r => !r.name.visible)'));
-  g.run(`campPanelKey(S.pn, S.camp, 'KeyS', 1000); campPanelsPaint(S, 1000);`);
+  g.run(`campPanelKey(S.pn, S.camp, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
   check('S opens the list: its rows are drawn, with no heading text and no 1 / 7 counter', J('campPanelOpen(S.pn)') === 'cruiser' && J('S.pnl.rows.filter(r => r.name.visible).length') >= 3 && J('S.pnl.title.visible') === false && J('S.pnl.count.visible') === false, J('S.pnl.rows.filter(r => r.name.visible).map(r => r.name.t).join("|")'));
   const rows = J('S.pnl.rows.filter(r => r.name.visible).map(r => r.name.y)');
   check('the first row is drawn inside the box, under the title row', rows[0] > T.y + Th + gap && rows[0] < T.y + Th + gap + B.pad + B.row, JSON.stringify([rows[0], T.y + Th]));
   check('a click on a row of the list is still the list\'s (over, click)', J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (Math.round(rows[0])) + ')') === true && J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (T.y + 4) + ')') === false);
   const BX = J('campBoxDx(S, true)');
-  check('the bottom left corner needs no step aside: the list ends well above it', BX === 0, BX);
+  check('the corners need no step aside: the list hangs under its own row (Q CRUISER) and the row under it, W FLEET, slides down below it (card space-game-keys5-corners)', BX === 0, BX);
   g.run(`S.pn.touch = 0; campPanelsPaint(S, 1000 + CAMP_PANELS.anim.idle + CAMP_PANELS.anim.out + 10);`);
   check('untouched, the list fades and closes: back to the title row alone', J('campPanelOpen(S.pn)') === '' && J('S.pnl.rows.every(r => !r.name.visible)'));
 }
