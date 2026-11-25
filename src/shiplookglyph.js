@@ -55,8 +55,8 @@ function slookGlyphShapes(id, L) {
       return [{ t: 'poly', pts }]; }
     case 'disc': return [D(0, 0, 0.4)];
     case 'ringdot': return [R(0, 0, 0.38, Math.max(SLGLYPH.least, L * 0.13)), D(0, 0, 0.14)];
-    case 'ringring': return [R(0, 0, 0.44, Math.max(SLGLYPH.least, L * 0.09)), R(0, 0, 0.22, Math.max(SLGLYPH.least, L * 0.09))];                         // a ring in a ring (the mothership)
-    case 'square': return [{ t: 'poly', pts: slGlyphRRect(-0.34 * L, -0.34 * L, 0.68 * L, 0.68 * L, 0.06 * L) }];                                            // a filled square (a tower)
+    case 'ring2': return [R(0, 0, 0.42, Math.max(SLGLYPH.least, L * 0.09)), R(0, 0, 0.2, Math.max(SLGLYPH.least, L * 0.09))];                           // a ring in a ring (the mothership; the mock's ring2: two rings of .42 and .2)
+    case 'square': return [P([[-0.36, -0.36], [0.36, -0.36], [0.36, 0.36], [-0.36, 0.36]])];                                                                // a filled square, straight edges (a tower; the mock's .72 square)
     default: return [D(0, 0, 0.4)];
   }
 }

@@ -25,13 +25,14 @@ function slookSize(kind) { // the baked picture's size, px: the hull and its mar
   return [Math.ceil(L + 2 * pad), Math.ceil(2 * (hy * L + pad))];
 }
 function slookPath(g, flat, ox, oy) { g.beginPath(); for (let i = 0; i < flat.length; i += 2) { if (i) g.lineTo(ox + flat[i], oy + flat[i + 1]); else g.moveTo(ox + flat[i], oy + flat[i + 1]); } g.closePath(); }
-function slookPaint(g, kind, side, L, ox, oy) { // the mock's direction 1 for one ship: the outline in the side's colour, the thin dark rim, the facet (the side's colour mixed toward the dark, white for a warhead)
+function slookPaint(g, kind, side, L, ox, oy) { // the mock's direction 1 for one ship: the outline in the side's colour, the thin dark rim, the facet (the side's colour mixed toward the dark, white for a warhead), and the kind's other facets if it has any (its `e` list)
   const k = SLOOK.K[kind]; if (!k) return;
   slookPath(g, slookPolygon(kind, L, 8), ox, oy);
   g.fillStyle(slookInt(slookColor(side)), 1); g.fillPath();
   g.lineStyle(Math.max(SLOOK.rim.least, L * SLOOK.rim.k), SLOOKDRAW.rim.color, SLOOKDRAW.rim.alpha); g.strokePath();
   slookPath(g, slookFacetPolygon(kind, L, 8), ox, oy);
   g.fillStyle(slookInt(slookFacet(side, !!k.hot)), 1); g.fillPath();
+  slookLobePolygons(kind, L, 8).forEach(q => { slookPath(g, q, ox, oy); g.fillStyle(slookInt(slookLobe(side)), 1); g.fillPath(); }); // more facets (the mothership's wing lobes, lighter than its spine), after the first, as the mock draws them
 }
 function slookTexture(scene, kind, side) { // the texture of a kind as a side, made once; returns its key ('' when the scene has no Phaser to draw with)
   if (!scene || !scene.textures || !scene.make || !SLOOK.K[kind]) return '';
