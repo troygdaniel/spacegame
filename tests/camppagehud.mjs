@@ -5,6 +5,8 @@
 //   C  every key chip is the key table's: change a key there and the model follows; no letter of a key is written in the code
 //   D  the view on a stand-in page: the elements are made once, written only when a value changed, at most 10 times a second; the panel sits over the canvas, the font size is a share of its width; the rows' places move under the panel; switching off takes it away
 //   H  round 2 (card space-game-page-hud-2): words on the meters, the pick's outline and lit digit (dim only for rest), W then a digit closes the menu, no Red 1 to 3, no radio contact sentence while it is on
+//   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
+//   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
 //   E  the rules: no web font, two weights, no image files, the script and the style are in the page
 // Run: node tests/camppagehud.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -265,6 +267,32 @@ g.run(`CAMP.flags.pagehud = true; window.__on = campCornerNow(C, 'friendlies'); 
 check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the other corners are not touched', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') > 0 && J('__ow.items.length') > 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
 g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = ''; CAMP.flags.pagedigit = true;`);
 check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 40000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
+
+console.log('K. the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)');
+g.run(`CAMP.flags.pagehud = true; CAMP.flags.hints = true; window.__m = (level, mission, t) => { const C = window.C = campNew(level, [], { seed: 5, mission }); C.god = true; C.t = t; return C; };`);
+const fm = (level, mission, t) => J(`campPageHudFirst(__m(${level}, ${mission}, ${t}))`);
+const k0 = fm(1, 0, 0);
+check('K mission 1.1 at its start: three chips in the key table\'s order (fly, fire, missile), each with its cap from the table and a word that is a text key', k0 && k0.items.map(x => x.id).join() === 'fly,fire,missile' && k0.items.every(x => x.key === J(`campCornerCap(${JSON.stringify(x.id)})`) && x.word === J(`uiText('camp.corner.chip.' + ${JSON.stringify(x.id)})`) && x.word.length > 0 && x.word !== 'camp.corner.chip.' + x.id) && k0.a === 1, JSON.stringify(k0));
+check('K the caps are Arrows, Space and M, the words Fly, Fire and Missile (today\'s table and texts)', k0.items.map(x => x.key + ' ' + x.word).join(' | ') === 'Arrows Fly | Space Fire | M Missile', JSON.stringify(k0.items));
+check('K it stays for 60 s of the mission clock (59.9 s still shows), fades over the last 3 s, and is gone at 60 s', fm(1, 0, 59900) !== null && fm(1, 0, 56000).a === 1 && fm(1, 0, 58500).a === 0.5 && fm(1, 0, 59000).a < 0.34 && fm(1, 0, 60000) === null && fm(1, 0, 90000) === null && fm(1, 0, 400000) === null);
+check('K mission 1.1 only: not 1.2, not 1.3, not level 2', fm(1, 1, 0) === null && fm(1, 2, 0) === null && fm(2, 0, 0) === null);
+check('K not when the hints are switched off (the tuning panel), not once the battle has a result', (g.run(`CAMP.flags.hints = false;`), fm(1, 0, 0)) === null && (g.run(`CAMP.flags.hints = true;`), J(`(() => { const C = __m(1, 0, 1000); C.result = { won: true }; return campPageHudFirst(C); })()`)) === null);
+check('K the model carries it as `first` (null when it is not the time)', J(`campPageModel(__m(1, 0, 1000)).first.items.length`) === 3 && J(`campPageModel(__m(1, 0, 61000)).first`) === null && J(`campPageModel(__m(1, 1, 1000)).first`) === null);
+check('K a key moved in the table moves the chip; a key with no cap leaves its chip out', (g.run(`window.__f = CAMP_KEYS.fire.k; CAMP_KEYS.fire.k = 'Y';`), J(`campPageHudFirst(__m(1, 0, 0)).items[1].key`)) === 'Y' && (g.run(`CAMP_KEYS.fire.k = '';`), J(`campPageHudFirst(__m(1, 0, 0)).items.map(x => x.id).join()`)) === 'fly,missile' && (g.run(`CAMP_KEYS.fire.k = __f;`), J(`campPageHudFirst(__m(1, 0, 0)).items.length`)) === 3);
+g.run(`__m(1, 0, 1000); window.SK = __scene(); window.__rk = campPageHudSync(SK, 0);`);
+const F1 = J(`(() => { const F = SK.pageHud.first; return { display: F.el.style.display || '', n: F.items.length, keys: F.items.map(x => x.key._text), words: F.items.map(x => x.word._text), op: F.el.style.opacity }; })()`);
+check('K the view: the row is shown with three pairs, the caps and the words written, dim', J('__rk') === true && F1.display === '' && F1.n === 3 && F1.keys.join() === 'Arrows,Space,M' && F1.words.join() === 'Fly,Fire,Missile' && +F1.op > 0.7 && +F1.op < 0.73, JSON.stringify(F1));
+g.run(`window.__w0 = __writes; campPageHudSync(SK, 200);`);
+check('K the same frame again writes nothing (only what changed)', J('__writes') === J('__w0'));
+g.run(`C.t = 61000; campPageHudSync(SK, 400);`);
+check('K after the minute the row is gone for the rest of the mission (display none), the pairs kept', J('SK.pageHud.first.el.style.display') === 'none' && J('SK.pageHud.first.items.length') === 3);
+g.run(`__m(1, 1, 1000); window.SL = __scene(); campPageHudSync(SL, 0);`);
+check('K mission 1.2: the row is built hidden and never shows', J('SL.pageHud.first.el.style.display') === 'none' && J('SL.pageHud.first.items.length') === 0);
+g.run(`CAMP.flags.pagehud = false; __m(1, 0, 1000); window.SM2 = __scene(); window.__ro = campPageHudSync(SM2, 0);`);
+check('K the page HUD off: unchanged, no element', J('__ro') === false && !J('SM2.pageHud'));
+const cssK = src('src/camppagehud.css'), pjK = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
+check('K the words and the caps are not written in the HUD code (the key table and the text keys), and the style is plain: dim, no image, no web font', !/['"](Arrows|Space|Fly|Fire|Missile)['"]/.test(pjK) && /\.ph-first \{[^}]*opacity: \.72/.test(cssK) && !/url\(|@font-face/.test(cssK) && /camp\.corner\.chip\.fly\b/.test(src('content/text/campcorner.md')) && /camp\.corner\.chip\.missile\b/.test(src('src/contenttables.js')));
+g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');

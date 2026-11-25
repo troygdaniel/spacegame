@@ -20,6 +20,7 @@ const CAMP_PAGEHUD = {
   low: 0.6, crit: 0.3,     // a pilot's ring: the good colour, the warning colour under 60 percent of the hull, the hostile colour under 30
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
   pills: 6,                // the most place pills at once
+  first: { level: 1, mission: 0, secs: 60, fade: 3, ids: ['fly', 'fire', 'missile'] }, // the first-minute chips (card space-game-page-hud-first-minute-chips): mission 1.1 only (level 1, mission index 0), the mission clock's first 60 s, faded out over the last 3; the ids are the key table's, in the order they sit
   hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
 };
 
@@ -60,9 +61,17 @@ function campPageModel(C, view) {
     return Object.assign(campPageHudRing(name, i + 1, frac, up, !!now && (now.kind === 'all' || now.id === r.who), true), { id: r.who }); // pick: the ring has its outline and the digit is lit (All pilots outlines every one: card space-game-w4-all-lit); on: out in space (dim is resting, in the bay)
   });
   const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C); // open: the pick that is open now, '' none (the rings of that group grow in place)
-  return { ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view),
+  return { first: campPageHudFirst(C), ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view),
     pilots: { key: campCornerCap('who'), items, open: open === 'fleet' },
     friends: { key: campCornerCap('friendlies'), items: ships, open: open === 'friends', enter: ships.some(x => x.pick) ? campPageHudEnter(C, 'guard') : null } }; // enter: the Enter chip and Guard, while a ship you protect is picked
+}
+
+// the first minute of mission 1.1 (card space-game-page-hud-first-minute-chips; Troy, 25 Nov 2026): one dim row of three key chips, each with a word (the arrows: fly, Space: fire, M: missile), for the first CAMP_PAGEHUD.first.secs of the mission clock (it stands still while a card or the pause is up), then gone for the rest of the mission. Mission 1.1 only (not 1.2 or 1.3), and not when the hints are switched off (the tuning panel: it is a hint). The caps are the key table's (campCornerCap of its ids), the words are the text keys camp.corner.chip.<id>; a key with no cap is left out. a is the share of the dim that is left (it fades over the last seconds); null when it is not the time
+function campPageHudFirst(C) {
+  const F = CAMP_PAGEHUD.first, left = C ? F.secs - C.t / 1000 : 0;
+  if (!C || C.result || C.level !== F.level || !C.L || C.L.mission !== F.mission || !(left > 0) || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
+  const items = F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key);
+  return items.length ? { items, a: Math.round(Math.min(1, left / F.fade) * 100) / 100 } : null;
 }
 
 // the goal (landing 2): the objective sentence of the level (campObjective: the first objective not done yet, so a second one shows only when it is the next thing to do) split at its colon into a label and a value ("Mine ore: 120 of 450." is "Mine ore" and
@@ -135,6 +144,7 @@ function campPageHudBuild(doc) {
   const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1), mlab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
   const foes = campPageHudEl(doc, 'div', 'ph-p ph-foes', root), f1 = campPageHudEl(doc, 'div', 'ph-row', foes);
   R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) }; R.foes.ent = campPageHudEnterRow(doc, foes);
+  R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = [];
   R.stock = { el: stock, oreLab: olab, missLab: mlab, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
@@ -166,6 +176,8 @@ function campPageHudPaint(R, M, doc) {
   if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); }
   const E = R.edge; set(E.el, 'display', M.edge ? '' : 'none');
   if (M.edge) { set(E.text, 'text', M.edge.n + ' \u00b7 ' + M.edge.km); set(E.ic, '--a', String(Math.round(M.edge.angle * 180 / Math.PI)) + 'deg'); }
+  const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
+  if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); fm.items.forEach((x, i) => { set(FI.items[i].key, 'text', x.key); set(FI.items[i].word, 'text', x.word); }); }
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) set(p, 'text', pl.name); });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);

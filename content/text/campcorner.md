@@ -17,6 +17,9 @@ The words of the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 
 | camp.corner.m.missiles | Missiles |
 | camp.corner.enter.attack | Attack |
 | camp.corner.enter.guard | Guard |
+| camp.corner.chip.fly | Fly |
+| camp.corner.chip.fire | Fire |
+| camp.corner.chip.missile | Missile |
 | camp.corner.lost | lost |
 | camp.corner.allshort | All |
 | camp.corner.attack | Attack {name} |
