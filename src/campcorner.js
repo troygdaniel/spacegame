@@ -1,5 +1,5 @@
 // ---------- Campaign: the corner panels, the rule and the registry (card space-game-layout-fleet; Troy, 24 Nov 2026, agreed bite by bite from his screenshot) ----------
-// FOUR CORNERS, each a small title that never leaves, starting with its keys as plain key-cap chips (no arrows, like the E chip): top left S CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES.
+// FOUR CORNERS, each a small title that never leaves, starting with its keys as plain key-cap chips (no arrows, like the E chip): top left Q CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES.
 // Left is what Troy commands, right is everything else. The details under a title open when its keys are used and fade after a few seconds (CAMP.corner.show, then CAMP.corner.fade); the title stays. The current selection
 // is written beside the title and never fades. The panel is drawn by src/campcornerscene.js (campCornerSync); every number is CAMP.corner in src/campaign.js. This file is pure (no Phaser).
 //

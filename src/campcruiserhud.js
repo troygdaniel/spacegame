@@ -1,6 +1,6 @@
-// ---------- The cruiser's status: SHIELD and HULL over the S CRUISER corner (top left), ORE and MISSILES over the HOSTILES corner (top right) (cards space-game-layout-cruiser, space-game-ore-missiles-topright; Troy, 24 Nov 2026) ----------
-// "Top left is what I command": the S CRUISER corner. Its title row (the S key-cap chip and CRUISER: the shared corner panel, src/campcorner.js) never leaves; the S list opens under it and fades back to it (src/campanelsdraw.js).
-// ABOVE the S CRUISER title sit the cruiser's SHIELD bar and HULL bar (they were the round gauges at the top right). ABOVE the HOSTILES title, at the top right, a block of the same size and the same rows sits level with it (a mirror:
+// ---------- The cruiser's status: SHIELD and HULL over the Q CRUISER corner (top left), ORE and MISSILES over the HOSTILES corner (top right) (cards space-game-layout-cruiser, space-game-ore-missiles-topright; Troy, 24 Nov 2026) ----------
+// "Top left is what I command": the Q CRUISER corner. Its title row (the S key-cap chip and CRUISER: the shared corner panel, src/campcorner.js) never leaves; the Q list opens under it and fades back to it (src/campanelsdraw.js).
+// ABOVE the Q CRUISER title sit the cruiser's SHIELD bar and HULL bar (they were the round gauges at the top right). ABOVE the HOSTILES title, at the top right, a block of the same size and the same rows sits level with it (a mirror:
 // card space-game-ore-missiles-topright): the ORE count (with the credits and the ships being mended, when there are some) and the MISSILES count (card space-game-missiles-cost-ore: it was bottom left, under FLEET; with how long the
 // next one takes to build, or no ore when that is why none is) and the R key cap beside it, the same chip as the corners' (a rounded cyan cap with a dark bold letter, CAMP.corner.title.chipW by chipH).
 // This file has its own numbers and its own words (camp.cruiser.*) and calls nothing in src/camphud.js, so the gauges can go without it. The corners' places are CAMP.corner.at.tl and .tr (src/campaign.js): the title row's top is there and the status
@@ -92,5 +92,5 @@ function campCruiserHudPaint(g, H, C) {
   if (H.crMisWhy) H.crMisWhy.setText(campCruiserMissileWhy(S)).setColor(S.missiles.state === 'noore' ? K.ink.warn : K.ink.misWhy);
 }
 
-// ---- the corner itself: the title row is the shared corner panel's (src/campcorner.js); its S chip is the zoom-reset key's (src/data_controls.js), which also opens the S list; no selection and no details of its own: the list is the details (src/campanelsdraw.js) ----
+// ---- the corner itself: the title row is the shared corner panel's (src/campcorner.js); its S chip is the zoom-reset key's (src/data_controls.js), which also opens the Q list; no selection and no details of its own: the list is the details (src/campanelsdraw.js) ----
 campCornerAdd({ id: 'cruiser', at: 'tl', keys: ['zoomreset'], title: 'camp.corner.cruiser', selection: () => '', rows: () => [] });

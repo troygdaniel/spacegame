@@ -1,6 +1,6 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
-// (The FLEET, SHIP, POWER, AUTOPILOT and ALL-SQUADS lists, their keys Q W P O I U and their switches CAMP_FLEET_LIST and CAMP_SHIP_LIST are DELETED: card space-game-delete-off-lists, Troy, 24 Nov 2026; the git tag lists-before-delete is main as they stood.) S opens the CRUISER list, the one list with a key; the convoy list and the dock list stay as data that no key opens. Nothing is on the screen until a key is pressed; only one list is open at a time.
-// (A NUMBERED list, the S list's `numbers: 1`, card space-game-s-list-numbers, is driven by the digits 1 to 9 alone: its rows carry their numbers, there is no highlight, and Up, Down, Left, Right and Enter are left to the ship.) In an open list that is not numbered Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
+// (The FLEET, SHIP, POWER, AUTOPILOT and ALL-SQUADQ lists, their keys Q W P O I U and their switches CAMP_FLEET_LIST and CAMP_SHIP_LIST are DELETED: card space-game-delete-off-lists, Troy, 24 Nov 2026; the git tag lists-before-delete is main as they stood.) S opens the CRUISER list, the one list with a key; the convoy list and the dock list stay as data that no key opens. Nothing is on the screen until a key is pressed; only one list is open at a time.
+// (A NUMBERED list, the Q list's `numbers: 1`, card space-game-s-list-numbers, is driven by the digits 1 to 9 alone: its rows carry their numbers, there is no highlight, and Up, Down, Left, Right and Enter are left to the ship.) In an open list that is not numbered Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row goes back to that list;
 // a list opened by its own key (S) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list; one that is refused leaves it open and says why.
@@ -39,7 +39,7 @@ const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.
 const campKeyLine = () => uiText('camp.ui.keys'); // the bottom line is the flying keys only: Arrows, Space, Enter, Tab, H (card space-game-layout-hud: the lists' keys, S Cruiser, are written on their own corner's title now)
 // a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, the dock where there is no outpost
 function campPanelWhen(C, row) {
-  if (row.off) return false; // a row switched off (the S list's Dock and repair, card space-game-keys3-repair: it stays in the table)
+  if (row.off) return false; // a row switched off (the Q list's Dock and repair, card space-game-keys3-repair: it stays in the table)
   if (!row.when || !C) return true;
   if (row.when === 'convoy') return campFlag('convoyorders') && !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
   if (row.when === 'blink') return campHas(C, 'blink');
@@ -142,7 +142,7 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
-  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
+  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the Q list's row Reload missiles, so the row lights as the key is pressed)
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'reload', '', 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
