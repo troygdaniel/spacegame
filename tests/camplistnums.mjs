@@ -15,6 +15,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run("CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.id === 'fmine').pick = 'field'"); // card space-game-keys6-enter: the Mine row mines the nearest ore by itself now (no pick); the sub-list engine is still there for a row that asks for it, and this suite tests it through that row
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
@@ -41,8 +42,8 @@ g.run(`
   check('the view is numbered: every row carries its number 1 to 7, none is highlighted (at -1), the foot says the digits', V.numbers === true && V.rows.map(r => r.num).join() === '1,2,3,4,5,6,7' && V.at === -1 && V.last === 7 && V.keys === 'camp.ui.listnums', JSON.stringify([V.numbers, V.rows.map(r => r.num), V.at, V.last, V.keys]));
   check('Down, Up, Left and Right are not used: the list does not move, the ship flies', ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].every(c => { const r = J(`__k('${c}')`); return !r.used && !r.ran; }) && J('P.at') === 0 && J('campPanelOpen(P)') === 'cruiser');
   g.run(`window.__g = __foe('gunship', 900, 0); C.nextRocket = 0;`);
-  const ent = J(`__k('Enter', 1100)`);
-  check('Enter fires a missile at the gunship in reach (the list does not take it) and the list stays open', ent.used && ent.ran && ent.ok && ent.row === 'missile' && ent.say === 'Missile away.' && J('C.missiles') === 5 && J('C.rockets.length') === 1 && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(ent));
+  const ent = J(`__k('KeyM', 1100)`);
+  check('M fires a missile at the gunship in reach (a letter: the list does not mind) and the list stays open', ent.used && ent.ran && ent.ok && ent.row === 'missile' && ent.say === 'Missile away.' && J('C.missiles') === 5 && J('C.rockets.length') === 1 && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(ent));
   g.run(`__new(1); __k('KeyQ', 100);`);
   const d4 = J(`__k('Digit4', 1200)`);
   check('a digit does the row: 4 is the fourth row (Dock at the outpost), at once: its order is given and its answer said', d4.used && d4.ran && d4.row === 'dock', JSON.stringify(d4));
@@ -75,9 +76,9 @@ g.run(`
   check('level 3 has two rock fields: Mine ore opens a sub-list of them (a numbered list\'s sub-list is numbered too)', J('campPickItems(C, "field").length') === 2 && J('!!P.pick') && J('campPanelView(P, C).pick') === true);
   const V = J('campPanelView(P, C)');
   check('its candidates carry 1 and 2, none highlighted, the foot says 1-2 and Esc back', V.numbers === true && V.rows.map(r => r.num).join() === '1,2' && V.at === -1 && V.keys === 'camp.ui.candnums' && V.last === 2, JSON.stringify([V.rows.map(r => r.num), V.at, V.keys, V.last]));
-  check('Down, Up, Left, Right and Enter are not the sub-list\'s keys: nothing moves, nothing is chosen', ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].every(c => !J(`__k('${c}')`).used) && J('P.pick.at') === 0 && J('!!P.pick'));
-  const e = J(`__k('Enter', 2000)`);
-  check('Enter in the sub-list is the ship\'s: it fires (nothing in reach: refused in words), it chooses no candidate', e.used && e.row === 'missile' && J('!!P.pick'), JSON.stringify(e));
+  check('Down, Up, Left and Right are not the sub-list\'s keys: nothing moves, nothing is chosen', ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].every(c => !J(`__k('${c}')`).used) && J('P.pick.at') === 0 && J('!!P.pick'));
+  const e = J(`__k('KeyM', 2000)`);
+  check('M in the sub-list is the ship\'s: it fires (nothing in reach: refused in words), it chooses no candidate', e.used && e.row === 'missile' && J('!!P.pick'), JSON.stringify(e));
   const d = J(`__k('Digit2', 2100)`);
   check('2 chooses the second candidate: the order is given at it (Mine), the lists close', d.used && d.ran && d.row === 'fmine' && J('campPanelOpen(P)') === '' && J('!P.pick'), JSON.stringify(d));
   g.run(`__new(3); __k('KeyQ', 100); campPickOpen(P, campKeyRow('fmine'), campPickItems(C, 'field'));`);

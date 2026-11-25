@@ -15,6 +15,7 @@ import { nodeGame } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run("CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.id === 'fmine').pick = 'field'"); // card space-game-keys6-enter: the Mine row mines the nearest ore by itself now (no pick); the sub-list engine is still there for a row that asks for it, and this suite tests it through that row
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`

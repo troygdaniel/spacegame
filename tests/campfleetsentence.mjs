@@ -42,7 +42,7 @@ g.run('C.sel = "all"; window.R1 = __foe("raider", 900, 0); campTgtStep(C, 1);');
 check('an enemy held: W Attack and its name (the one the HOSTILES corner holds)', J('LINE()[3].text') === 'Attack ' + J('campHeldNow(C).name') && J('campHeldNow(C).kind') === 'hostile' && J('LINE()[2].ok') === true, J('__text()'));
 g.run('campFriStep(C, 1);');
 check('a friendly held: W Guard and its name (Transport)', J('LINE()[3].text') === 'Guard ' + J('campHeldNow(C).name') && J('campHeldNow(C).kind') !== 'hostile' && /^Guard \S+/.test(J('LINE()[3].text')), J('__text()'));
-check('the words are content (camp.corner.attack, .guard, .formup), the keys are the table\'s (who, order)', J(`uiText('camp.corner.attack', { name: 'X' })`) === 'Attack X' && J(`uiText('camp.corner.guard', { name: 'X' })`) === 'Guard X' && J(`uiText('camp.corner.formup')`) === 'Form up' && J('campCornerCap("who") + campCornerCap("order")') === 'WE');
+check('the words are content (camp.corner.attack, .guard, .formup), the keys are the table\'s (who, order)', J(`uiText('camp.corner.attack', { name: 'X' })`) === 'Attack X' && J(`uiText('camp.corner.guard', { name: 'X' })`) === 'Guard X' && J(`uiText('camp.corner.formup')`) === 'Form up' && J('campCornerCap("who") + campCornerCap("order")') === 'WEnter');
 g.run('campTgtStep(C, 1);');
 check('the one target: an enemy picked after a friendly takes the friendly\'s place in the line', J('campHeldNow(C).kind') === 'hostile' && /^Attack /.test(J('LINE()[3].text')));
 
@@ -104,7 +104,7 @@ console.log('E. no backslash and no X');
 {
   g.run('__new(); __scene(); window.R1 = __foe("raider", 900, 0); campTgtStep(C, 1); campTcornerLook(P, 0); campCornerKey(C, "KeyQ"); campCornerKey(C, "BracketRight"); campCornerKey(C, "BracketLeft"); campCornerSync(S, 0);');
   const chips = J('Object.keys(S.hud.corner).map(id => S.hud.corner[id].chips.filter(c => c.vis).map(c => c.text))').flat();
-  check('the chips on the screen are W, E, [, ] and Q (the cruiser\'s): no backslash, no X, no S', ['\\', 'X', 'S'].every(k => !chips.includes(k)) && ['W', 'E', '[', ']', 'Q'].every(k => chips.includes(k)), JSON.stringify(chips));
+  check('the chips on the screen are W, Enter, E, ] and Q (the cruiser\'s): no backslash, no X, no S', ['\\', 'X', 'S'].every(k => !chips.includes(k)) && ['W', 'Enter', 'E', ']', 'Q'].every(k => chips.includes(k)), JSON.stringify(chips));
   check('and no line of text in the corners names them', !J('S.objs.filter(o => o.vis).map(o => o.text)').some(t => /(^|\s)(\\|X)(\s|$)/.test(t)));
   check('the corner code never writes the nearest-threat or the clear key', !/CAMP_KEYS\.(near|clear)|campCornerCap\('(near|clear)'\)|key: '(near|clear)'/.test(['src/campcorner.js', 'src/camptcorner.js', 'src/campcornerscene.js', 'src/camptcornerscene.js'].map(src).join('\n')));
 }
