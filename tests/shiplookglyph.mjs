@@ -86,7 +86,7 @@ check('24 the page HUD\'s own hostile arrow is the same pink already (#ff6fa8): 
 console.log('E. with the switch off nothing changes');
 g.run('CAMP.flags.shiplook = false; window.S = __scene(__new()); window.U = campSpawn(S.camp, "raider", 3000, 3000); window.SP = __sprite(100); S.cameras.main.zoom = 0.1; slookSync(S, U, SP, slookFrame(S));');
 check('25 off, even at the far zoom: the sprite is not touched and no sign texture is made', J('SP.calls.length') === 0 && J('S.made.length') === 0 && J('SP.tex') === 'old');
-const rules = ['src/campaign.js', 'src/campnav.js', 'src/campconvoy.js', 'src/campcharge.js', 'src/camptarget.js'].filter(f => /slook|shiplook/i.test(src(f).replace(/card space-game-ship-look[^\n]*/g, '').split('\n').filter(l => !/campFlat|campMounts|campMouth|mountsFlat|mouthFlat|shiplook: false/.test(l)).join('\n')));
+const rules = ['src/campaign.js', 'src/campnav.js', 'src/campconvoy.js', 'src/campcharge.js', 'src/camptarget.js'].filter(f => /slook|shiplook/i.test(src(f).replace(/card space-game-ship-look[^\n]*/g, '').split('\n').filter(l => !/shiplook: true/.test(l)).join('\n')));
 const mapRule = src('src/campmap.js');
 check('26 the map\'s rule file (src/campmap.js) gives a mark the ship\'s kind and nothing of the look (no slook, no colour of the new look): the drawing half decides how it looks', rules.length === 0 && /kind: u\.kind/.test(mapRule) && !/slook|shiplook/i.test(mapRule.replace(/card space-game-ship-look[^\n]*/g, '').replace(/the new ship look/g, '')));
 const gl = src('src/shiplookglyph.js').replace(/\/\/[^\n]*/g, '');

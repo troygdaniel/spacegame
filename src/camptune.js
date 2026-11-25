@@ -91,8 +91,7 @@ const CAMP_TUNE = {
     { id: 'autofire', kind: 'flag', group: 'systems', flag: 'autofire', when: 'now' },
     { id: 'laser', kind: 'flag', group: 'systems', flag: 'laser', when: 'now' },
     { id: 'hints', kind: 'flag', group: 'systems', flag: 'hints', when: 'now' },
-    { id: 'pagedigit', kind: 'flag', group: 'systems', flag: 'pagedigit', when: 'now' }, // card space-game-page-hud-3: the digit instead of the initial inside the page HUD's rings
-    { id: 'shiplook', kind: 'flag', group: 'systems', flag: 'shiplook', when: 'now' } // card space-game-ship-look-f-foundation: the new flat-cut look for every ship (src/shiplook.js), felt at once
+    { id: 'pagedigit', kind: 'flag', group: 'systems', flag: 'pagedigit', when: 'now' } // card space-game-page-hud-3: the digit instead of the initial inside the page HUD's rings
   ],
   state: { over: {}, snap: null, loaded: false }
 };

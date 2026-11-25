@@ -16,7 +16,7 @@ const up = `!!(window.game && game.scene.isActive('Campaign'))`;
 const notes = []; const note = (...a) => { const s = a.join(' '); console.log('  ' + s); notes.push(s); };
 let bad = 0;
 
-const t = await launch('?campaign=1', ROOT);
+const t = await launch('?campaign=1&shiplook=flag', ROOT); // shiplook=flag: neither on nor off, so the switch flipped in the page decides (the boot helper adds shiplook=0 to an address that does not name it)
 const j = async expr => JSON.parse(await t.ev(`JSON.stringify(${expr})`));
 await t.send('Emulation.setDeviceMetricsOverride', { width: 1578, height: 1000, deviceScaleFactor: 1, mobile: false });
 const snap = async name => { // taken twice: the first capture after a step can be a frame behind

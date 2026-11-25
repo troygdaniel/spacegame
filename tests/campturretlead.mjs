@@ -19,6 +19,7 @@ const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 // a duel: the carrier holds Space, one alien (a kind, 5,000 hit points so it lives to be hit) is made to fly a straight line at a constant velocity and never shoots.
 // It answers: shots (turret shots fired), hits (the damage it took over the damage of one shot)
 g.run(`
+  CAMP.bay.startOut = false; // this suite is about the cruiser's turrets: the pilots begin in the bay, as the suites of the bay do (they start out beside the cruiser in the game, at CAMP.bay.mouth, and shoot too: with the mouth moved onto the flat-cut hull, card space-game-ship-look-default-on, the no-lead raider of section C was hit by the pilots' guns, 6 of 7, not the turrets')
   window.__duel = (kind, dx, dy, vx, vy, secs, opts) => {
     opts = opts || {}; window.C = campNew(11, [], { seed: 1, god: true }); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(c => { c.started = true; }); C.motherSpawn = 1e12;
     const c = C.carrier; if (opts.carrierV) { c.vx = opts.carrierV[0]; c.vy = opts.carrierV[1]; }

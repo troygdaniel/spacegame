@@ -380,3 +380,49 @@ Bots, Normal, 8 seeds, before (main cbd9fc00) and after (the leash at 3,000, mai
 | 1.2 plain / strong / missile through the keys, with the key-bot fix, game leash 0 | 100 / 88 / 63 | game leash 3000: 100 / 88 / 38 |
 
 So 1.1 and 1.3 do not move (no run chased a runner past 3,000 px: the escorts are neither easier nor harder in these numbers), and 1.2 loses fewer miners for the strong and thinks bots. The key bots strong and missile on 1.2 are not helped: on 16 seeds with the first, wider version of the leash strong was 63 percent won with or without it and missile 56 with it, 69 without (inside the noise of 16 seeds), and the 8 seeds above say 38 against 63, so their remaining losses to the miners are not the chase (they stay with card `space-game-12-keys-lose-miners`). Two pins in `tests/campl1pacing.mjs` moved with the leash and say so: the empty time of 1.3 (no hostile alive) was 117 s on the median of three seeds and is 131 with the leash at 3,000 (119 at 4,000, 129 at 5,000: mostly the noise of three seeds), so its bound went from 126 to 135; and 'do nothing' at 1.2's beat 3 costs a miner and a torpedo hit on seven of eight seeds with the leash (eight of eight without it), so the pin is now five of six seeds, not both of two. A pilot that stops chasing a runner leaves the road a little emptier: a longer leash is the lever if Troy minds.
+
+## The cruiser's mounts and launch mouth on the flat-cut hull (card `space-game-ship-look-default-on`; Troy, 25 Nov 2026: "no switch back")
+
+With the new ship look on for everyone, the two front turret mounts (`CAMP.carrier.mounts`: x 10 to x 2) and the launch mouth (`CAMP.bay.mouth`: (21, 19.5) to (9, 20)) became every player's and every bot's numbers: the flat-cut hull is only 11 px wide forward of x 5, so they had to move back onto it. They were measured before they were made the table's.
+
+**How.** Base `02460033` (tag `shiplook-default-before`, the last commit with both sets of numbers, one behind the switch), `tools/campaign-bot.mjs`'s own bot driver (`run`), missions 1.1, 1.2 and 1.3, five bots (plain, strong, thinks, troy, cycle), **32 seeds each, 160 runs a mission, 480 a column**, three columns on the same seeds: the old numbers; the new numbers; and a **sham** (the old numbers with every mount nudged 0.3 px along the nose), which moves every fight the same chaotic way as a real change but cannot move the balance, so it says how far a number moves by noise alone. A difference is read paired (the same bot and seed in both columns): its standard error (se) is in brackets, z is the difference over it.
+
+| mission | measure | old numbers | new numbers | new - old (se) | z | sham - old (se) |
+|---|---|---|---|---|---|---|
+| 1.1 | won (%) | 80.00 | 80.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.1 | time to the end (s) | 277.56 | 277.98 | +0.42 (0.81) | +0.5 | +0.76 (0.48) |
+| 1.1 | cruiser's hull left | 586.48 | 587.98 | +1.49 (1.17) | +1.3 | -0.21 (0.26) |
+| 1.1 | damage the cruiser took | 132.90 | 129.89 | -3.01 (2.09) | -1.4 | -1.41 (0.81) |
+| 1.1 | kills | 12.67 | 12.62 | -0.04 (0.03) | -1.5 | +0.01 (0.02) |
+| 1.1 | ships lost | 0.00 | 0.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.1 | convoy lost (%) | 20.00 | 20.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.1 | transports delivered | 0.80 | 0.80 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.2 | won (%) | 79.38 | 80.00 | +0.62 (0.62) | +1.0 | +0.00 (0.00) |
+| 1.2 | time to the end (s) | 296.31 | 288.61 | -7.70 (3.67) | -2.1 | -5.91 (3.15) |
+| 1.2 | cruiser's hull left | 600.00 | 600.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.2 | damage the cruiser took | 32.32 | 31.46 | -0.86 (2.08) | -0.4 | -1.88 (1.04) |
+| 1.2 | kills | 18.84 | 18.64 | -0.21 (0.19) | -1.1 | -0.19 (0.15) |
+| 1.2 | ships lost | 0.02 | 0.04 | +0.03 (0.02) | +1.1 | -0.01 (0.01) |
+| 1.2 | convoy lost (%) | 0.00 | 0.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.2 | transports delivered | 0.00 | 0.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.3 | won (%) | 80.00 | 80.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.3 | time to the end (s) | 255.84 | 255.86 | +0.02 (0.02) | +1.0 | +0.03 (0.03) |
+| 1.3 | cruiser's hull left | 600.00 | 600.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.3 | damage the cruiser took | 50.33 | 57.32 | +6.99 (2.39) | +2.9 | +0.71 (1.22) |
+| 1.3 | kills | 16.59 | 16.66 | +0.07 (0.12) | +0.6 | +0.06 (0.05) |
+| 1.3 | ships lost | 0.00 | 0.00 | +0.00 (0.00) | +0.0 | +0.00 (0.00) |
+| 1.3 | convoy lost (%) | 44.38 | 40.62 | -3.75 (3.53) | -1.1 | -3.75 (1.96) |
+| 1.3 | transports delivered | 2.16 | 2.19 | +0.04 (0.04) | +1.1 | +0.04 (0.02) |
+
+**Reading it.** The `won` row is 80 percent in all three columns because one of the five bots, `troy` (Troy's first try: launches late and sits), loses every mission in every column; the other four win about every run, and the only run that moved is one seed of 1.2 with the `strong` bot (96.9 to 100 percent: the sham did not move it, one seed of 32). **No mission's win rate or time moves beyond noise**: the one time that looks large, 1.2 (-7.7 s, z -2.1), moves almost as far with the sham (-5.9 s, z -1.9), and so does the swift bonus there (+7.5 points against +6.9 for the sham). The cruiser's hull is 600 at the end in 1.2 and 1.3 in every run, and the transports and miners are saved as often (1.3: convoy lost 44 / 41 / 41 percent, the sham the same as the new numbers).
+
+**One real but small movement:** in 1.3 the cruiser takes **about 7 more damage a run** with the new mounts (50.3 to 57.3 of a pool of 750 with the shield: **+14 percent, z +2.9**, the sham +0.7), and the `strong` bot kills 0.6 more (20.5 to 21.1, z +2.4). The hull stays 600, win rate and time are the same, so nothing is retuned; if Troy wants the 1.3 damage back, the table row is `CAMP.carrier.mounts[2..3]` (the two front mounts, now at x 2, sit 8 px ahead of the next pair; they moved 8 px back).
+
+**The other pins this moved, and what was done with them** (all on card `space-game-ship-look-default-on`; every one is a sample of three or six seeds that the new numbers re-dealt, and the 32-seed numbers above say the game did not move):
+- *A second player, the crude one of `tests/campaign.mjs`, on 32 seeds* (the old-belt fixture of that suite, old numbers / new / sham): 1.1 won 32 / 32 / 32 of 32; 1.2 won 25 / 27 / 27; 1.3 won 28 / 27 / 29 (a time-out or two each). So the six-seed checks that failed are chaos at the edge: `campaign.mjs` now asks two of six wins for that fixture's 1.2 (it asked five) and the carrier hurt on two of six seeds (it asked three); `campkeybot.mjs` asks the plain bot five of six through the keys in 1.2 (it asked six).
+- *Seconds with no hostile alive* (the plain bot, 32 seeds): the median is 109 s in 1.2 and 132 s in 1.3 for the old numbers and for the new. `campl1pacing.mjs` took 162, 141 and 149 s for 1.3 on its three seeds; its bound is 150 s (it was 135).
+- *The first four raids and the goal* (`campl1tune.mjs`): the plain bot meets the goal five or six seconds earlier on seeds 1 and 2, so the fourth raid (175 s) comes up to ten seconds after it; the pin allows ten (it allowed none). A nudge of the mounts of 0.3 px moves a goal time as much.
+- *Torpedoes in 1.1* (`campminer.mjs`): the bonus for no torpedo hit is kept on 23 / 22 / 22 of 32 runs by the bot that ignores the miner's call and on 22 / 21 / 23 by the one that answers it (old / new / sham), so a torpedo gets through in about three runs of ten either way; the suite asks that one gets through on every seed when the call is answered and that fewer do when it is ignored (it asked for none).
+- *The cruiser alone* (`campturretlead.mjs`, `campmissiles.mjs`): the pilots start out beside the cruiser, at the mouth, and shoot too; the mouth moved, so the raider of one duel was hit by their guns, not the turrets'. The two suites keep the pilots in the bay (`CAMP.bay.startOut = false`, as the suites of the bay do), which is what they were measuring.
+- *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
+- *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
