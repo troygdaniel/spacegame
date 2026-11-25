@@ -6,5 +6,5 @@ The words of one change of the Campaign's UX night (card space-game-night-ux, do
 ## Strings
 | key | text |
 |---|---|
-| camp.win.result | Won in {time}. Carrier hull {hull} of {max}, {lost} of your ships lost. |
-| camp.win.resultconv | Won in {time}. Carrier hull {hull} of {max}, {delivered} of {convoys} convoys delivered, {lost} of your ships lost. |
+| camp.win.result | Won in {time}. Cruiser hull {hull} of {max}, {lost} of your ships lost. |
+| camp.win.resultconv | Won in {time}. Cruiser hull {hull} of {max}, {delivered} of {convoys} convoys delivered, {lost} of your ships lost. |

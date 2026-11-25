@@ -22,6 +22,6 @@ The words of the Campaign's anomalies (card space-game-campaign-anomalies): the 
 | camp.anom.got.ore | {n} ore |
 | camp.b.anomaly | Find the cloaked cache |
 | camp.tech.overdrive.name | Overdrive |
-| camp.tech.overdrive.text | From the aliens' lab: the carrier flies a quarter faster. |
+| camp.tech.overdrive.text | From the aliens' lab: the cruiser flies a quarter faster. |
 | camp.tech.lens.name | Lens |
 | camp.tech.lens.text | From the aliens' lab: the sensors notice an anomaly twice as far. |

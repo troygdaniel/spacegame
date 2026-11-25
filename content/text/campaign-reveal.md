@@ -13,4 +13,4 @@ SPOILER. The Campaign's reveal (card space-game-campaign-outpost-reveal): after 
 | camp.l3.after.r.2 | The war goes on. |
 | camp.l3.before.r.1 | The outpost lies open, pilot. |
 | camp.l3.before.r.2 | Break the defence towers round it. |
-| title.camp.sub.r | The war goes on: fly the carrier, command the wing. |
+| title.camp.sub.r | The war goes on: fly the cruiser, command the wing. |

@@ -12,6 +12,6 @@ The words of the order lists (card one-list-keys; the S list is the one a key op
 | camp.ui.listkeysub | {keyup} {keydown}  {keypick} order  Left back  {keypause} close |
 | camp.ui.listnums | 1-{last}  does a row    {keypause} close |
 | camp.ui.candnums | 1-{last}  give the order    {keypause} back |
-| camp.say.wing.recall | {group}, return to the carrier. |
+| camp.say.wing.recall | {group}, return to the cruiser. |
 | camp.b.noneutrals | Lose no miners |
 | camp.b.notorpedoes | Take no torpedo hits |

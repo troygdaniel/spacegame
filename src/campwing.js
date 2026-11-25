@@ -139,7 +139,7 @@ const campWingKindOf = u => u.team === 'alien' ? 'enemy' : u.kind === 'freighter
 const CAMPWING_KIND_WORDS = { enemy: 'an enemy', friend: 'one of ours', convoy: 'a convoy', place: 'a place', point: 'a point', pickup: 'ore', cache: 'a cache', anomaly: 'an anomaly', rock: 'a rock' };
 function campWingShipName(C, u) {
   if (u.kind === 'mother') return 'the mothership';
-  if (u.kind === 'carrier') return 'the carrier';
+  if (u.kind === 'carrier') return 'the cruiser';
   if (u.kind === 'freighter') return typeof campConvoyName === 'function' ? campConvoyName(u) + ' convoy' : 'the convoy';
   const k = 'camp.nav.k.' + u.kind, w = typeof uiText === 'function' ? uiText(k) : k, word = w && w !== k ? String(w).toLowerCase() : u.kind; // the kind's own words ("torpedo boat", "pirate leader"): the id said "Fighters, attack the tboat." and "the pirateleader"
   return (u.team === 'alien' ? 'the ' : 'our ') + word;
@@ -249,7 +249,7 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (tg === false) return campWingNo('wnotarget');
   const gname = campWingGroupName(C, id);
   if (verb === 'recall') {
-    const rc = id === 'all' ? 'recall' : 'wing.recall', rv = { group: gname, name: '' }; // one part recalled is named: "Fighters, return to the carrier."
+    const rc = id === 'all' ? 'recall' : 'wing.recall', rv = { group: gname, name: '' }; // one part recalled is named: "Fighters, return to the cruiser."
     if (dry) return campYes(rc, rv);
     const was = ships.map(u => u.order);
     ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++; campWingSayReplaced(C, ships, was, 'recall');

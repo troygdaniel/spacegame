@@ -101,7 +101,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | spoken.short | the first sentence or two is said |
 | spoken.full | the whole answer is said |
 | spoken.off | answers are never said aloud |
-| music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. M mutes all. |
+| music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. The Sound button mutes all. |
 | camp.l1.before.1 | Lunar Base. A transport waits to run to Ceres. |
 | camp.l1.before.2 | Pirates work the lane. Escort her through. |
 | camp.l1.after.1 | First contact. We beat their scouts and took their tech. |
@@ -117,13 +117,13 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.attackmother | Fighters, attack the mothership. |
 | camp.say.escort | The pilots are with the {name} convoy. |
 | camp.say.guard | The wing is guarding. |
-| camp.say.recall | Wing, return to the carrier. |
+| camp.say.recall | Wing, return to the cruiser. |
 | camp.say.missiles | Missile away. |
 | camp.say.missilesmother | Missile away, at the mothership. |
 | camp.say.earthhalf | Earth's shield is at half, pilot. |
 | camp.say.earthlow | Earth's shield is nearly gone, pilot. |
-| camp.say.hullhalf | The carrier's hull is at half. |
-| camp.say.hulllow | The carrier's hull is critical, pilot. |
+| camp.say.hullhalf | The cruiser's hull is at half. |
+| camp.say.hulllow | The cruiser's hull is critical, pilot. |
 | camp.no.over | The battle is over, pilot. |
 | camp.no.bay | The bay is empty, pilot. |
 | camp.no.launching | The wing is still launching. |
@@ -138,7 +138,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.no.missilewait | The launcher is still cycling. |
 | camp.no.nobig | No big ship in missile range, pilot. |
 | camp.no.range | The mothership is out of missile range, pilot. |
-| camp.lose.carrier | The carrier is lost. |
+| camp.lose.carrier | The cruiser is lost. |
 | camp.lose.earth | Earth's shield has failed. |
 | camp.lose.debug | The level was ended with the debug key. |
 | camp.ui.title | CAMPAIGN |
@@ -156,7 +156,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.map.title | MAP  -  LEVEL {n}: {name} |
 | camp.map.footer | Tab or Esc closes it. The battle goes on behind it. |
 | camp.map.across | {km} km across |
-| camp.map.carrier | Your carrier |
+| camp.map.carrier | Your cruiser |
 | camp.map.wing | Your ships out ({n}) |
 | camp.map.convoy | Convoys ({n}), course drawn |
 | camp.map.alien | Aliens ({n}) |
@@ -164,7 +164,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.map.tower | Defence towers ({n}) |
 | camp.map.cache | Caches left ({n}) |
 | camp.map.relic | The relic |
-| camp.ui.hull | CARRIER |
+| camp.ui.hull | CRUISER |
 | camp.ui.earth | EARTH |
 | camp.ui.bay | BAY |
 | camp.ui.out | OUT |
@@ -172,17 +172,17 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.ui.mother | MOTHERSHIP |
 | camp.ui.pausehelp | Hold Space: the turrets fire at ships close by. {keymissile} fires a homing missile at the target. |
 | camp.tech.shield.name | Shield grid |
-| camp.tech.shield.text | The carrier takes 40 percent less damage. |
+| camp.tech.shield.text | The cruiser takes 40 percent less damage. |
 | camp.tech.beam.name | Beam turrets |
 | camp.tech.beam.text | The turrets fire beams: twice the damage, further, and through what they hit. |
 | camp.tech.blink.name | Warp blink |
-| camp.tech.blink.text | Hop the carrier 1,500 px ahead: {viablink} list, {rowblink}. Ready again after 20 seconds. |
+| camp.tech.blink.text | Hop the cruiser 1,500 px ahead: {viablink} list, {rowblink}. Ready again after 20 seconds. |
 | camp.tech.plating.name | Hull plating |
-| camp.tech.plating.text | The carrier's hull is half as strong again. |
+| camp.tech.plating.text | The cruiser's hull is half as strong again. |
 | camp.tech.bay2.name | Second bay |
 | camp.tech.bay2.text | Four more fighters in the bay. |
 | camp.tech.repair.name | Repair field |
-| camp.tech.repair.text | The carrier and the ships beside it mend as they fly. |
+| camp.tech.repair.text | The cruiser and the ships beside it mend as they fly. |
 | camp.l2.before.1 | We are through the warp. This is Alpha Centauri. |
 | camp.l2.before.2 | Something old waits on Proxima b. Find it first. |
 | camp.l2.after.1 | The relic is a machine from an older race. |
