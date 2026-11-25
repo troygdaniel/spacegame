@@ -16,11 +16,14 @@ setPace('normal');
 console.log('A. 1.2: the rocks and the goal');
 {
   const row = J(`(() => { const L = CAMP.levels[1].missions[1]; return { rocks: L.rocks.map(f => ({ n: f.n, hp: f.hp })), goal: L.objectives[0], cash: L.objectives[2] }; })()`);
-  check('three fields of ten rocks, each of 200 hit points (600 ore in all)', row.rocks.length === 3 && row.rocks.every(f => f.n === 10 && f.hp === 200), JSON.stringify(row.rocks));
+  check('four fields of ten rocks, each of 200 hit points (800 ore in all; it was three fields and 600 until card space-game-12-ore-enough, Troy, 24 Nov 2026: he could not finish)', row.rocks.length === 4 && row.rocks.every(f => f.n === 10 && f.hp === 200), JSON.stringify(row.rocks));
+  const M = J(`(() => { const L = CAMP.levels[1].missions[1], pl = campPlaces(1).ceres, d = f => Math.round(Math.hypot(f.at[0], f.at[1])); return { ore: L.rocks.reduce((a, f) => a + f.n, 0) * CAMP.ore.rock, goal: L.objectives[0].n, d: L.rocks.map(d), spend: 5 * CAMP.missile.cost + CAMP.emergency.ore + CAMP.mend.hullOre, start: CAMP.ore.start }; })()`);
+  check('ENOUGH ORE: the field holds at least 1.5 times the goal in the store (675 of 450), and a player who also pays for five missiles, one Emergency shield and one hull repair (210 ore) can still fill the bay to the goal with the rocks to spare', M.ore >= 1.5 * M.goal && M.ore >= M.goal + M.spend + 100, JSON.stringify(M));
+  check('the fourth field is a little further out than the three (the furthest, under 3,000 px from Ceres: a cruiser flies there in about 14 s), the other three are where they were', M.d.length === 4 && M.d[3] === Math.max(...M.d) && M.d[3] < 3000 && M.d[3] > Math.max(...M.d.slice(0, 3)) && M.d.slice(0, 3).join() === '1140,1170,1628', M.d.join());
   check('the goal is a store of 450 (of the 500 it holds), and the sale asked for is as it was, 160', row.goal.type === 'ore' && row.goal.n === 450 && row.cash.type === 'cashin' && row.cash.n === 160, JSON.stringify(row));
   const C = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1, ore: 176 }); campStep(C, 0.1); return { n: C.rocks.length, hp: C.rocks.map(r => r.hp + '/' + r.maxHp).filter((v, i, a) => a.indexOf(v) === i), ore: C.ore, goal: campObjectives(C)[0] }; })()`);
-  check('a battle makes 30 rocks of 200 hit points', C.n === 30 && C.hp.join() === '200/200', JSON.stringify(C));
-  check('with the 176 ore a good 1.1 carries in, the goal is not met at the start (190 was: 14 ore to go); 274 ore are to be mined of the 600 in the fields', C.ore === 176 && C.goal.done === false && C.goal.need === 450 && C.goal.got === 176, JSON.stringify(C.goal));
+  check('a battle makes 40 rocks of 200 hit points', C.n === 40 && C.hp.join() === '200/200', JSON.stringify(C));
+  check('with the 176 ore a good 1.1 carries in, the goal is not met at the start (190 was: 14 ore to go); 274 ore are to be mined of the 800 in the fields', C.ore === 176 && C.goal.done === false && C.goal.need === 450 && C.goal.got === 176, JSON.stringify(C.goal));
   const o = J(`(() => { const C = campNew(2, [], { seed: 1 }); return C.rocks.length ? C.rocks.map(r => r.hp + '/' + r.maxHp).filter((v, i, a) => a.indexOf(v) === i) : null; })()`);
   check('a field row that says no hp keeps the table\'s 100 (level 2\'s rocks)', o && o.join() === '100/100', JSON.stringify(o));
 }
