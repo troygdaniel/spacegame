@@ -16,7 +16,8 @@ function campCornerSync(s, now) {
   const C = s.camp; if (!C || !s.hud || !s.add || typeof CAMP_CORNERS === 'undefined') return;
   const all = s.hud.corner || (s.hud.corner = {}), on = campTdispOn(s), Ns = {}, ext = on ? campCornerListUnder(s, now) : null;
   CAMP_CORNERS.forEach(d => { Ns[d.id] = on ? campCornerNow(C, d.id) : null; }); // every corner first: the second row of a stack sits as far down as the first row's details are open
-  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = Ns[d.id]; if (!N) campCornerHide(V); else campCornerDraw(s, V, N, campCornerSlide(d.id, Ns, ext)); });
+  s.cornerDy = {}; // (how far each row slid down this frame: the page HUD's friend panel slides with it, src/camppagehud.js)
+  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = Ns[d.id], dy = campCornerSlide(d.id, Ns, ext); s.cornerDy[d.id] = dy; if (!N) campCornerHide(V); else campCornerDraw(s, V, N, dy); });
 }
 // the cruiser list (the first row of the left stack has no details of its own: this list hangs under it): its frame's height plus the gap, and how strong it is (it fades); null when none is open
 function campCornerListUnder(s, now) {

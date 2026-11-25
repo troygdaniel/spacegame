@@ -44,3 +44,18 @@
 .ph-pip { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); }
 .ph-pip.on { background: var(--ph-ink); }
 .ph-pip.build { background: var(--ph-mute); }
+/* top right under the stock: the hostiles; the one lit panel, drawn only when a hostile is seen */
+.ph-foes { right: 1.3em; top: 7.2em; width: 15em; background: rgba(58, 18, 40, .62); border-color: rgba(255, 111, 168, .45); display: flex; flex-direction: column; gap: .35em; }
+.ph-foes .ph-k, .ph-foes .ph-lab { background: #ffc3da; }
+.ph-foes .ph-lab { background: none; color: #f3bcd2; }
+.ph-big { font-weight: 600; font-size: 1.05em; }
+.ph-sub { font-size: .82em; color: #f3bcd2; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .ph-foes { animation: ph-pulse 2.4s ease-in-out infinite; } @keyframes ph-pulse { 50% { box-shadow: 0 0 0 .35em rgba(255, 111, 168, .12), 0 .6em 2em rgba(0, 0, 0, .35); } } }
+/* top left under the pilots: the friendly that is picked */
+.ph-friend { left: 1.3em; top: 13em; width: 21em; display: flex; flex-direction: column; gap: .4em; }
+.ph-friend .ph-sub { color: var(--ph-mute); }
+/* in space: a pill for a place, a pill at the screen edge for the hostiles off the screen (they move 10 times a second; the transition smooths the steps) */
+.ph-place { transform: translate(-50%, -50%); padding: .45em 1em; white-space: nowrap; border-radius: 2em; font-size: .82em; background: rgba(10, 16, 28, .96); color: #cfe3ff; transition: left .1s linear, top .1s linear; }
+.ph-edge { transform: translate(-50%, -50%); padding: .45em .8em; border-radius: 2em; display: flex; align-items: center; gap: .5em; font-size: .86em; background: rgba(58, 18, 40, .7); border-color: rgba(255, 111, 168, .45); font-variant-numeric: tabular-nums; white-space: nowrap; transition: left .1s linear, top .1s linear; }
+.ph-edgeic { --a: 0deg; transform: rotate(var(--a)); }
+.ph-arrow { width: .9em; height: .9em; }

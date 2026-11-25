@@ -122,8 +122,8 @@ class Campaign extends Phaser.Scene {
     const im = p.kind === 'star' && typeof starTexture === 'function'
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
-    made.push(im, label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16));
-    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13)); }
+    const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
+    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
     return made;
   }
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second

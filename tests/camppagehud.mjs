@@ -25,8 +25,8 @@ check('it has a row on the N panel, in the systems group, with words', J(`campTu
 check('the address flag: ?pagehud, =1, =on, =true, =yes are on; no flag, =0 and =off are not', ['?campaign=1&pagehud', '?pagehud=1', '?x=1&pagehud=on', '#pagehud=true', '?pagehud=yes'].every(s => J(`campPageHudAddr(${JSON.stringify(s)})`) === true) && ['', '?campaign=1', '?pagehud=0', '?pagehud=off', '?pagehudx=1'].every(s => J(`campPageHudAddr(${JSON.stringify(s)})`) === false));
 check('off: the canvas leaves nothing out', ['status', 'cruiser', 'fleet', 'hostiles', 'friendlies'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === false));
 g.run(`CAMP.flags.pagehud = true;`);
-check('on (landing 1): the canvas leaves out the shield and hull plate and the Q CRUISER and W rows, and keeps the rest (the hostiles and friendlies corners)', ['status', 'cruiser', 'fleet'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true) && ['hostiles', 'friendlies'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === false));
-check('the corners say so: the cruiser and fleet rows are hidden (their details are not), the target corners are not', J(`campCornerNow(__new(), 'cruiser').rowHidden`) === true && J(`campCornerNow(C, 'fleet').rowHidden`) === true && J(`campCornerNow(C, 'hostiles').rowHidden`) === false);
+check('on: the canvas leaves out the shield and hull plate and the Q CRUISER and W rows (landing 1), and keeps what is not the page HUD\'s (the lists, the other corners\' details, the map)', ['status', 'cruiser', 'fleet'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true) && ['list', 'map', 'radio'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === false));
+check('the corners say so: every row is hidden while the page HUD is on (their details are not: they open under the panels)', ['cruiser', 'fleet', 'hostiles', 'friendlies'].every(id => J(`campCornerNow(__new(), ${JSON.stringify(id)}).rowHidden`) === true));
 g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('B. the model');
@@ -100,7 +100,7 @@ check('no page, no scene: nothing happens', J('campPageHudSync(null, 0)') === fa
 
 console.log('F. the goal and the stock (landing 2)');
 g.run(`CAMP.flags.pagehud = true;`);
-check('on: the canvas also leaves out the goal and wave lines and the ore and missiles block; the hostiles and friendlies corners are still the canvas\'s', ['goal', 'stock'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true) && J(`campPageHudHides('hostiles')`) === false);
+check('on: the canvas also leaves out the goal and wave lines and the ore and missiles block (landing 2)', ['goal', 'stock'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true));
 g.run(`CAMP.flags.pagehud = false;`);
 check('off: they are the canvas\'s (goal, stock)', J(`campPageHudHides('goal')`) === false && J(`campPageHudHides('stock')`) === false);
 g.run(`__out();`);
@@ -125,10 +125,40 @@ check('the page HUD has a goal panel and a stock panel with their words and pips
 g.run(`C.L.objectives = null; C.L.win = 'none'; C.L.place = null; campPageHudSync(S3, 200);`);
 check('no goal: the goal panel is not drawn (display none) and no toast waits for it', J('S3.pageHud.goal.el.style.display') === 'none' && J('S3.pageHudStack') === 0);
 g.run(`__out(); S3.camp = C; campPageHudSync(S3, 400);`);
-check('with a goal the toasts start under its panel (it ends at 130 canvas px here), the HOSTILES row\'s place moves under the stock panel, and the canvas column\'s dim plate is not drawn', J('S3.pageHudStack') === 130 && J('CAMP_CORNER_SHIFT.tr') === J('130 + CAMP.corner.stack - CAMP.corner.at.tr.y') && J('S3.hudBack.alpha') === 0);
+check('with a goal the toasts start under its panel (it ends at 130 canvas px here), the HOSTILES row\'s place is under the stock panel (so its details open under it), and the canvas column\'s dim plate is not drawn', J('S3.pageHudStack') === 130 && J('CAMP_CORNER_SHIFT.tr') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tr.y') && J('S3.hudBack.alpha') === 0);
 check('hudStackBottom (the scene\'s, where everything at the top centre ends and a toast starts under): the page goal panel counts, and the old rule stands without it', J('Campaign.prototype.hudStackBottom.call({ hud: {}, pageHudStack: 130 }, 60)') === 130 && J('Campaign.prototype.hudStackBottom.call({ hud: {}, pageHudStack: 0 }, 60)') === 60 && J('Campaign.prototype.hudStackBottom.call({ hud: {} }, 60)') === 60);
 g.run(`CAMP.flags.pagehud = false; campPageHudSync(S3, 600);`);
 check('off: the plate is back (its alpha as it was), the toast has no page panel to start under, the rows are where they were', J('S3.hudBack.alpha') === 0.4 && J('S3.pageHudStack') === 0 && J('CAMP_CORNER_SHIFT.tr') === 0 && J('CAMP_CORNER_SHIFT.tl') === 0);
+
+console.log('G. the hostiles, the friendlies and the pills in space (landing 3)');
+g.run(`CAMP.flags.pagehud = true;`);
+check('on: the canvas also leaves out the rows of the HOSTILES and FRIENDLIES corners, the edge arrows of the hostiles, the labels of the places and the bottom key line', ['hostiles', 'friendlies', 'sight', 'places', 'keys'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true));
+g.run(`CAMP.flags.pagehud = false;`);
+g.run(`__out(); C.ships = C.ships.filter(u => u.team !== 'alien');`);
+check('no hostile seen: no hostiles panel (null), no edge pill; no friendly picked: no friendlies panel', J('campPageModel(C).foes') === null && J('campPageModel(C, { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }).edge') === null && (g.run(`C.fsel = '';`), J('campPageModel(C).friend') === null));
+g.run(`window.RA = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); window.RB = campSpawn(C, 'raider', C.carrier.x + 950, C.carrier.y + 150);`);
+const foes = J('campPageModel(C).foes');
+check('a hostile seen: the panel has the hostiles key (the table\'s), the label, what it is (the sight\'s own words), a compass point and how far', foes && foes.key === J(`campCornerCap('hostiles')`) && foes.label === 'HOSTILES' && /Raider|hostile/i.test(foes.what) && /^(north|south|east|west)/.test(foes.dir) && /km$/.test(foes.km), JSON.stringify(foes));
+g.run(`window.__view = { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }; RA.x = C.carrier.x + 2600; RA.y = C.carrier.y; RB.x = C.carrier.x + 2650; RB.y = C.carrier.y;`);
+const edge = J('campPageModel(C, __view).edge');
+check('hostiles off the screen: one pill at the edge with the count and how far, and an arrow angle', edge && edge.n === 2 && /km$/.test(edge.km) && Math.abs(edge.angle) < 0.3 && edge.x > J('W') * 0.8, JSON.stringify(edge));
+g.run(`window.WD = campFriList(C).find(e => e.kind === 'ward'); C.fsel = WD.id;`);
+const fr = J('campPageModel(C).friend');
+check('a friendly picked: its name, its hull and how far, with the friendlies key from the table', fr && fr.key === J(`campCornerCap('friendlies')`) && fr.label === 'FRIENDLIES' && fr.name === J('campTdispName(WD.unit)') && fr.frac > 0 && fr.frac <= 1 && /km$/.test(fr.km), JSON.stringify(fr));
+g.run(`window.__pl = Object.values(campPlaces(C.level)).find(p => !p.hidden); window.__pv = { x: __pl.x - W / 2, y: __pl.y - (__pl.r || 60) - 36 - H / 2, zoom: 1 };`);
+const pls = J('campPageModel(C, __pv).places');
+check('a place in view gets ONE pill (its name, with its outpost after a dot), at the place\'s screen place', pls.length >= 1 && pls[0].name.indexOf(J('String(__pl.name)')) === 0 && Math.abs(pls[0].x - J('W') / 2) < 1 && Math.abs(pls[0].y - J('H') / 2) < 1, JSON.stringify(pls));
+check('far out (under the far marks\' zoom) the page draws no place pills: the canvas\'s marks have the names', J('campPageModel(C, { x: __pv.x, y: __pv.y, zoom: CAMPZOOM.view.markZ / 2 }).places.length') === 0 && J('campPageModel(C).places.length') === 0);
+g.run(`CAMP.flags.pagehud = true; window.S4 = __scene(); S4.hud = { keys: { visible: true, setVisible(v) { this.visible = v; } } }; S4.keysBack = { visible: true, setVisible(v) { this.visible = v; } }; S4.placeLabels = [{ visible: true, active: true, setVisible(v) { this.visible = v; } }]; S4.cameras = { main: { scrollX: __view.x, scrollY: __view.y, zoom: 1 } }; S4.cornerDy = { friendlies: 40 }; campPageHudSync(S4, 0);`);
+check('the panels are drawn: hostiles (display on), the friendlies, the edge pill, and the bottom key line, its strip and the world\'s place labels are hidden', J('S4.pageHud.foes.el.style.display') === '' && J('S4.pageHud.friend.el.style.display') === '' && J('S4.pageHud.edge.el.style.display') === '' && J('S4.hud.keys.visible') === false && J('S4.keysBack.visible') === false && J('S4.placeLabels[0].visible') === false);
+check('the hostiles panel says what, where and how far; the friend panel its name; the edge pill the count', J('S4.pageHud.foes.key._text') === J(`campCornerCap('hostiles')`) && /km$/.test(J('S4.pageHud.foes.sub._text')) && J('S4.pageHud.friend.name._text') === J('campTdispName(WD.unit)') && /^2 /.test(J('S4.pageHud.edge.text._text')));
+check('the friend panel sits under the ship panel and slides down with the Q list (40 px here); the edge pill is at the edge of the canvas', J('S4.pageHud.friend.el.style.top') === J(`Math.round((130 + 40 + CAMP.corner.stack) * 1 * 10) / 10 + 'px'`) && parseInt(J('S4.pageHud.edge.el.style.left')) > 1000, J('[S4.pageHud.friend.el.style.top, S4.pageHud.edge.el.style.left]'));
+check('the canvas rows keep their place under the panels: the details of FRIENDLIES open under the friend panel, those of HOSTILES under the hostiles panel (here the stand-in panels all end at 130)', J('CAMP_CORNER_SHIFT.bl') === J('130 - CAMP.corner.title.h - CAMP.corner.at.bl.y - 40') && J('CAMP_CORNER_SHIFT.tr') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tr.y'));
+g.run(`C.fsel = ''; RA.hp = 0; RB.hp = 0; RA.gone = RB.gone = true; campPageHudSync(S4, 300);`);
+check('no hostile and no friendly: both panels and the edge pill are not drawn (display none)', J('S4.pageHud.foes.el.style.display') === 'none' && J('S4.pageHud.friend.el.style.display') === 'none' && J('S4.pageHud.edge.el.style.display') === 'none');
+g.run(`CAMP.flags.pagehud = false; campPageHudSync(S4, 600);`);
+check('off: the key line, its strip and the place labels are back', J('S4.hud.keys.visible') === true && J('S4.keysBack.visible') === true && J('S4.placeLabels[0].visible') === true);
+check('the scene files: the hostile arrows are left out of the sight scene, the labels drawPlace makes are kept (placeLabels), and the corners\' slide is stored for the friend panel', /campPageHudHides\('sight'\) \? \[\]/.test(src('src/campsightscene.js')) && /placeLabels/.test(src('src/campaignscene.js')) && /s\.cornerDy\[d\.id\] = dy/.test(src('src/campcornerscene.js')));
 
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');
