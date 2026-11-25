@@ -2,7 +2,7 @@
 // Card space-game-toast-over-topcentre (ORCH: with Earth, REPAIR and the outpost line all showing, the top-centre column ends at y 108 and a toast, which starts at y 86, covers its last line).
 // The code is src/common.js (toastBox, toast, toastKeep) and the Campaign scene (hudStackBottom, toastTop, flowHud, paintHud).
 //   A. toastBox: the top is the band's own unless one is given
-//   B. toast() on a stand-in scene: the scene's toastTop() is used (never above TOAST.top); a scene with none keeps TOAST.top (the Long Haul)
+//   B. toast() on a stand-in scene: the scene's toastTop() is used as it is (card space-game-toast-gap: no floor at TOAST.top, so a short column has its toast just under it); a scene with none keeps TOAST.top (the Long Haul)
 //   C. toastKeep: the box that is up follows a new top; a gone one, the same top and no toasts are left alone
 //   D. the Campaign's numbers: the column's end with all five lines, the mothership's bar, the rival's bars; the toast is under the lot and between the two top corners
 //   E. the scene's source: flowHud keeps the stack, paintHud keeps the toast under it; only the Campaign scene has toastTop
@@ -44,7 +44,7 @@ console.log('B. toast() on a stand-in scene');
   const low = at(120), none = at(undefined), above = at(40);
   check('the scene\'s toastTop is used: the box starts at 120, its text and frame centred on it', low.top === 120 && low.y === 120 + low.h / 2 && low.texty === low.y && low.bgy === low.y, JSON.stringify(low));
   check('a scene with no toastTop (the Long Haul) keeps TOAST.top', none.top === T.top && none.y === T.top + none.h / 2, JSON.stringify(none));
-  check('a toastTop above the band is not used: the box never starts above TOAST.top', above.top === T.top, JSON.stringify(above));
+  check('a toastTop above the old band is used as it is (card space-game-toast-gap: the Campaign\'s toast sits just under a short column, not at 86): the box starts at 40', above.top === 40 && above.y === 40 + above.h / 2, JSON.stringify(above));
 }
 
 console.log('C. toastKeep');
@@ -61,7 +61,11 @@ console.log('D. the Campaign\'s numbers');
   const all = J(`(() => { const sc = __camp(['WAVE 1 OF 3', 'GOAL', 'EARTH 50%', 'REPAIR 1  8 s', 'OUTPOST'], true); return { below: sc.hudBelow, stack: sc.hudStack, top: sc.toastTop() }; })()`);
   check('with Earth, repair and the outpost line showing the column ends at y 108 (the card\'s case) and a toast starts 6 px under it: 114, not 86', all.below === 108 && all.stack === 108 && K.toastGap === 6 && all.top === 114 && all.top > T.top, JSON.stringify(all));
   const two = J(`(() => { const sc = __camp(['WAVE 1 OF 3', 'GOAL', '', '', ''], false); return { below: sc.hudBelow, top: sc.toastTop() }; })()`);
-  check('with only the wave and the goal the column ends at y 42 and the toast keeps the band\'s own top (86): nothing changes for the usual case', two.below === y0 + 2 * p && two.top === T.top, JSON.stringify(two));
+  check('with only the wave and the goal the column ends at y 42 and the toast starts 6 px under it, at 48 (card space-game-toast-gap: it was held at the band\'s own top, 86)', two.below === y0 + 2 * p && two.top === two.below + K.toastGap && two.top < T.top, JSON.stringify(two));
+  const one = J(`(() => { const sc = __camp(['', 'GOAL', '', '', ''], false); return { below: sc.hudBelow, stack: sc.hudStack, top: sc.toastTop() }; })()`);
+  check('an escort mission has only its goal line (no WAVE line): the column ends at y 24 and the toast starts 6 px under it, at 30: just under it, as the browser batch asked', one.below === y0 + p && one.stack === one.below && one.top === one.below + K.toastGap && one.top - one.below === 6, JSON.stringify(one));
+  const grow = J(`(() => { const sc = __camp(['', 'GOAL', '', '', ''], false); sc.time = { now: 0 }; sc.tweens = { add() {} }; const o = __scene(); sc.add = o.add; toast(sc, 'Docked.'); const e = sc.toasts[0], t0 = e.top; sc.hud.earth.text = 'EARTH 50%'; sc.hud.repair.text = 'REPAIR 1  8 s'; sc.camp.earth = { shield: 50, max: 100 }; sc.flowHud((...a) => {}); toastKeep(sc, sc.toastTop()); const t1 = e.top; sc.hud.earth.text = ''; sc.hud.repair.text = ''; sc.camp.earth = null; sc.flowHud((...a) => {}); toastKeep(sc, sc.toastTop()); return { t0, t1, t2: e.top, y: e.y, h: e.h }; })()`);
+  check('a toast that is up follows the column both ways: down when lines come (Earth, repair) and back up under the short column when they go', grow.t0 === 30 && grow.t1 > grow.t0 && grow.t2 === 30 && grow.y === 30 + grow.h / 2, JSON.stringify(grow));
   const mo = J(`(() => { const sc = __camp(['WAVE 1 OF 3', 'GOAL', 'EARTH 50%', 'REPAIR 1  8 s', 'OUTPOST'], true, true); return { stack: sc.hudStack, top: sc.toastTop() }; })()`);
   check('with the mothership alive its name and bar stand under the column (the bar 20 px under, 12 high): the toast starts under the bar', mo.stack === 108 + 32 && mo.top === 108 + 32 + 6, JSON.stringify(mo));
   const rv = J(`(() => { const sc = __camp(['WAVE 1 OF 3', 'GOAL', 'EARTH 50%', 'REPAIR 1  8 s', 'OUTPOST'], true, false, true, false); const a = sc.toastTop(); const sp = __camp(['WAVE 1 OF 3', 'GOAL', 'EARTH 50%', 'REPAIR 1  8 s', 'OUTPOST'], true, false, true, true); return { bars: a, phase: sp.toastTop(), D: CAMP_RIVAL_DRAW.hud }; })()`);
@@ -75,7 +79,7 @@ console.log('E. the scene\'s source');
 {
   const sc = src('src/campaignscene.js'), cm = src('src/common.js');
   check('flowHud keeps the stack (hudStackBottom of the column\'s end) and paintHud keeps the toast under it every frame, after flowHud', /this\.hudStack = this\.hudStackBottom\(F\.bottom\)/.test(sc) && /toastKeep\(this, this\.toastTop\(\)\)/.test(sc) && sc.indexOf('this.flowHud(bar)') < sc.indexOf('toastKeep(this, this.toastTop())'));
-  check('toast() asks the scene for its top (toastTop) and never goes above TOAST.top', /typeof s\.toastTop === 'function' \? Math\.max\(TOAST\.top, s\.toastTop\(\)\) : TOAST\.top/.test(cm));
+  check('toast() asks the scene for its top (toastTop) and uses it as it is (no Math.max with TOAST.top: card space-game-toast-gap); the scene\'s own toastTop has no floor either', /typeof s\.toastTop === 'function' \? s\.toastTop\(\) : TOAST\.top/.test(cm) && !/Math\.max\(TOAST\.top, s\.toastTop/.test(cm) && /toastTop\(\) \{ return this\.hudStack \? Math\.ceil\(this\.hudStack \+ CAMP\.hud\.toastGap\) : TOAST\.top; \}/.test(sc));
   const others = ['hud.js', 'space.js', 'surface.js', 'traffic.js', 'autopilot.js', 'cruise.js', 'assist.js', 'station.js'].filter(f => { try { return /toastTop/.test(src('src/' + f)); } catch (e) { return false; } });
   check('no Long Haul file has a toastTop: only the Campaign scene moves its toasts', others.length === 0, others.join());
 }
