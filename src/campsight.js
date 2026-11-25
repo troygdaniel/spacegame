@@ -11,7 +11,7 @@
 //   campSightStep(C)             each tick: the hostiles that come into sight for the first time are called on the radio, after CAMP.sensor.delay ms, one line for a few seconds' worth
 //   campSightLine(C, ids)        the call: { key: 'camp.say.sight', vars: { what, dir, km } } or null: how many, which way, how far; the kinds too when a fighter or the carrier is near enough to tell
 //   campSightMarks(C)            the groups that came into sight in the last CAMP.sensor.mark ms: [{ x, y, age: 0..1 }] (the edge arrow blinks)
-//   campSightArrows(C, scroll, W_, H_, zoom)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, n, dist, what, fresh }]
+//   campSightArrows(C, scroll, W_, H_, zoom)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, tx, ty, n, dist, what, fresh }] (tx, ty: where the group is on the screen: the arrow turns to it when it is slid along the edge, src/campedgespread.js)
 //   campSightDir(dx, dy)         'north', 'north-east' ... for a vector (up on the screen is north)
 //   campSensors(C)              the sensor circles of the fighters that are out: [{ id, x, y, r: CAMP.sensor.wing }]
 //   campSightFighter(C, x, y, r)  the first fighter of yours that is out within r px of a point, or null: what a cloaked anomaly asks of a ship that is not the cruiser (src/campanomaly.js)
@@ -95,13 +95,13 @@ function campSightArrows(C, scroll, W_, H_, zoom) {
     const sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
     if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
     const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
-    out.push({ x: e.x, y: e.y, angle: e.angle, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark });
+    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark });
   });
   return out.slice(0, K.arrows);
 }
 
 // the ships you protect that are in trouble and off the screen (card space-game-target-display: the radar showed every ship of the convoy, and it is gone): one that is under attack (the full health bar, src/campcharge.js: hit in the
-// last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, dist, what: its name, pct, friend: true, fresh: just hit }
+// last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, tx, ty, dist, what: its name, pct, friend: true, fresh: just hit }
 function campSightFriends(C, scroll, W_, H_, zoom) {
   if (!C || !C.carrier || typeof campChargeBars !== 'function') return [];
   const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [];
@@ -109,7 +109,7 @@ function campSightFriends(C, scroll, W_, H_, zoom) {
     const sx = (b.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (b.y - scroll.y - H_ / 2) * z + H_ / 2;
     if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
     const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
-    out.push({ x: e.x, y: e.y, angle: e.angle, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0 });
+    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0 });
   });
   return out.slice(0, K.friends);
 }
