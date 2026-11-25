@@ -14,11 +14,19 @@ function campCornerRow(V, i) { // the texts of one detail line, made the first t
 function campCornerHide(V) { if (!V.gkey && !V.on) return; V.g.clear(); V.gkey = ''; V.on = false; [V.title, V.sel].concat(V.chips, V.words).forEach(o => o.setVisible(false)); V.rows.forEach(r => [r.name, r.num, r.text, r.cap, r.label].forEach(o => o.setVisible(false))); }
 function campCornerSync(s, now) {
   const C = s.camp; if (!C || !s.hud || !s.add || typeof CAMP_CORNERS === 'undefined') return;
-  const all = s.hud.corner || (s.hud.corner = {}), on = campTdispOn(s);
-  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = on ? campCornerNow(C, d.id) : null; if (!N) campCornerHide(V); else campCornerDraw(s, V, N); });
+  const all = s.hud.corner || (s.hud.corner = {}), on = campTdispOn(s), Ns = {}, ext = on ? campCornerListUnder(s, now) : null;
+  CAMP_CORNERS.forEach(d => { Ns[d.id] = on ? campCornerNow(C, d.id) : null; }); // every corner first: the second row of a stack sits as far down as the first row's details are open
+  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = Ns[d.id]; if (!N) campCornerHide(V); else campCornerDraw(s, V, N, campCornerSlide(d.id, Ns, ext)); });
 }
-function campCornerDraw(s, V, N) {
-  const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx), g = V.g, o = N.open, T0 = G.title; V.on = true;
+// the cruiser list (the first row of the left stack has no details of its own: this list hangs under it): its frame's height plus the gap, and how strong it is (it fades); null when none is open
+function campCornerListUnder(s, now) {
+  const P = s.pn, id = P && typeof campPanelOpen === 'function' ? campPanelOpen(P) : '', def = id && typeof campPanelDef === 'function' ? campPanelDef(id) : null;
+  if (!def || def.corner !== 'tl' || campCornerDrawsList(id) || typeof campPanelsGeometry !== 'function') return null;
+  const V = s.pnl && s.pnl.view, G = campPanelsGeometry(def, V ? V.total : 0, V ? V.pick : false), k = typeof campPanelFade === 'function' ? campPanelFade(P, now) : 1;
+  return { h: G.h + CAMP.corner.gap, k };
+}
+function campCornerDraw(s, V, N, dy) {
+  const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx, dy, N.span), g = V.g, o = N.open, T0 = G.title; V.on = true;
   const cy = T0.y + (T0.h - T.chipH) / 2, chipX = i => T0.x + T.pad + i * (T.chipW + T.chipGap);
   let CL, WL = []; // CL: the chips as drawn { x, cap, ok }; WL: the words of a line
   if (N.line) { // a LINE (FLEET: card space-game-fleet-sentence): chips and words from the left, never fading; the title and the selection are not drawn
@@ -39,7 +47,7 @@ function campCornerDraw(s, V, N) {
   while (V.chips.length < CL.length) V.chips.push(V.tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5));
   V.chips.forEach((c, i) => { if (i >= CL.length) c.setVisible(false); });
   CL.forEach((c, i) => { const t = V.chips[i]; campLabel(t, c.cap, c.ok ? '#02101c' : '#9fb4c4'); t.setPosition(c.x + T.chipW / 2, cy + T.chipH / 2).setVisible(true); });
-  const key = [CL.map(c => [c.x, c.cap, c.ok].join(':')).join(), N.title, dx, G.det ? G.det.h : 0, Math.round(o * 20), N.items.map(it => [campCornerKind(it), it.name || it.text || it.cap, it.num || it.label || '', Math.round((it.share || 0) * 100), it.color, it.ok, it.sel].join(':')).join('|')].join('#');
+  const key = [CL.map(c => [c.x, c.cap, c.ok].join(':')).join(), N.title, dx, Math.round(T0.y), G.det ? G.det.h : 0, Math.round(o * 20), N.items.map(it => [campCornerKind(it), it.name || it.text || it.cap, it.num || it.label || '', Math.round((it.share || 0) * 100), it.color, it.ok, it.sel, it.cap, it.capOk].join(':')).join('|')].join('#');
   if (V.gkey !== key) { // the frame, the chips, the bars: drawn again when something they show changes
     V.gkey = key; g.clear();
     g.fillStyle(0x04101c, 0.85).fillRoundedRect(T0.x, T0.y, T0.w, T0.h, 6); g.lineStyle(1, 0x38e1ff, 0.45).strokeRoundedRect(T0.x, T0.y, T0.w, T0.h, 6);
@@ -50,7 +58,9 @@ function campCornerDraw(s, V, N) {
       N.items.forEach(it => {
         const kind = campCornerKind(it);
         if (kind === 'bar') { const bx = D.x + K.pad, bw = D.w - K.pad * 2, by = y + K.bar.dy; g.fillStyle(0x16293d, o).fillRect(bx, by, bw, K.bar.h); g.fillStyle(it.color || 0x6dff9c, o).fillRect(bx, by, Math.max(it.share > 0 ? 1 : 0, Math.round(bw * (it.share || 0))), K.bar.h); g.lineStyle(1, 0x38e1ff, 0.4 * o).strokeRect(bx, by, bw, K.bar.h); }
-        if (kind === 'key') g.fillStyle(it.ok ? K.chip : 0x2a3b4c, (it.ok ? 0.95 : 0.9) * o).fillRoundedRect(D.x + K.pad, y + 4, T.chipW + 2, T.chipH, 4);
+        const capOk = it.capOk !== undefined ? it.capOk : it.ok !== false; // a digit chip is grey when its digit does nothing now
+        if (kind === 'key') g.fillStyle(capOk ? K.chip : 0x2a3b4c, (capOk ? 0.95 : 0.9) * o).fillRoundedRect(D.x + K.pad, y + 4, T.chipW + 2, T.chipH, 4);
+        else if (kind === 'bar' && it.cap) g.fillStyle(capOk ? K.chip : 0x2a3b4c, (capOk ? 0.95 : 0.9) * o).fillRoundedRect(D.x + K.pad, y, T.chipW + 2, T.chipH, 4); // a pilot's digit, level with the name
         y += K.item[kind] || K.item.text;
       });
     }
@@ -58,8 +68,9 @@ function campCornerDraw(s, V, N) {
   let i = 0, y = G.det ? G.det.y + K.pad : 0; const D = G.det;
   if (D && o > 0) N.items.forEach(it => {
     const kind = campCornerKind(it), r = campCornerRow(V, i++), x = D.x + K.pad;
-    if (kind === 'bar') { campLabel(r.name, it.name, it.sel ? '#9fe9ff' : '#ffffff'); r.name.setPosition(x, y).setAlpha(o).setVisible(true); campLabel(r.num, it.num, '#e8f6ff'); r.num.setPosition(D.x + D.w - K.pad, y + 2).setAlpha(o).setVisible(true); [r.text, r.cap, r.label].forEach(t => t.setVisible(false)); }
-    else if (kind === 'key') { campLabel(r.cap, it.cap, it.ok ? '#02101c' : '#9fb4c4'); r.cap.setPosition(x + (T.chipW + 2) / 2, y + 4 + T.chipH / 2).setAlpha(o).setVisible(true); campLabel(r.label, it.label, it.ok ? '#e8f6ff' : '#7f95a8'); r.label.setPosition(x + T.chipW + 8, y + 5).setAlpha(o).setVisible(true); [r.name, r.num, r.text].forEach(t => t.setVisible(false)); }
+    const capOk = it.capOk !== undefined ? it.capOk : it.ok !== false, nx = x + (it.cap ? T.chipW + 10 : 0); // a bar with a digit chip: the name starts after the chip
+    if (kind === 'bar') { campLabel(r.name, it.name, it.sel ? '#9fe9ff' : it.ok === false ? '#7f95a8' : '#ffffff'); r.name.setPosition(nx, y).setAlpha(o).setVisible(true); campLabel(r.num, it.num, '#e8f6ff'); r.num.setPosition(D.x + D.w - K.pad, y + 2).setAlpha(o).setVisible(true); [r.text, r.label].forEach(t => t.setVisible(false)); if (it.cap) { campLabel(r.cap, it.cap, capOk ? '#02101c' : '#9fb4c4'); r.cap.setPosition(x + (T.chipW + 2) / 2, y + T.chipH / 2).setAlpha(o).setVisible(true); } else r.cap.setVisible(false); }
+    else if (kind === 'key') { campLabel(r.cap, it.cap, capOk ? '#02101c' : '#9fb4c4'); r.cap.setPosition(x + (T.chipW + 2) / 2, y + 4 + T.chipH / 2).setAlpha(o).setVisible(true); campLabel(r.label, it.label, it.sel ? '#9fe9ff' : it.ok === false ? '#7f95a8' : '#e8f6ff'); r.label.setPosition(x + T.chipW + 8, y + 5).setAlpha(o).setVisible(true); [r.name, r.num, r.text].forEach(t => t.setVisible(false)); }
     else { campLabel(r.text, it.text, it.ink || '#9fbdd1'); r.text.setPosition(x, y + 2).setAlpha(o).setVisible(true); [r.name, r.num, r.cap, r.label].forEach(t => t.setVisible(false)); }
     y += K.item[kind] || K.item.text;
   });
