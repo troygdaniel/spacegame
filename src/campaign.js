@@ -1659,7 +1659,7 @@ function campBullets(C, dt) {
 // ---------- the missile launcher (card space-game-campaign-missiles; the numbers are CAMP.missile) ----------
 // C.missiles is the magazine: a plain number. It does NOT fill itself: a missile is built for CAMP.missile.cost ore, by itself at 0 and one more for each press of R (src/campmissilebuild.js); campMissileAdd (the loot) can fill it up to `max`.
 // A missile goes for its target, turning at most `turn` rad/s; when the target is gone it takes the mothership or the nearest big ship in reach, else it flies on until its fuel is out.
-// Its fuze goes off near a big ship (never a raider or a drone on the way), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
+// Its fuze goes off near a big ship (never a raider or a drone on the way) OR near the ship it was fired at, whatever its size (card space-game-missiles-miss: a missile fired at a raider or a skiff flew through it and never went off: 0 hits in 10), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
 function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the carrier unless a missile asks)
   const p = from || C.carrier, big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
@@ -1687,7 +1687,7 @@ function campMissiles(C, dt) {
     if (tg) m.rot = campRot(m.rot, Math.atan2(tg.y - m.y, tg.x - m.x), k.turn * dt);
     m.sp = Math.min(k.speed, m.sp + k.accel * dt); m.vx = Math.cos(m.rot) * m.sp; m.vy = Math.sin(m.rot) * m.sp;
     const px = m.x, py = m.y; m.x += m.vx * dt; m.y += m.vy * dt;
-    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && campBig(u) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze)) || (C.torpedoes && C.torpedoes.length ? campTorpedoFuze(C, px, py, m) : null); // a torpedo sets the fuze off too
+    const hit = C.ships.find(u => u.team === 'alien' && u.hp > 0 && (campBig(u) || u.id === m.target) && campSegHit(px, py, m.x, m.y, u.x, u.y, u.r + k.fuze)) || (C.torpedoes && C.torpedoes.length ? campTorpedoFuze(C, px, py, m) : null); // a torpedo sets the fuze off too
     if (hit) { // it goes off: everything near it is hurt, a big ship most
       m.dead = true; C.events.push({ type: 'mboom', x: m.x, y: m.y, r: k.blast });
       campAliens(C).forEach(u => { if (campDist(u, m) <= k.blast + u.r) campHurt(C, u, campBig(u) ? k.big : k.small, C.carrier.id); });

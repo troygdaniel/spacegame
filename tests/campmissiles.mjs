@@ -246,5 +246,17 @@ console.log('H. nothing else moved');
   check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 }
 
+
+console.log('I. a missile hits what it was fired at, whatever its size (card space-game-missiles-miss, Troy, 24 Nov 2026: M at a raider or a skiff flew through it: 0 hits in 10; tools/missile-hitrate.mjs measures it)');
+{
+  g.run(`window.__mh = (kind, range, picked) => { const C = campNew('home', [], { seed: 5, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien' && u.kind !== 'fighter'); const t = campSpawn(C, kind, C.carrier.x + range, C.carrier.y); t.vmax = 0; C.missiles = 6; C.nextRocket = 0; if (picked) C.tgt = t.id; const P = campPanelNew(); const r = campPanelKey(P, C, 'KeyM', 100000); let boom = false; for (let i = 0; i < 360 && !boom; i++) { campStep(C, 1 / 30); C.events.forEach(e => { if (e.type === 'mboom') boom = true; }); C.events.length = 0; } return { ran: r.ran, ok: r.ok, say: r.say, boom, hp: t.hp, tgt: C.tgt === t.id }; };`);
+  const kinds = ['skiff', 'raider', 'drone', 'cutter', 'brute'].map(k => [k, J(`__mh('${k}', 1500, true)`), J(`__mh('${k}', 1500, false)`)]);
+  check('a missile fired at a small ship (a skiff, a raider, a drone, a cutter, a brute) goes off at it and hurts it, picked or picked by M', kinds.every(([k, a, b]) => a.boom && b.boom && a.hp < J(`campSpawn(campNew('home', [], { seed: 5 }), '${k}', 0, 0).hp`) && b.hp < J(`campSpawn(campNew('home', [], { seed: 5 }), '${k}', 0, 0).hp`)), JSON.stringify(kinds));
+  check('M with none picked picks that enemy: it is the target now', J(`__mh('raider', 1500, false).tgt`) === true);
+  const out = J(`__mh('raider', 2600, false)`), outp = J(`__mh('raider', 2600, true)`);
+  check('M with the only enemy out of missile range fires nothing and says so in words (no pick is made for it; a picked one is refused as out of range)', out.ran && !out.ok && !out.boom && outp.ran && !outp.ok && !outp.boom && out.tgt === false, JSON.stringify([out, outp]));
+  g.run(`window.C9 = campNew('home', [], { seed: 5, god: true }); C9.ships = C9.ships.filter(u => u.team !== 'alien' && u.kind !== 'fighter'); window.far9 = campSpawn(C9, 'raider', C9.carrier.x + 2700, C9.carrier.y); window.near9 = campSpawn(C9, 'drone', C9.carrier.x + 2000, C9.carrier.y + 10); C9.missiles = 6; C9.nextRocket = 0; campPanelKey(campPanelNew(), C9, 'KeyM', 100000);`);
+  check('M picks the nearest enemy IN range: a far raider out of range is skipped for the drone inside it', J('C9.tgt') === J('near9.id') && J('C9.rockets.length') === 1);
+}
 console.log(failed ? `\nCAMPMISSILES FAIL (${failed} of ${n})` : `\nCAMPMISSILES PASS (${n})`);
 process.exitCode = failed ? 1 : 0;
