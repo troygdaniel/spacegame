@@ -210,6 +210,13 @@ So about three quarters of the added allocation and about half of the added fram
 
 **To price a part of a frame** (added by this card): `PERF_PATCH='window.campTgtPaint = () => {}' node tools/perfcampaign.mjs frames,alloc,profile busy1` runs the code after the fight is set up and before anything is measured. `window.campFdispSync = () => {}` switches the WHO box off, `window.campTdispSync = () => {}` the target box, `Campaign.prototype.paintHud = () => {}` the HUD, `window.campPanelsPaint = () => {}` the lists, `window.campNavEdge = () => null` the arrow at the edge. Nothing is saved. `PERF_ROOT=<a checkout of another commit>` runs the same tool on that code, to set two builds side by side.
 
+## The new world look, W1: the backdrop (card `space-game-world-w1-backdrop`, 25 Nov 2026)
+
+The Campaign's backdrop is three new textures (`wlook-stars1` 2048 by 1024 with two slate clouds and a few stars, `wlook-stars2` 512, `wlook-stars3` 1024, plain white stars, no tint), painted **lazily** at the Campaign's create (`src/campworldback.js`), not at boot. Measured in Chrome (software drawing, the Mac at load 17 to 20):
+
+- **Painting:** 31 to 42 ms, once, at the first Campaign scene of a session (four runs: 34, 37, 42, 31 ms). The Long Haul's own sky, which stays as it is, paints in about 196 ms at boot (`waSpaceArt`, the 1024 px fbm nebula), so the boot cost (`tests/world.mjs`) does not move: nothing here runs at boot. Memory: three canvases, 8 MB + 1 MB + 4 MB (the old three are 4 + 1 + 4 MB and stay, because the Long Haul and the title use them); the texture count is 191 then 194.
+- **A frame of the busiest fight:** `node tools/perfcampaign.mjs frames busy1`, 600 stepped frames, today's backdrop (the harness boots with `?worldlook=0`) against the new one swapped in inside the same page by `PERF_PATCH` (`campWorldBackdrop(S)` after destroying the old layers), four runs each, alternating. Mean of a frame, median of four (range): **3.93 ms (3.74 to 4.92) today, 4.14 ms (3.80 to 4.42) new**; update 3.16 and 3.33; render 0.48 and 0.51; display list 269 and 269; heap 11.0 MB and 11.0 MB. The three layers are three full-screen tile sprites as before, the same fill for the drawing; the spread between runs of one build is larger than the difference, so no change is claimed.
+
 ## Measuring again
 
 ```
