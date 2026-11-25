@@ -5,6 +5,7 @@
 // from where it ends. Arrows and labels stay out of the keep rectangles (CAMP.nav.arrow.keep: the corner panels, the message band, the key line) as they did, and on the screen.
 //   campEdgeT(x, y, W, H, m)    where a point of the border (inset m px) is along it: 0 to the perimeter, clockwise from the top left
 //   campEdgeAt(t, W, H, m)      the point of the border t px along it: { x, y }
+//   campEdgeOffscreen(sx, sy, W, H, shown)   is a ship at (sx, sy) on the screen, for the page HUD's pill (card space-game-edge-pills-position): false while it is `hide` px inside the border (CAMP.nav.pill) or more; a pill already shown stays until then, one not shown appears only when the ship is within `show` px of the border or beyond it. No keep rectangles: the canvas HUD's panels are not there while the page HUD is on
 //   campEdgeSpread(items, o)    items [{ x, y, angle, tx, ty, w, h, want }] nearest first: the arrow's point on the border, the way it points, where its ship is on the screen (tx, ty: the arrow turns to it from its
 //                               new place; none: it keeps its angle) and its label's size (want(px, py, angle) -> { x, y }: where its label would like to be, when it is not the usual place behind the arrow). o { keep, W, H, m, tri, gap, pad, step, boxes }: the keep rectangles, the screen, the border's inset, the arrow's size, the clear space
 //                               between an arrow and its label, the space kept round each, the px a slide moves at a time, and rectangles [x0, y0, x1, y1] already taken (the goal's label).
@@ -24,6 +25,10 @@ function campEdgeAt(t, W_, H_, m) {
   if (t < w + h) return { x: m + w, y: m + t - w };
   if (t < 2 * w + h) return { x: m + w - (t - w - h), y: m + h };
   return { x: m, y: m + h - (t - 2 * w - h) };
+}
+function campEdgeOffscreen(sx, sy, W_, H_, shown) { // the page HUD's pill: shown? the loose rule keeps it until the ship is well inside; not shown? it comes only when the ship is at the border or beyond (a little play, no flicker)
+  const P = CAMP.nav.pill, m = shown ? P.hide : P.show;
+  return !(sx > m && sx < W_ - m && sy > m && sy < H_ - m);
 }
 function campEdgeSpread(items, o) {
   o = o || {}; const W_ = o.W || 1280, H_ = o.H || 720, m = o.m != null ? o.m : 40, K = o.keep || [], tri = o.tri != null ? o.tri : CAMPEDGE.tri, gap = o.gap != null ? o.gap : CAMPEDGE.gap, pad = o.pad != null ? o.pad : CAMPEDGE.pad, step = o.step > 0 ? o.step : CAMPEDGE.step;
