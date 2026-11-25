@@ -12,6 +12,8 @@
 //   campChargeBars(C)         one bar for each of them: { id, kind, x, y, hull, pct, band, color, hit, loud }  (hit: 1 at the hit, easing to 0 over CAMP.charge.flash ms; loud: 0 the thin line to 1 the full bar)
 //   campChargeLoud(ago)       the share for a hit that was `ago` ms ago: 1 up to CAMP.charge.loud, then down to 0 over CAMP.charge.ease;  campChargeLook(k, thin, full)   a size between the line's and the bar's for a share
 //   campChargeMark(C, id)     the same for one ship, or null when it has none (a ship's row in a list, a mark on the map)
+//   campChargeNumberSide(a, W_, H_)  where the full bar's percentage goes on the screen (card space-game-edge-percent-label-cut): 'right' of the bar, 'left' of it when the right is cut off by the edge, or null for none (the ship is off the screen
+//                             or under the HUD, the test the edge arrow and the page's edge pill use, so a ship with a pill has no number; or the number would not fit whole inside the screen)
 const campChargeLoud = ago => { const K = CAMP.charge; return !(ago >= 0) ? 0 : ago < K.loud ? 1 : ago < K.loud + K.ease ? 1 - (ago - K.loud) / K.ease : 0; }; // 1 while under attack and for `loud` ms after the last hit, then eased down to 0 (no hit yet: 0)
 const campChargeLook = (k, thin, full) => thin + (full - thin) * Math.max(0, Math.min(1, k)); // a size between the thin line's and the full bar's
 const campChargeHull = u => Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1)));
@@ -23,3 +25,13 @@ function campChargeOne(C, u) {
 }
 const campChargeBars = C => campChargeShips(C).map(u => campChargeOne(C, u));
 const campChargeMark = (C, id) => { const u = campChargeShips(C).find(x => x.id === id); return u ? campChargeOne(C, u) : null; };
+
+// where the percentage of a full bar goes, in px of the screen: a = { sx, sy: the ship's place, ny: the number's middle line, tw, th: its box }; the bar is K.bar.w wide at sx. The number does not draw half off the screen (card space-game-edge-percent-label-cut: a ship that
+// was just off the left edge had it cut to "1%" over its pill) nor for a ship that is off the screen or under a HUD corner, whose edge arrow or page pill says it already (the very test of campSightFriends: CAMP.nav.arrow margin and keep).
+function campChargeNumberSide(a, W_, H_) {
+  const K = CAMP.charge, A = CAMP.nav.arrow, m = A.margin, e = K.number.edge, off = K.bar.w / 2 + K.number.gap;
+  if (!(a.sx > m && a.sx < W_ - m && a.sy > m && a.sy < H_ - m) || (A.keep || []).some(r => a.sx >= r[0] && a.sx <= r[2] && a.sy >= r[1] && a.sy <= r[3])) return null;
+  if (a.ny - a.th / 2 < e || a.ny + a.th / 2 > H_ - e) return null;
+  if (a.sx + off + a.tw <= W_ - e) return 'right';
+  return a.sx - off - a.tw >= e ? 'left' : null;
+}
