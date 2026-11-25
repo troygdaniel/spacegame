@@ -13,7 +13,7 @@
 //                                      edge: { n, km, angle, x, y } | null (hostiles off the screen: the nearest group's arrow), places: [{ name, x, y }] (the places in view, in game px; needs `view`: { x, y, zoom }) } }
 //   campPageHudBuild(doc)              the elements, made once: { root, ship: {...refs} }
 //   campPageHudPaint(R, M)             writes the model into the elements: only what changed
-//   campPageHudSync(s, now)            the scene calls it every frame (src/campaignscene.js): at most 10 times a second it builds, places and paints the HUD, and takes it away when the switch is off or the scene is over
+//   campPageHudSync(s, now)            the scene calls it every frame (src/campaignscene.js): at most 10 times a second it builds, places and paints the HUD, and takes it away when the switch is off or the scene is over; while a full card is up (the pause card, the H page, the N panel, Settings, the ready room) the panels are hidden, not taken away (campPageHudCovered)
 const CAMP_PAGEHUD = {
   em: 0.0112,              // the HUD's font size: this share of the canvas width (about 1.1 percent), so it scales with the window
   every: 100,              // ms between two updates: 10 a second
@@ -191,7 +191,7 @@ function campPageHudPaint(R, M, doc) {
 // ---- the scene's call ----
 function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and lists are where they were
   const R = s && s.pageHud; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
-  if (s) s.pageHud = null;
+  if (s) { s.pageHud = null; s.pageHudHeld = false; }
   if (typeof CAMP_CORNER_SHIFT === 'object') { CAMP_CORNER_SHIFT.tl = 0; CAMP_CORNER_SHIFT.bl = 0; CAMP_CORNER_SHIFT.tr = 0; }
   if (s) { s.pageHudStack = 0; campPageHudHideLines(s, false); if (R && R.backAlpha !== undefined && s.hudBack && s.hudBack.setAlpha) s.hudBack.setAlpha(R.backAlpha); }
 }
@@ -201,16 +201,24 @@ function campPageHudHideLines(s, on) { // the canvas lines the page HUD replaces
   const offG = on && campPageHudHides('goal'); if (s.hud) { put(s.hud.obj, !offG); put(s.hud.wave, !offG); } // the goal line and the wave line of the canvas (their words are still set: the column's flow is as it was)
   const offP = on && campPageHudHides('places'); (s.placeLabels || []).forEach(o => { if (o && o.active !== false) put(o, !offP); });
 }
+// a full card is up over the battle: the pause card (the H page and the N panel are the pause card's own mode), the H page, and a scene that holds the battle still (Settings, the ready room: Phaser pauses the Campaign, so its frame, and this sync, do not run). The panels are hidden while it is, and come back as they were; the result cards (won, lost, debrief, refit, pick, the ending) take the HUD away already (the mode is not play or pause). With the switch off nothing here runs (card space-game-page-hud-hide-on-cards)
+const campPageHudCovered = s => !!s && (s.mode === 'pause' || s.pageHudHeld === true || (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)));
+function campPageHudCover(s, on) { // the scene's own pause and resume events: while the scene is paused no frame runs, so the panels are hidden at once here and shown again by the first frame after the resume
+  if (!s) return; s.pageHudHeld = !!on;
+  if (on && s.pageHud && s.pageHud.root) campPageHudSet(s.pageHud.root, 'display', 'none');
+}
 function campPageHudSync(s, now) {
   if (!s || typeof document === 'undefined') return false;
   const C = s.camp, on = !!C && !!C.carrier && campPageHudOn() && (s.mode === 'play' || s.mode === 'pause') && !s.mp;
   if (!on) { if (s.pageHud) campPageHudDrop(s); return false; }
   const K = CAMP_PAGEHUD, t = +now || 0, canvas = s.game && s.game.canvas;
   if (!canvas || typeof canvas.getBoundingClientRect !== 'function') return false;
-  if (!s.pageHud) { s.pageHud = campPageHudBuild(document); s.pageHud.at = -1e9; document.body.appendChild(s.pageHud.root); if (s.events && s.events.once) { const off = () => campPageHudDrop(s); s.events.once('shutdown', off); s.events.once('destroy', off); } }
+  if (campPageHudCovered(s)) { if (s.pageHud) campPageHudSet(s.pageHud.root, 'display', 'none'); return false; } // a card is up: nothing is built, placed or painted, the panels wait hidden
+  if (!s.pageHud) { s.pageHud = campPageHudBuild(document); s.pageHud.at = -1e9; document.body.appendChild(s.pageHud.root); if (s.events && s.events.once) { const off = () => campPageHudDrop(s); s.events.once('shutdown', off); s.events.once('destroy', off); } if (s.events && s.events.on && !s.pageHudEv) { s.pageHudEv = true; s.events.on('pause', () => campPageHudCover(s, true)); s.events.on('resume', () => campPageHudCover(s, false)); } }
   const R = s.pageHud; if (t - R.at < K.every && t >= R.at) return true; // 10 a second at most
   R.at = t;
   const r = canvas.getBoundingClientRect(), set = campPageHudSet, cam = s.cameras && s.cameras.main, fs = r.width * K.em; // the HUD sits over the canvas, the same size; the font size is a share of its width
+  set(R.root, 'display', ''); // shown again when a card closes (set 'none' while one is up)
   set(R.root, 'left', Math.round(r.left) + 'px'); set(R.root, 'top', Math.round(r.top) + 'px'); set(R.root, 'width', Math.round(r.width) + 'px'); set(R.root, 'height', Math.round(r.height) + 'px'); set(R.root, 'fontSize', Math.round(fs * 100) / 100 + 'px');
   const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom } : null;
   campPageHudPaint(R, campPageModel(C, view), document);
