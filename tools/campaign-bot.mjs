@@ -56,10 +56,11 @@ const BOTS = {
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
+const KEYLEASH = Number(arg('leash', 3000));                  // --leash N: with --keys, the pilots are sent only at a threat this near the cruiser (px) and called back from a chase past it (card space-game-12-keys-lose-miners)
 const OLD = process.argv.includes('--old');
 const SETS = process.argv.map((a, i) => a === '--set' ? process.argv[i + 1] : null).filter(Boolean); // --set alien.hpScale=2 --set alien.damageScale=2: change the table before the run (what-if)
 const g = nodeGame();
-g.run(`window.__KEYS = ${process.argv.includes('--keys')}`); // --keys: the orders are given with the keys a player has (see ord below)
+g.run(`window.__KEYS = ${process.argv.includes('--keys')}`); g.run(`window.KEYLEASH = ${KEYLEASH}`); // --keys: the orders are given with the keys a player has (see ord below)
 g.run(`window.__PACE = ${isNaN(Number(PACE)) ? JSON.stringify(PACE) : Number(PACE)}`); // the battle pace of every battle of this run
 g.run(`window.__RANK = ${JSON.stringify(RANK)}`); // the pilot's rank for every battle of this run
 if (OLD) g.run(`(() => { CAMP.earth.shield = 300; CAMP.earth.regen = 0; CAMP.mother.hp = 900; CAMP.mother.damage = 12; CAMP.mother.holdAt = 1600; CAMP.mother.spawnEvery = 8000; CAMP.mother.spawnMax = 6; CAMP.levels[1].waves[2].ships.raider = 3; })()`); // the numbers before the easier level 1
@@ -103,7 +104,12 @@ g.run(`(() => {
     if (ROW[name]) return give(C, ROW[name]);
     if (name === 'reload') return campPanelKey(campPanelNew(), C, 'KeyR', 0); // R builds the rack (card space-game-missiles-cost-ore): a key, not a row of a list
     if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
-    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null; if (name === 'attack' && !m) campTgtNearest(C); else aim(C, m ? m.id : ''); return name === 'attack' ? (pilotKey(C, 'red', campKeyCodes('order')[0]), pilotKey(C, 'green', campKeyCodes('order')[0])) : campPanelKey(campPanelNew(), C, campKeyCodes('missile')[0], 0); }
+    if (name === 'attack' || name === 'missiles') { const m = arg === 'mothership' ? C.ships.find(u => u.kind === 'mother' && u.hp > 0) : null;
+      if (name === 'attack' && !m) { // the nearest threat (\), unless it is out of reach: a player does not send the pilots 10 km after a pirate that has broken off, and calls them back (X clears, E with nothing picked forms up) when they are out past that (card space-game-12-keys-lose-miners: the key bots chased runners 10 to 17 km from Ceres while the next raid killed the miners)
+        const t0 = campTgtList(C)[0], far = u => Math.hypot(u.x - C.carrier.x, u.y - C.carrier.y) > window.KEYLEASH;
+        if (!t0 || far(t0)) { if (!campWing(C, 'fighter').some(far) && !C.tgt) return { ok: false }; campTgtClear(C); return (pilotKey(C, 'red', campKeyCodes('order')[0]), pilotKey(C, 'green', campKeyCodes('order')[0])); }
+        campTgtNearest(C);
+      } else aim(C, m ? m.id : ''); return name === 'attack' ? (pilotKey(C, 'red', campKeyCodes('order')[0]), pilotKey(C, 'green', campKeyCodes('order')[0])) : campPanelKey(campPanelNew(), C, campKeyCodes('missile')[0], 0); }
     return campOrder(C, name, arg);
   };
   window.__botStep = (C, s, B, sk, st) => {
@@ -129,7 +135,7 @@ g.run(`(() => {
       const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
       if (threat && !st.tuck) { st.tuck = true; ord(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; ord(C, 'convoy', 'carry on'); }
     }
-    if (B.missiles && !fight && Math.round(s * 30) % 90 === 0 && typeof campMissileState === 'function' && campMissileState(C).state === 'ready') ord(C, 'reload'); // missiles cost ore (card space-game-missiles-cost-ore): in a calm moment the rack is built up, as a player does (R); at zero the ship builds one by itself
+    if (B.missiles && !fight && !campObjectives(C).some(o => !o.done && o.type === 'ore') && Math.round(s * 30) % 90 === 0 && typeof campMissileState === 'function' && campMissileState(C).state === 'ready') ord(C, 'reload'); /* (not while the mission asks for ore in the store: 1.2's goal is 450, and every missile built is 20 ore of it; the key bots spent the store on racks and timed out: card space-game-12-keys-lose-miners) */ // missiles cost ore (card space-game-missiles-cost-ore): in a calm moment the rack is built up, as a player does (R); at zero the ship builds one by itself
     if (B.missiles && Math.round(s * 30) % 21 === 0 && typeof campOrder === 'function') ord(C, 'missiles', C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'mothership' : '');
     if (B.attackEvery && st.launched && s >= B.attackFrom && !st.landAt && Math.round(s * 30) % Math.round(B.attackEvery * 30) === 0 && (!mineOpen || fight) && !(callOnly && typeof B.help === 'string')) {
       const boat = typeof campTorpedoBoats === 'function' ? campTorpedoBoats(C).filter(u => !u.running).sort((p, q) => campDist(p, C.carrier) - campDist(q, C.carrier))[0] : null; // torpedo boats (card space-game-torpedo-boats): the plain answer is to send the fighters at the nearest boat that still has a torpedo, before anything else
