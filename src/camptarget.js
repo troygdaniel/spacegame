@@ -146,7 +146,7 @@ function campFriRegister(C) { // give a number to every ship you protect that ha
     R = C.fnums = { next: 1, by: {}, plan: {} };
     ((C.L && C.L.convoys) || []).forEach(cv => { R.plan['freighter-' + cv.id] = R.next++; });
   }
-  campPickGuarded(C).forEach(u => { if (!R.by[u.id]) R.by[u.id] = { n: R.plan[u.id] || R.next++, name: campFriShipName(u) }; }); // (a number is in the list only from the moment its ship is first seen: no row for a hauler that has not come yet)
+  campPickGuarded(C).filter(u => !u.joins || (C.cues && C.cues[u.joins] != null)).forEach(u => { if (!R.by[u.id]) R.by[u.id] = { n: R.plan[u.id] || R.next++, name: campFriShipName(u) }; }); // (a number is in the list only from the moment its ship is first seen: no row for a hauler that has not come yet; a ship with `joins` (a traffic row's field: the miner of 1.1) is no friend of the list until that cue has fired, then it takes the next free number: card space-game-11-e-reaches-miner)
   return R;
 }
 function campFriNumbered(C) { // the numbered list, dark ships included, in number order

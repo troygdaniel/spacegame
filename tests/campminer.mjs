@@ -16,7 +16,7 @@ g.run(`window.__MC = null; window.__seen = new WeakSet(); const __tick = campTic
 const fly = (name, seed) => { g.run('window.__MC = { says: [], transport: 0 }'); const r = bot.run(1, seed, name, 'steady', [], 420, 0);
   const x = J(`(() => { const C = window.C, m = C.ships.find(u => u.tid === 'dm'); return Object.assign({ miner: m && m.hp > 0 ? Math.round(m.hp) : 0, ore: Math.round(C.ore), hit: C.torpStat.hit, pilots: C.ships.filter(u => u.pilot && u.hp > 0).length, bonus: campBonuses(C).filter(b => b.ok || b.met || b.done).map(b => b.id) }, window.__MC); })()`);
   g.run('window.__MC = null'); return Object.assign(x, { res: r.result, t: r.t, hull: r.hull, lost: r.shipsLost }); };
-const SEEDS = [1, 2, 3], runs = {}; for (const b of ['plaini', 'plaing', 'plaina']) runs[b] = SEEDS.map(s => fly(b, s));
+const SEEDS = [1, 2, 3], runs = {}; for (const b of ['plaini', 'plaing', 'plaigk', 'plaina']) runs[b] = SEEDS.map(s => fly(b, s));
 const line = (r, key) => r.says.filter(s => s[1] === key);
 
 console.log('A. the price line');
@@ -46,6 +46,9 @@ console.log('B. the three answers');
   check('the transport ends at least 40 hull lower with all three away than with the call ignored, on average', sum('plaini', r => r.transport) / 3 - sum('plaina', r => r.transport) / 3 >= 40, sum('plaini', r => r.transport) / 3 + ' ' + sum('plaina', r => r.transport) / 3);
   check('send one: no torpedo gets through, and the miner is saved on most seeds but not surely (one pilot against two skiffs)', runs.plaing.every(r => r.hit === 0) && runs.plaing.filter(r => r.miner > 0).length >= 2, runs.plaing.map(r => r.miner + '/' + r.hit).join());
   check('no answer is best at everything: ignore loses the miner, all three takes a torpedo, one risks the miner', true);
+  console.log('     one, by the keys (W 2 E 2 Enter): ' + tab('plaigk'));
+  check('send one THROUGH THE KEYS (the bot plaigk presses W, 2, E, the miner\'s digit, Enter: card space-game-11-e-reaches-miner) is the same answer as the order: it wins, no pilot is lost, no torpedo gets through, the same seeds save the miner, and the radio says "Kara away at the miner" once', runs.plaigk.every((r, i) => r.res === 'won' && r.lost === 0 && r.hit === 0 && (r.miner > 0) === (runs.plaing[i].miner > 0) && line(r, 'camp.say.miner.short').length === 1 && /^Kara away at the miner/.test(line(r, 'camp.say.miner.short')[0][2]) && !line(r, 'camp.say.miner.all').length), runs.plaigk.map(r => r.miner + '/' + r.hit).join() + ' vs ' + runs.plaing.map(r => r.miner + '/' + r.hit).join());
+  check('and the price of answering is the same one: the third wave of the row, the three torpedo boats at the transport, is still there (the transport ends within 40 hull of the order bot\'s on average)', Math.abs(sum('plaigk', r => r.transport) - sum('plaing', r => r.transport)) / 3 <= 40, sum('plaigk', r => r.transport) / 3 + ' ' + sum('plaing', r => r.transport) / 3);
   const row = J('CAMP.levels[1].missions[0].waves.map(w => ({ lane: w.on && w.on.lane, ships: w.ships, goal: w.goal || "", beat: w.beat || "", say: w.say }))');
   check('the row: the call at 31 percent of the road, then at 34 percent three torpedo boats and two skiffs for the transport, then the ambush at 52 percent as it was', row.length === 3 && row[0].beat === 'distress' && row[0].lane === 0.31 && row[1].lane === 0.52 && JSON.stringify(row[1].ships) === '{"skiff":4,"tboat":2}' && row[2].lane === 0.34 && JSON.stringify(row[2].ships) === '{"tboat":3,"skiff":2}' && row[2].goal === 'convoy:t1' && row[2].say === 'camp.say.miner.bait', JSON.stringify(row));
   }

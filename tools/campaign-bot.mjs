@@ -49,6 +49,7 @@ const BOTS = {
   plainu: { name: 'plainu', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, noroute: true },            // plain, and it never scouts the fork: the default lane (what a player who ignores the new tools meets; card space-game-fleet-command-tune)
   plaini: { name: 'plaini', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'ignore' },              // plain, but the miner's call of 1.1 is ignored: no pilot is sent at the pirates on him
   plaing: { name: 'plaing', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'guard' },               // plain, and at the miner's call of 1.1 one pilot (Kara) is sent to guard the miner
+  plaigk: { name: 'plaigk', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'guardkeys' },           // plain, and at the miner's call of 1.1 one pilot (Kara) is sent to guard the miner THROUGH THE KEYS a player presses: W, 2, E, the miner's digit, Enter (card space-game-11-e-reaches-miner)
   plaina: { name: 'plaina', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'all' },                 // plain, and at the miner's call all three pilots are sent at the pirates on him
   plainr: { name: 'plainr', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, rear: true },               // plain, and when the last hauler leaves one pilot (Kara) is posted on it to guard it (card space-game-13-all-haulers-savable): a player who sends a pilot to the rear
   thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp' },   // a player who directs the fleet: helps the miner and uses the convoy orders (and scouts the fork)
@@ -89,11 +90,15 @@ g.run(`(() => {
   let callHeld = {}, callOnly = false;
   const callTick = (C, B) => { callHeld = {}; callOnly = false; const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || typeof B.help !== 'string' || !C.waves[w].started) return;
     const foes = campAliens(C), mine = foes.filter(u => u.wave === w); if (!mine.length) return; callOnly = mine.length === foes.length;
-    if (B.help === 'guard') callHeld = { green: 1 }; else if (B.help === 'all') callHeld = { red: 1, green: 1, yellow: 1 }; };
+    if (B.help === 'guard' || B.help === 'guardkeys') callHeld = { green: 1 }; else if (B.help === 'all') callHeld = { red: 1, green: 1, yellow: 1 }; };
   // the answer to the miner's call of 1.1 (card l1-miner-choice): help: true sends Wedge at the pirates (as it always did), 'guard' sends one pilot (Kara) to fly beside the miner, 'all' sends all three at the pirates
   const minerAnswer = (C, how, foe) => { const w = C.L.waves.find(x => x.beat === 'distress'), m = w && C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === w.victim);
-    if (how === 'ignore' || how === 'guard') campWingOrder(C, null, 'guard', null, 'bot'); // the pilots form up on the cruiser (the bot's standing attack order would send them at anything seen): nobody goes, or only the one sent next
+    if (how === 'ignore' || how === 'guard' || how === 'guardkeys') campWingOrder(C, null, 'guard', null, 'bot'); // the pilots form up on the cruiser (the bot's standing attack order would send them at anything seen): nobody goes, or only the one sent next
     if (how === 'ignore') return null;
+    if (how === 'guardkeys') { // the keys of a player (card space-game-11-e-reaches-miner): W then 2 picks Kara and closes, E opens the friends pick and E then the miner's number picks him and closes, Enter sends the pilot picked to guard the friend picked
+      const n = m ? ((campFriNumbered(C).find(e => e.id === m.id)) || {}).number : 0; if (!n) return null;
+      const P = campPanelNew(), K = c => campPanelKey(P, C, c, 0); K('KeyW'); K('Digit2'); K('KeyE'); K('Digit' + n); return K('Enter');
+    }
     return how === 'guard' && m ? campWingOrder(C, 'green', 'guard', m.id, 'bot') : how === 'all' ? campWingOrder(C, null, 'attack', foe.id, 'bot') : campWingOrder(C, 'red', 'attack', foe.id, 'bot'); };
   const wingEscort = (C, arg) => { const t = campFind(C, arg), cv = t && t.kind === 'convoy' ? C.by[t.id] : campNearest(campConvoys(C), C.carrier); return cv ? campWingOrder(C, 'yellow', 'escort', cv.id, 'bot') : campOrder(C, 'escort', arg); };
   const wingAttack = (C, arg) => { let r = null; ['red', 'green'].filter(k => !callHeld[k]).forEach(k => { const x = campWingOrder(C, k, 'attack', arg === 'mothership' ? 'mother' : null, 'bot'); if (x.ok || !r) r = x; }); if (!r) return { ok: false }; /* every squad it orders is held at the miner's call */ return r.ok || campWing(C, 'fighter').length === 0 ? r : campOrder(C, 'attack', arg); };

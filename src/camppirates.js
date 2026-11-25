@@ -124,6 +124,7 @@ function campTrafficNew(C) {
       if (t.escort) u.escort = Object.assign({}, t.escort); // a patrol that flies with a convoy up to a share of its road, then turns back to its post (card space-game-l1-1-beats)
       u.tid = t.id || ('t' + ti); u.cname = (t.name || kd.name) + (n > 1 ? ' ' + (i + 1) : ''); u.post = { x, y }; u.range = t.r || kd.r; u.rot = a; u.slot = i;
       if (t.hp) u.hp = u.maxHp = t.hp; // a row may say how tough the ship is (the crippled miner of 1.1 is not 70)
+      if (t.joins) u.joins = String(t.joins); // a ship that JOINS the numbered friendly list (E then a digit, src/camptarget.js campFriNumbered) only when the named cue has fired: the miner of 1.1 calls for help at the cue 'distress' (card space-game-11-e-reaches-miner); before it he is no friend of the list
       if (t.stay) u.stay = true; // a miner that works where it is and never goes home (until it is frightened): the distress call of 1.1 (card space-game-l1-1-beats)
       if (t.kind === 'miner') { u.home = home ? { x: home.x, y: home.y, r: home.r || 60 } : { x, y, r: 0 }; u.field = Array.isArray(t.field) ? { x: t.field[0], y: t.field[1] } : null; u.phase = 'out'; u.until = 0; u.beam = ''; }
     }
