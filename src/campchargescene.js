@@ -18,22 +18,26 @@ function campChargeDraw(g, color, hull, hit, k) { // the bar in screen px, its b
 function campChargeSync(scene) {
   const C = scene.camp, cam = scene.cameras && scene.cameras.main, K = CAMP.charge; if (!C || !scene.hud || !cam || typeof campChargeBars !== 'function') return;
   const V = scene.hud.charge || (scene.hud.charge = {}), z = cam.zoom > 0 ? cam.zoom : 1, seen = {};
+  const nl = typeof slookOn === 'function' && slookOn() && typeof slookMarkR === 'function'; // the new ship look (card space-game-ship-look-b-ring-arc, Troy 25 Nov 2026): the line and the bar over the ship are gone (its hull is the arc round it, src/shiplookmarks.js); the percentage stays, for the same 4 s after a hit, beside the arc, in the arc's colours
   campChargeBars(C).forEach(b => {
-    let o = V[b.id]; if (!o) o = V[b.id] = { g: scene.add.graphics().setDepth(K.depth), t: null, key: '', side: 'right' }; // (the number's text is made the first time the bar is full: a ship nobody hits never has one)
+    let o = V[b.id]; if (!o) o = V[b.id] = { g: nl ? null : scene.add.graphics().setDepth(K.depth), t: null, key: '', side: 'right' }; // (the number's text is made the first time the bar is full: a ship nobody hits never has one)
+    if (nl && o.g) o.g.setVisible(false); else if (!nl && !o.g) o.g = scene.add.graphics().setDepth(K.depth); // (a switch flipped on the N panel while playing: the bar's graphics is made when it is wanted again and kept hidden while it is not)
     const sp = scene.sp && scene.sp[b.id], half = Math.max(K.bar.min, sp && sp.displayWidth ? Math.max(sp.displayWidth, sp.displayHeight) * z / 2 : 0); // px on the screen: the ship's half size, the least being what the far view draws
     const k = Math.round(b.loud * 8) / 8, key = b.band + ':' + Math.round(b.hull * K.bar.w) + ':' + k * 8 + ':' + Math.round(b.hit * 5); // what the bar shows: drawn again only when this changes
-    if (o.key !== key) { o.key = key; campChargeDraw(o.g, b.color, b.hull, Math.round(b.hit * 5) / 5, k); }
+    if (!nl && o.key !== key) { o.key = key; campChargeDraw(o.g, b.color, b.hull, Math.round(b.hit * 5) / 5, k); }
     const vis = !scene.mp, at = b.y - (half + K.bar.gap) / z; // the map is over the view: no bars under it
-    o.g.setPosition(b.x, at).setScale(1 / z).setVisible(vis);
+    if (!nl) o.g.setPosition(b.x, at).setScale(1 / z).setVisible(vis);
+    const offPx = nl ? slookMarkR((sp && sp.displayWidth ? Math.max(sp.displayWidth, sp.displayHeight) : slookMarkLen(scene, C.by[b.id])) * z) + SLOOK.ring.gap + K.number.gap : K.bar.w / 2 + K.number.gap; // px on the screen from the ship's middle to the number's near edge: the bar's half width and the gap, or the picked ring's edge and the gap
     if (k > 0 && !o.t) o.t = scene.add.text(0, 0, '', uiFont(K.number.font, '#ffffff', { stroke: '#02060d', strokeThickness: 3 })).setOrigin(0, 0.5).setDepth(K.depth);
     if (o.t) {
-      if (typeof campLabel === 'function') campLabel(o.t, b.pct + '%', campChargeCss(b.color)); else { o.t.setText(b.pct + '%'); o.t.setColor(campChargeCss(b.color)); } // the percentage: only the full bar has it
-      const nh = K.number.font * 1.4, ny = at - campChargeLook(k, K.line.h, K.bar.h) / 2 / z, tw = o.t.width > 0 ? o.t.width : K.number.font * 0.62 * String(b.pct + '%').length; // (its box on the screen: the text is scaled by 1/z, so its px are the screen's)
-      const side = typeof campChargeNumberSide === 'function' ? campChargeNumberSide({ sx: (b.x - cam.scrollX - W / 2) * z + W / 2, sy: (b.y - cam.scrollY - H / 2) * z + H / 2, ny: (ny - cam.scrollY - H / 2) * z + H / 2, tw, th: nh }, W, H) : 'right'; // not off the edge, not for a ship off the screen
+      const ncol = campChargeCss(nl ? slookHullColor(b.hull) : b.color); // the number is the arc's colour in the new look (red is retired: pink under 30 percent)
+      if (typeof campLabel === 'function') campLabel(o.t, b.pct + '%', ncol); else { o.t.setText(b.pct + '%'); o.t.setColor(ncol); } // the percentage: only the full bar has it
+      const nh = K.number.font * 1.4, ny = nl ? b.y : at - campChargeLook(k, K.line.h, K.bar.h) / 2 / z, tw = o.t.width > 0 ? o.t.width : K.number.font * 0.62 * String(b.pct + '%').length; // (its box on the screen: the text is scaled by 1/z, so its px are the screen's)
+      const side = typeof campChargeNumberSide === 'function' ? campChargeNumberSide({ sx: (b.x - cam.scrollX - W / 2) * z + W / 2, sy: (b.y - cam.scrollY - H / 2) * z + H / 2, ny: (ny - cam.scrollY - H / 2) * z + H / 2, tw, th: nh, off: offPx }, W, H) : 'right'; // not off the edge, not for a ship off the screen
       if (side && o.side !== side) { o.side = side; o.t.setOrigin(side === 'left' ? 1 : 0, 0.5); } // the right of the bar, or the left of it when the edge would cut it
-      o.t.setPosition(b.x + (side === 'left' ? -1 : 1) * (K.bar.w / 2 + K.number.gap) / z, ny).setScale(1 / z).setAlpha(k).setVisible(vis && k > 0 && !!side);
+      o.t.setPosition(b.x + (side === 'left' ? -1 : 1) * offPx / z, ny).setScale(1 / z).setAlpha(k).setVisible(vis && k > 0 && !!side);
     }
     seen[b.id] = true;
   });
-  Object.keys(V).forEach(id => { if (!seen[id]) { V[id].g.destroy(); if (V[id].t) V[id].t.destroy(); delete V[id]; } }); // a ship that is lost or arrived has no bar
+  Object.keys(V).forEach(id => { if (!seen[id]) { if (V[id].g) V[id].g.destroy(); if (V[id].t) V[id].t.destroy(); delete V[id]; } }); // a ship that is lost or arrived has no bar
 }

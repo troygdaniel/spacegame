@@ -179,7 +179,7 @@ console.log('F. the switch off, the calls and the files');
   check('the file follows the rules: no web request, no image or sound file, no particles and no tween (one sprite a trail, a pooled kill), no Phaser emitter', !/\bfetch\(|XMLHttpRequest|https?:\/\/|\.(png|jpe?g|gif|svg|mp3|wav|ogg)\b|\bparticles\b|\.tweens\b|createEmitter/.test(code('src/shiplookfx.js')));
   check('it reads no rule and writes none: no assignment to a unit or to the CAMP table', !/\bu\.(hp|x|y|vx|vy|rot)\s*=[^=]|\bCAMP\.[a-z]+[.\w]*\s*=[^=]|\bC\.[a-z]+\s*=[^=]/.test(code('src/shiplookfx.js')));
   check('its script tag is in the page once, where landing F put it, and the other draw files are not touched by this card', html.split('<script src="src/shiplookfx.js"></script>').length === 2 && !/slookFx|SLOOKFX|slookKill|slookRocket/.test(src('src/shiplookdraw.js') + src('src/shiplookmarks.js') + src('src/shiplookglyph.js')));
-  check('the percent number and the old health line are not part of this card: campchargescene.js does not mention the look', !/slook/i.test(src('src/campchargescene.js')));
+  check('the percent number, the ring and the health arc are piece B\'s, not this card\'s: shiplookfx.js does not draw, read or name the charge bars (campchargescene.js, campcharge.js, the bar\'s percent) nor the picked ring', !/campcharge|campChargeBars|campChargeSync|campTgt|slookMarkR|slookPickR|slookRingR|slookArcColor|\.pct\b/.test(code('src/shiplookfx.js')));
 }
 
 console.log(failed ? `\nSHIP LOOK FX FAIL: ${failed} of ${n} checks failed` : `\nSHIP LOOK FX PASS (${n} checks)`);
