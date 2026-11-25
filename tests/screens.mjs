@@ -159,12 +159,12 @@ check('the Settings row is in CONTENT: a button that flips the switch, Enter doe
   check('the second turns them OFF again', J('CAMP.flags.screens') === false && J('localStorage.getItem(SCR.store)') === '0' && J('__row.slots.scrOn.text') === 'New screens: OFF' && J('__said[1]') === 'New screens OFF: the screens are as they were.');
 }
 { // nothing draws from the new pieces: no other file calls them (the pieces after landing F will, one screen each, and then this check moves with them)
-  const own = ['screens.js', 'scrhost.js', 'settings.js'], used = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && own.indexOf(f) < 0 && /\b(scr(On|Set|Load|Key|Chip|Chips|Words|Ring|Meter|Pill|Host\w*)|SCR_BUDGET|SCRHOST)\b/.test(code('src/' + f)));
-  check('no screen changes: no file but the helpers, the host and the Settings row names any of them', used.length === 0, used.join());
-  const st = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && ['scrhost.js'].indexOf(f) < 0 && /scrHostMount\(/.test(code('src/' + f)));
-  check('and nothing mounts the host', st.length === 0, st.join());
+  const own = ['screens.js', 'scrhost.js', 'settings.js', 'campkeys.js', 'scrkeys.js', 'scrsettings.js'], used = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && own.indexOf(f) < 0 && /\b(scr(On|Set|Load|Key|Chip|Chips|Words|Ring|Meter|Pill|Host\w*)|SCR_BUDGET|SCRHOST)\b/.test(code('src/' + f)));
+  check('no other screen draws from them yet: no file but the helpers, the host, the Settings row and landing E (the keys page and Settings: src/campkeys.js, src/scrkeys.js, src/scrsettings.js) names any of them; the pieces after it add their own files here', used.length === 0, used.join());
+  const st = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && ['scrhost.js', 'scrkeys.js', 'scrsettings.js'].indexOf(f) < 0 && /scrHostMount\(/.test(code('src/' + f)));
+  check('and nothing else mounts the host: only the keys page and Settings (landing E)', st.length === 0, st.join());
 }
-check('the Settings row\'s use of the switch is the only one in the game: scrOn is called from settings.js alone', readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && /\bscrOn\(/.test(code('src/' + f))).sort().join() === 'settings.js');
+check('the switch is read by the Settings row and by landing E alone: scrOn is called from campkeys.js (the keys page), scrsettings.js and settings.js', readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && /\bscrOn\(/.test(code('src/' + f))).sort().join() === 'campkeys.js,scrsettings.js,settings.js');
 
 console.log(`\n${n - failed}/${n} checks passed`);
 process.exit(failed ? 1 : 0);
