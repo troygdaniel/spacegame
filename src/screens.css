@@ -1,0 +1,20 @@
+/* The new screens' panels (landing F of the new screens; card space-game-screens-f-foundation): the style of src/scrhost.js's root and its pieces, in the look of the page HUD and the tokens of docs/screens-mock.html.
+   Everything is inside .sc-root (no other element of the page is touched): the root lies over the canvas and takes no click (pointer-events none); only a tile or chip with a handler (.act) takes one. System typeface, no web font,
+   no image, no request. The root's font-size is set by the host (1.5 percent of the canvas's width: the menus' em, against the flight HUD's 1.12), so every size below is in em. Dark and light need no pair: the game is a dark scene. */
+.sc-root{--sc-bg:#070b14;--sc-ink:#e6edf7;--sc-mute:#8794ab;--sc-line:rgba(140,170,210,.16);--sc-panel:rgba(14,22,36,.72);--sc-good:#4fe0a6;--sc-warn:#ffc857;--sc-foe:#ff6fa8;--sc-mine:#cfe6ff;--sc-blue:#6fd6ff;--sc-amber:#ffc857;--sc-alien:#d58bff;--sc-gold:#e9b872;--sc-text:system-ui,-apple-system,"Segoe UI",sans-serif;
+  position:fixed;left:0;top:0;width:0;height:0;margin:0;padding:0;pointer-events:none;z-index:6;overflow:hidden;color:var(--sc-ink);font-family:var(--sc-text);font-size:16px;line-height:1.5;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+.sc-root *{box-sizing:border-box;pointer-events:none;user-select:none;-webkit-user-select:none}
+.sc-root .act{pointer-events:auto;cursor:pointer}
+.sc-p{background:var(--sc-panel);border:1px solid var(--sc-line);border-radius:1.15em;padding:1em 1.2em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 .6em 2em rgba(0,0,0,.35)}
+.sc-abs{position:absolute}.sc-r{display:flex;align-items:center;gap:.7em}.sc-c{display:flex;flex-direction:column;gap:.6em}.sc-sp{justify-content:space-between}.sc-ctr{align-items:center;text-align:center}
+.sc-k{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;padding:0 .45em;border-radius:.45em;font-size:.78em;font-weight:600;color:#0a1420;background:#bfe9ff;flex:none;white-space:nowrap}
+.sc-lab{font-size:.7em;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--sc-mute)}
+.sc-t1{font-size:2.6em;font-weight:600;letter-spacing:-.01em;line-height:1.1}.sc-t2{font-size:1.5em;font-weight:600;line-height:1.2}.sc-t3{font-size:1.05em;font-weight:600}.sc-sm{font-size:.84em;color:#c3cde0}.sc-dim{opacity:.45}
+.sc-m{height:.36em;border-radius:1em;background:rgba(255,255,255,.09);overflow:hidden;flex:1}.sc-m i{display:block;height:100%;border-radius:1em;background:var(--sc-good)}
+.sc-ring{width:var(--s,2.6em);height:var(--s,2.6em);border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c,var(--sc-good)) calc(var(--v,100)*1%),rgba(255,255,255,.1) 0);flex:none}
+.sc-ring>span{width:78%;height:78%;border-radius:50%;display:grid;place-items:center;background:#0e1626;font-weight:600;font-size:.9em}
+.sc-pill{display:inline-flex;align-items:center;gap:.45em;padding:.3em .8em;border-radius:2em;background:rgba(255,255,255,.06);border:1px solid var(--sc-line);font-size:.84em;white-space:nowrap}
+.sc-ok{color:var(--sc-good)}.sc-no{color:var(--sc-mute)}.sc-gold{color:var(--sc-gold)}.sc-pink{color:var(--sc-foe)}.sc-amber{color:var(--sc-amber)}
+.sc-tile{border:1px solid var(--sc-line);border-radius:.9em;padding:.7em .8em;background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:.25em;min-width:0}
+.sc-tile.on{border-color:var(--sc-ink);background:rgba(255,255,255,.08)}.sc-tile.lock{opacity:.4}
+.sc-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.7em}
