@@ -15,6 +15,7 @@
 .ph-meters { display: flex; gap: 1.1em; }
 .ph-half { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .4em; }
 .ph-half .ph-num { margin-left: auto; min-width: 0; }
+.ph-half .ph-meter { flex: none; } /* in the half's column the meter keeps its own height (a flex: 1 would be a height of 0) */
 .ph-mw { flex: none; width: 6.6em; } /* the word of a meter beside its icon (Shields, Hull, Ore, Missiles): every meter starts at the same place */
 .ph-row { display: flex; align-items: center; gap: .6em; }
 .ph-meter { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); overflow: hidden; }
