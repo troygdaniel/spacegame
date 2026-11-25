@@ -108,6 +108,7 @@ class Campaign extends Phaser.Scene {
       this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true, typeof campZoomFloor === 'function' ? campZoomFloor(this.level, this.mi) : 0); CAMZOOM.want = campZoomStart(); camzoomSetup(this); // the view goes out to 0.2 here, or to where this mission's route fits on a long one (campZoomRange, campZoomFloor; the Long Haul's 0.4 is put back below) // every flight starts at the zoom six presses of - reach (campZoomStart); the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
+    if (typeof campPlaceLabelsInstall === 'function') campPlaceLabelsInstall(this); // the two labels of a place keep clear of each other at every zoom (src/campplacelabels.js); after the zoom, which scales the labels, on the same event
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
   get camzoomHold() { return !!this.mp; } // with the map open the wheel is the map's (camzoomCanWheel, src/camzoom.js)
@@ -123,6 +124,7 @@ class Campaign extends Phaser.Scene {
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
+    (this.placeSets = this.placeSets || []).push({ p, nm, pb }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js)
     if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
     return made;
   }
