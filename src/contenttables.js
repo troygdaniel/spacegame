@@ -583,7 +583,6 @@ const UI_TEXT = {
   'camp.ui.tune.row.repairtime': 'Pilot\'s mend, seconds',
   'camp.ui.tune.row.fighterdamage': 'Fighter damage a shot',
   'camp.ui.tune.row.convoyspeed': 'Transport and hauler speed',
-  'camp.ui.tune.row.haulgap': 'Seconds between haulers leaving',
   'camp.ui.tune.row.enemyhull': 'Enemy hull (times the mission\'s)',
   'camp.ui.tune.row.enemydamage': 'Enemy damage (times the mission\'s)',
   'camp.ui.tune.row.pace': 'Battle pace (1 is Normal)',
