@@ -155,10 +155,13 @@ function campMapPaint(s, time) {
   }
   // the marks, the places first and the carrier last (campMapMarks sorts them)
   const marks = campMapMarks(C, mp.whole, typeof campSquadsShown === 'function' ? campSquadsShown(s.pn, C, (s.time && s.time.now) || time) : []); // a squad in focus (or one just given an order) has coloured dots; the map closes the lists, so this is the kept ring
+  const flat = typeof slookOn === 'function' && slookOn(); // the new ship look (src/shiplook.js): a ship is its signal shape on the map, in its side's colour (hostile pink, aliens violet); asked once a frame
   marks.forEach(m => {
     if (mp.z > 1.01 && !CAMPMAP_PINNED.includes(m.type) && (X(m.x) < F.x || X(m.x) > F.x + F.w || Y(m.y) < F.y || Y(m.y) > F.y + F.h)) return; // zoomed in, what is out of the frame is not drawn on its edge (that was for the whole level); the carrier, the mothership and the convoys still are
     const p = pin(X(m.x), Y(m.y));
-    if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); if (m.outpost) { const q = r + 9; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(p.x - q, p.y - q, q * 2, q * 2); g.fillStyle(0x6dff9c, 0.95).fillRect(p.x - 2, p.y - q - 5, 4, 4); } } // a friendly outpost (the level's `outposts`) wears a green frame and a beacon: the dock
+    if (flat && m.type === 'torpedo') m.color = slookInt(slookColor(slookMapType('torpedo'))); // a torpedo coming at you is hostile: pink
+    if (flat && m.kind && slookGlyphMark(g, m, p.x, p.y)) { if (m.arming) g.lineStyle(1.5, slookInt(SLOOK.C.foe), 0.5 + 0.5 * Math.sin(time / 120)).strokeCircle(p.x, p.y, 8 + 2 * Math.sin(time / 120)); } // a ship: its signal shape (a torpedo boat keeps its ring while it arms, pink)
+    else if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); if (m.outpost) { const q = r + 9; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(p.x - q, p.y - q, q * 2, q * 2); g.fillStyle(0x6dff9c, 0.95).fillRect(p.x - 2, p.y - q - 5, 4, 4); } } // a friendly outpost (the level's `outposts`) wears a green frame and a beacon: the dock
     else if (m.type === 'lane') { // a lane of a fork in the road (src/camproute.js): the chosen one is a firm green line, the others are dashed; one that a scout has read is brighter
       const pts = m.pts.map(q => pin(X(q.x), Y(q.y))), col = m.chosen ? 0x6dff9c : 0x7fe9ff;
       for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], dist = Math.hypot(b.x - a.x, b.y - a.y), n = m.chosen ? 1 : Math.max(1, Math.round(dist / 12)); g.lineStyle(m.chosen ? 2 : 1.2, col, m.chosen ? 0.9 : m.known ? 0.7 : 0.4); for (let k = 0; k < n; k += (m.chosen ? 1 : 2)) { const t0 = k / n, t1 = Math.min(1, (k + (m.chosen ? 1 : 0.55)) / n); g.lineBetween(a.x + (b.x - a.x) * t0, a.y + (b.y - a.y) * t0, a.x + (b.x - a.x) * t1, a.y + (b.y - a.y) * t1); } }
@@ -247,7 +250,7 @@ function campMapPaint(s, time) {
   const rows = campMapLegend(C, marks);
   mp.leg.forEach((t, i) => {
     const r = rows[i]; if (!r) { t.setVisible(false); return; }
-    t.setVisible(true).setText(r.text); g.fillStyle(r.color, 1).fillCircle(CAMPMAP_SIDE.x + 6, t.y, 4);
+    t.setVisible(true).setText(r.text); g.fillStyle(flat && SLGLYPH.types[r.type] ? slookInt(slookColor(slookMapType(r.type))) : r.color, 1).fillCircle(CAMPMAP_SIDE.x + 6, t.y, 4);
   });
 }
 
