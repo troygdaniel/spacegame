@@ -9,11 +9,11 @@
 //   SLOOK.K[kind]             a kind's look: { name, side (its usual one), px (play size, measured on main bc8ad3e), p (the outline: points in units of the length, nose at +x, length 1), d (the facet), g (its signal shape),
 //                             s (1: drawn with curves, the aliens'), hot (1: the facet is white, the torpedo boat's warhead) }
 //   slookKinds()              the kinds, in the mock's order (the thirteen it draws, then the lancer, the mothership and the towers, which it does not: the proposals of the scope report)
-//   slookSide(u, prot)        the side of a UNIT, from the sim: 'friend' (your cruiser and pilots), 'protect' (a ship you protect: prot is true when campConvoyShips has it, a freighter always is), 'neutral',
+//   slookSide(u, prot)        the side of a UNIT, from the sim: 'friend' (your cruiser and pilots), 'protect' (a ship you protect: prot is true when campConvoyShips has it; a freighter always is, and so is every living neutral miner), 'neutral',
 //                             'foe' (the pirates) or 'alien'. slookSideOf(C, u) asks the sim who is protected; slookKindSide(kind) is the usual side where there is no unit (the briefing, the target panel)
 //   slookFacet(side, hot)     the facet's colour: the side's colour mixed 55 percent toward SLOOK.C.dark, white for a warhead
 //   slookPolygon(kind, L, n)  the outline in px at length L as a flat list of points (nose at +x); a smooth kind is its quadratic curves cut into n steps each (default 6), so a Phaser Graphics can fill it;  slookFacetPolygon: the facet, the same way
-//   slookSidesOf(kind)        the sides a kind is drawn as (its usual one, and SLOOK.also);  slookTexKey(kind, side): the key of its baked texture, 'look-<kind>-<side>' (landing A makes them)
+//   slookTexKey(kind, side)   the key of a kind's baked texture as a side (default its usual one), 'look-<kind>-<side>' (landing A makes them; a unit whose side is not its kind's usual one, which the sim does not make today, gets its own)
 //   slookFireColor(side)      the colour of a shot: your side's mint, pink for hostile fire (amber only ever means a ship you protect), the neutrals' own grey-blue
 //   slookArcColor(frac)       the hull arc round a ship that is hurt or picked: green above 60 percent, amber to 30, pink under (the HUD's rings);  slookRingR(L, w) and slookPickR(L, w): the arc's radius and the picked ship's bright ring (w: px a unit is on the screen)
 const SLOOK = {
@@ -21,7 +21,6 @@ const SLOOK = {
   memo: { s: null, v: null },                               // the page's address, read again only when it changed (the switch is asked many times a frame)
   C: { friend: '#cfe6ff', friendHi: '#6fd6ff', protect: '#ffc857', foe: '#ff6fa8', alien: '#d58bff', neutral: '#9fb3c8', own: '#7df0c0', dark: '#0b1220' }, // the mock's C table: yours, the glow of your engines, a ship you protect, hostile (pirates), alien, neutral, your fire, the facet's dark
   sides: ['friend', 'protect', 'neutral', 'foe', 'alien'],  // the five sides a ship can be drawn as (each a key of C)
-  also: { miner: 'neutral', patrol: 'protect' },            // a kind that can also be drawn as another side than its usual one (a miner is neutral until a mission has you protect it; a patrol that escorts): landing A bakes both
   facet: 0.55,                                              // the facet is the side's colour mixed this far toward C.dark
   rim: { color: 'rgba(5,8,14,.9)', k: 0.03, least: 1 },     // the thin dark rim: its colour, its width as a share of the length, and its least width (px)
   hot: '#ffffff',                                           // the torpedo boat's warhead tip
@@ -98,7 +97,6 @@ function slookPoly(P, smooth, L, n) { // points in units of the length (nose at 
 }
 const slookPolygon = (kind, L, n) => SLOOK.K[kind] ? slookPoly(SLOOK.K[kind].p, !!SLOOK.K[kind].s, L, n) : []; // the outline of a kind at length L px, for a Phaser Graphics to fill (a smooth kind is cut into n steps a curve, default 6)
 const slookFacetPolygon = (kind, L, n) => SLOOK.K[kind] ? slookPoly(SLOOK.K[kind].d, !!SLOOK.K[kind].s, L, n) : []; // the facet inside it, the same way
-const slookSidesOf = kind => { const k = SLOOK.K[kind]; return !k ? [] : SLOOK.also[kind] ? [k.side, SLOOK.also[kind]] : [k.side]; }; // the sides a kind is drawn as: its usual one, and the other it can take
 const slookTexKey = (kind, side) => 'look-' + kind + '-' + (side || slookKindSide(kind)); // the key of the baked texture of a kind as a side (landing A makes them; the target panel and the briefing ask for them by this name)
 const slookFireColor = side => side === 'foe' || side === 'alien' ? SLOOK.C.foe : side === 'neutral' ? SLOOK.C.neutral : SLOOK.C.own; // hostile fire is pink; amber only ever means a ship you protect
 const slookArcColor = frac => frac > SLOOK.arc.ok ? SLOOK.arc.good : frac > SLOOK.arc.crit ? SLOOK.arc.warn : SLOOK.arc.foe;

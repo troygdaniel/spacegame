@@ -7,6 +7,12 @@ Everything here was measured in headless Chrome with software GL on a busy Mac, 
 what a player's machine does. Wall-clock times moved by up to 50% between runs when other agents were using the CPU; the ratios
 below come from runs that alternate old and new code in the same page.
 
+## The new ship look: the base to beat (card `space-game-ship-look-f-foundation`, 25 Nov 2026)
+
+Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every piece of the new look (A the ships, B the ring and arc, C fire and trails, D the signal shapes, E the panel and briefing; scope report on card `space-game-ship-look-scope`) puts its before and after beside these lines. The Mac was quiet (load 3).
+- **The sim, no Chrome** (`node --expose-gc --max-semi-space-size=128 tools/perfcampaign.mjs sim busy1`, two runs): one step 0.46 ms median, 0.53 to 0.59 ms at the 95th percentile, 0.46 to 0.47 ms mean (2.8 percent of a 16.7 ms frame), 2.7 to 2.8 KB allocated a step. The new look does not touch the sim, so this should not move; if it does, the piece that moved it is wrong.
+- **The drawing, Chrome (NOT measured in this landing: the card said no Chrome)**: the number the pieces must hold is the stepped frame of JavaScript in the busiest fight, `node tools/perfcampaign.mjs frames busy1`. The card text gave 1.3 ms; this file's own table (22 Nov, below) has 2.27 ms mean and 5.9 ms max for the same measure, and 1.27 ms was the 20 Nov build. Whoever lands piece A takes `frames busy1` on `c0c5dd91` and on the piece in one page, swapping the code under test (the ratio method in "Measuring again"), and writes both here; B and C do the same against the new base.
+
 ## Campaign fights on this Mac (card `space-game-choppy-fights`, 22 Nov 2026)
 
 Troy says big fights are choppy. This section is the measurement and nothing else: no game file was changed for it. The fixes are listed at the end, for whoever makes them.
