@@ -248,7 +248,7 @@ function campMapPaint(s, time) {
     if (!cp) mp.routeText.setPosition(0, 0);
   } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); mp.routeAt = null; }
   if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); if (!mp.dom) campMapFitOne(mp.dest, uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else if (!mp.dom) mp.dest.setText('');
-  const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
+  const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); if (!mp.dom) g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); else if (chosen.id !== mp.setId) g.lineStyle(1.5, 0xe6edf7, 0.9).strokeCircle(q.x, q.y, 11); } // the row the list has lit: a bright square on the glass map, a thin ring in the page's ink on the card (a place you have set has its own white ring)
   // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
   if (mp.flewId && mp.setId === mp.flewId && !(N && N.on)) { mp.setId = ''; mp.flewId = ''; } // the trip is over (arrived, cleared, a steering key): the place is no longer set
   const setRow = mp.setId ? mp.rows.find(r => r.id === mp.setId) : null; if (mp.setId && !setRow) mp.setId = '';
