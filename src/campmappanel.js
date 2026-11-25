@@ -28,12 +28,14 @@ const campMapPanelsOn = s => typeof document !== 'undefined' && !!s && !!s.game 
 
 // ---- where a place's name may stand (card space-game-tab-map-labels-rings; Troy, 25 Nov 2026: "LUNA is under the cruiser icon, the green square cuts through CERES"): the names are put clear of the marks on top of the places ----
 const CAMPMAPPANEL_OBST = { carrier: 12, mother: 12, rival: 10, wing: 8, convoy: 8, patrol: 8, miner: 8, pirate: 8, tboat: 8, alien: 8, tower: 8, torpedo: 6 }; // the radius (screen px) a ship's mark keeps clear: the cruiser's long arrow is the widest
+const campMapPin = (mp, p) => { const F = campMapFrameOf(mp); return { x: Math.max(F.x + 5, Math.min(F.x + F.w - 5, p.x)), y: Math.max(F.y + 5, Math.min(F.y + F.h - 5, p.y)) }; }; // a mark past the edge of the frame is drawn ON the edge (campMapPaint's pin): its name stands by that mark, not by the place out of sight
 function campMapObstacles(mp, marks, noRing) { // the circles { x, y, r } in the frame that a name keeps out of: every ship's mark, and the ring of the mission's place (at most 24 px: a big ring is not a wall)
   const F = campMapFrameOf(mp), out = [];
   (marks || []).forEach(m => {
     let r = CAMPMAPPANEL_OBST[m.type]; if (m.type === 'objective' && !noRing) r = Math.min(24, Math.max(17, (m.r || 0) * mp.fit.s + 5)); if (!r) return; // (noRing: the goal's own word is for the ring: it keeps clear of the ships only)
-    const p = campMapPoint(mp.fit, F, m.x, m.y); if (p.x < F.x - r || p.x > F.x + F.w + r || p.y < F.y - r || p.y > F.y + F.h + r) return;
-    out.push({ x: p.x, y: p.y, r });
+    const raw = campMapPoint(mp.fit, F, m.x, m.y), inside = raw.x >= F.x - r && raw.x <= F.x + F.w + r && raw.y >= F.y - r && raw.y <= F.y + F.h + r;
+    if (!inside && mp.z > 1.01 && m.type !== 'carrier' && m.type !== 'mother' && m.type !== 'convoy') return; // zoomed in, what is out of the frame is not drawn; zoomed out (and the cruiser, the mothership and the convoys always) it sits on the edge, where it is an obstacle
+    const p = inside ? raw : campMapPin(mp, raw); out.push({ x: p.x, y: p.y, r });
   });
   return out;
 }

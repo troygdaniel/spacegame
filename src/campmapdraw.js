@@ -94,7 +94,7 @@ function campMapNames(s) {
   const inF = p => p.x >= F.x - 8 && p.x <= F.x + F.w + 8 && p.y >= F.y - 8 && p.y <= F.y + F.h + 8;
   const places = campMapMarks(C, mp.whole).filter(m => m.type === 'place' && (mp.z <= 1.01 || inF(campMapPoint(mp.fit, F, m.x, m.y)))), names = [], pts = [];
   const items = places.map(m => {
-    const t = own(s.add.text(0, 0, m.name.toUpperCase(), mp.dom ? uiFont(12, m.color === CAMPMAP.color.star ? '#ffe29a' : CAMPMAPPANEL.names, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y); // on the page HUD's card the names are pale (amber is for a ship you protect) and in the page's typeface
+    const t = own(s.add.text(0, 0, m.name.toUpperCase(), mp.dom ? uiFont(12, m.color === CAMPMAP.color.star ? '#ffe29a' : CAMPMAPPANEL.names, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = mp.dom ? campMapPin(mp, campMapPoint(mp.fit, F, m.x, m.y)) : campMapPoint(mp.fit, F, m.x, m.y); // on the page HUD's card the names are pale (amber is for a ship you protect) and in the page's typeface
     names.push(t); pts.push(p); t.world = { x: m.x, y: m.y }; return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4 + (mp.dom && m.outpost ? 5 : 0), w: t.width, h: t.height, side: 'below' }; // (a dock's thin ring is 8 px out: its name stands outside it)
   });
   const crowd = mp.z < CAMPMAP.crowdZ, L = C.L || CAMP.levels[C.level], keep = places.map(m => !!m.outpost || m.id === L.place); // far out, the inner system is a few pixels across: a name that cannot be put clear of the others is left out (the mission's place and the outposts keep theirs, and are placed first; zoom in and the rest are there)
@@ -115,7 +115,7 @@ function campMapNamesRecheck(s, time) {
   const mp = s.mp, P = mp && mp.namePlan; if (!mp || !mp.dom || !P || !P.names.length || mp.dragging || mp.z !== mp.zWant) return;
   if (time - (mp.nameChk == null ? -1e9 : mp.nameChk) < 1200) return; mp.nameChk = time;
   const F = campMapFrameOf(mp), obst = campMapObstacles(mp, campMapMarks(s.camp, mp.whole, []));
-  const marks = P.ord.map(i => { const p = campMapPoint(mp.fit, F, P.worlds[i].x, P.worlds[i].y); return { x: p.x, y: p.y, r: P.items[i].r }; }).concat(obst);
+  const marks = P.ord.map(i => { const p = campMapPin(mp, campMapPoint(mp.fit, F, P.worlds[i].x, P.worlds[i].y)); return { x: p.x, y: p.y, r: P.items[i].r }; }).concat(obst);
   const boxes = P.ord.map(i => ({ x: P.names[i].x, y: P.names[i].y, w: P.names[i].width, h: P.names[i].height })).filter((b, k) => P.names[P.ord[k]].visible !== false || true);
   if (campMapNamesBad(boxes, marks) > P.bad + 30) { campMapNames(s); mp.namesZ = mp.z; }
 }
@@ -124,7 +124,7 @@ function campMapNamesMove(s) {
   const mp = s.mp, F = campMapFrameOf(mp); if (!mp) return;
   mp.nameObjs.forEach(t => {
     if (!t.world) { t.setVisible(!t.band); return; }
-    const p = campMapPoint(mp.fit, F, t.world.x, t.world.y), x = p.x + t.off.x, y = p.y + t.off.y;
+    const p = mp.dom ? campMapPin(mp, campMapPoint(mp.fit, F, t.world.x, t.world.y)) : campMapPoint(mp.fit, F, t.world.x, t.world.y), x = p.x + t.off.x, y = p.y + t.off.y;
     t.setPosition(x, y).setVisible(!t.drop && x >= F.x && x <= F.x + F.w && y >= F.y && y <= F.y + F.h);
   });
 }
