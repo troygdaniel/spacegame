@@ -44,7 +44,7 @@ A level row with no `missions` is one mission of its own (kind `waves`, no objec
 
 You are promoted as you fly. Six ranks, plain names: **Cadet, Ensign, Lieutenant, Commander, Captain, Commodore**. The points are the **best scores of the missions flown, added up** (a mission score already counts its objectives, its bonus objectives, the hull left and the time; a mission flown again for a better score can only raise the total). Nothing is saved for the rank: it is read from the saved results.
 
-| Rank | From points | Extra fighters (it was fighters + escorts before card `space-game-cut-escorts`) | About |
+| Rank | From points | Extra wing strength (it was fighters + escorts before card `space-game-cut-escorts`) | About |
 |---|---|---|---|
 | Cadet | 0 | 0 | the start |
 | Ensign | 1,000 | 1 | one good mission |

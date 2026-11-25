@@ -49,7 +49,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.rank.none | No rank yet. Fly a mission. |
 | camp.hub.rank.points | Score so far: {points} points |
 | camp.hub.rank.flown | Missions flown: {n} of {all} |
-| camp.hub.rank.wing | Wing: {f} fighters |
+| camp.hub.rank.wing | Wing strength: {f} |
 | camp.hub.launch.head | NEXT: MISSION {n} OF {of}  -  {title} |
 | camp.hub.launch.go | Enter launches the cruiser; {keyready} shows the briefing first. |
 | camp.hub.launch.level | Level {n} begins with this mission: {name}. |
