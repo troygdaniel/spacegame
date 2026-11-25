@@ -237,7 +237,10 @@ function campMapPaint(s, time) {
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
     if (mp.dom) { // the word is a gold pill on the card, kept inside the frame (over the ring when the goal is at the top edge it is under it)
-      const gw = mp.goalText.width + 14, gh = mp.goalText.height + 3, gx = Math.max(F.x + gw / 2 + 3, Math.min(F.x + F.w - gw / 2 - 3, q.x)), gy = q.y - 22 - gh / 2 < F.y + 3 ? q.y + 22 : q.y - 22;
+      const gw = mp.goalText.width + 14, gh = mp.goalText.height + 3, ring = 17, inF = c => c.x - gw / 2 >= F.x + 3 && c.x + gw / 2 <= F.x + F.w - 3 && c.y - gh / 2 >= F.y + 3 && c.y + gh / 2 <= F.y + F.h - 3;
+      const cands = [{ x: q.x, y: q.y - 22 }, { x: q.x, y: q.y + 22 }, { x: q.x + ring + gw / 2 + 6, y: q.y }, { x: q.x - ring - gw / 2 - 6, y: q.y }, { x: q.x, y: q.y - 22 - gh - 4 }, { x: q.x, y: q.y + 22 + gh + 4 }].filter(inF);
+      const clear = (mp.nameObjs || []).filter(t => t && t.world && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })).concat(campMapObstacles(mp, marks, true).map(o => ({ x: o.x - o.r, y: o.y - o.r, w: o.r * 2, h: o.r * 2 })));
+      const at = campMapFreeSpot(cands, gw, gh, clear) || cands[0] || { x: Math.max(F.x + gw / 2 + 3, Math.min(F.x + F.w - gw / 2 - 3, q.x)), y: Math.max(F.y + gh / 2 + 3, Math.min(F.y + F.h - gh / 2 - 3, q.y - 22)) }, gx = at.x, gy = at.y; // the word: above the ring, else under it, else beside it, inside the frame and clear of the names and the ships
       mp.goalText.setPosition(gx, gy); g.fillStyle(0xe9b872, 0.16).fillRoundedRect(gx - gw / 2, gy - gh / 2, gw, gh, gh / 2); g.lineStyle(1, 0xe9b872, 0.5).strokeRoundedRect(gx - gw / 2, gy - gh / 2, gw, gh, gh / 2);
     }
     mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, campNavFlight(C, goal, d)) }));
