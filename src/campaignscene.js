@@ -61,7 +61,7 @@ class Campaign extends Phaser.Scene {
   create() {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
     const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
-    spaceBackdrop(this, true);
+    if (typeof campWorldOn === 'function' && campWorldOn() && typeof campWorldBackdrop === 'function') campWorldBackdrop(this); else spaceBackdrop(this, true); // the new world look's backdrop (near black, white stars, two faint slate clouds: card space-game-world-w1-backdrop) or today's
     campShotTextures(this); // the pirates', the neutrals' and the Earth side's shots
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
