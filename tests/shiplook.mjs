@@ -91,7 +91,7 @@ const sl = src('src/shiplook.js');
 check('28 the table is pure: no Phaser, no page, no web request, no image or sound file', !/\bPhaser\b|\bthis\.add\b|\bscene\.|document\.|\bfetch\(|XMLHttpRequest|https?:\/\/|\.(png|jpe?g|gif|svg|mp3|wav|ogg)\b/.test(sl.replace(/\/\/[^\n]*/g, '')));
 const html = src('index.html'), tags = ['src/shiplook.js', 'src/shiplookdraw.js', 'src/shiplookmarks.js', 'src/shiplookfx.js', 'src/shiplookglyph.js'];
 check('29 the five files have their script tag once each, the table first (the draw files are stubs until the pieces after this one land)', tags.every(t => html.split('<script src="' + t + '"></script>').length === 2) && tags.every((t, i) => !i || html.indexOf(t) > html.indexOf(tags[i - 1])) && html.indexOf('src/shiplook.js') > html.indexOf('src/camppagehud.js'));
-check('30 the draw files are stubs (comments only) in this landing, and the file the Long Haul uses for its hulls (src/shipmodels.js shipLook) keeps its name: nothing here redefines it', tags.slice(1).every(f => src(f).replace(/\/\/[^\n]*/g, '').trim() === '') && !/\bshipLook\b/.test(sl.replace(/\/\/[^\n]*/g, '')) && J('typeof shipLook') === 'function');
+check('30 the file the Long Haul uses for its hulls (src/shipmodels.js shipLook) keeps its name: nothing in the look files redefines it, whichever pieces have landed (the draw files are stubs until their piece lands)', !tags.some(f => /\bshipLook\b/.test(src(f).replace(/\/\/[^\n]*/g, ''))) && J('typeof shipLook') === 'function');
 
 console.log('F. the pictures of today');
 const look = J('Object.keys(CAMP_LOOK)');
