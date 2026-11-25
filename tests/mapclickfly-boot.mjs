@@ -54,7 +54,7 @@ async function campaign() {
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes
     await t.run(6000);
     const sp = await j(`Math.round(Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy))`), top = await j(`Math.round(CAMP.carrier.speed)`), burn = await j(`Math.round(CAMP.carrier.speed * Math.max(CAMP.nav.fast, CAMP.nav.farFast))`); // far trips burn at farFast // the table's numbers, not a number written here (the carrier's top speed was 210 when this was written)
-    check('six seconds in, the carrier is past its own top speed (' + top + ') and under the burn\'s (' + burn + ')', sp > top * 1.05 && sp <= burn + 1, sp + ' px/s');
+    check('six seconds in, the cruiser is past its own top speed (' + top + ') and under the burn\'s (' + burn + ')', sp > top * 1.05 && sp <= burn + 1, sp + ' px/s');
     await snap(t, 'campaign-burn');
     await t.ev(`(() => { ${SC}.k.UP.isDown = true; return 1; })()`); await t.run(200); await t.ev(`(() => { ${SC}.k.UP.isDown = false; return 1; })()`); await t.run(200); // the arrows fly (no letter does: card one-list-keys)
     check('a steering key (Up) takes the wheel: the autopilot and the burn are off, and the speed is back under the top speed (' + top + ')', await j(`${SC}.camp.nav === null`) && (await j(`Math.hypot(${SC}.camp.carrier.vx, ${SC}.camp.carrier.vy)`)) <= top + 1);
