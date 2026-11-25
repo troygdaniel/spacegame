@@ -56,7 +56,7 @@ function campMapOpen(s) {
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
   if (!dom) hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
   mp.g = own(s.add.graphics()).setDepth(152);
-  if (dom) { mp.list = []; campMapPanelOpen(s); } // the header, the footer and the column are page elements; the card is drawn by campMapPaint under the marks
+  if (dom) { mp.list = []; campMapPanelOpen(s); campMapPanelTakeToasts(s); } // the header, the footer and the column are page elements; the card is drawn by campMapPaint under the marks; a box that was up when the map opened moves into the radio panel
   else {
     own(s.add.text(F.x, 46, uiText('camp.map.title', { n: C.level, name: L.name }), uiFont(24, '#38e1ff', { letterSpacing: 2 }))).setDepth(154);
     own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
@@ -263,6 +263,7 @@ function campMapPaint(s, time) {
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
   if (mp.dom) { // the column of the card (src/campmappanel.js): page panels written from a pure model, ten a second (the radio panel fades every frame)
     const M = campMapPanelDue(s, time) ? campMapPanelModel(C, mp, { rows: mp.rows, sel, win, setRow, setDist: setRow ? Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y) : 0, legend: campMapLegend(C, marks), km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10), flat }) : null;
+    if (typeof campPageHudHideLines === 'function') campPageHudHideLines(s, true); // the canvas lines the page HUD replaces (the goal line at the top centre, the key line at the bottom) stay hidden while the card is up: it does not cover the screen's edge as the glass did
     campMapPanelPaint(s, M, time);
     return;
   }

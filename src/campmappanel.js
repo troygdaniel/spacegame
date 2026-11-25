@@ -75,6 +75,13 @@ function campMapToast(s, msg, color, hold) {
   return true;
 }
 
+// a radio box of the canvas that was up when the map opened (the old box would stay over the map until its time ran out): its line moves into the radio panel and the box goes
+function campMapPanelTakeToasts(s) {
+  const up = (s && s.toasts || []).filter(o => o && o.t && o.t.active); if (!up.length) return false;
+  const o = up[up.length - 1], color = o.t && o.t.style && o.t.style.color ? o.t.style.color : '#ffd37a';
+  campMapToast(s, o.msg, color, 0); up.forEach(x => { try { x.t.destroy(); x.bg.destroy(); x.tab.destroy(); } catch (e) { /* gone with the scene */ } }); s.toasts = [];
+  return true;
+}
 // ---- the page elements ----
 const campMapPanelSet = (el, prop, v) => {
   if (prop !== 'html') return campPageHudSet(el, prop, v);
