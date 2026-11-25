@@ -67,7 +67,8 @@ try {
   check('every body of the system is inside the frame at the far end', places === 0, places + ' outside');
   await wheel(-100, 8); await t.run(1200); const mw = await j(`${S}.mp.zWant`); note('after 8 wheel notches in: zoom ' + mw.toFixed(3)); check('the wheel zooms the map back in', mw > mf.zMin * 2, String(mw)); await snap('6-map-wheel-in');
   await wheel(100, 30); await t.run(1500); check('the wheel out goes to the same end and no further', Math.abs((await j(`${S}.mp.zWant`)) - mf.zMin) < 1e-6);
-  await key(await zr(), 40); await t.run(1200); check('Q over the map closes the map and opens the cruiser list (a list\'s key does that; Q is the cruiser list\'s since card space-game-keys5-qwe, it was S)', (await j(`!${S}.mp`)) === true && (await j(`campPanelOpen(${S}.pn)`)) === 'cruiser', JSON.stringify(await j(`[!!${S}.mp, campPanelOpen(${S}.pn)]`))); await shut();
+  await key(await zr(), 40); await t.run(1200); check('Q over the map is the map\'s reset: the map stays open at the fitted zoom (1) and no cruiser list opens (card space-game-q-recentre-map; another list\'s key closes the map)', (await j(`!!${S}.mp`)) === true && Math.abs((await j(`${S}.mp.zWant`)) - 1) < 1e-6 && (await j(`campPanelOpen(${S}.pn)`)) === '', JSON.stringify(await j(`[!!${S}.mp, ${S}.mp && ${S}.mp.zWant, campPanelOpen(${S}.pn)]`)));
+  await key('Tab'); await t.run(500); check('Tab closes the map', (await j(`!${S}.mp`)) === true);
   await key('Tab'); await t.run(700); note('the map opened again: ' + JSON.stringify(await j(`${S}.mp ? { z: ${S}.mp.z, zWant: ${S}.mp.zWant, whole: ${S}.mp.whole } : null`))); await key('Tab'); await t.run(300);
   const errs = await j(`window.__errors || []`); check('the game logged no error', !errs || errs.length === 0, JSON.stringify(errs).slice(0, 300));
 } catch (e) { console.log('  FAIL the walk stopped: ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); bad++; }
