@@ -20,5 +20,5 @@ The words of mission 1.1 in four beats (card space-game-l1-1-beats; src/campbeat
 | camp.bf.enemy.lancer.many | {n} alien lancers |
 | camp.bf.enemy.pirateleader.one | the pirate leader, a heavy ship |
 | camp.bf.enemy.pirateleader.many | {n} pirate leaders |
-| camp.hint.tuck | Torpedo boats! Say or type "tuck in". |
-| camp.hint.run | The leader blocks the way. Say or type "run for it". |
+| camp.hint.tuck | Torpedo boats! Pick one ({keynear}), then {keyorder}: the pilots attack. |
+| camp.hint.run | The pirate leader blocks the way. Pick it ({keynear}), then {keyorder}: the pilots attack. |
