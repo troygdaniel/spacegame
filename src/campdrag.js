@@ -117,6 +117,7 @@ function campDragInstall(s) {
   const shipClick = (x, y, b) => { if (!s.mp && typeof s.shipClick === 'function') s.shipClick(x, y, b); }; // card space-game-click-target: the scene's (src/campaignscene.js shipClick), in the flight view only (the map has its own clicks)
   if (s.input && s.input.mouse && typeof s.input.mouse.disableContextMenu === 'function') s.input.mouse.disableContextMenu(); // the browser's menu on a right click is off on the canvas: the right click is the order
   const down = p => {
+    if (typeof p.downTime === 'number' && s.pnTook === p.downTime) return; // an open list took this press (campPanelsClick sets pnTook): it is the list's click, not the start of a drag or a click on the ship under it (card space-game-drag-on-list-pans)
     if (!ok(p)) { if (typeof p.rightButtonDown === 'function' && p.rightButtonDown() && !s.mp && campDragCanStart(s, p.x, p.y)) shipClick(p.x, p.y, 'right'); return; } // a right press is a click at once (it has no drag); a wheel press is nothing
     if (s.mp) { campDragMapDown(s, p); return; }
     if (campDragMarkHit(s.dragMark, p.x, p.y)) { campViewRecentre(s); return; }
