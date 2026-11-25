@@ -12,15 +12,16 @@ const k = code => J(`(() => { const r = campPanelKey(P, C, '${code}', 100); retu
 const ord = sq => J(`campWingShips(C, '${sq}').map(u => u.order && u.order.type).join()`);
 const sel = () => J('C.sel');
 
-check('the pick has four rows: Wedge, Kara, Apollo, All pilots (the call signs are the pilots\'); All pilots is the default and is marked', J(`campPanelRows(C, 'fleet').map(r => r.label).join('|')`) === 'Wedge|Kara|Apollo|All pilots' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'whoall').marked`) === true && sel() === 'all');
+check('the pick has three rows: Wedge, Kara, Apollo (the call signs are the pilots\'); All pilots is no row (card space-game-keys8-e-digit item 5: the first tap of W picks it) but it is the default, and none of the three is marked then', J(`campPanelRows(C, 'fleet').map(r => r.label).join('|')`) === 'Wedge|Kara|Apollo' && J(`campPanelRows(C, 'fleet').some(r => r.marked)`) === false && J(`campSelIs(C, 'all')`) === true && sel() === 'all');
 const w1 = k('KeyW');
-check('W opens the fleet pick and steps who to Wedge; it gives no order', w1.used && !w1.ran && w1.open === 'fleet' && sel() === 'pilot:red');
-check('W again steps to Kara, Apollo, All pilots, and round to Wedge; the pick stays open', [k('KeyW'), sel()][1] === 'pilot:green' && (k('KeyW'), sel()) === 'pilot:yellow' && (k('KeyW'), sel()) === 'all' && (k('KeyW'), sel()) === 'pilot:red' && J('campPanelOpen(P)') === 'fleet');
+check('W (the pick closed) picks ALL pilots and opens the pick; it gives no order', w1.used && !w1.ran && w1.open === 'fleet' && sel() === 'all');
+check('W again steps to Wedge, Kara, Apollo, All pilots, and round to Wedge; the pick stays open', [k('KeyW'), sel()][1] === 'pilot:red' && (k('KeyW'), sel()) === 'pilot:green' && (k('KeyW'), sel()) === 'pilot:yellow' && (k('KeyW'), sel()) === 'all' && (k('KeyW'), sel()) === 'pilot:red' && J('campPanelOpen(P)') === 'fleet');
 const d3 = k('Digit3');
 check('a digit still jumps straight there: 3 picks Apollo and closes the pick', d3.ok && !d3.ran && d3.open === '' && sel() === 'pilot:yellow');
 check('a digit with no list open does nothing', (() => { const r = k('Digit1'); return !r.used && sel() === 'pilot:yellow'; })());
-k('KeyW'); k('Digit4');
-check('W then 4 picks all pilots', sel() === 'all');
+g.run('campPanelClose(P)'); k('KeyW'); const w4 = k('Digit4');
+check('W alone picks all pilots, and W then 4 does nothing: the digit left the pick (the pick stays open)', sel() === 'all' && !w4.ok && w4.open === 'fleet');
+g.run('campPanelClose(P)');
 k('BracketRight'); const held = J('C.tgt');
 k('Enter');
 check('Enter at the enemy held: all pilots attack', held !== '' && J(`['red', 'green', 'yellow'].every(q => campWingShips(C, q).every(u => u.order.type === 'attack'))`));

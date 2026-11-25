@@ -27,7 +27,7 @@ g.run(`
 
 // ---- A. the table ----
 {
-  check('the cruiser list and the fleet pick are numbered (the Q list and the W pick: numbers 1); every other list has none', J(`CAMP_PANELS.panels.filter(p => p.numbers).map(p => p.id).join()`) === 'cruiser,fleet');
+  check('the cruiser list, the fleet pick and the friends pick are numbered (the Q list, the W pick and the E pick: numbers 1); every other list has none', J(`CAMP_PANELS.panels.filter(p => p.numbers).map(p => p.id).join()`) === 'cruiser,fleet,friends');
   check('campKeyDigit: Digit1 to Digit9 and Numpad1 to Numpad9 are 1 to 9; 0, letters, arrows, Enter are 0', J(`['Digit1', 'Digit5', 'Digit9', 'Numpad1', 'Numpad9'].map(campKeyDigit).join()`) === '1,5,9,1,9' && J(`['Digit0', 'Numpad0', 'KeyA', 'ArrowUp', 'Enter', '', null, undefined].map(campKeyDigit).join()`) === '0,0,0,0,0,0,0,0');
   check('the foot\'s words for a numbered list: the digits, and Esc (read from the key table)', J(`uiText('camp.ui.listnums', { last: 7 })`) === '1-7  does a row    Esc close' && J(`uiText('camp.ui.candnums', { last: 2 })`) === '1-2  give the order    Esc back');
   check('the words are in their file and in the table', src('content/text/camplists.md').includes('| camp.ui.listnums |') && src('content/text/camplists.md').includes('| camp.ui.candnums |') && src('src/contenttables.js').includes("'camp.ui.listnums'") && src('src/contenttables.js').includes("'camp.ui.candnums'"));

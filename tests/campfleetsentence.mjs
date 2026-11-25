@@ -14,13 +14,13 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`window.C = campNew(1, [], { seed: 5, mission: 0 }); C.t = 1000; window.LINE = () => campFleetLine(C);`);
 
 console.log('A. the line');
-check('the first segment is the W chip (the table\'s who key) and the rest are words: four stops, "digit name"', J('LINE()[0].key') === 'who' && J('campCornerCap("who")') === 'W' && J('LINE().slice(1).map(s => s.text).join("|")') === '1 Wedge|2 Kara|3 Apollo|4 All', JSON.stringify(J('LINE()')));
-check('the default pick is All pilots: all four digits (1 2 3 4) are lit white (card space-game-w4-all-lit)', [1, 2, 3, 4].every(i => J(`LINE()[${i}].ink`) === '#ffffff') && [1, 2, 3, 4].every(i => J(`LINE().alt[${i}].ink`) === '#ffffff'));
+check('the first segment is the W chip (the table\'s who key) and the rest are words: three stops (card space-game-keys8-e-digit item 5: no digit 4), "digit name"', J('LINE()[0].key') === 'who' && J('campCornerCap("who")') === 'W' && J('LINE().slice(1).map(s => s.text).join("|")') === '1 Wedge|2 Kara|3 Apollo', JSON.stringify(J('LINE()')));
+check('the default pick is All pilots: all three digits (1 2 3) are lit white (cards space-game-w4-all-lit and space-game-keys8-e-digit: there is no 4)', [1, 2, 3].every(i => J(`LINE()[${i}].ink`) === '#ffffff') && [1, 2, 3].every(i => J(`LINE().alt[${i}].ink`) === '#ffffff'));
 g.run(`C.sel = 'pilot:green';`);
-check('Kara picked: 2 is lit and 4 is dim', J('LINE()[2].ink') === '#ffffff' && J('LINE()[4].ink') === '#8fa6b8' && J('LINE()[1].ink') === '#8fa6b8');
-check('.alt is the same stops as digits alone, with the chip, and the same lit one', J('LINE().alt.map(s => s.key || s.text).join("|")') === 'who|1|2|3|4' && J('LINE().alt[2].ink') === '#ffffff');
+check('Kara picked: 2 is lit and 3 is dim', J('LINE()[2].ink') === '#ffffff' && J('LINE()[3].ink') === '#8fa6b8' && J('LINE()[1].ink') === '#8fa6b8');
+check('.alt is the same stops as digits alone, with the chip, and the same lit one', J('LINE().alt.map(s => s.key || s.text).join("|")') === 'who|1|2|3' && J('LINE().alt[2].ink') === '#ffffff');
 g.run(`C.sel = 'all'; C.ships.filter(u => u.pilot === 'apollo').forEach(u => { u.hp = 0; u.gone = true; }); C.bay.fighters = 0;`);
-check('a pilot who is lost (nothing out, none in the bay) is still a stop and keeps his darker look with All pilots picked: 3 is dark, 1 2 4 are lit', J('LINE().slice(1).length') === 4 && J('LINE()[3].ink') === '#4d5f70' && [1, 2, 4].every(i => J(`LINE()[${i}].ink`) === '#ffffff'), JSON.stringify(J('LINE()')));
+check('a pilot who is lost (nothing out, none in the bay) is still a stop and keeps his darker look with All pilots picked: 3 is dark, 1 2 are lit', J('LINE().slice(1).length') === 3 && J('LINE()[3].ink') === '#4d5f70' && [1, 2].every(i => J(`LINE()[${i}].ink`) === '#ffffff'), JSON.stringify(J('LINE()')));
 check('the words are content: "All" is camp.corner.allshort, the rest are the pilots\' names; no order, no target, no second chip', J(`uiText('camp.corner.allshort')`) === 'All' && J('LINE().filter(s => s.key).length') === 1 && !J('LINE().some(s => s.key === "order")'));
 
 console.log('B. the layout');
@@ -28,8 +28,8 @@ const T0 = J(`campCornerGeom('tl', 0, 0, 0, campCornerNow(C, 'fleet').span).titl
 check('the half of the row is x 118 and 202 wide (CAMP.corner.split 114 + the gap 4)', T0.x === 18 + 114 + 4 && T0.w === 320 - 114 - 4, JSON.stringify(T0));
 const lay = w => J(`campCornerLineLayout(LINE(), ${JSON.stringify(T0)}, (t, s) => t.length * ${w})`);
 const wide = lay(4.5), tight = lay(10);
-check('with very narrow letters (4.5 px; real ones at 13 px are about 7, so at 320 px the names never fit: the half is 202 px) the names fit the half: four words with their names, the chip and the words left to right inside the frame', wide.chips.length === 1 && wide.words.map(w => w.text).join('|') === '1 Wedge|2 Kara|3 Apollo|4 All' && wide.words.every((w, i) => i === 0 ? w.x > wide.chips[0].x : w.x > wide.words[i - 1].x) && wide.words[3].x + '4 All'.length * 4.5 <= T0.x + T0.w - 8, JSON.stringify(wide));
-check('with wide letters (10 px) they do not: the short form, 1 2 3 4, and it fits', tight.words.map(w => w.text).join('|') === '1|2|3|4' && tight.words[3].x + 10 <= T0.x + T0.w - 8, JSON.stringify(tight));
+check('with very narrow letters (4.5 px; real ones at 13 px are about 7, so at 320 px the names never fit: the half is 202 px) the names fit the half: three words with their names, the chip and the words left to right inside the frame', wide.chips.length === 1 && wide.words.map(w => w.text).join('|') === '1 Wedge|2 Kara|3 Apollo' && wide.words.every((w, i) => i === 0 ? w.x > wide.chips[0].x : w.x > wide.words[i - 1].x) && wide.words[2].x + '3 Apollo'.length * 4.5 <= T0.x + T0.w - 8, JSON.stringify(wide));
+check('with wide letters (10 px) they do not: the short form, 1 2 3, and it fits', tight.words.map(w => w.text).join('|') === '1|2|3' && tight.words[2].x + 10 <= T0.x + T0.w - 8, JSON.stringify(tight));
 
 console.log('C. the scene');
 g.run(`
@@ -39,7 +39,7 @@ g.run(`
   C.sel = 'pilot:red'; campCornerSync(S, 0);
 `);
 const V = 'S.hud.corner.fleet';
-check('the chip W and four words are drawn; no title word, no selection (the row is a line)', J(`${V}.chips[0].text`) === 'W' && J(`${V}.words.filter(w => w.vis).length`) === 4 && !J(`${V}.title.vis`) && !J(`${V}.sel.vis`));
+check('the chip W and three words are drawn; no title word, no selection (the row is a line)', J(`${V}.chips[0].text`) === 'W' && J(`${V}.words.filter(w => w.vis).length`) === 3 && !J(`${V}.title.vis`) && !J(`${V}.sel.vis`));
 check('the words stand left to right and the picked one (Wedge: 1) is the lit white, the others dim', J(`${V}.words[0].x`) < J(`${V}.words[1].x`) && J(`${V}.words[0].style.color`) === '#ffffff' && J(`${V}.words[1].style.color`) === '#8fa6b8');
 g.run(`C.sel = 'pilot:green'; campCornerSync(S, 0);`);
 check('the lit one follows the pick: Kara (2)', J(`${V}.words[1].style.color`) === '#ffffff' && J(`${V}.words[0].style.color`) === '#8fa6b8');
