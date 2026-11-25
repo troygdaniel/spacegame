@@ -42,6 +42,7 @@ function campPageHudBar(m, id, d, C) { // a meter: its share, its number, and wh
   return { frac: d.frac, n: d.n, show: d.frac < 1 || C.t - m[id] < CAMP_PAGEHUD.num };
 }
 const campPageHudCap1 = t => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
+// (the pilots' line is the VERB of what they are doing, as the mock has it ("Mining"): the first word of the target display's own words; who is picked is under it)
 function campPageModel(C, view) {
   if (!C || !C.carrier) return null;
   const S = campCruiserStatus(C), m = campPageHudMem(C);
@@ -52,7 +53,7 @@ function campPageModel(C, view) {
     return { id: r.who, name, initial: name.charAt(0).toUpperCase(), digit: String(i + 1), frac, color: frac < K.crit ? 'foe' : frac < K.low ? 'warn' : 'good', on: up, pick: !!now && (now.kind === 'all' || now.id === r.who) }; // pick: the digit is lit (All pilots lights every one: card space-game-w4-all-lit)
   });
   const out = now && now.kind === 'pilot' ? [now.unit] : (typeof campSelAllUnits === 'function' ? campSelAllUnits(C) : []), lead = out.find(u => u && u.hp > 0 && !u.gone);
-  return { ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), friend: campPageHudFriend(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view), pilots: { key: campCornerCap('who'), items, doing: lead ? campPageHudCap1(campTdispDoing(C, lead)) : uiText('camp.corner.bay'), who: now && now.kind === 'pilot' ? now.name : uiText('camp.sel.all') } };
+  return { ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), friend: campPageHudFriend(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view), pilots: { key: campCornerCap('who'), items, doing: lead ? campPageHudCap1(String(campTdispDoing(C, lead)).split(' ')[0].replace(/[^A-Za-z]+$/, '')) : uiText('camp.corner.bay'), who: now && now.kind === 'pilot' ? now.name : uiText('camp.sel.all') } };
 }
 
 // the goal (landing 2): the objective sentence of the level (campObjective: the first objective not done yet, so a second one shows only when it is the next thing to do) split at its colon into a label and a value ("Mine ore: 120 of 450." is "Mine ore" and

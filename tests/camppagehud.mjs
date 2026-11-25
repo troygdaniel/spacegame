@@ -55,7 +55,7 @@ g.run(`__out(); C.sel = 'all';`);
 check('All pilots picked lights every digit (card space-game-w4-all-lit), and the words say so', J('campPageModel(C).pilots.items.every(p => p.pick)') === true && J('campPageModel(C).pilots.who') === 'All pilots');
 g.run(`C.sel = 'pilot:green';`);
 check('one pilot picked: only his digit is lit, and the line names him', J('campPageModel(C).pilots.items.map(p => p.pick).join()') === 'false,true,false' && J('campPageModel(C).pilots.who') === 'Kara');
-check('what they are doing is a short line, from the same words the target display uses (capitalised)', /^[A-Z]/.test(J('campPageModel(C).pilots.doing')) && J('campPageModel(C).pilots.doing.length') < 40, J('campPageModel(C).pilots.doing'));
+check('what they are doing is ONE word, the verb of the same words the target display uses (capitalised: "Guarding", "Mining"), as the mock has it', /^[A-Z][a-z]+$/.test(J('campPageModel(C).pilots.doing')), J('campPageModel(C).pilots.doing'));
 check('no cruiser: no model (the page HUD draws nothing)', J('campPageModel(null)') === null);
 
 console.log('C. the key chips are the table\'s');
