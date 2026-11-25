@@ -74,3 +74,11 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.autofire | Turrets fire by themselves |
 | camp.ui.tune.row.laser | Turret charge (the lasers run dry) |
 | camp.ui.tune.row.hints | The first-minute hints |
+| camp.ui.tune.row.strayfar | Transport warning: how far |
+| camp.ui.tune.row.straygrace | Transport warning: wait |
+| camp.ui.tune.row.strayagain | Transport warning: repeat |
+| camp.ui.tune.row.minergone | Miner call: pilot away at |
+| camp.ui.tune.row.minernear | Miner call: near the miner |
+| camp.ui.tune.row.minerwait | Miner call: count after |
+| camp.ui.tune.row.baittboats | 1.1 bait wave: torpedo boats |
+| camp.ui.tune.row.baitskiffs | 1.1 bait wave: skiffs |

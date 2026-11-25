@@ -13,10 +13,23 @@ import { fileURLToPath } from 'node:url';
 import { nodeGame } from '../tests/nodegame.mjs';
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FILES = { CAMP: 'src/campaign.js', CAMPZOOM: 'src/campzoom.js' }; // where each table is written
+export const FILES = { CAMP: 'src/campaign.js', CAMPZOOM: 'src/campzoom.js', CAMPSTRAY: 'src/campstray.js', CAMPMINER: 'src/campminer.js' }; // where each table is written (the last two: card space-game-stray-n-rows, a table on ONE line: const CAMPSTRAY = { far: 1500, grace: 4, again: 25 };)
 
 // the line of a path in a table written as the sources write them: one key a line (an inline object may carry the next keys on its own lines, indented further)
-// text: the file; name: 'CAMP' or 'CAMPZOOM'; parts: ['carrier', 'speed']. Returns the 0-based index of the line that holds the last key, or -1.
+// text: the file; name: a table of FILES; parts: ['carrier', 'speed']. Returns the 0-based index of the line that holds the last key, or -1.
+// A part that is a whole number is a place in a list: the key before it is `key: [`, and the list's items are objects that each start a line with `{` (the first may follow the `[` on the key's own line): 'waves', '2' is the third wave's line.
+// A table that is all on its first line (const CAMPSTRAY = { far: 1500, grace: 4 };) has its first key on that line.
+function nthItem(lines, at, indent, k) {
+  let n = /\[\s*\{/.test(lines[at].replace(/\/\/.*$/, '')) ? 0 : -1, item = -1;
+  if (n === 0 && k === 0) return at;
+  for (let i = at + 1; i < lines.length; i++) {
+    const l = lines[i], ind = /^(\s*)/.exec(l)[1].length;
+    if (/^\s*\/\//.test(l)) continue;
+    if (/^\s*\{/.test(l)) { if (item < 0) item = ind; if (ind === item && ++n === k) return i; }
+    else if (ind <= indent) return -1;                                          // left the block the list is in
+  }
+  return -1;
+}
 export function findLine(text, name, parts) {
   const lines = text.split('\n'), start = lines.findIndex(l => new RegExp('^const ' + name + ' = \\{').test(l));
   if (start < 0) return -1;
@@ -24,7 +37,9 @@ export function findLine(text, name, parts) {
   for (let d = 0; d < parts.length; d++) {
     const key = parts[d], re = new RegExp('(^|[\\s{,])' + key + '\\s*:');
     let found = -1;
-    for (let i = at + (d === 0 ? 1 : 0); i < lines.length; i++) {
+    if (d === 0 && re.test(lines[start].replace(/\/\/.*$/, '').replace(/^.*?=\s*\{/, ' '))) found = start; // a table on one line
+    else if (d > 0 && /^\d+$/.test(key) && new RegExp('(^|[\\s{,])' + parts[d - 1] + '\\s*:\\s*\\[').test(lines[at].replace(/\/\/.*$/, ''))) found = nthItem(lines, at, indent, +key); // a number after a key that opens a list is a place in it (after any other key it is a key: the level `1: {`)
+    else for (let i = at + (d === 0 ? 1 : 0); i < lines.length; i++) {
       const l = lines[i], m = /^(\s*)/.exec(l), ind = m[1].length;
       if (/^\s*\}/.test(l) && ind <= indent && d > 0) break;               // left the block of the parent
       if (d === 0 && /^\};?\s*$/.test(l)) break;                            // left the table
