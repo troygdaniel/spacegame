@@ -227,7 +227,7 @@ const CAMP = {
     ease: 500,                             // ms the full bar then takes to shrink back to the thin line (a short ease, not a pop); a new hit makes it full again at once
     line: { h: 2, back: 0.3 },             // the THIN LINE (px on the screen, the same at every zoom): its height, and how faint the track is behind it that shows how much hull is gone (its length is the hull that is left, in the band's colour, no number)
     bar: { w: 38, h: 5, gap: 5, min: 14, back: 0.85 }, // px ON THE SCREEN, the same at every zoom: the full bar's width (the thin line's length too) and height, its distance over the ship's edge, the least the ship's half size counts for (a ship drawn at its minimum size, src/campzoom.js, is 10 px across), and how dark the frame behind the full bar is
-    number: { font: 11, gap: 5 },          // the percentage at the right of the full bar: its size (px) and its distance from the bar's end
+    number: { font: 11, gap: 5, edge: 4 }, // the percentage at the right of the full bar: its size (px), its distance from the bar's end and the least it keeps from the screen's edge (card space-game-edge-percent-label-cut: it goes to the left of the bar when the right is cut off, and is not drawn at all when neither side fits or the ship is off the screen)
     mark: { w: 16, h: 3, gap: 5, line: 1 }, // px: the bar over a ship's mark on the Tab map (width, the full bar's height, distance over the mark; line: the thin line's height; no number on the map)
     list: { w: 46, h: 6 },                 // px: the bar at the right of a ship's row in an order's sub-list
     depth: 6                               // the flight view's draw order: over the ships (4 and 5), under the HUD

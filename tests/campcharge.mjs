@@ -128,7 +128,7 @@ console.log('D. the flight view');
   check('the line is the whole length at full hull: the fill is the bar\'s width, 2 px high, from the bottom edge up', (() => { const f = J('S.hud.charge[campChargeBars(C)[0].id].g.last.filter(c => c[0] === "fillRect")[1]'); return f[3] === K.bar.w && f[4] === K.line.h && f[2] === -K.line.h; })());
   g.run('S.gs.forEach(o => { o.n0 = o.clears; }); campChargeSync(S); campChargeSync(S); campChargeSync(S);');
   check('nothing changed: nothing is drawn again (only the place moves)', J('S.gs.every(o => o.clears === o.n0)'));
-  g.run(`window.T = C.ships.find(u => u.kind === 'freighter'); T.maxHp = 100; T.hp = 70; C.t = 50000; campChargeSync(S);`);
+  g.run(`window.T = C.ships.find(u => u.kind === 'freighter'); T.x = C.carrier.x + 200; T.y = C.carrier.y + 120; T.maxHp = 100; T.hp = 70; C.t = 50000; campChargeSync(S);`); // (on the screen of the stand-in camera, which is on the cruiser: the number is not drawn for a ship that is off it, card space-game-edge-percent-label-cut)
   const f70 = J('S.hud.charge[T.id].g.last.filter(c => c[0] === "fillRect")[1]');
   check('hurt but not under attack: the line is shortened to the hull that is left (70 percent of the width), still no number', f70[3] === Math.round(K.bar.w * 0.7) && J('S.ts.length') === 0);
   g.run(`window.o0 = S.hud.charge[T.id].g.clears; C.t = 50001; campHurt(C, T, 20, 'x'); campChargeSync(S);`);
