@@ -43,6 +43,22 @@ Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every pie
   The switch costs nothing you can measure in the frame: on is 1.24 and 1.25 ms against 1.24 and 1.58 ms off (the second off run caught a busier Mac). What it changes is the count of things: the display list is 295 sprites against 274 (a look at the same fight with the switch on counted about 30 trail sprites, one for each ship that moves, and three kill records of eight sprites made in 9 seconds; the missiles' and torpedoes' smoke puffs are no longer made, which is why the tweens are 2 against 35), 13 more textures (the bolts, the dart and its tail, the four trails, the two rings, the core and the shard, baked once at the first use), and the heap is 0.35 MB lower with it on. With the switch off the only new work in a frame is the `postupdate` handler's first line (`slookOn()` false: a flag lookup) and a `typeof` guard in each of the six places the scene calls. The kill pool is at most 12 effects, 96 sprites, hidden when done. The sim is not touched (`sim busy1` unchanged by construction: no rule file reads the look).
 
 
+### Piece D, the signal shapes (card `space-game-ship-look-d-glyphs`, 25 Nov 2026)
+
+`node tools/perfcampaign.mjs frames busy1`, one muted headless Chrome through the lock; base = a checkout of `main` at `eb079034` (pieces F, A, B, C on it, `PERF_ROOT`), then piece D with the switch off, then on (`PERF_PATCH='CAMP.flags.shiplook = true'`). The tool's `frames` mode ignores `PERF_ZOOM`, so the far view is set with `PERF_PATCH='CAMZOOM.want = 0.1'`. Mac load 4.5 to 5.8.
+
+| Stepped frame of JavaScript, mean ms (max) | base `eb079034` | piece D, switch off | piece D, switch on |
+|---|---|---|---|
+| start zoom (0.335), run 1 | 1.32 (3.7) | 1.29 (3.8) | 1.32 (6.2) |
+| zoomed out to 0.1 (signs when on) | 1.27 (3.1) | 1.62 (4.1) | 2.06 (10.1) |
+| 0.1, look on, signs never used (`SLOOK.glyph.under = 0`), two runs | | | 1.42, 1.27 (6.0, 5.8) |
+| 0.1, look on, signs, the same two runs alternated | | | 1.51, 1.58 (6.1, 6.8) |
+| textures in the page | 191 | 191 | 213 at the start zoom, 221 with the signs (8 more) |
+
+- **At the start zoom nothing moves** (base 1.32, off 1.29, on 1.32): the look in front of the camera is A, B and C, and the signs are not used.
+- **Zoomed out, the signs cost about +0.1 to +0.3 ms** over the same look without them (1.27 to 1.42 against 1.51 to 1.58, alternated, so the load is the same for both): the sprites are the same number and the same size, the sign is one more texture swap per ship when the zoom crosses 0.26 or 0.3 (a few ms once, the 6 to 10 ms maximum), and nothing is painted each frame. The first row at 0.1 (off 1.62, on 2.06) was taken with the Mac busier and is the noisiest of the set: the off number is 0.35 above its own base, which only the load explains (the code with the switch off is the same code as at the start zoom, which is level with the base).
+- **The Tab map** paints a sign for each ship mark in place of the dot: polygons and fans of triangles, a few dozen a frame while the map is open (it is not open in the fight above); not measured.
+
 ## Campaign fights on this Mac (card `space-game-choppy-fights`, 22 Nov 2026)
 
 Troy says big fights are choppy. This section is the measurement and nothing else: no game file was changed for it. The fixes are listed at the end, for whoever makes them.

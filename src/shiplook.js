@@ -26,6 +26,8 @@ const SLOOK = {
   hot: '#ffffff',                                           // the torpedo boat's warhead tip
   arc: { good: '#4fe0a6', warn: '#ffc857', foe: '#ff6fa8', ok: 0.6, crit: 0.3, track: 'rgba(255,255,255,.13)', w: 2 }, // the hull arc: green above `ok`, amber down to `crit`, pink under; a faint full ring behind it; its line width (times w)
   ring: { color: '#e6edf7', k: 0.66, pad: 4, gap: 4.5, w: 1.6 }, // the picked ship's bright ring: the arc's radius is k times the length plus pad (times w); the ring sits gap outside the arc, its line is w wide
+  text: { foe: '#ffb3d1' },                                 // the words of a hostile mark, a light pink (the edge arrow's label; its red was #ff9aae)
+  glyph: { under: 0.26, over: 0.3 },                         // the far zoom (card space-game-ship-look-d-glyphs): a ship is drawn as its signal shape when the camera zoom is under `under` (two presses of the zoom-out key from the start zoom of 0.335) and goes back to its picture over `over` (the least-size rule applies at the start zoom too: a pilot is drawn 16 px long there, so it is not the rule that says far)
   glyphs: ['chev', 'bar', 'cap', 'capdot', 'tri', 'trinotch', 'tribar', 'hex', 'diamond', 'cres', 'disc', 'ringdot', 'ringring', 'square'], // the signal shapes (direction 4, the mock's glyph function: landing D draws them); the last two are the scope report's, for the mothership and the towers
   K: {
     carrier: { name: 'Cruiser', side: 'friend', px: 58, p: [[.5, 0], [.38, .09], [.1, .11], [.05, .24], [-.3, .24], [-.34, .12], [-.5, .1], [-.5, -.1], [-.34, -.12], [-.3, -.24], [.05, -.24], [.1, -.11], [.38, -.09]], d: [[.36, 0], [.1, .05], [-.44, .05], [-.44, -.05], [.1, -.05]], g: 'bar' },
