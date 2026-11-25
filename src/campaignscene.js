@@ -290,7 +290,7 @@ class Campaign extends Phaser.Scene {
   // ----- keys -----
   onKey(e) {
     const zk = typeof campZoomKey === 'function' ? campZoomKey(e.code) : null;
-    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
+    if (zk && !this.leaving && this.mode === 'play') { campZoomPress(this, zk, e.repeat); if (!zk.reset || e.repeat || this.mp) return; } // S (the reset) puts the view back on the cruiser and goes ON to open the cruiser list (card space-game-keys2-cruiser); the other zoom keys are done here // + - = 0: the zoom of the view, or of the map when it is open (src/campzoom.js); a held key repeats, so this is read before the repeat guard
     if (this.leaving) return;
     if (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)) { if (campTuneKey(this, e) === 'close' && typeof this.closeTune === 'function') this.closeTune(); return; } // the tuning panel (src/camptunedraw.js) takes every key while it is open, a held arrow too
     const c = e.code, C = this.camp;
