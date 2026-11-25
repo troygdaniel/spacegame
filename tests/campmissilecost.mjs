@@ -15,6 +15,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
+g.run("CAMP_PANELS.panels[0].rows.find(r => r.id === 'sreload').off = 0"); // card space-game-keys7-trim: the Reload missiles row is off the Q list in the game (the R key and the rack stay); this suite is about the row, so it puts it back
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`

@@ -11,12 +11,12 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { nodeGame, ROOT } from './nodegame.mjs';
-import { findLine, editText, plan } from '../tools/apply-tuning.mjs';
+import { findLine, editText, plan, FILES } from '../tools/apply-tuning.mjs';
 
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame(), J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
-const SRC = { CAMP: readFileSync(join(ROOT, 'src/campaign.js'), 'utf8'), CAMPZOOM: readFileSync(join(ROOT, 'src/campzoom.js'), 'utf8') };
+const SRC = Object.fromEntries(Object.keys(FILES).map(k => [k, readFileSync(join(ROOT, FILES[k]), 'utf8')])); // every table the tool writes: CAMP, CAMPZOOM and the radio rules' CAMPSTRAY, CAMPMINER (card space-game-stray-n-rows)
 
 console.log('A. every row has its line');
 const rows = J('CAMP_TUNE.rows.map(r => ({ id: r.id, flag: r.kind === "flag", name: r.kind === "flag" ? "CAMP" : r.root, path: r.kind === "flag" ? "flags." + r.flag : r.path, d: (() => { const s = campTuneSlot(r); return s.obj[s.key]; })() }))');

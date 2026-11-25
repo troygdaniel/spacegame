@@ -89,7 +89,7 @@ function toastBox(plan, top = TOAST.top) { // top: where the box starts (TOAST.t
 function toastKeep(s, top) { // the box that is up moves to the scene's toastTop when that has changed (the column above it grew or shrank); a gone one is left alone
   (s.toasts || []).forEach(o => { if (!o || !o.t || !o.t.active || o.top === undefined || o.top === top) return; const d = top - o.top; o.top = top; o.y += d; o.t.y += d; o.bg.y += d; o.tab.y += d; });
 }
-function toast(s, msg, color = '#ffd37a') {
+function toast(s, msg, color = '#ffd37a', hold = 0) { // hold: ms this one stays up when longer than TOAST.hold (a radio line the player must read: src/campsayhold.js)
   const now = s.time && typeof s.time.now === 'number' ? s.time.now : 0;
   const old = (s.toasts || []).filter(o => o && o.t && o.t.active);
   const prev = old.length ? old[old.length - 1] : null;
@@ -100,7 +100,7 @@ function toast(s, msg, color = '#ffd37a') {
   const bg = s.add.rectangle(box.x, box.y, box.w, box.h, 0x04101c, 0.92).setStrokeStyle(1, edge, 0.9).setScrollFactor(0).setDepth(299);
   const tab = s.add.rectangle(box.left + 2, box.y, 3, box.h, AMBER, 1).setScrollFactor(0).setDepth(299);
   s.toasts = [{ t, bg, tab, y: box.y, h: box.h, top: box.top, msg: String(msg), last: String(msg), at: now }]; // last: the message that came last, whole (the last LINE of a message that wrapped is a fragment: it was paired with the next toast as if it were a message, and the box showed "Q, CONVOY, 3 is Run for it." with the start of the sentence cut off)
-  s.tweens.add({ targets: [t, bg, tab], alpha: 0, delay: TOAST.hold, duration: TOAST.fade, onComplete: () => { t.destroy(); bg.destroy(); tab.destroy(); } });
+  s.tweens.add({ targets: [t, bg, tab], alpha: 0, delay: Math.max(TOAST.hold, hold | 0), duration: TOAST.fade, onComplete: () => { t.destroy(); bg.destroy(); tab.destroy(); } });
 }
 
 function go(s, key, data) {

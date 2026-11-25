@@ -56,7 +56,7 @@ class Campaign extends Phaser.Scene {
     this.replay = !!d.replay && (!!(this.P.results && this.P.results[campResultKey(this.level, this.mi)]) || (typeof campHubFlyable === 'function' && campHubFlyable(this.P).some(r => r.level === this.level && r.i === this.mi))); // a mission flown AGAIN from the ready room (card space-game-campaign-replay): only one that has a result, or one SKIPPED (card space-game-replay-reselect-bug: before the next, no result: its first win is kept as its result); its story and progress do not move
     this.resume = !this.replay && this.via !== 'retry' && (this.P.levelDone | 0) === this.level && this.P.level === this.level && this.mi === campMissions(this.level).length - 1; // the level was won and the tab closed at the pick: the launch shows the level's story and the pick again, not a battle
     campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
-    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
+    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {}; this.sayR = campSayNew();
   }
   create() {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
@@ -391,6 +391,7 @@ class Campaign extends Phaser.Scene {
         }
       }
       inp.fire = k.SPACE.isDown;
+      if (this.sayR && this.sayR.wait.length) this.radioShow(campSayDue(this.sayR, this.time.now)); // the radio lines that waited for a kept line's hold are shown now (src/campsayhold.js)
       campStep(C, Math.min(dt, 100) / 1000);
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
@@ -427,11 +428,12 @@ class Campaign extends Phaser.Scene {
     if (this.keysBack && this.keysBack.setVisible) this.keysBack.setVisible(on);
     if (this.hudBack && this.hudBack.setVisible) this.hudBack.setVisible(on);
   }
+  radioShow(lines) { lines.forEach(l => { toast(this, l.text, '#9fe9ff', l.keep ? CAMP.sayhold.ms : 0); this.say([l.text]); }); } // the toast and the voice together; a kept line stays CAMP.sayhold.ms
   chatShow(line, now) { chatterPlay(line); const t = this.hud.chat; if (!t) return; t.setText(line.call + ': ' + line.text); this.chatUntil = now + CHATTER.show; } // said in the pilot's voice (prio 0), shown with his callsign
   onEvent(e) {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
-    if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
+    if (e.type === 'say') this.radioShow(campSayOffer(this.sayR || (this.sayR = campSayNew()), (this.time && this.time.now) || 0, { text: uiText(e.key, e.vars), keep: campSayKeep(e.key) })); // a radio line: shown at once, or after the kept line that is up (src/campsayhold.js)
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'rival') campRivalEvent(this, e); // a rival's phases: the warning, the broadside, the ram (src/camprivaldraw.js)
@@ -613,11 +615,13 @@ class Campaign extends Phaser.Scene {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
       else {
-        const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
-        g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));
-        const lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, this.hud.arrow.width || 160, this.hud.arrow.height || 18, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
-        this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the target display, the gauges, the message band and the key line
+        const want = (px, py, an) => ({ x: px - Math.cos(an) * 64, y: py - Math.sin(an) * 28 }), aw = this.hud.arrow.width || 160, ah = this.hud.arrow.height || 18; // the label stands back from the arrow, a little off its line
+        const sp = typeof campEdgeSpread === 'function' ? campEdgeSpread([{ x: ar.x, y: ar.y, angle: ar.angle, w: aw, h: ah, want }], { keep: this.arrowKeep(), W, H, m: CAMP.nav.arrow.margin, tri: 13, boxes: this.hud.sight && this.hud.sight.boxes ? this.hud.sight.boxes : [] })[0] : null; // slid along the edge off the hostiles' and friends' arrows (src/campedgespread.js; card space-game-edge-labels-overlap)
+        const a = sp ? sp.angle : ar.angle, ax = sp ? sp.x : ar.x, ay = sp ? sp.y : ar.y, tri = [{ x: ax + Math.cos(a) * 13, y: ay + Math.sin(a) * 13 }, { x: ax + Math.cos(a + 2.5) * 10, y: ay + Math.sin(a + 2.5) * 10 }, { x: ax + Math.cos(a - 2.5) * 10, y: ay + Math.sin(a - 2.5) * 10 }];
+        g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
+        const lp = sp ? { x: sp.lx, y: sp.ly } : typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, aw, ah, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
+        this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the target display, the gauges, the message band and the key line, and off the other arrows
       }
     }
   }
