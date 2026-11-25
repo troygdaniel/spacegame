@@ -22,7 +22,7 @@ const onBorder = p => Math.abs(p.x - M) < 1 || Math.abs(p.x - (W - M)) < 1 || Ma
 const edgeAt = (dx, dy) => J(`campNavEdge(${dx}, ${dy}, ${W}, ${H}, ${M}, ${JSON.stringify(KEEP)})`); // where the arrow of a ship that far from the middle of the screen sits
 const item = (dx, dy, w = 130, h = 16) => { const e = edgeAt(dx, dy); return { x: e.x, y: e.y, angle: e.angle, tx: W / 2 + dx, ty: H / 2 + dy, w, h }; };
 // the closed title row of each corner panel, from the corner table (so it follows the corners wherever they are put)
-const CORNERS = (() => { const C = J('CAMP.corner'); return ['tl', 'tr', 'bl', 'br'].map(k => { const a = C.at[k]; return [a.x, a.dir > 0 ? a.y : a.y - C.title.h, a.x + C.w, a.dir > 0 ? a.y + C.title.h : a.y]; }); })();
+const CORNERS = (() => { const C = J('CAMP.corner'); return Object.keys(C.at).map(k => { const a = C.at[k]; return [a.x, a.dir > 0 ? a.y : a.y - C.title.h, a.x + C.w, a.dir > 0 ? a.y + C.title.h : a.y]; }); })();
 const rects = p => p.boxes;
 const clearOf = (p, list) => list.every(r => !overlap(p.boxes[0], r) && !overlap(p.boxes[1], r));
 
@@ -74,26 +74,21 @@ console.log('B. the spread');
   check('no things is no answer, and the keep list and the boxes are not changed by the call', J(`campEdgeSpread([], {}).length`) === 0 && (() => { const k = JSON.stringify(KEEP); spread([item(-3000, 0), item(-5000, 0)]); return JSON.stringify(J('CAMP.nav.arrow.keep')) === k; })());
 }
 
-console.log('B2. the stacked corners (agreed with 5-GEN, card space-game-keys5-corners: Q CRUISER then W FLEET at the top left, ] HOSTILES then [ FRIENDLIES at the top right, the bottom corners empty)');
+console.log('B2. the stacked top corners (card space-game-keys6-layout, on main: Q CRUISER and W on one row at y 78, E FRIENDLIES under it at y 110; ] HOSTILES at y 78 on the right; the bottom corners are empty)');
 {
-  const g2 = nodeGame(), J2 = e => JSON.parse(g2.run(`JSON.stringify(${e}) ?? 'null'`));
-  // the layout as that card puts it (a fixture: the table's own numbers move with that card; this block holds the rule to the stacked shape)
-  g2.run('CAMP.corner.at.bl = { x: 18, y: 110, dir: 1 }; CAMP.corner.at.br = { x: 942, y: 110, dir: 1 }; CAMP.nav.arrow.keep = [[0, 0, 360, 150], [908, 0, 1280, 150], [360, 0, 920, 152], [0, 656, 1220, 720], [0, 560, 440, 664]];');
-  const K2 = J2('CAMP.nav.arrow.keep'), C2 = J2('CAMP.corner'), rows = ['tl', 'tr', 'bl', 'br'].map(k => { const a = C2.at[k]; return [a.x, a.dir > 0 ? a.y : a.y - C2.title.h, a.x + C2.w, a.dir > 0 ? a.y + C2.title.h : a.y]; });
-  const sp2 = items => J2(`campEdgeSpread(${JSON.stringify(items)}, ${JSON.stringify({ keep: K2, W, H, m: M })})`), edge2 = (dx, dy) => J2(`campNavEdge(${dx}, ${dy}, ${W}, ${H}, ${M}, ${JSON.stringify(K2)})`);
-  const it2 = (dx, dy, w = 150, h = 16) => { const e = edge2(dx, dy); return { x: e.x, y: e.y, angle: e.angle, tx: W / 2 + dx, ty: H / 2 + dy, w, h }; };
+  const at = J('CAMP.corner.at'), KT = J('CAMP.corner.title.h');
+  check('the corner table is the stacked layout: every title row is at the top (a row starts under y 150), and none is a bottom corner', Object.values(at).every(a => a.dir > 0 && a.y + KT <= 150), JSON.stringify(at));
+  check('the second row of the left stack (E FRIENDLIES, y 110 to 136) is inside the keep rectangles the arrows keep out of', CORNERS.every(c => KEEP.some(r => c[0] >= r[0] && c[2] <= r[2] && c[1] >= r[1] && c[3] <= r[3])), JSON.stringify(CORNERS));
   let bad = [];
   for (let a = 0; a < 360; a += 15) {
-    const r = a * Math.PI / 180, out = sp2([3000, 5000, 7000, 9000].map(d => it2(Math.cos(r) * d, Math.sin(r) * d)));
+    const r = a * Math.PI / 180, out = spread([3000, 5000, 7000, 9000].map(d => item(Math.cos(r) * d, Math.sin(r) * d)));
     for (let i = 0; i < out.length; i++) {
-      if (rows.some(c => overlap(out[i].boxes[0], c) || overlap(out[i].boxes[1], c))) bad.push(a + ':row:' + i);
-      if (K2.some(c => overlap(out[i].boxes[0], c) || overlap(out[i].boxes[1], c))) bad.push(a + ':keep:' + i);
+      if (CORNERS.some(c => overlap(out[i].boxes[0], c) || overlap(out[i].boxes[1], c))) bad.push(a + ':row:' + i);
       for (let j = i + 1; j < out.length; j++) if (overlap(out[i].boxes[0], out[j].boxes[0]) || overlap(out[i].boxes[0], out[j].boxes[1]) || overlap(out[i].boxes[1], out[j].boxes[0]) || overlap(out[i].boxes[1], out[j].boxes[1])) bad.push(a + ':touch:' + i + j);
     }
   }
-  check('with the stacked corners: all round, four ships in one line of sight: no touching, none on a keep rectangle, none on a title row of the four panels (the second rows at y 110 included)', bad.length === 0, bad.slice(0, 6).join(' | '));
-  check('the second rows of both stacks (W FLEET and [ FRIENDLIES, y 110 to 136) are inside the keep rectangles the arrows keep out of', rows.every(c => K2.some(r => c[0] >= r[0] && c[2] <= r[2] && c[1] >= r[1] && c[3] <= r[3])), JSON.stringify(rows));
-  check('the bottom corners are free in that layout: an arrow on the right side, low (the target display used to be there) is not pushed away: it sits where the line from the middle meets the border', (() => { const e = edge2(3000, 900), p = sp2([it2(3000, 900)])[0]; return Math.abs(p.x - e.x) < 1 && Math.abs(p.y - e.y) < 1 && p.y > 450 && p.moved === false; })());
+  check('all round, four ships in one line of sight: no touching, and none on a title row of any corner panel', bad.length === 0, bad.slice(0, 6).join(' | '));
+  check('the bottom corners are free: an arrow on the right side, low (the target display used to be there) is not pushed away, it sits where the line from the middle meets the border', (() => { const e = edgeAt(3000, 900), p = spread([item(3000, 900)])[0]; return Math.abs(p.x - e.x) < 1 && Math.abs(p.y - e.y) < 1 && p.y > 450 && p.moved === false; })());
 }
 
 console.log('C. the scene');
@@ -135,7 +130,7 @@ console.log('D. the calls');
   check('the script is in index.html before the scene half that uses it', (() => { const h = src('index.html'), a = h.indexOf('src/campedgespread.js'), b = h.indexOf('src/campsightscene.js'); return a > 0 && b > a; })());
   check('the sight scene puts its arrows through the spread and keeps the rectangles', /campEdgeSpread\(its, \{ keep, W, H, m: CAMP\.nav\.arrow\.margin, tri: K\.tri, gap: K\.gap \}\)/.test(src('src/campsightscene.js')) && /V\.boxes = \[\]/.test(src('src/campsightscene.js')));
   check('the arrows carry where their ship is on the screen (tx, ty), for the turn', /tx: sx, ty: sy, n: g\.n/.test(src('src/campsight.js')) && /tx: sx, ty: sy, dist: campDist\(b, C\.carrier\)/.test(src('src/campsight.js')));
-  check('the keep table is not changed by it (it is the corner panels\' own: 5-GEN, card space-game-keys5-corners): the spread reads CAMP.nav.arrow.keep as it is', /K = o\.keep \|\| \[\]/.test(src('src/campedgespread.js')));
+  check('the keep table is not changed by it (it is the corner panels\' own: cards space-game-keys5-corners and space-game-keys6-layout): the spread reads CAMP.nav.arrow.keep as it is', /K = o\.keep \|\| \[\]/.test(src('src/campedgespread.js')));
   check('PROJECT_STATUS.md says it', /edge labels/i.test(src('PROJECT_STATUS.md')) && /space-game-edge-labels-overlap/.test(src('PROJECT_STATUS.md')));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
