@@ -51,7 +51,7 @@ try {
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes, the flight goes on
   await t.run(16000);
   const dist = await j(`(() => { const C = ${SC}.camp, u = C.by[C.nav && C.nav.ref]; return u ? Math.round(campDist(C.carrier, u)) : -1; })()`);
-  check('about fifteen seconds on, the carrier has come to turret range (about 400 px) of it and holds there: the trip is still on', dist > 200 && dist < 700 && (await j(`!!${SC}.camp.nav`)), dist + ' px');
+  check('about fifteen seconds on, the cruiser has come to turret range (about 400 px) of it and holds there: the trip is still on', dist > 200 && dist < 700 && (await j(`!!${SC}.camp.nav`)), dist + ' px');
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(500);
   await snap(t, 'follow');
   check('and with the map open the set mark is still marked with its buttons, Fly ON (it is being followed)', (await j(`${SC}.mp.btnFly.visible && /ON$/.test(${SC}.mp.btnFly.text)`)) === true, await j(`${SC}.mp.btnFly.text`));
