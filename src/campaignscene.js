@@ -480,12 +480,13 @@ class Campaign extends Phaser.Scene {
     C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) { if (sl) slookPickMark(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u), this); else campTgtCorners(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u)); } });
   }
   sync() {
-    const C = this.camp, seen = {};
+    const C = this.camp, seen = {}, F = typeof slookFrame === 'function' ? slookFrame(this) : null; // F: the new ship look's state for this frame, asked once for all the ships (src/shiplookdraw.js)
     C.ships.forEach(u => {
       let sp = this.sp[u.id];
       if (!sp) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone; sp = this.sp[u.id] = this.add.image(u.x, u.y, this.texOf(u.kind)).setScale(look.scale).setDepth(u.kind === 'carrier' ? 5 : u.team === 'earth' ? 4 : 3); if (look.tint) sp.setTint(look.tint); }
       sp.setPosition(u.x, u.y).setRotation(u.rot); seen[u.id] = true;
-      if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, typeof campZoomHull === 'function' ? campZoomHull(u.kind, sp.width * look.scale) : sp.width * look.scale); if (sp._k !== k) { sp._k = k; sp.setScale(look.scale * k); } } // zoomed far out a ship is drawn no smaller than its least size (CAMPZOOM.view.leastSmall and leastBig, src/campzoom.js; the hull's length, campZoomHull)
+      if (typeof slookSync === 'function') slookSync(this, u, sp, F); // the new ship look (src/shiplookdraw.js): its texture and base scale while the switch is on, today's picture when it is off
+      if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, typeof campZoomHull === 'function' ? campZoomHull(u.kind, sp.width * (sp._ls || look.scale)) : sp.width * (sp._ls || look.scale)); if (sp._k !== k) { sp._k = k; sp.setScale((sp._ls || look.scale) * k); } } // zoomed far out a ship is drawn no smaller than its least size (CAMPZOOM.view.leastSmall and leastBig, src/campzoom.js; the hull's length, campZoomHull)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
     this.squadMarks();
@@ -528,7 +529,7 @@ class Campaign extends Phaser.Scene {
     if (!this.bayG || (this.bayG.active === false && !this.bayG.scene)) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
     const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
     if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
-    const L = campBayLight(C, this.bayAt), bays = campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
+    const L = campBayLight(C, this.bayAt), bays = typeof slookOn === 'function' && slookOn() ? slookBays() : campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
     const kc = campShipK(this, c.id); // the picture drawn up by the far view: the boxes and the halo go out with it (card space-game-ships-bigger)
     const pos = ([x, y]) => [c.x + cs * x * kc - sn * y * kc, c.y + sn * x * kc + cs * y * kc];
     const quad = (x, y, x1, x2, y1, y2) => [[x + x1, y + y1], [x + x2, y + y1], [x + x2, y + y2], [x + x1, y + y2]].map(([a, b]) => [c.x + cs * a * kc - sn * b * kc, c.y + sn * a * kc + cs * b * kc]); // a box in the carrier's frame, turned with it

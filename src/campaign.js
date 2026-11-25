@@ -51,6 +51,7 @@ const CAMP = {
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
     mounts: [[30, -7], [30, 7], [10, -20], [10, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows
+    mountsFlat: [[30, -7], [30, 7], [2, -20], [2, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the same eight on the new ship look's flat-cut hull (card space-game-ship-look-a-ships; Troy, 25 Nov 2026): the two that were at x 10 are at x 2, back on the pods; used only while that look is on (campMounts)
     pd: 4,                                 // hit points one turret shot takes off an alien
     pdDelay: 700,                          // ms between the shots of one turret (eight of them: 46 hit points a second in all): they fire only while Space is held, each at the nearest alien in its reach, and never on their own
     pdRange: 500,                          // px a turret reaches (to the edge of the alien it aims at: about three and a half carrier lengths)
@@ -141,6 +142,7 @@ const CAMP = {
     startOut: true,                        // true: the pilots are out beside the cruiser when a mission begins (card space-game-keys-orders; Troy, 23 Nov 2026); false: they start in the bay and leave on an order, as before (the node suites about the bay, and the launch queue, set it)
     launchEvery: 600,                      // ms between ships leaving the bay once Launch is ordered
     mouth: [21, 19.5],                     // px from the carrier's centre (x along the nose, y to the side): where a launched ship appears, one side and then the other: just in front of the launch tube of a hangar pod (CAMP_ART.cruiser.launch)
+    mouthFlat: [9, 20],                    // the same on the new ship look's flat-cut hull (card space-game-ship-look-a-ships; Troy, 25 Nov 2026): the hull is only 11 px wide forward of x 5, so it is 3 px in front of the pod's front face, level with the launch tube; used only while that look is on (campMouth)
     dockAt: 63                             // px: a recalled ship this close to the carrier lands (and is whole again when next launched)
   },
   pilots: [                                // THE THREE PILOTS (card space-game-three-pilots; Troy, 23 Nov 2026: "one fighter replaces each squad: Wedge (red, the leader), Kara (green), Apollo (yellow)"; src/campwing.js campPilots). A pilot is one fighter that flies for a squad: its ship has u.pilot (the id here) and u.squad, and the squad's group ('red', 'green', 'yellow') is that one ship. The order is the order the squads fill
@@ -734,6 +736,9 @@ const CAMP = {
     }
   }
 };
+const campFlat = () => typeof slookOn === 'function' && slookOn();                                       // the new ship look is on (src/shiplook.js: the flag, the N panel's row, ?shiplook=1/0): the only thing of it the rules read, so the cruiser's marks sit on its hull
+const campMounts = () => campFlat() ? CAMP.carrier.mountsFlat : CAMP.carrier.mounts;                       // where the eight turrets sit on the cruiser: the table's own, or the flat-cut hull's while the new look is on
+const campMouth = () => campFlat() ? CAMP.bay.mouthFlat : CAMP.bay.mouth;                                  // where a launched ship appears: the same
 const campFlag = id => !!(CAMP.flags && CAMP.flags[id]); // a switch of CAMP.flags: is the system in the mission? (the tuning panel changes them live; the defaults are the table's)
 
 // ---------- small helpers ----------
@@ -1310,7 +1315,7 @@ function campLead(C, tu, u) {
 const campReach = C => CAMP.carrier.pdRange * (campHas(C, 'beam') ? CAMP.tech.beam.reach : 1); // px a turret reaches: the beam tech reaches further
 function campTurretPlace(C) { // each turret's place in the world, from the carrier's place and nose
   const c = C.carrier, cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-  C.turrets.forEach((tu, i) => { const m = CAMP.carrier.mounts[i]; tu.x = c.x + cs * m[0] - sn * m[1]; tu.y = c.y + sn * m[0] + cs * m[1]; });
+  const mt = campMounts(); C.turrets.forEach((tu, i) => { const m = mt[i]; tu.x = c.x + cs * m[0] - sn * m[1]; tu.y = c.y + sn * m[0] + cs * m[1]; });
 }
 // when turret i's slot comes: its own grid (a cycle is pdDelay; turret i is i/n of a cycle behind the first, if CAMP.carrier.stagger) and a little jitter from a stream of its own
 function campTurretAt(C, i, slot) {
@@ -1370,7 +1375,7 @@ function campBullet(C, from, rot, speed, dmg, lifeMs, team, ahead, extra) {
 function campLaunch(C, again, order, squad) { // again: the kind of a fighter that was mended aboard (src/camprepair.js): it goes out at once, with the order it had and in the squad it was in
   if (!again && (!C.launchQ.length || C.t < C.nextLaunch || C.carrier.hp <= 0)) return;
   C.nextLaunch = C.t + CAMP.bay.launchEvery;
-  const kind = again || C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = CAMP.bay.mouth, cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
+  const kind = again || C.launchQ.shift(), c = C.carrier, side = (C.launched % 2 ? 1 : -1), m = campMouth(), cs = Math.cos(c.rot), sn = Math.sin(c.rot); // out of the mouth of a hangar pod, one side and then the other
   const u = campSpawn(C, kind, c.x + cs * m[0] - sn * side * m[1], c.y + sn * m[0] + cs * side * m[1]); C.launched++;
   u.vx = c.vx + Math.cos(c.rot) * 140; u.vy = c.vy + Math.sin(c.rot) * 140; u.rot = c.rot;
   if (squad && kind === 'fighter') { u.squad = squad; campPilotSet(C, u); } // a pilot mended aboard flies again as itself, in its own squad

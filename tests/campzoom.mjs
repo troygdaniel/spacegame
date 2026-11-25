@@ -155,7 +155,7 @@ console.log('the flight view out to where the mission\'s route fits (card space-
   check('the default is inside every mission\'s range: nearer than the farthest zoom of each of the nine (the farthest is 0.02 to 0.11) and far enough out that the default is never held back by CAMZOOM.min', miss.every(m => m.floor < J('campZoomDefault()')) && J('campZoomDefault()') < 1 && J('campZoomDefault()') > K.min);
 }
 const scn = src('src/campaignscene.js');
-check('the scene scales each ship and shot by the camera\'s zoom as it syncs them (the size of a sprite from its picture and its look, once a change), and gives the Long Haul\'s zoom range back on shutdown', /campZoomShipScale\(this\.cameras\.main\.zoom, [^;]*sp\.width \* look\.scale/.test(scn) && /sp\._k !== k/.test(scn) && /campZoomShotScale\(this\.cameras\.main\.zoom\)/.test(scn) && /campZoomRange\(false\)/.test(scn));
+check('the scene scales each ship and shot by the camera\'s zoom as it syncs them (the size of a sprite from its picture and its look, once a change), and gives the Long Haul\'s zoom range back on shutdown', /campZoomShipScale\(this\.cameras\.main\.zoom, [^;]*sp\.width \* \(sp\._ls \|\| look\.scale\)/.test(scn) && /sp\._k !== k/.test(scn) && /campZoomShotScale\(this\.cameras\.main\.zoom\)/.test(scn) && /campZoomRange\(false\)/.test(scn));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nfailed: 0');
 process.exit(failed ? 1 : 0);
