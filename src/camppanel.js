@@ -151,7 +151,7 @@ function campPanelKey(P, C, code, now) {
   }
   if (campKeyIs('missile', code)) { // M: a homing missile at the target (card space-game-keys6-enter: it was Enter; a letter takes no list's key, so it fires with a list open too)
     res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the press that closed it, or a second one at once, fires nothing and says nothing
-    if (typeof campTgtNow === 'function' && !campTgtNow(C) && typeof campTgtNearest === 'function') campTgtNearest(C); // no enemy picked (card space-game-keys7-trim): the nearest enemy is picked now and the missile goes at it (it becomes the target; a friendly held is let go: one target at a time)
+    if (typeof campTgtNow === 'function' && !campTgtNow(C) && typeof campTgtNearest === 'function') campTgtNearest(C, CAMP.missile.lock); // no enemy picked (card space-game-keys7-trim): the nearest enemy IN missile range is picked now (card space-game-missiles-miss: not one out of range) and the missile goes at it (it becomes the target; a friendly held is let go: one target at a time); none in range: the old way, the nearest big ship in reach or the short no-line
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'missile'; return res;
   }
