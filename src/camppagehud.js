@@ -119,8 +119,8 @@ function campPageHudEdge(C, view) {
   const a = campSightArrows(C, { x: view.x, y: view.y }, W, H, view.zoom > 0 ? view.zoom : 1)[0]; if (!a) return null;
   return { n: a.n, km: uiText('camp.tdisp.km', { km: campNavKm(a.dist) }), angle: a.angle, x: a.x, y: a.y };
 }
-// a pill's size in game px, from its words (no DOM at the model: the font is CAMP_PAGEHUD.em of the width, the pill's .86 em; about .6 em a letter, its padding and the arrow)
-const campPageHudPillSize = text => { const em = W * CAMP_PAGEHUD.em * 0.86; return { w: (String(text).length * 0.6 + 3.4) * em, h: 2 * em }; };
+// a pill's size in game px, from its words (no DOM at the model: the font is CAMP_PAGEHUD.em of the width, the pill's .86 em; about .6 em a letter, its padding and the arrow; the height is the line and the padding, 2.6 of its em, as measured in a browser)
+const campPageHudPillSize = text => { const em = W * CAMP_PAGEHUD.em * 0.86; return { w: (String(text).length * 0.6 + 3.4) * em, h: 2.6 * em }; };
 // the pills at the edge keep clear of each other (card space-game-page-hud-friend-edge-pill): in order, the first keeps its place; each next one that would touch one put before it (the fixed ones first: the hostiles' pill) slides ALONG the border, the nearer way first, until it touches none (campEdgeT and campEdgeAt, src/campedgespread.js). items [{ x, y, w, h }], fixed [{ x, y, w, h }] (centres); returns [{ x, y, moved }]: the centre of each, kept whole on the screen (half its width and 6 px in from the sides, half its height and 6 from the top and bottom; a pill is as wide as its words)
 function campPageHudEdgeFit(items, fixed) {
   const m = CAMP.nav.arrow.margin, pad = 4, step = 6, clamp = (p, it) => ({ x: Math.max(it.w / 2 + 6, Math.min(W - it.w / 2 - 6, p.x)), y: Math.max(it.h / 2 + 6, Math.min(H - it.h / 2 - 6, p.y)) }), can = typeof campEdgeT === 'function' && typeof campEdgeAt === 'function';
@@ -135,6 +135,8 @@ function campPageHudEdgeFit(items, fixed) {
     const r = pick || { x: p0.x, y: p0.y, moved: false, b: box(p0, it) }; taken.push(r.b); return { x: r.x, y: r.y, moved: r.moved };
   });
 }
+// does the page have a pill for this ship now? (the last model the scene's sync wrote, 10 a second: s.pageHud.last.fedges): the canvas's amber goal arrow (src/campaignscene.js paintHud) is not drawn for a ship that has one
+function campPageHudHasPill(s, id) { const L = s && s.pageHud && s.pageHud.last; return !!id && !!L && Array.isArray(L.fedges) && L.fedges.some(f => f.id === id); }
 // the ships you protect that are off the screen: ONE pill each at the edge, in the amber of the ships you protect (the canvas drew an amber arrow for the ones in trouble only; the miner had none): the arrow, its E digit, its name and how far, "2 Miner \u00b7 12 km"; `hot` is the bar's: under attack or nearly lost. Nearest the cruiser first, at most CAMP_PAGEHUD.fedges; slid along the edge off each other and off the hostiles' pill; empty when the camera is not known
 function campPageHudFriendEdges(C, view, edge) {
   if (!view || typeof campSightFriends !== 'function' || typeof campFriNumbered !== 'function') return [];

@@ -284,12 +284,12 @@ function campNavLabelAt(x, y, w, h, keep, W_, H_) {
   const best = cands.filter(c => onScreen(c.x, c.y) && !hits(c.x, c.y)).sort((a, b) => Math.hypot(a.x - ox, a.y - oy) - Math.hypot(b.x - ox, b.y - oy))[0];
   return best ? { x: best.x, y: best.y } : { x: ox, y: oy }; // the nearest place that is on the screen and out of every rectangle; none (a screen full of them): where it was put
 }
-// the arrow at the goal: scroll { x, y }: the camera's top left in the world. null when the goal is on the screen, near, or there is none. { x, y, angle, dist, name }
+// the arrow at the goal: scroll { x, y }: the camera's top left in the world. null when the goal is on the screen, near, or there is none. { x, y, angle, dist, name, kind, ref }
 function campNavArrow(C, scroll, W_, H_, zoom) { // zoom: the camera's (1 when it has none): a point is (its offset from the middle of the view) times the zoom from the middle of the screen
   const g = campNavGoal(C); if (!g || !C.carrier) return null;
   const A = CAMP.nav.arrow, c = C.carrier, dist = Math.hypot(g.x - c.x, g.y - c.y); if (dist < A.min) return null;
   const z = zoom > 0 ? zoom : 1, sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
   if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return null; // on the screen and clear of the HUD: seen
   const e = campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep); if (!e) return null;
-  return { x: e.x, y: e.y, angle: e.angle, dist, name: g.name };
+  return { x: e.x, y: e.y, angle: e.angle, dist, name: g.name, kind: g.kind, ref: g.ref }; // kind, ref: what the goal is and, for a ship, its id (the page HUD's pill for a ship you protect stands in for its arrow: campPageHudHasPill)
 }
