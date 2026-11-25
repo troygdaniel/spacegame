@@ -623,6 +623,8 @@ const UI_TEXT = {
   'camp.lose.base': 'The works are lost.',
   'camp.lose.tip.convoy': 'Guard the haulers: pick one ({keyfriendlies}), then {keyorder}.',
   'camp.lose.tip.base': 'Guard the works: pick them ({keyfriendlies}), then {keyorder}. Hold Space.',
+  'camp.lose.miners': 'Both mining ships are lost.',
+  'camp.lose.tip.miners': 'Guard the miners: pick one ({keyfriendlies}), then {keyorder}.',
   'camp.say.scanned': 'Point scanned: {n} of {of}.',
   'camp.say.hauler': '{name} is under way.',
   'camp.say.raid': 'Raiders on the haulers. Escort them.',
