@@ -86,3 +86,4 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.minerwait | Miner call: count after |
 | camp.ui.tune.row.baittboats | 1.1 bait wave: torpedo boats |
 | camp.ui.tune.row.baitskiffs | 1.1 bait wave: skiffs |
+| camp.ui.tune.row.pilotleash | Pilots' chase leash |

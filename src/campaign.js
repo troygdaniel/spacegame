@@ -306,6 +306,7 @@ const CAMP = {
     vee: { back: 0.9, side: 0.8 },         // the vee: a row of two wingmen, left and right, is gap * back behind its leader and gap * side out from him; the next pair a row farther
     reach: 700,                            // px: an alien this near what a flight guards is a threat the flight breaks off to meet (as it was)
     self: 450,                             // px: or one this near the ship itself (as it was)
+    leash: 3000,                           // px: THE CHASE LEASH (card space-game-pilot-chase-leash; Troy, 24 Nov 2026: a pilot chased a pirate that had broken off 10 to 17 km from Ceres and left the miners open to the next raid). A pilot that is guarding, and is further than this from what it guards (the ship, place or point it guards, else the cruiser), breaks off a chase of any foe it picked by itself; a pilot that is attacking breaks off a chase of a RUNNER (a pirate that has broken off) the same way; an attack order on a foe that is still fighting, named or picked, is kept however far. 0 is no leash (it was none). The N panel has the row
     cover: { range: 520, aspect: 0.5 },    // a WINGMAN covers its leader: an alien within range px of the leader with its nose within aspect rad of the leader (it is shooting at him) is the wingman's foe, before the one it would have picked
     catchUp: 220,                          // px: farther than this from its slot a ship points where it is flying; nearer, its nose goes the way of what it flies beside
     rest: -Math.PI / 2                     // rad: the heading a flight takes beside a place or a point, which has no nose (north)
@@ -1560,7 +1561,7 @@ function campMotherAI(C, u, dt) {
 // a ship of yours, by its order (the fighters)
 function campWingAI(C, u, dt) {
   const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
-  let foe = null, home = null;
+  let foe = null, home = null, anchor = c; // anchor: what the pilot guards (the leash is measured from it): the cruiser unless the guard order says another ship, a place or a point
   const towed = campTowSet(C, u, aliens); // a burn takes the wing with it (src/campnav.js has the rule): a ship with no hostile near is towed
   if (campRepairRun(C, u, dt)) return; // a fighter under 30 percent hull breaks off, flies home and lands to be mended, whatever its order (src/camprepair.js)
   if (o.type === 'recall') {
@@ -1597,8 +1598,13 @@ function campWingAI(C, u, dt) {
     }
   } else { // guard: a flight holds its slots beside a point (the carrier, a place, a convoy; src/campflight.js); an alien that comes within reach of it, or of this ship, is fought, and the flight flies back to its slots when it is gone
     const at = o.at || { kind: 'carrier' }, p = at.kind === 'carrier' ? c : at.kind === 'place' ? campPlaces(C.level)[at.id] : at.kind === 'point' ? at : at.kind === 'anomaly' ? (C.anoms || []).find(a => 'anom:' + a.id === at.id) || c : C.by[at.id] || c; // an anomaly: the squad flies to it (src/campanomaly.js)
+    anchor = p;
     foe = campNearest(aliens, p, CAMP.flight.reach) || campNearest(aliens, u, CAMP.flight.self); if (foe) foe = campDogFoe(C, u, foe, 1000); foe = campFlightCover(C, u) || foe; // a wingman covers its leader first (src/campflight.js) // a partner within reach is the one it fights
     if (!foe) home = campFlightSlot(C, u, p); // no threat: hold the slot beside what is guarded, at its speed and heading (src/campflight.js); it was a circle round it
+  }
+  if (foe && CAMP.flight.leash > 0 && (o.type === 'guard' || (o.type === 'attack' && foe.running)) && campDist(u, anchor) > CAMP.flight.leash) { // THE LEASH (CAMP.flight.leash): too far from what it guards, after a runner (any order that attacks) or a foe a guarding pilot picked itself: break off and fly back to the place. A pilot ordered to attack keeps after any foe that is still fighting, named or picked, however far (it is sent at the pirates at a miner 3,000 px from the cruiser)
+    foe = null; home = campFlightSlot(C, u, anchor);
+    if (o.type === 'attack') u.order = { type: 'guard', at: { kind: 'carrier' } }; // the attack order was on a runner: it is over, or it would send the pilot out again the next frame
   }
   if (foe) {
     const dx = foe.x - u.x, dy = foe.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);

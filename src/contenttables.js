@@ -616,6 +616,7 @@ const UI_TEXT = {
   'camp.ui.tune.row.minerwait': 'Miner call: count after',
   'camp.ui.tune.row.baittboats': '1.1 bait wave: torpedo boats',
   'camp.ui.tune.row.baitskiffs': '1.1 bait wave: skiffs',
+  'camp.ui.tune.row.pilotleash': "Pilots' chase leash",
   'camp.ui.ore': 'ORE',
   'camp.ui.shield': 'SHIELD',
   'camp.l1.before.3': 'Then mine at the rim and bring the haulers home.',

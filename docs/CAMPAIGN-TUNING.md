@@ -359,3 +359,24 @@ Other forces tried, same seeds (carrier / plain / plainr): 4,2,1 gave 17 / 58 / 
 So careful play (plain, or plain with a pilot posted on the rear) brings all three home on 10 and 8 of 12 seeds, where it was 6 and 2. A player who only flies the cruiser still loses a hauler on 7 of 12 seeds (it was 11 of 12), and one who does nothing loses them all. The noise is about plus or minus 14 points at 12 seeds, so read the rows as a band: the force 4, 1, 1 was picked as the smallest change (one ship less of each of the two heavy kinds) that puts both careful players at two thirds or more. The all-delivered bonus (`all`) stays a bonus.
 
 To undo it: `drone: 2, gunship: 2` in the wave (or set both N rows back to 2). The bots in the tuning doc: `plainr`, and `--runs` (one line per run: result, haulers delivered and lost, which hauler was lost and by what, the bonuses) are new in `tools/campaign-bot.mjs`; its summary has an `allHome` column in `--json`.
+
+## The pilots' chase leash (card `space-game-pilot-chase-leash`, 24 Nov 2026; base main cbd9fc00)
+
+Found on `space-game-12-keys-lose-miners`: a pilot that chased a pirate that had broken off had no limit (10 to 17 km from Ceres in 1.2), and the next raid killed the miners or the transport. Troy said yes to a leash. The rule is in `campWingAI` (`src/campaign.js`): a pilot further than `CAMP.flight.leash` from what it guards (the ship, place or point of its guard order, else the cruiser) breaks off and flies back to its slot when (a) it is on a guard order and chasing any foe it picked by itself, or (b) it is on an attack order and the foe has broken off (a runner). An attack order on a foe that is still fighting, named or picked, is kept however far: a first version also leashed those, and it turned back the pilots sent at the pirates on 1.1's miner (3,000 px or more from the cruiser), failing `tests/campbeats.mjs`, `campdogfight.mjs`, `campfightpace.mjs` and `campminer.mjs`. An attack order that was on a runner is over when the pilot breaks off (it guards the cruiser), or it would send the pilot out again the next frame.
+
+| What | Old | New |
+|---|---|---|
+| `CAMP.flight.leash` (new number) | none (a pilot chased without limit) | 3000 px; 0 is no leash. The N panel has the row `pilotleash` ("Pilots' chase leash", 0 to 10,000 in steps of 250, felt at once) |
+
+To undo it: set the number to 0 (or delete the leash block in `campWingAI`). The three assumptions on the card: (1) holds as widened above (a foe that is still fighting is kept after, named or not; the leash is for runners and for a guard pilot acting by itself); (2) no new radio line; (3) the cruiser has no leash, only the pilots' AI reads it. Not on the leash (their chases are short already): the mine, fetch and hold orders (a foe within 320 px of the pilot) and the escort order (within 650 px of the convoy ship). Pins: `tests/camppilotleash.mjs` (13 checks).
+
+Bots, Normal, 8 seeds, before (main cbd9fc00) and after (the leash at 3,000, main with the key-bot fix of `space-game-12-keys-lose-miners` merged):
+
+| Mission, bots | Before | After |
+|---|---|---|
+| 1.1 plain / strong / thinks (straight) | 100 / 100 / 100 percent, 306 / 306 / 365 s | 100 / 100 / 100, 306 / 306 / 365 s (the same) |
+| 1.2 plain / strong / thinks (straight) | 88 / 88 / 88 (one lost to the miners each), 284 / 302 / 277 s | 88 / 100 / 100, 275 / 271 / 268 s |
+| 1.3 plain / strong / thinks (straight) | 100 / 100 / 100, 292 s | 100 / 100 / 100, 292 s (the same) |
+| 1.2 plain / strong / missile through the keys, with the key-bot fix, game leash 0 | 100 / 88 / 63 | game leash 3000: 100 / 88 / 38 |
+
+So 1.1 and 1.3 do not move (no run chased a runner past 3,000 px: the escorts are neither easier nor harder in these numbers), and 1.2 loses fewer miners for the strong and thinks bots. The key bots strong and missile on 1.2 are not helped: on 16 seeds with the first, wider version of the leash strong was 63 percent won with or without it and missile 56 with it, 69 without (inside the noise of 16 seeds), and the 8 seeds above say 38 against 63, so their remaining losses to the miners are not the chase (they stay with card `space-game-12-keys-lose-miners`). Two pins in `tests/campl1pacing.mjs` moved with the leash and say so: the empty time of 1.3 (no hostile alive) was 117 s on the median of three seeds and is 131 with the leash at 3,000 (119 at 4,000, 129 at 5,000: mostly the noise of three seeds), so its bound went from 126 to 135; and 'do nothing' at 1.2's beat 3 costs a miner and a torpedo hit on seven of eight seeds with the leash (eight of eight without it), so the pin is now five of six seeds, not both of two. A pilot that stops chasing a runner leaves the road a little emptier: a longer leash is the lever if Troy minds.
