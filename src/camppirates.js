@@ -131,6 +131,7 @@ function campTrafficNew(C) {
 }
 function campNeutralLost(C, u) {
   C.neutralsLost++;
+  (C.L && C.L.lose || []).forEach(r => { if (r.type === 'nomore' && r.kind === u.kind && !C.result && !C.ships.some(s => s !== u && s.team === 'neutral' && s.kind === r.kind && s.hp > 0)) campEnd(C, 'lost', r.why || 'other'); }); // a mission row's `lose` rule: the last neutral ship of that kind is gone (1.2: both miners), card space-game-12-lose-no-miners
   C.events.push({ type: 'neutral', stage: 'lost', id: u.id, kind: u.kind, name: u.cname || u.kind, x: u.x, y: u.y });
   campSay(C, 'camp.say.neutral.lost', { name: u.cname || u.kind });
 }

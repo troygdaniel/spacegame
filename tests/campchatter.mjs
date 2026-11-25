@@ -145,34 +145,28 @@ try {
   check('G  it is kept clear of the other rows: the label sits in the free space right of EFFECTS (x 640 or more)', /bx \+ 6[4-9]\d|bx \+ 7\d\d/.test(st.split("'CHATTER'")[0].slice(-200)));
   check('G  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 } catch (e) { check('a section of the test ran without an error', false, e && e.message); }
-// ---- H: the line stands above the FLEET corner (card space-game-talk-over-fleet-corner; Troy, 24 Nov 2026: the fleet's spoken lines were drawn on top of the Q FLEET corner) ----
+// ---- H: where the radio line stands (card space-game-talk-over-fleet-corner put it above the FLEET corner; card space-game-keys5-corners moved all four corners to the top: the radio line has the bottom left, above the key line) ----
 try {
   g.run(`window.__R = campNew(1, [], { seed: 5, mission: 0 }); __R.t = 1000;`); // a real battle state: the three pilots are out, so FLEET has rows
-  const Kc = J('CAMP.corner'), spot = dx => J(`chatterSpot(__R, ${dx || 0})`), geom = (open, dx) => J(`campCornerGeom('bl', ${open ? 'campCornerItemsH(campCornerNow(__R, "fleet").items)' : 0}, ${dx || 0})`);
+  const Kc = J('CAMP.corner'), spot = dx => J(`chatterSpot(__R, ${dx || 0})`), Wd = J('W'), Hd = J('H');
   const hit = (a, b) => a && b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; // two rectangles share some area
   const box = (sp, lines) => ({ x: sp.x, y: sp.bottom - 23 * lines, w: 330, h: 23 * lines }); // the line's box: 330 wide (its word wrap), 23 px a line (15 px type and the 3 px stroke), standing on its bottom edge
-  const sweep = (open, dx) => { const sp = spot(dx), G = geom(open, dx); return [1, 2, 3].every(n => !hit(box(sp, n), G.title) && !hit(box(sp, n), G.det)); };
-  const closed = spot(), T = J('campCornerGeom("bl", 0, 0).title');
-  check('H  closed: the line ends CAMP.corner.gap above the FLEET title row, at the margin (its left edge is the corner\'s less the stroke: x 16, the glyph at 18)', closed.bottom === T.y - Kc.gap && closed.x === Kc.edge - Kc.ink, JSON.stringify(closed));
-  check('H  closed: a line of one, two or three rows (it grows upward) never touches the title row', sweep(false, 0));
+  const closed = spot();
+  check('H  the line stands at the bottom left: its left edge the margin less the stroke (x 16, the glyph at 18), its bottom edge CAMP.corner.radio (70) px up from the screen\'s bottom', closed.x === Kc.edge - Kc.ink && closed.bottom === Hd - Kc.radio && Kc.radio === 70, JSON.stringify(closed));
+  check('H  it grows upward from there: a line of one, two or three rows stays above the key line (the keep rectangle from y 656) and under the stacks at the top', [1, 2, 3].every(n => { const b = box(closed, n); return b.y + b.h <= 656 && b.y > Kc.at.bl.y + Kc.title.h; }));
+  const corners = () => ['tl', 'bl', 'tr'].map(c => J(`campCornerGeom('${c}', 0, 0).title`));
   g.run(`campCornerOpen(__R, 'fleet')`);
-  const items = J('campCornerNow(__R, "fleet").items.length'), G1 = geom(true, 0), open1 = spot();
-  check('H  open: FLEET has its pilots\' rows (the three out beside the cruiser)', items === 3 && G1.det && G1.det.h > 0, items);
-  check('H  open: the line moves up by the details\' height and ends CAMP.corner.gap above their frame', open1.bottom === G1.det.y - Kc.gap && open1.bottom < closed.bottom - G1.det.h, JSON.stringify(open1));
-  check('H  open: a line of one, two or three rows touches neither the details nor the title row', sweep(true, 0));
-  g.run(`__R.t = 1000 + CAMP.corner.show + 100`); // the details are fading (their strength is over 0): the line stays clear of the frame while it is still drawn
-  check('H  fading: while the details are still drawn the line stays above them', J('campCornerStrength(__R, "fleet")') > 0 && spot().bottom === open1.bottom);
-  g.run(`__R.t = 1000 + CAMP.corner.show + CAMP.corner.fade + 1`);
-  check('H  faded out: the line comes back down to the title row', spot().bottom === closed.bottom && sweep(false, 0));
-  check('H  an open list on the left steps the corner right, and the line with it (the same dx; closed and open)', spot(300).x === closed.x + 300 && sweep(false, 300) && (g.run(`campCornerOpen(__R, 'fleet')`), sweep(true, 300) && spot(300).x === closed.x + 300));
-  check('H  a stand-in with no clock or no state does not fail (a test\'s scene), it stands over the closed corner', J('chatterSpot({}, 0).bottom') === closed.bottom && J('chatterSpot(null, 0).bottom') === closed.bottom);
+  const G = J(`campCornerGeom('bl', campCornerItemsH(campCornerNow(__R, 'fleet').items), 0)`);
+  check('H  the four corners are at the top now: no row, and not the FLEET details open under its row, reaches the radio line (any length up to three rows)', corners().every(t => [1, 2, 3].every(n => !hit(box(closed, n), t))) && [1, 2, 3].every(n => !hit(box(closed, n), G.det)) && G.det.y + G.det.h < box(closed, 3).y, JSON.stringify([G, closed]));
+  check('H  the cruiser list under Q CRUISER (the tallest thing the left stack has: its frame at the table\'s eleven rows, with the FLEET row slid below it) does not reach the radio line either', (() => { const row = Kc.at.tl.y + Kc.title.h + Kc.gap, list = J('CAMPPANELS_LOOK.box'), h = list.pad + (J('CAMP_PANELS.show') * (list.row + list.gap) - list.gap) + list.pad + list.foot, fleet = row + h + Kc.gap + Kc.title.h; return fleet < box(closed, 3).y; })());
+  check('H  an open list on the left steps the corners right, and the line with it (the same dx)', spot(300).x === closed.x + 300 && spot(300).bottom === closed.bottom);
+  check('H  a stand-in with no clock or no state does not fail (a test\'s scene): the same place', J('chatterSpot({}, 0).bottom') === closed.bottom && J('chatterSpot(null, 0).bottom') === closed.bottom);
   const sc = read('src/campaignscene.js'), upd2 = sc.slice(sc.indexOf('  update(time, dt) {'));
-  check('H  the scene text grows upward (origin 0, 1), starts at the margin, and is placed by chatterSpot', /this\.hud\.chat = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, [^;]*\.setOrigin\(0, 1\)/.test(sc) && /chatterSpot\(/.test(upd2) && /\.setPosition\(sp\.x, sp\.bottom\)/.test(upd2));
-  check('H  it is placed each frame AFTER the corner is drawn (campCornerSync), so a pilot hit that opens FLEET moves the line in the same frame', upd2.indexOf('chatterSpot(') > upd2.indexOf('campCornerSync(this'));
-  // the other three corners and the top centre against the toasts (the toast box is 520 wide and 16 px more each side, centred; the HUD column's plate is CAMP.hud.plate.w wide, centred on CAMP.hud.text.x)
-  const Wd = J('W'), at = Kc.at, toastL = Wd / 2 - (J('TOAST.w') / 2 + J('TOAST.pad')), toastR = Wd / 2 + (J('TOAST.w') / 2 + J('TOAST.pad')), P = J('CAMP.hud.plate'), plateL = J('CAMP.hud.text.x') - P.w / 2, plateR = J('CAMP.hud.text.x') + P.w / 2;
-  check('H  the toast box and the HUD column\'s plate (top centre) clear the top corners sideways: S CRUISER ends left of both, HOSTILES starts right of both', at.tl.x + Kc.w < Math.min(toastL, plateL) && at.tr.x > Math.max(toastR, plateR), [at.tl.x + Kc.w, toastL, plateL, at.tr.x, toastR, plateR].join(' '));
-  check('H  the bottom corners (FLEET and FRIENDLIES) clear the toast band: it ends above them', J('TOAST.bottom') + 40 < at.bl.y - Kc.title.h && J('TOAST.bottom') + 40 < at.br.y - Kc.title.h);
+  check('H  the scene text grows upward (origin 0, 1), starts at the margin, at the radio place, and is placed by chatterSpot', /this\.hud\.chat = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - CAMP\.corner\.radio, [^;]*\.setOrigin\(0, 1\)/.test(sc) && /chatterSpot\(/.test(upd2) && /\.setPosition\(sp\.x, sp\.bottom\)/.test(upd2));
+  // the top centre against the toasts (the toast box is 520 wide and 16 px more each side, centred; the HUD column's plate is CAMP.hud.plate.w wide, centred on CAMP.hud.text.x)
+  const at = Kc.at, toastL = Wd / 2 - (J('TOAST.w') / 2 + J('TOAST.pad')), toastR = Wd / 2 + (J('TOAST.w') / 2 + J('TOAST.pad')), P = J('CAMP.hud.plate'), plateL = J('CAMP.hud.text.x') - P.w / 2, plateR = J('CAMP.hud.text.x') + P.w / 2;
+  check('H  the toast box and the HUD column\'s plate (top centre) clear the four corners sideways: the left stack ends left of both, the right stack starts right of both', at.tl.x + Kc.w < Math.min(toastL, plateL) && at.bl.x + Kc.w < Math.min(toastL, plateL) && at.tr.x > Math.max(toastR, plateR), [at.tl.x + Kc.w, toastL, plateL, at.tr.x, toastR, plateR].join(' '));
+  check('H  the radio line (330 wide from x 16) ends left of the toast box', closed.x + 330 < toastL, [closed.x + 330, toastL].join(' '));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 } catch (e) { check('a section of the test ran without an error (H)', false, e && e.message); }
 console.log(failed ? `CAMP CHATTER FAIL (${failed} of ${n})` : `CAMP CHATTER PASS (${n} checks)`);

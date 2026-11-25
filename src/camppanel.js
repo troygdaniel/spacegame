@@ -1,6 +1,6 @@
 // ---------- Campaign: the order lists, the logic (cards one-list-keys and list-shortcuts; Troy, 22 and 23 Nov 2026) ----------
-// (The FLEET, SHIP, POWER, AUTOPILOT and ALL-SQUADS lists, their keys Q W P O I U and their switches CAMP_FLEET_LIST and CAMP_SHIP_LIST are DELETED: card space-game-delete-off-lists, Troy, 24 Nov 2026; the git tag lists-before-delete is main as they stood.) S opens the CRUISER list, the one list with a key; the convoy list and the dock list stay as data that no key opens. Nothing is on the screen until a key is pressed; only one list is open at a time.
-// (A NUMBERED list, the S list's `numbers: 1`, card space-game-s-list-numbers, is driven by the digits 1 to 9 alone: its rows carry their numbers, there is no highlight, and Up, Down, Left, Right and Enter are left to the ship.) In an open list that is not numbered Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
+// (The FLEET, SHIP, POWER, AUTOPILOT and ALL-SQUADQ lists, their keys Q W P O I U and their switches CAMP_FLEET_LIST and CAMP_SHIP_LIST are DELETED: card space-game-delete-off-lists, Troy, 24 Nov 2026; the git tag lists-before-delete is main as they stood.) S opens the CRUISER list, the one list with a key; the convoy list and the dock list stay as data that no key opens. Nothing is on the screen until a key is pressed; only one list is open at a time.
+// (A NUMBERED list, the Q list's `numbers: 1`, card space-game-s-list-numbers, is driven by the digits 1 to 9 alone: its rows carry their numbers, there is no highlight, and Up, Down, Left, Right and Enter are left to the ship.) In an open list that is not numbered Up and Down move the highlight (round at the ends), Enter gives the highlighted order (on a part's row: opens that part), Left goes back to the list it is a part of, the list's own key closes it.
 // ESC GOES BACK ONE STEP, TO WHERE YOU CAME FROM (card space-game-order-target-pick; Troy, 22 Nov 2026): a target sub-list (src/camppick.js) goes back to the list it was opened from; a list opened from a part's row goes back to that list;
 // a list opened by its own key (S) is closed; with nothing open Esc pauses (the scene). P.trail is the lists we came through by rows, the last one first to go back to.
 // An order that is taken closes the list; one that is refused leaves it open and says why.
@@ -39,7 +39,7 @@ const campPanelKeyLine = () => ['left', 'right'].map(side => CAMP_PANELS.panels.
 const campKeyLine = () => uiText('camp.ui.keys'); // the bottom line is the flying keys only: Arrows, Space, Enter, Tab, H (card space-game-layout-hud: the lists' keys, S Cruiser, are written on their own corner's title now)
 // a row that can never be used in this mission is not in its list: the convoy's part with no convoy to give orders to, the blink without its tech, the dock where there is no outpost
 function campPanelWhen(C, row) {
-  if (row.off) return false; // a row switched off (the S list's Dock and repair, card space-game-keys3-repair: it stays in the table)
+  if (row.off) return false; // a row switched off (the Q list's Dock and repair, card space-game-keys3-repair: it stays in the table)
   if (!row.when || !C) return true;
   if (row.when === 'convoy') return campFlag('convoyorders') && !!((C.L && C.L.convoys && C.L.convoys.length) || (typeof campConvoyShips === 'function' && campConvoyShips(C).length));
   if (row.when === 'blink') return campHas(C, 'blink');
@@ -116,21 +116,22 @@ function campPanelKey(P, C, code, now) {
         if (plan.how === 'auto') item = plan.item;
       }
       const r = campPanelRun(C, row, 'key', item);
-      res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now;
+      res.ran = !row.who || !(r && r.ok); res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now; // (a pick of who is no order: it says nothing unless it is refused)
       if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
       if (res.ok) campPanelClose(P); // the order is given: the keys go back to the ship. A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
   }
-  const tk = typeof campTgtStep === 'function' ? (campKeyIs('hostiles', code) ? 'hostiles' : campKeyIs('friendlies', code) ? 'friendlies' : campKeyIs('who', code) ? 'who' : campKeyIs('near', code) ? 'near' : campKeyIs('clear', code) ? 'clear' : '') : '';
-  if (tk) { // ] the next enemy, [ the next friendly, Q who, \ the nearest threat, X all of it: one key and one direction each (src/camptarget.js: the three picks; card space-game-keys4-onekey)
+  const tk = typeof campTgtStep === 'function' ? (campKeyIs('hostiles', code) ? 'hostiles' : campKeyIs('friendlies', code) ? 'friendlies' : campKeyIs('near', code) ? 'near' : '') : '';
+  if (tk) { // ] the next enemy, E the next friendly, \ the nearest threat: one key and one direction each, each cycle going round with no empty stop (src/camptarget.js; cards space-game-keys4-onekey, space-game-keys5-qwe and space-game-keys6-enter: W is the fleet pick, a list's key; X is gone)
     res.used = true; res.fleet = true; if (!C) return res;
-    if (tk === 'clear') { campPicksClear(C); campSquadsFree(P); } else if (tk === 'near') campTgtNearest(C); else if (tk === 'who') campSelStep(C, 1); else if (tk === 'friendlies') campFriStep(C, 1); else campTgtCycle(C);
+    if (tk === 'near') campTgtNearest(C); else if (tk === 'friendlies') campFriStep(C, 1); else campTgtCycle(C);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
   }
   const ok = typeof campSelOrder === 'function' && campKeyIs('order', code) ? 'engage' : '';
-  if (ok) { // W: the pilots attack the enemy, guard the friend, or form up on the cruiser, by what is picked; a selected pilot takes the order alone (src/camptarget.js campSelOrder; card space-game-keys2-orders)
-    res.used = true; if (!C) return res;
+  if (ok && open && !nums) return res; // an open list that takes Enter (not a numbered one) has had it above: the order is not given through it
+  if (ok) { // Enter: the pilots attack the enemy, guard the friend, or form up on the cruiser, by what is picked; a selected pilot takes the order alone (src/camptarget.js campSelOrder; cards space-game-keys2-orders and space-game-keys6-enter)
+    res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the Enter that closed it gives no order
     const f = campSelNow(C), r = campSelOrder(C, ok, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = r && r.verb || ok; res.fleet = true;
     if (res.ok) campSquadsKeep(P, f && f.kind === 'pilot' ? f.squad : 'squads', now); // the pilot (or all three) keep the ring a while
@@ -142,12 +143,12 @@ function campPanelKey(P, C, code, now) {
     const r = campOrder(C, 'power', pw, 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = pw; return res;
   }
-  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the S list's row Reload missiles, so the row lights as the key is pressed)
+  if (campKeyIs('reload', code)) { // R: queue one missile to build, for ore (card space-game-missiles-cost-ore: it is also the Q list's row Reload missiles, so the row lights as the key is pressed)
     res.used = true; if (!C) return res;
     const r = campOrder(C, 'reload', '', 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'sreload'; if (typeof now === 'number' && P && P.lit) P.lit.sreload = now; return res;
   }
-  if ((!open || nums) && campKeyIs('missile', code)) { // Enter with no list open (or a numbered one: it does not take Enter): a homing missile at the target
+  if (campKeyIs('missile', code)) { // M: a homing missile at the target (card space-game-keys6-enter: it was Enter; a letter takes no list's key, so it fires with a list open too)
     res.used = true; if (!C || campPanelHeld(P, now)) return res; // a card has just closed (campPanelHold): the press that closed it, or a second one at once, fires nothing and says nothing
     const r = campOrder(C, 'missiles', campPanelTargetArg(C, { order: 'missiles' }), 'key');
     res.ran = true; res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = 'missile'; return res;
@@ -161,6 +162,8 @@ const campPanelTargetArg = (C, row) => row.order === 'missiles' && typeof campTg
 function campPanelRun(C, row, how, item) {
   if (!C || !row) return { ok: false, say: '' };
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
+  if (row.who) return campSelPick(C, row.who, how || 'key'); // a row of the fleet pick: WHO takes the order (no order is given)
+  if (row.formup) return campSelOrder(C, 'formup', how || 'key'); // 5 of the fleet pick: form up on the cruiser, at once, whoever is picked
   if (item && row.pick === 'ward') return campOrder(C, 'mendship', item.id, how || 'key'); // the ship that was chosen is mended (src/campmend.js)
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
   if (row.wing) return campWingOrder(C, row.wing[0], row.wing[1], null, how || 'key');
@@ -197,6 +200,7 @@ const campPanelCost = (C, row, short) => {
   return '';
 };
 function campPanelState(C, row) {
+  if (row.who) return campSelIs(C, row.who) ? 'picked' : ''; // the fleet pick: what is picked now says so
   if (row.cost) return campPanelCost(C, row); // a yard row: what it costs (now)
   switch (row.id) {
     case 'fmine': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' fighters out' : C.bay.fighters + ' in the bay'; } // pilots in the bay take the order by launching (card space-game-keys-orders)
@@ -217,6 +221,7 @@ function campPanelShortWhy(r) {
   return t;
 }
 function campPanelShortState(C, row) {
+  if (row.who) return campSelIs(C, row.who) ? 'picked' : '';
   if (row.cost) return campPanelCost(C, row, true);
   switch (row.id) {
     case 'fmine': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' out' : C.bay.fighters + ' in bay'; }
@@ -232,6 +237,8 @@ function campPanelShortState(C, row) {
 function campPanelRowState(C, row) {
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
+  if (row.who) return campSelList(C).some(e => e.id === row.who) ? ok() : no('nopilot'); // a pilot who is lost or home is no stop of the pick
+  if (row.formup) { const r = campSelOrder(C, 'formup', 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.fly === 'objective') {
     const f = campNavFind(C, 'the objective'); if (!f.row) return no('nogoal');
@@ -256,7 +263,7 @@ const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id) {
   if (!campPanelDef(id) || !C) return [];
-  return campPanelList(C, id).map(row => { const part = row.open ? campPanelDef(row.open) : null; return Object.assign({ id: row.id, label: row.label, key: part ? part.key : row.cap && CAMP_KEYS[row.cap] ? CAMP_KEYS[row.cap].k : '', more: !!part, marked: campPanelConvoyMarked(C, row) }, campPanelRowState(C, row)); });
+  return campPanelList(C, id).map(row => { const part = row.open ? campPanelDef(row.open) : null; return Object.assign({ id: row.id, label: row.who ? campSelLabel(row.who) : row.label, key: part ? part.key : row.cap && CAMP_KEYS[row.cap] ? CAMP_KEYS[row.cap].k : '', more: !!part, marked: row.who ? campSelIs(C, row.who) : campPanelConvoyMarked(C, row) }, campPanelRowState(C, row)); });
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;
