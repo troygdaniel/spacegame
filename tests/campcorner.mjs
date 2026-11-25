@@ -201,5 +201,22 @@ check('the scene calls campCornerSync every frame, and campCornerKey for every k
 check('the two files have their script tags (the rule after the target display\'s, the drawing with the other scene halves)', /<script src="src\/campcorner\.js"><\/script>/.test(html) && /<script src="src\/campcornerscene\.js"><\/script>/.test(html));
 check('the rule is pure (no Phaser: no this.add, no scene) and keeps its state in a WeakMap per mission', !/this\.add|scene\.add|s\.add/.test(src('src/campcorner.js')) && /const CAMP_CORNER_STATE = new WeakMap\(\)/.test(src('src/campcorner.js')));
 
+// ---- card space-game-esc-all-pilots (Troy, 24 Nov 2026: "the numbers go dark after W then Esc"): the lit digits show who takes the next order, the pick open or closed ----
+console.log('the lit digits, open or closed');
+{
+  g.run(`__new(); window.PP = campPanelNew(); campTcornerLook(PP, 1000); window.__lit = () => campFleetRows(C).map(r => r.cap + (r.capOk ? '+' : '-')).join(' ');`);
+  check('the pick closed and All pilots picked (the default): all four digits are lit', J('__lit()') === '1+ 2+ 3+ 4+', J('__lit()'));
+  g.run(`campPanelKey(PP, C, 'KeyW', 1000); campTcornerLook(PP, 1000);`);
+  check('W opens the pick and steps to Wedge: every digit is lit (they are keys now)', J('__lit()') === '1+ 2+ 3+ 4+' && J('C.sel') === 'pilot:red', J('__lit()'));
+  g.run(`campPanelKey(PP, C, 'Escape', 1100); campTcornerLook(PP, 1100);`);
+  check('Esc closes the pick and Wedge stays picked: his digit stays lit, the others go grey (they did all go dark)', J('campPanelOpen(PP)') === '' && J('C.sel') === 'pilot:red' && J('__lit()') === '1+ 2- 3- 4-', J('__lit()'));
+  g.run(`campPanelKey(PP, C, 'KeyW', 1200); campPanelKey(PP, C, 'Digit4', 1200); campTcornerLook(PP, 1200);`);
+  check('W then 4 (All pilots): the pick closes and all four digits are lit again', J('C.sel') === 'all' && J('__lit()') === '1+ 2+ 3+ 4+', J('__lit()'));
+  g.run(`campPanelKey(PP, C, 'KeyW', 1300); campPanelKey(PP, C, 'KeyW', 1300); campPanelKey(PP, C, 'Escape', 1400); campTcornerLook(PP, 1400);`);
+  check('W, W (Kara) then Esc: only 2 is lit', J('C.sel') === 'pilot:green' && J('__lit()') === '1- 2+ 3- 4-', J('__lit()'));
+  g.run(`campWingShips(C, 'green').forEach(u => { u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); C.sel = 'all'; campTcornerLook(PP, 1500);`);
+  check('a lost pilot\'s digit is grey even with All pilots picked; the others are lit', J('__lit()') === '1+ 2- 3+ 4+', J('__lit()'));
+}
+
 console.log(failed ? `\nCORNER PANEL FAIL: ${failed} of ${n} checks failed` : `\nCORNER PANEL PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);

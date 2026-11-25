@@ -112,9 +112,9 @@ function campCornerPanelId() {
 // All pilots, Form up on me. A chip is grey when its digit does nothing now (the pick is not open: W opens it) or the row cannot be done. The pick is no list of its own on the screen: these ARE its rows
 function campFleetRows(C) {
   if (typeof campPanelDef !== 'function' || typeof campPanelRows !== 'function' || !campPanelDef('fleet')) return [];
-  const rows = campPanelList(C, 'fleet'), view = campPanelRows(C, 'fleet'), stops = typeof campSelList === 'function' ? campSelList(C) : [], pid = campCornerPanelId(), live = pid === null || pid === 'fleet';
+  const rows = campPanelList(C, 'fleet'), view = campPanelRows(C, 'fleet'), stops = typeof campSelList === 'function' ? campSelList(C) : [], pid = campCornerPanelId(), live = pid === null || pid === 'fleet', now = typeof campSelNow === 'function' ? campSelNow(C) : null;
   return view.map((r, i) => {
-    const row = rows[i] || {}, cap = String(i + 1), capOk = live && r.ok !== false;
+    const row = rows[i] || {}, cap = String(i + 1), picked = !!now && !!row.who && (now.id === row.who || now.kind === 'all'), capOk = (live || picked) && r.ok !== false; // card space-game-esc-all-pilots (Troy, 24 Nov 2026: the digits went dark after W then Esc): a digit is lit while the pick is open, AND whenever it is who takes the next order (open or closed): All pilots lights all four, one pilot lights his digit; a lost pilot stays grey
     if (row.who && row.who !== 'all') { // a pilot: the name with the hull bar under it
       const e = stops.find(x => x.id === row.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, h = up ? campTdispHull(u) : null;
       return { kind: 'bar', id: r.id, cap, capOk, name: r.label, num: h ? h.now + ' / ' + h.max : uiText(e ? 'camp.corner.bay' : 'camp.corner.lost'), share: h ? h.share : 0, color: h ? CAMP.charge.color[campChargeBand(h.share)] : 0x16293d, sel: !!r.marked, ok: r.ok !== false };
