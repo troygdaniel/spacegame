@@ -39,6 +39,7 @@ const campCornerDrawsList = id => !!id && CAMP_CORNERS.some(d => d.list === id);
 const campCornerClock = C => +(C && C.t) || 0; // (a stand-in in a test may have no clock: 0)
 function campCornerState(C) { let st = CAMP_CORNER_STATE.get(C); if (!st) { st = { open: {}, mem: {} }; CAMP_CORNER_STATE.set(C, st); } return st; }
 function campCornerOpen(C, id, ms) { if (!C || typeof C !== 'object') return; campCornerState(C).open[id] = { at: campCornerClock(C), ms: ms > 0 ? ms : CAMP.corner.show }; }
+function campCornerShut(C, id) { if (C && typeof C === 'object') delete campCornerState(C).open[id]; } // the details close at once (card space-game-page-hud-2: W then a digit; the title row and the selection stay)
 const campCornerKeyList = d => (d.keys || []).map(k => typeof k === 'string' ? { cap: (CAMP_KEYS[k] && CAMP_KEYS[k].k) || '', codes: campKeyCodes(k) } : { cap: String(k.cap || ''), codes: k.codes || [] });
 function campCornerKey(C, code) { CAMP_CORNERS.forEach(d => { if (campCornerKeyList(d).some(k => k.codes.indexOf(code) >= 0)) campCornerOpen(C, d.id); }); } // a key of a corner was used: its details open
 function campCornerStrength(C, id) { // 0..1: full for the time it was opened for, then a fade, then none

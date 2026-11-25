@@ -103,7 +103,7 @@ function campSelList(C) { // the stops of Q and W: All pilots, then the pilots a
   }).filter(Boolean);
   return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName(), label: campSelAllName() }].concat(pilots);
 }
-function campSelLabel(id) { // a stop's words in the fleet pick and the corner: its call sign and name (CAMP.pilots: Red 1 Wedge; card space-game-keys5-qwe), or All pilots
+function campSelLabel(id) { // a stop's words in the fleet pick and the corner: its name (CAMP.pilots: Wedge; the call signs Red 1 to 3 are gone: card space-game-page-hud-2), or All pilots
   if (id === CAMP_SELALL) return campSelAllName();
   const sq = String(id).replace(CAMP_SELPILOT, ''), p = (CAMP.pilots || []).find(q => q.squad === sq);
   return p ? (p.call ? p.call + ' ' : '') + p.name : sq;
