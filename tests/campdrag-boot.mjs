@@ -59,7 +59,7 @@ try {
   check('it stays where it was put while the battle goes on (the camera does not drift back to the cruiser)', Math.abs(c2.sx - c1.sx) < 60 && Math.abs(c2.sy - c1.sy) < 60 && c2.panned, JSON.stringify([c1.sx, c2.sx]));
   await snap('2-panned-with-mark');
   const mk = await j(`({ x: ${S}.dragMark.t.x, y: ${S}.dragMark.t.y, w: ${S}.dragMark.t.width, text: ${S}.dragMark.t.text })`);
-  check('the mark says RECENTRE and names S', /RECENTRE/.test(mk.text) && /S/.test(mk.text), JSON.stringify(mk));
+  check('the mark says RECENTRE and names the reset key from the table (Q)', /RECENTRE/.test(mk.text) && mk.text.includes((await j(`CAMP_KEYS.zoomreset.k`)) || 'Q'), JSON.stringify(mk));
   // the wheel zooms about the pointer: the world point under it stays under it
   const under = (c, sx, sy) => ({ x: c.sx + 640 + (sx - 640) / c.z, y: c.sy + 360 + (sy - 360) / c.z });
   const w0 = await cam(), p0 = under(w0, 900, 200);
@@ -83,6 +83,10 @@ try {
   // a drag that starts on an open list is the list's click, not a pan
   await key(await zr()); await t.run(300); const lp = await j(`(() => { const def = campPanelDef(campPanelOpen(${S}.pn)), V = campPanelView(${S}.pn, ${S}.camp), G = campPanelsGeometry(def, V.total); return { x: G.x + 20, y: G.y + 20 }; })()`);
   await drag(lp.x, lp.y, lp.x + 150, lp.y + 20); check('a drag that starts on the open list does not pan the view', !(await cam()).panned, JSON.stringify(lp));
+  // card space-game-q-recentre-map: the cruiser list is open (it has the digits, the arrows fly): a held arrow still brings a dragged view back
+  await drag(700, 300, 400, 300); check('dragged with the cruiser list open: off the cruiser', (await cam()).panned);
+  await keyDown('ArrowUp'); await t.run(650); await keyUp('ArrowUp'); await t.run(300);
+  check('a held arrow brings the dragged view back with the cruiser list open', !(await cam()).panned);
   await key('Escape', 40);
 
   // ---- the Tab map ----
@@ -99,6 +103,7 @@ try {
   await key(await zr(), 40); await t.run(500);
   const m2b = await j(`({ cx: ${S}.mp.fit.cx, cy: ${S}.mp.fit.cy, panned: ${S}.mp.panned, z: ${S}.mp.zWant, mark: ${S}.mp.recentre.visible })`);
   check('Q on the map is the zoom reset and the recentre: the centre is where it was, no mark', !m2b.panned && !m2b.mark && m2b.z === 1 && Math.abs(m2b.cx - m0.cx) < 1 && Math.abs(m2b.cy - m0.cy) < 1, JSON.stringify([m0, m2b]));
+  check('Q on the dragged map does not close it and opens no list (card space-game-q-recentre-map)', (await j(`!!${S}.mp && campPanelOpen(${S}.pn) === ''`)) === true);
   await key('Tab'); await t.run(300);
   const errs = await j(`window.__errors || []`); check('the game logged no error', !errs || errs.length === 0, JSON.stringify(errs).slice(0, 300));
 } catch (e) { console.log('  FAIL the walk stopped: ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); bad++; }

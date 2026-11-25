@@ -78,7 +78,7 @@ function campDragFlyTick(s, dt, flying) {
 // the arrows are the wheel: not while a list or a call has them, the map is open, or a word is being typed
 function campDragFlying(s) {
   const k = s && s.k; if (!k || s.mp || s.mode !== 'play') return false;
-  if (s.pn && typeof campPanelOpen === 'function' && campPanelOpen(s.pn)) return false;
+  if (s.pn && typeof campPanelOwnsArrows === 'function' && campPanelOwnsArrows(s.pn)) return false; // only a list that HAS the arrows (not the numbered Q list: the arrows fly with it open: card space-game-q-recentre-map)
   if (typeof document !== 'undefined' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return false;
   return [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown);
 }
