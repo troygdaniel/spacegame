@@ -613,11 +613,13 @@ class Campaign extends Phaser.Scene {
       const cam = this.cameras && this.cameras.main, ar = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null; // a stand-in scene in a test has no camera
       if (!ar) this.hud.arrow.setVisible(false);
       else {
-        const a = ar.angle, tri = [{ x: ar.x + Math.cos(a) * 13, y: ar.y + Math.sin(a) * 13 }, { x: ar.x + Math.cos(a + 2.5) * 10, y: ar.y + Math.sin(a + 2.5) * 10 }, { x: ar.x + Math.cos(a - 2.5) * 10, y: ar.y + Math.sin(a - 2.5) * 10 }];
-        g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));
-        const lp = typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, this.hud.arrow.width || 160, this.hud.arrow.height || 18, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
-        this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the target display, the gauges, the message band and the key line
+        const want = (px, py, an) => ({ x: px - Math.cos(an) * 64, y: py - Math.sin(an) * 28 }), aw = this.hud.arrow.width || 160, ah = this.hud.arrow.height || 18; // the label stands back from the arrow, a little off its line
+        const sp = typeof campEdgeSpread === 'function' ? campEdgeSpread([{ x: ar.x, y: ar.y, angle: ar.angle, w: aw, h: ah, want }], { keep: this.arrowKeep(), W, H, m: CAMP.nav.arrow.margin, tri: 13, boxes: this.hud.sight && this.hud.sight.boxes ? this.hud.sight.boxes : [] })[0] : null; // slid along the edge off the hostiles' and friends' arrows (src/campedgespread.js; card space-game-edge-labels-overlap)
+        const a = sp ? sp.angle : ar.angle, ax = sp ? sp.x : ar.x, ay = sp ? sp.y : ar.y, tri = [{ x: ax + Math.cos(a) * 13, y: ay + Math.sin(a) * 13 }, { x: ax + Math.cos(a + 2.5) * 10, y: ay + Math.sin(a + 2.5) * 10 }, { x: ax + Math.cos(a - 2.5) * 10, y: ay + Math.sin(a - 2.5) * 10 }];
+        g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
+        const lp = sp ? { x: sp.lx, y: sp.ly } : typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, aw, ah, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };
+        this.hud.arrow.setPosition(lp.x, lp.y); // the label keeps out of the target display, the gauges, the message band and the key line, and off the other arrows
       }
     }
   }
