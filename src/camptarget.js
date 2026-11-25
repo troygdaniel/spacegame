@@ -49,8 +49,9 @@ function campTgtStep(C, dir) {
   const at = list.findIndex(u => u.id === C.tgt), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
   C.tgt = list[i].id; C.fsel = ''; campMarkTouch(C, false, true); return list[i]; // one target: the friendly is let go
 }
-function campTgtNearest(C) {
-  const list = campTgtList(C); if (!list.length) { if (C) C.tgt = ''; return null; }
+function campTgtNearest(C, within) { // within: only a hostile this close to the carrier (px) is picked, and none leaves the pick as it was (M asks for the missile lock range: card space-game-missiles-miss)
+  let list = campTgtList(C); if (within && C && C.carrier) { list = list.filter(u => campDist(u, C.carrier) <= within); if (!list.length) return null; }
+  if (!list.length) { if (C) C.tgt = ''; return null; }
   C.tgt = list[0].id; C.fsel = ''; C.tgtAt = campMarkClock(C); campMarkTouch(C, false, true); return list[0]; // one target: the friendly is let go. A \ press counts as a press of ]: the next ] within the restart time steps on from it
 }
 function campTgtCycle(C) { // ] (card space-game-keys4-onekey, Troy, 24 Nov 2026): the next hostile, nearest the cruiser first, round at the end, one direction. After CAMP.target.restart ms (the game's clock, so a pause does not eat it) with no press of ] or \ the next press starts again from the nearest: a walk through the list never begins in the middle of it
