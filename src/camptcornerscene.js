@@ -20,8 +20,8 @@ function campTcornerSync(s, now) {
 function campTcornerDraw(s, V, N, it, F) {
   const K = CAMP.corner, P = CAMP.tdisp.pic, left = N.at.charAt(1) === 'l', G = campCornerGeom(N.at, campCornerItemsH(N.items), campBoxDx(s, left)), D = G.det; if (!D) return campTcornerHide(V);
   let y = D.y + K.pad; for (const x of N.items) { if (x === it) break; y += K.item[campCornerKind(x)] || K.item.text; } // the row's top: under the items above it
-  const x0 = D.x + K.pad, o = N.open, col = CAMP.tdisp.color[it.side === 'hostile' ? 'hostile' : 'friend'], ink = CAMP.tdisp.ink[it.side === 'hostile' ? 'hostile' : 'friend'], tx = x0 + P + 8, py = y + 2; V.on = true;
-  const gkey = [x0, py, it.side, Math.round(o * 20)].join('|');
+  const x0 = D.x + K.pad, o = N.open, pinkP = !!(F && F.on) && it.side === 'hostile', col = pinkP ? slookInt(SLOOK.C.foe) : CAMP.tdisp.color[it.side === 'hostile' ? 'hostile' : 'friend'], ink = pinkP ? SLOOK.text.foe : CAMP.tdisp.ink[it.side === 'hostile' ? 'hostile' : 'friend'], /* (the new ship look: a hostile's frame and words are pink, red is retired) */ tx = x0 + P + 8, py = y + 2; V.on = true;
+  const gkey = [x0, py, it.side, Math.round(o * 20), pinkP ? 'p' : ''].join('|');
   if (V.gkey !== gkey) { V.gkey = gkey; V.g.clear(); V.g.fillStyle(0x0a1a2a, 0.95 * o).fillRect(x0, py, P, P); V.g.lineStyle(1, col, 0.5 * o).strokeRect(x0, py, P, P); } // the picture's frame
   const sk = it.ship + '|' + it.id + (F && F.on ? '|n' : ''); // (the switch is part of what the picture is: a switch flipped on the N panel is felt at once)
   if (V.ship !== sk && s.textures && typeof s.texOf === 'function') { // the picture: the ship's own art, its nose up, to fit the frame (and in its squad's colour for a fighter)
