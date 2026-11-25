@@ -41,6 +41,30 @@ function campHubWarm(sc, level) {
   return near.length;
 }
 
+// THE NEW LOOK (piece c of the new screens, card space-game-screens-c-hub; src/scrhub.js says what is shown, src/scrhubdraw.js draws it over the room): while CAMP.flags.screens is on, the glass, the rows, the pages and the overlays
+// of the canvas (every object at depth 80 to 90) are hidden and the hangar is dimmed; the next-mission card, the refit, the rank and the mission pick are page panels instead. The keys are campHubKey's, as ever, and a click on a tile
+// is clickMission or click. True when the room was painted that way; false when it is the canvas's turn (the switch is off, a dock's room, or there is no page). A function and not a method, with the switch asked first: a stand-in
+// scene of a test has only the functions it needs.
+function campHubNewLook(sc) {
+  const on = typeof scrOn === 'function' && scrOn() && !(sc.d && sc.d.dock) && typeof scrHubPaint === 'function';
+  if (!on) { if (sc.scrHubOn === true) campHubOldLook(sc); return false; }
+  const msg = sc.msg && sc.time && sc.msg.until > sc.time.now && sc.msg.over === (sc.hub.open || '') ? { text: sc.msg.text, ok: sc.msg.ok } : null;
+  if (!scrHubPaint(sc, scrHubModel(sc.P, sc.hub, { station: String(sc.look && sc.look.name || ''), msg, oldNote: !!sc.oldNote && campHubOldSave(sc.P) }))) { if (sc.scrHubOn === true) campHubOldLook(sc); return false; }
+  if (sc.scrHubOn !== true) {
+    sc.scrHubOn = true;
+    (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o.depth >= 80 && o.depth <= 90 && typeof o.setVisible === 'function') o.setVisible(false); }); // the glass, the rows, the pages, the overlay and its click zones, the key line
+    if (!sc.scrVeil && sc.add && typeof sc.add.rectangle === 'function') sc.scrVeil = sc.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.78).setDepth(79); // the hangar stays, dimmed
+    if (sc.scrVeil) sc.scrVeil.setVisible(true);
+    if (sc.events && typeof sc.events.once === 'function') sc.events.once('shutdown', () => { sc.scrHubOn = false; });
+  }
+  return true;
+}
+function campHubOldLook(sc) { // the switch went off in the middle of the room: the canvas's own glass comes back (the paint that follows sets what each line shows)
+  sc.scrHubOn = false; if (typeof scrHubDrop === 'function') scrHubDrop(sc);
+  (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o.depth >= 80 && o.depth <= 90 && typeof o.setVisible === 'function') o.setVisible(true); });
+  if (sc.scrVeil) sc.scrVeil.setVisible(false);
+}
+
 class CampHub extends Phaser.Scene {
   constructor() { super('CampHub'); }
   init(d) { this.d = d || {}; this.leaving = false; } // d: the scene data above (all of it optional)
@@ -135,6 +159,7 @@ class CampHub extends Phaser.Scene {
 
   // everything on the glass from the state: rows, foot and the page of the chosen row
   paint() {
+    if (campHubNewLook(this)) return; // the new look draws the room as page panels (above)
     const P = this.P, H = this.hub, Li = CAMP_HUBS.list, rows = campHubRows(P, H.rows, Object.assign({}, this.d, { hub: H })), id = H.rows[H.row], nx = campHubNext(P);
     this.titleT.setText(uiText('camp.hub.title', { name: this.look.name.toUpperCase() })); this.lvT.setText(uiText('camp.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }));
     rows.forEach((r, k) => { const o = this.rowT[k]; o.name.setText(r.name).setColor(k === H.row ? '#ffffff' : '#cfefff'); o.note.setText(r.note).setColor(k === H.row ? '#ffd37a' : '#8fb4c9'); o.cap.setBackgroundColor(k === H.row ? '#ffb454' : '#9fe9ff'); });
@@ -285,6 +310,7 @@ class CampHub extends Phaser.Scene {
     interiorTick(this, time);
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)
+    if (this.scrHubOn === true && typeof scrHubSync === 'function') scrHubSync(this, this.modalUp()); // the new look's panels follow the canvas and wait while a page of the room's own is in front
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }

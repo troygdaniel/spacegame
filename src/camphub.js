@@ -140,7 +140,7 @@ function campHubBoardGo(H, P, res) {
   const say = campHubSelect(H, P); if (say) res.say = say; res.action = CAMP_HUB.act.board; return res;
 }
 CAMP_HUB.over.board = {
-  len: P => campHubSelectable(P).length + 1, get: H => H.cur | 0, set: (H, i) => { H.cur = i; }, go: campHubBoardGo, // + 1: the Start over row
+  len: P => campHubSelectable(P).length + (typeof scrOn === 'function' && scrOn() ? 0 : 1), get: H => H.cur | 0, set: (H, i) => { H.cur = i; }, go: campHubBoardGo, // + 1: the Start over row (the new look has none: Troy, 25 Nov 2026, it lives on Settings > Reset as Reset campaign, so the cursor never stands on it)
   key: (H, P, code, res) => {
     if (code === 'KeyR') { res.used = true; return (H.cur | 0) >= campHubOverRow(P) ? res : campHubBoardGo(H, P, res); } // (R opens a briefing: there is none on the Start over row)
     if (code === 'KeyX') { res.used = true; if (H.pick) { H.pick = null; res.say = { key: 'camp.hub.replay.cleared', vars: {} }; } return res; }
