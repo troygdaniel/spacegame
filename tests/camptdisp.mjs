@@ -107,7 +107,7 @@ console.log('C. what it is doing');
 console.log('D. the box and the words');
 {
   const B = J('campTdispBox()'), K = J('CAMP.tdisp'), keep = J('CAMP.nav.arrow.keep');
-  check('the box is the room of the right stack of corner rows at the top right (card space-game-keys5-corners; it was the bottom right corner): its right edge ' + K.right + ' px from the edge, 320 wide (the corner panel\'s width), from the HOSTILES row (y 78) down to the bottom of the FRIENDLIES row under it', B.x + B.w === 1280 - K.right && B.w === 320 && B.y === J('CAMP.corner.at.tr.y') && B.y + B.h === J('CAMP.corner.at.br.y + CAMP.corner.title.h'));
+  check('the box is the room of the right stack of corner rows at the top right (card space-game-keys5-corners; it was the bottom right corner): its right edge ' + K.right + ' px from the edge, 320 wide (the corner panel\'s width), from the HOSTILES row (y 78) down to the bottom of the FRIENDLIES row under it', B.x + B.w === 1280 - K.right && B.w === 320 && B.y === J('CAMP.corner.at.tr.y') && B.y + B.h === J('CAMP.corner.at.tr.y + CAMP.corner.title.h'));
   check('it is inside the rectangle the edge arrows keep out of (the one the radar had), so no label is put on it', keep.some(r => B.x >= r[0] && B.y >= r[1] && B.x + B.w <= r[2] && B.y + B.h <= r[3]));
   const rows = src('content/text/camptdisp.md').split('\n').filter(l => /^\| camp\.tdisp\./.test(l)).map(l => l.split('|')[1].trim());
   check('the words are in content/text/camptdisp.md, each as its default in src/contenttables.js (the build checks they match) and none is a bare key at run time', rows.length >= 40 && rows.every(k => J(`uiText(${JSON.stringify(k)}, { who: 'x', where: 'x', km: 1, side: 'x', what: 'x' })`) !== k), rows.length);

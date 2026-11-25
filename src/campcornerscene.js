@@ -26,7 +26,7 @@ function campCornerListUnder(s, now) {
   return { h: G.h + CAMP.corner.gap, k };
 }
 function campCornerDraw(s, V, N, dy) {
-  const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx, dy), g = V.g, o = N.open, T0 = G.title; V.on = true;
+  const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx, dy, N.span), g = V.g, o = N.open, T0 = G.title; V.on = true;
   const cy = T0.y + (T0.h - T.chipH) / 2, chipX = i => T0.x + T.pad + i * (T.chipW + T.chipGap);
   let CL, WL = []; // CL: the chips as drawn { x, cap, ok }; WL: the words of a line
   if (N.line) { // a LINE (FLEET: card space-game-fleet-sentence): chips and words from the left, never fading; the title and the selection are not drawn

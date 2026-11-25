@@ -102,7 +102,7 @@ g.run(`
 console.log('G. the registered corners');
 {
   g.run('__new(); __look(); window.R1 = __foe("raider", 900, 0);');
-  check('the two corners are registered where Troy put them: HOSTILES top right, FRIENDLIES bottom right', J('campCornerDef("hostiles").at') === 'tr' && J('campCornerDef("friendlies").at') === 'br');
+  check('the two corners are registered where Troy put them: HOSTILES top right, FRIENDLIES under the left row at 78 (card space-game-keys6-layout)', J('campCornerDef("hostiles").at') === 'tr' && J('campCornerDef("friendlies").at') === 'bl');
   check('the panel gives their chips from the key table: ] for the hostiles and E for the friendlies', JSON.stringify(J('NOW("hostiles").chips')) === JSON.stringify([']']) && JSON.stringify(J('NOW("friendlies").chips')) === JSON.stringify(['E']));
   check('the titles: HOSTILES and FRIENDLIES, no selection, details closed', J('NOW("hostiles").title') === 'HOSTILES' && J('NOW("friendlies").title') === 'FRIENDLIES' && J('NOW("hostiles").selection') === '' && J('NOW("hostiles").items.length') === 0 && J('NOW("hostiles").open') === 0);
   g.run('campCornerKey(C, "BracketRight");');
@@ -134,17 +134,17 @@ console.log('H. the details');
   check('HULL is the ship\'s hull (now / max, its share, a colour of the charge table)', it[1].name === 'HULL' && it[1].num === J('Math.ceil(R1.hp) + " / " + Math.round(R1.maxHp)') && it[1].share === 1 && it[1].color === J('CAMP.charge.color[campChargeBand(1)]'));
   check('no shield: a line that says so, grey', it[2].kind === 'text' && it[2].text === 'no shield' && it[2].ink === '#7f95a8');
   check('the line of what it is doing is in the side\'s ink', it[3].text === J('campTdispDoing(C, R1)') && it[3].ink === J('CAMP.tdisp.ink.hostile'));
-  check('there is no order chip in the details: the Enter chip is in the FLEET row (cards space-game-fleet-sentence and space-game-keys5-qwe), and it is Enter Attack from the key table there', it.length === 4 && !it.some(i => i.kind === 'key') && J('campTdispOrder(C, "attack").key') === 'Enter' && J('campFleetLine(C)[2].key') === 'order' && J('campFleetLine(C)[3].text') === 'Attack ' + J('campHeldNow(C).name'));
+  check('there is no order chip in the details (and none on the rows either since card space-game-keys6-layout: no chip but R), and the order key the key lines read is the table\'s', it.length === 4 && !it.some(i => i.kind === 'key') && J('campTdispOrder(C, "attack").key') === 'Enter');
   g.run('R1.hp = R1.maxHp / 4;');
   check('the hull follows the ship', J('NOW("hostiles").items[1].share') === 0.25);
   g.run('window.RV = campSpawn(C, "pirateleader", C.carrier.x + 1200, C.carrier.y); C.tgt = RV.id;');
   check('the rival has a shield bar of its own (the cyan), not the line', J('NOW("hostiles").items[2].kind') === 'bar' && J('NOW("hostiles").items[2].name') === 'SHIELD' && J('NOW("hostiles").items[2].color') === 0x7fe9ff);
   g.run('C.t += 100; campFriStep(C, 1);'); // (a moment later: one corner of a side has its details open at a time, the one opened last)
   const f = J('NOW("friendlies").items');
-  check('a friendly ship held: the same rows, in the friendly\'s ink, and no order chip (E Guard is in the FLEET row)', f[0].kind === 'pic' && f[0].side === 'friend' && !f.some(i => i.kind === 'key') && J('campFleetLine(C)[3].text') === 'Guard ' + J('campHeldNow(C).name'), JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
+  check('a friendly ship held: the same rows, in the friendly\'s ink, and no order chip', f[0].kind === 'pic' && f[0].side === 'friend' && !f.some(i => i.kind === 'key'), JSON.stringify(f.map(i => i.kind + ':' + (i.label || i.name || i.text || ''))));
   g.run(`campFriHold(C, 'place:luna');`);
   const p = J('NOW("friendlies").items');
-  check('an outpost held (a click on the Tab map): its type and its distance as lines, no picture, no bars, no chip (the FLEET row says Guard and its name)', JSON.stringify(p.map(i => i.kind)) === JSON.stringify(['text', 'text']) && p[0].text === 'Friendly post' && /km$/.test(p[1].text) && /^Guard /.test(J('campFleetLine(C)[3].text')), JSON.stringify(p));
+  check('an outpost held (a click on the Tab map): its type and its distance as lines, no picture, no bars, no chip', JSON.stringify(p.map(i => i.kind)) === JSON.stringify(['text', 'text']) && p[0].text === 'Friendly post' && /km$/.test(p[1].text), JSON.stringify(p));
   check('and its name is the selection', J('NOW("friendlies").selection') === J('campFriNow(C).name'));
 }
 
@@ -171,7 +171,7 @@ console.log('I. the picture on a stand-in scene');
   check('the details fade away: the picture goes with them; the title stays', J(V + '.pic.vis') === false && J(V + '.km.vis') === false);
   g.run('campFriStep(C, 1); campCornerSync(S, 3000); campTcornerSync(S, 3000);');
   const W = 'S.hud.tcorner.friendlies';
-  check('a friendly held: its picture is in the bottom corner, in the friendly\'s cyan frame', J(W + '.pic.vis') && J(W + '.pic.x') > J('CAMP.corner.at.br.x') && J(W + '.g.log.some(l => l[0] === "lineStyle" && l[2] === ' + J('CAMP.tdisp.color.friend') + ')') && J(V + '.pic.vis') === false);
+  check('a friendly held: its picture is in the bottom corner, in the friendly\'s cyan frame', J(W + '.pic.vis') && J(W + '.pic.x') > J('CAMP.corner.at.bl.x') && J(W + '.g.log.some(l => l[0] === "lineStyle" && l[2] === ' + J('CAMP.tdisp.color.friend') + ')') && J(V + '.pic.vis') === false);
   g.run(`campFriHold(C, 'place:luna'); campCornerSync(S, 4000); campTcornerSync(S, 4000);`);
   check('an outpost held: no picture (its details are lines)', J(W + '.pic.vis') === false);
   g.run('P.pick = null; const tw = C.ships.find(u => u.kind === "freighter"); tw.x = C.carrier.x + 300; tw.y = C.carrier.y; tw.hp = tw.maxHp * 0.4; campPickOpen(P, { id: "repairward", pick: "ward" }, campPickItems(C, "ward")); campPicksClear(C); campTcornerLook(P, 5000); C.t += 9000; campCornerSync(S, 5000); campTcornerSync(S, 5000);');
