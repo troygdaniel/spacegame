@@ -3,7 +3,7 @@
 //   A  what is focused: the subject, in order: a target sub-list's candidate, the leader of the squad whose ring shows, the picked hostile, the cruiser; it reads campTdispSubject (src/camptdisp.js) when there is one
 //   B  the glide: the zoom of a long one (both ends on the screen, then back), the edge arrow's place
 //   C  the key: start, the same ship again, the cruiser, the camera's follow and its lerp, the arrival, the zoom given back (not over one the player set)
-//   D  the end: a ship that dies or leaves, the battle over, a card; the pause keeps it; the way back (S, the RECENTRE mark, F with nothing selected)
+//   D  the end: a ship that dies or leaves, the battle over, a card; the pause keeps it; the way back (Q, the RECENTRE mark, F with nothing selected)
 //   E  the drag view: a drag breaks the follow and F picks it up again; a flying key does not bring the view back; the arrows, Space and the lists work while looking elsewhere
 //   F  the scene: F is a key of the table (and no other key of the Campaign's), the scene's onKey and update are wired to it, the text and the label
 // Run: node tests/campfocus.mjs   (exit code 1 on a failed check)
@@ -42,7 +42,7 @@ g.run(`window.R1 = __foe(900, 0); window.R2 = __foe(1400, 300); campTgtStep(C, 1
 check('the picked hostile ([ ] \ S) is the subject: the nearest first, as the target is', J('campFocusSubject(C, S.pn, 1000).why') === 'target' && J('campFocusSubject(C, S.pn, 1000).u.id') === J('R1.id') && J('campFocusSubject(C, S.pn, 1000).side') === 'hostile', J('campFocusSubject(C, S.pn, 1000).u.id') + ' ' + J('R1.id'));
 g.run(`campOrder(C, 'launch', '', 'key'); __go(10);`);
 check('the wing is out (squads of red, green and yellow ships), each squad has a leader: its first ship by id', J('["red", "green", "yellow"].every(q => { const l = campFocusLeader(C, q); return l && l.squad === q && C.ships.filter(u => u.team === "earth" && u.kind === "fighter" && u.squad === q).every(u => u.id >= l.id); })'));
-g.run(`campPanelKey(S.pn, C, 'KeyQ', 1000);`); // Q picks the first friend, the red pilot (Q is who: all pilots first, the first press picks the first pilot) (card space-game-bracket-select-orders): its ring shows
+g.run(`campPanelKey(S.pn, C, 'KeyW', 1000); campPanelKey(S.pn, C, 'Digit1', 1000);`); // Q picks the first friend, the red pilot (Q is who: all pilots first, the first press picks the first pilot) (card space-game-bracket-select-orders): its ring shows
 check('with a squad\'s ring showing (its pilot is the selected friend) its leader is the subject, before the picked hostile', J('C.sel') === 'pilot:red' && J('campFocusSubject(C, S.pn, 1000).why') === 'squad' && J('campFocusSubject(C, S.pn, 1000).u.id') === J('campFocusLeader(C, "red").id') && J('campFocusSubject(C, S.pn, 1000).side') === 'friend');
 g.run(`window.__redLead = campFocusLeader(C, 'red'); __redLead.hp = 0;`);
 check('a squad whose leader is lost has the next ship as its leader (here it has none: the squad is one pilot) and the subject falls back to the next thing there is', J('campFocusLeader(C, "red") === null || campFocusLeader(C, "red").id !== __redLead.id') && J('campFocusSubject(C, S.pn, 1000).why') !== 'squad');
@@ -51,7 +51,7 @@ g.run(`__redLead.hp = 100; campPanelClose(S.pn); S.pn.pick = null; S.pn.seen = n
 g.run(`window.__tr = C.ships.find(u => u.team === 'earth' && u.kind !== 'fighter' && u.kind !== 'carrier' && u.hp > 0); window.__pk = campPickShown; campPickShown = () => ({ what: 'ship', id: __tr.id, x: __tr.x, y: __tr.y }); window.__fr = campFocusSubject(C, S.pn, 1000); campPickShown = __pk;`);
 check('a ship you protect picked in a sub-list is the subject, as a friend (a transport, a hauler, a miner)', !!J('__tr') && J('__fr.why') === 'pick' && J('__fr.u.id') === J('__tr.id') && J('__fr.side') === 'friend', JSON.stringify(J('__fr && { why: __fr.why, side: __fr.side }')));
 // the box of src/camptdisp.js (6-GEN): campFocusSeen reads campTdispSubject when it is there
-g.run(`window.__realTdisp = window.campTdispSubject; window.campTdispSubject = (C, P, now) => ({ u: R2, side: 'hostile' }); C.tgt = ''; campPanelClose(S.pn); window.__d1 = campFocusSubject(C, S.pn, 1000); campPanelKey(S.pn, C, 'KeyQ', 1000); window.__d2 = campFocusSubject(C, S.pn, 1000); C.sel = ''; campPanelClose(S.pn); if (window.__realTdisp) window.campTdispSubject = window.__realTdisp; else delete window.campTdispSubject;`); // (the real one, once it has landed (src/camptdisp.js), is put back: it is a function declaration and cannot be deleted)
+g.run(`window.__realTdisp = window.campTdispSubject; window.campTdispSubject = (C, P, now) => ({ u: R2, side: 'hostile' }); C.tgt = ''; campPanelClose(S.pn); window.__d1 = campFocusSubject(C, S.pn, 1000); campPanelKey(S.pn, C, 'KeyW', 1000); campPanelKey(S.pn, C, 'Digit1', 1000); window.__d2 = campFocusSubject(C, S.pn, 1000); C.sel = ''; campPanelClose(S.pn); if (window.__realTdisp) window.campTdispSubject = window.__realTdisp; else delete window.campTdispSubject;`); // (the real one, once it has landed (src/camptdisp.js), is put back: it is a function declaration and cannot be deleted)
 check('when the target display\'s own campTdispSubject is there the focus asks it for the sub-list\'s candidate and the picked hostile (the two read one selection), and keeps the squad\'s leader between them', J('__d1.why') === 'target' && J('__d1.u.id') === J('R2.id') && J('__d2.why') === 'squad' && J('__d2.u.id') === J('campFocusLeader(C, "red").id'));
 check('a ship\'s name is the lists\' and the box\'s ("Raider 2", the cruiser)', /Raider/.test(J('campFocusName(C, R1)')) && J('campFocusName(C, C.carrier)') === 'the cruiser' && J('campFocusName(C, null)') === '');
 
@@ -109,8 +109,8 @@ watch(); g.run(`S.mode = 'debrief'; __frame(33.3, 1);`);
 check('a card on the screen (the debrief) does too', J('S.focus') === null);
 watch(); g.run(`S.mode = 'pause'; __frame(33.3, 5);`);
 check('the pause (and the H page, which is the pause\'s mode) keeps it', J('S.focus') !== null && J('S.focus.id') === J('R1.id'));
-watch(); g.run(`window.__zk = campZoomKey('KeyS'); campZoomPress(S, __zk, false);`);
-check('S (the zoom reset) brings the cruiser back and the zoom to its default', J('S.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
+watch(); g.run(`window.__zk = campZoomKey('KeyQ'); campZoomPress(S, __zk, false);`);
+check('Q (the zoom reset) brings the cruiser back and the zoom to its default', J('S.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
 watch(); g.run(`window.__rc = campViewRecentre(S);`);
 check('campViewRecentre (the RECENTRE mark\'s click, S\'s door) ends a focus and says it did', J('__rc') === true && J('S.focus') === null && J('campViewRecentre(S)') === false);
 watch(); g.run(`window.__zoomed = null; R1.hp = 0; S.focus.zoom = { was: 0.4, set: 0.3 }; CAMZOOM.want = 0.3; __frame(33.3, 1);`);
@@ -124,7 +124,7 @@ g.run(`window.__r6 = campFocusPress(S);`);
 check('and F picks it up again: the view is not the hand\'s any more and the camera follows the ship', J('__r6') === 'start' && J('S.panned') === false && J('S.focus.id') === J('R1.id') && J('S.focus.gliding') === true && J('__cam.target') === null);
 g.run(`S.dragFly = 0;`);
 check('a flying key held does NOT bring the view back from a focus (the drag\'s own flying key does from a pan): he is looking at it on purpose', J('campDragFlyTick(S, 5000, true)') === false && J('S.focus !== null') && J('campDragFrame(S, 5000, true) === undefined') === true && J('S.focus !== null'));
-check('the arrows still fly the cruiser and the lists still work while looking elsewhere: the focus reads and writes none of them (the sim\'s input and the panels are left alone)', (() => { g.run(`C.input.thrust = 1; C.input.turn = 1; __frame(33.3, 3); campPanelKey(S.pn, C, 'KeyS', 1000);`); return J('C.input.thrust') === 1 && J('C.input.turn') === 1 && J('campPanelOpen(S.pn)') === 'cruiser' && J('S.focus !== null'); })());
+check('the arrows still fly the cruiser and the lists still work while looking elsewhere: the focus reads and writes none of them (the sim\'s input and the panels are left alone)', (() => { g.run(`C.input.thrust = 1; C.input.turn = 1; __frame(33.3, 3); campPanelKey(S.pn, C, 'KeyQ', 1000);`); return J('C.input.thrust') === 1 && J('C.input.turn') === 1 && J('campPanelOpen(S.pn)') === 'cruiser' && J('S.focus !== null'); })());
 
 // ---- F. the scene, the key table, the words ----
 console.log('F. the scene, the key table, the words');
@@ -133,7 +133,7 @@ const sc = src('src/campaignscene.js'), dr = src('src/campdrag.js'), ix = src('i
 check('the scene calls campFocusInstall in create, campFocusFrame in update, and campFocusPress for the focus key before the lists read the key (with a list open it works; a call and the map do not take it)', /campFocusInstall\(this\)/.test(sc) && /campFocusFrame\(this, dt\)/.test(sc) && /campKeyIs\('focus', c\)[^]{0,120}campFocusPress\(this\)/.test(sc) && sc.indexOf("campKeyIs('focus', c)") < sc.indexOf('campPanelKey(this.pn, C, c, now)') && sc.indexOf("campKeyIs('focus', c)") > sc.indexOf('campMapKey(this, c, e.shiftKey)'));
 check('the drag view lets go of a focus on a drag and ends it on the way back (the two spots of src/campdrag.js), and the script is loaded after it', /campFocusBreak\(s\)/.test(dr) && /campFocusEnd\(s, 'back'\)/.test(dr) && ix.indexOf('src/campfocus.js') > ix.indexOf('src/campdrag.js') && ix.indexOf('src/campfocus.js') < ix.indexOf('src/campmapdraw.js'));
 g.run(`var S = __mk(); window.R1 = __foe(900, 0); campTgtStep(C, 1);`);
-check('the label says what is watched and the way back from the key table ("WATCHING Raider 1  S back"), the arrow\'s words the distance, the lost ship its name', (() => { const w = J(`uiText('camp.hud.focuswatch', { name: 'Raider 1' })`); return w === 'WATCHING Raider 1  S back' && J(`uiText('camp.hud.focuscruiserfar', { km: '12' })`) === 'Cruiser 12 km' && J(`uiText('camp.hud.focuslost', { name: 'Raider 1' })`) === 'Raider 1 is gone. Back to the cruiser.' && !/[{}]/.test(w); })());
+check('the label says what is watched and the way back from the key table ("WATCHING Raider 1  Q back"), the arrow\'s words the distance, the lost ship its name', (() => { const w = J(`uiText('camp.hud.focuswatch', { name: 'Raider 1' })`); return w === 'WATCHING Raider 1  Q back' && J(`uiText('camp.hud.focuscruiserfar', { km: '12' })`) === 'Cruiser 12 km' && J(`uiText('camp.hud.focuslost', { name: 'Raider 1' })`) === 'Raider 1 is gone. Back to the cruiser.' && !/[{}]/.test(w); })());
 g.run(`var S2 = __mk(); window.R1 = __foe(900, 0); campTgtStep(C, 1);
   window.__rec = { vis: [], txt: {}, tri: 0, clears: 0 }; window.__nt = 0;
   const mk = n => { const o = { name: n, width: 120, setScrollFactor() { return o; }, setDepth() { return o; }, setOrigin() { return o; }, setVisible(v) { __rec.vis.push(n + ':' + v); return o; }, setPosition(x, y) { o.x = x; o.y = y; return o; }, setText(t) { o.text = t; __rec.txt[n] = t; return o; }, text: '', style: { color: '' } }; return o; };
@@ -162,10 +162,10 @@ g.run(`__tick(F, 0.7);`);
 check('half a second on, through the scene\'s update: the camera has arrived at the ship (the middle of the view is within a hundred px of it: Phaser\'s follow, which this stand-in does not run, carries it on) and follows it (0.12), and the flight went on meanwhile (the battle clock ran)', J('F.focus.gliding') === false && Math.abs(J('campFocusMid(__cam).x') - J('RX.x')) < 150 && J('__cam.follows.length') === 1 && J('F.camp.t') > 600, JSON.stringify(J('[F.focus.gliding, campFocusMid(__cam).x, RX.x, F.camp.t]')));
 g.run(`F.k.UP.isDown = true; F.camp.input.thrust = 0; __tick(F, 0.3); window.__thr = F.camp.input.thrust; F.k.UP.isDown = false;`);
 check('and the arrow keys still fly the cruiser while the camera is elsewhere (Up is thrust in the sim\'s input), and the focus stays', J('__thr') === 1 && J('F.focus !== null'));
-g.run(`F.onKey({ code: 'KeyS' }); window.__open = campPanelOpen(F.pn); F.onKey({ code: 'KeyF' }); window.__same = F.focus && F.focus.id;`);
-check('a list opens while looking elsewhere (S), and F with the list open does not close it or lose the ship', J('__open') === 'cruiser' && J('campPanelOpen(F.pn)') === 'cruiser' && J('__same') === J('RX.id'));
-g.run(`F.onKey({ code: 'Escape' }); F.onKey({ code: 'KeyS' });`);
-check('S through the scene brings the cruiser back (the follow is the cruiser\'s sprite again) and resets the zoom', J('F.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
+g.run(`F.onKey({ code: 'KeyQ' }); window.__open = campPanelOpen(F.pn); F.onKey({ code: 'KeyF' }); window.__same = F.focus && F.focus.id;`);
+check('a list opens while looking elsewhere (Q), and F with the list open does not close it or lose the ship', J('__open') === 'cruiser' && J('campPanelOpen(F.pn)') === 'cruiser' && J('__same') === J('RX.id'));
+g.run(`F.onKey({ code: 'Escape' }); F.onKey({ code: 'KeyQ' });`);
+check('Q through the scene brings the cruiser back (the follow is the cruiser\'s sprite again) and resets the zoom', J('F.focus') === null && J('__cam.target.id') === 'sprite-of-the-cruiser' && J('CAMZOOM.want') === J('campZoomDefault()'));
 g.run(`F.onKey({ code: 'KeyF' });`);
 check('F with the target still picked looks at it again', J('F.focus && F.focus.id') === J('RX.id'));
 g.run(`F.camp.by[RX.id].hp = 0; __tick(F, 0.2);`);

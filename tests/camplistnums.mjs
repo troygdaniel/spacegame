@@ -26,7 +26,7 @@ g.run(`
 
 // ---- A. the table ----
 {
-  check('only the cruiser list is numbered (the S list: numbers 1); every other list has none', J(`CAMP_PANELS.panels.filter(p => p.numbers).map(p => p.id).join()`) === 'cruiser');
+  check('the cruiser list and the fleet pick are numbered (the Q list and the W pick: numbers 1); every other list has none', J(`CAMP_PANELS.panels.filter(p => p.numbers).map(p => p.id).join()`) === 'cruiser,fleet');
   check('campKeyDigit: Digit1 to Digit9 and Numpad1 to Numpad9 are 1 to 9; 0, letters, arrows, Enter are 0', J(`['Digit1', 'Digit5', 'Digit9', 'Numpad1', 'Numpad9'].map(campKeyDigit).join()`) === '1,5,9,1,9' && J(`['Digit0', 'Numpad0', 'KeyA', 'ArrowUp', 'Enter', '', null, undefined].map(campKeyDigit).join()`) === '0,0,0,0,0,0,0,0');
   check('the foot\'s words for a numbered list: the digits, and Esc (read from the key table)', J(`uiText('camp.ui.listnums', { last: 7 })`) === '1-7  does a row    Esc close' && J(`uiText('camp.ui.candnums', { last: 2 })`) === '1-2  give the order    Esc back');
   check('the words are in their file and in the table', src('content/text/camplists.md').includes('| camp.ui.listnums |') && src('content/text/camplists.md').includes('| camp.ui.candnums |') && src('src/contenttables.js').includes("'camp.ui.listnums'") && src('src/contenttables.js').includes("'camp.ui.candnums'"));
@@ -34,7 +34,7 @@ g.run(`
 
 // ---- B. the keys ----
 {
-  g.run(`__new(1); __k('KeyS', 100);`);
+  g.run(`__new(1); __k('KeyQ', 100);`);
   const rows = J('__rows().map(r => r.id)'), nrows = rows.length;
   check('S opens the list: seven rows in a level with an outpost and a goal (goal, target, mine, dock, repair, reload, emergency)', J('campPanelOpen(P)') === 'cruiser' && rows.join() === 'goal,target,fmine,dock,srepair,sreload,emergency', rows.join());
   const V = J('campPanelView(P, C)');
@@ -43,13 +43,13 @@ g.run(`
   g.run(`window.__g = __foe('gunship', 900, 0); C.nextRocket = 0;`);
   const ent = J(`__k('Enter', 1100)`);
   check('Enter fires a missile at the gunship in reach (the list does not take it) and the list stays open', ent.used && ent.ran && ent.ok && ent.row === 'missile' && ent.say === 'Missile away.' && J('C.missiles') === 5 && J('C.rockets.length') === 1 && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(ent));
-  g.run(`__new(1); __k('KeyS', 100);`);
+  g.run(`__new(1); __k('KeyQ', 100);`);
   const d4 = J(`__k('Digit4', 1200)`);
   check('a digit does the row: 4 is the fourth row (Dock at the outpost), at once: its order is given and its answer said', d4.used && d4.ran && d4.row === 'dock', JSON.stringify(d4));
-  g.run(`__new(3); __k('KeyS', 100);`);
+  g.run(`__new(3); __k('KeyQ', 100);`);
   const d1 = J(`__k('Digit1', 1300)`);
   check('1 is the first row, Fly to the goal (level 3 has one): given at once, the list closes after an order that is taken, the row is lit', d1.used && d1.ran && d1.row === 'goal' && d1.ok && J('campPanelOpen(P)') === '' && J('P.lit.goal') === 1300, JSON.stringify(d1));
-  g.run(`__new(1); __k('KeyS', 100);`);
+  g.run(`__new(1); __k('KeyQ', 100);`);
   const np = J(`__k('Numpad2', 1400)`);
   check('the keypad\'s digits do the same: Numpad2 is the second row (Fly to the target: grey with no target, so the reason is said and the list stays open)', np.used && np.ran && !np.ok && np.row === 'target' && /^No target, pilot\./.test(np.say) && J('campPanelOpen(P)') === 'cruiser' && J('P.lit.target') === 1400, JSON.stringify(np));
   const grey = J(`__k('Digit5', 1500)`);
@@ -57,21 +57,21 @@ g.run(`
   const none = J(`__k('Digit8', 1600)`);
   check('8 with only seven rows: nothing (used, no order, no words), the list stays open', none.used && !none.ran && none.say === '' && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(none));
   check('9 and 0: 9 is no row either; 0 is no key of the list at all', J(`__k('Digit9')`).used && !J(`__k('Digit9')`).ran && !J(`__k('Digit0')`).used);
-  g.run(`__new(1, ['blink']); __k('KeyS', 100);`);
+  g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
   check('with the warp tech the list has an eighth row, the blink: 8 does it (the blink hop needs to be ready; the key reaches the row)', J('__rows().length') === 8 && J(`__k('Digit8', 1700).row`) === 'blink');
   g.run(`__new(1);`);
   check('with no list open a digit is nothing (a digit key belongs to the open S list only)', !J(`__k('Digit1')`).used && !J(`__k('Digit4')`).used && J('campPanelOpen(P)') === '');
-  g.run(`__k('KeyS', 100);`);
-  check('Esc closes the list, S too', J(`__k('Escape')`).used && J('campPanelOpen(P)') === '' && (g.run(`__k('KeyS', 100)`), J('campPanelOpen(P)') === 'cruiser') && (g.run(`__k('KeyS', 101)`), J('campPanelOpen(P)') === ''));
-  g.run(`__new(1); __k('KeyS', 100); P.touch = 100;`);
+  g.run(`__k('KeyQ', 100);`);
+  check('Esc closes the list, S too', J(`__k('Escape')`).used && J('campPanelOpen(P)') === '' && (g.run(`__k('KeyQ', 100)`), J('campPanelOpen(P)') === 'cruiser') && (g.run(`__k('KeyQ', 101)`), J('campPanelOpen(P)') === ''));
+  g.run(`__new(1); __k('KeyQ', 100); P.touch = 100;`);
   check('the fade is still the list\'s: untouched it closes (campPanelFade)', J(`campPanelFade(P, 100 + CAMP_PANELS.anim.idle + CAMP_PANELS.anim.out + 5)`) === 0 && J('campPanelOpen(P)') === '');
-  g.run(`__new(1); __k('KeyS', 100); P.touch = 100;`);
+  g.run(`__new(1); __k('KeyQ', 100); P.touch = 100;`);
   check('a digit is a touch: the fade starts again from it', (g.run(`__k('Digit5', 5000)`), J('P.touch') === 5000));
 }
 
 // ---- C. the target sub-list ----
 {
-  g.run(`__new(3); __k('KeyS', 100); window.__row = campKeyRow('fmine'); campPickOpen(P, __row, campPickItems(C, 'field'));`);
+  g.run(`__new(3); __k('KeyQ', 100); window.__row = campKeyRow('fmine'); campPickOpen(P, __row, campPickItems(C, 'field'));`);
   check('level 3 has two rock fields: Mine ore opens a sub-list of them (a numbered list\'s sub-list is numbered too)', J('campPickItems(C, "field").length') === 2 && J('!!P.pick') && J('campPanelView(P, C).pick') === true);
   const V = J('campPanelView(P, C)');
   check('its candidates carry 1 and 2, none highlighted, the foot says 1-2 and Esc back', V.numbers === true && V.rows.map(r => r.num).join() === '1,2' && V.at === -1 && V.keys === 'camp.ui.candnums' && V.last === 2, JSON.stringify([V.rows.map(r => r.num), V.at, V.keys, V.last]));
@@ -80,7 +80,7 @@ g.run(`
   check('Enter in the sub-list is the ship\'s: it fires (nothing in reach: refused in words), it chooses no candidate', e.used && e.row === 'missile' && J('!!P.pick'), JSON.stringify(e));
   const d = J(`__k('Digit2', 2100)`);
   check('2 chooses the second candidate: the order is given at it (Mine), the lists close', d.used && d.ran && d.row === 'fmine' && J('campPanelOpen(P)') === '' && J('!P.pick'), JSON.stringify(d));
-  g.run(`__new(3); __k('KeyS', 100); campPickOpen(P, campKeyRow('fmine'), campPickItems(C, 'field'));`);
+  g.run(`__new(3); __k('KeyQ', 100); campPickOpen(P, campKeyRow('fmine'), campPickItems(C, 'field'));`);
   check('a digit past the candidates does nothing; Esc goes back to the list (the sub-list closes, the list stays)', (() => { const o = J(`__k('Digit5')`); const b = J(`__k('Escape')`); return o.used && !o.ran && b.used && J('!P.pick') && J('campPanelOpen(P)') === 'cruiser'; })());
 }
 
@@ -88,7 +88,7 @@ g.run(`
 {
   g.run(`__new(1);`);
   check('a list that is not numbered (the convoy list, opened by data: no key opens it now) keeps Up, Down and Enter, and a digit is nothing to it', (() => { g.run(`campPanelGo(P, C, 'convoy')`); const o = J('campPanelOpen(P)') === 'convoy'; const dn = J(`__k('ArrowDown')`); const dg = J(`__k('Digit2')`); return o && dn.used && J('P.at') === 1 && !dg.used; })());
-  check('campPanelOwnsArrows: the convoy list has them; the S list has not; with no list open nobody has them', J('campPanelOwnsArrows(P)') === true && (g.run(`campPanelClose(P); __k('KeyS', 100)`), J('campPanelOwnsArrows(P)') === false) && (g.run(`campPanelClose(P)`), J('campPanelOwnsArrows(P)') === false));
+  check('campPanelOwnsArrows: the convoy list has them; the S list has not; with no list open nobody has them', J('campPanelOwnsArrows(P)') === true && (g.run(`campPanelClose(P); __k('KeyQ', 100)`), J('campPanelOwnsArrows(P)') === false) && (g.run(`campPanelClose(P)`), J('campPanelOwnsArrows(P)') === false));
 }
 
 // ---- E. the scene ----
@@ -110,7 +110,7 @@ g.run(`
     input: { handlers: [], on(e, f) { this.handlers.push([e, f]); }, off() {} }, events: { once() {} } }; s.camp.ships = s.camp.ships.filter(u => u.team !== 'alien'); return s; };
 `);
 {
-  g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelKey(S.pn, S.camp, 'KeyS', 1000); campPanelsPaint(S, 1000);`);
+  g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelKey(S.pn, S.camp, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
   check('each visible row has its number in the chip at the left: 1 to 7, in order', J('S.pnl.rows.filter(r => r.name.visible).map(r => r.cap.t).join()') === '1,2,3,4,5,6,7', J('S.pnl.rows.filter(r => r.name.visible).map(r => r.cap.t).join()'));
   check('the words of the rows start after the chip (every row, so they line up)', J('S.pnl.rows.filter(r => r.name.visible).every(r => r.name.x > S.pnl.rows[0].cap.x + 10)'));
   check('only the Reload missiles row has the second chip (its R), and no other', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()') === 'Reload missiles:R', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()'));
@@ -131,19 +131,19 @@ g.run(`
   g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.splice(cr.rows.findIndex(r => r.id === 'zextra2'), 1); cr.rows.splice(cr.rows.findIndex(r => r.id === 'zextra'), 1); }`);
   check('taking them away puts the words back to 8', J(`campPanelMost('cruiser')`) === 8 && J(`uiText('camp.ui.pausepanels')`).includes('1 to 8 does a row'));
   // the live list: eight rows only with the warp blink tech (the foot says the live length), and digit 8 does row 8, the warp blink
-  g.run(`__new(1, ['blink']); __k('KeyS', 100);`);
+  g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
   const rows8 = J('__rows().map(r => r.id)');
   check('with the blink tech the S list has eight rows and the eighth is the warp blink', rows8.length === 8 && rows8[7] === 'blink', rows8.join());
   check('the view and the foot say 1-8 (last 8, eight number chips 1 to 8)', J('campPanelView(P, C).last') === 8 && J('campPanelView(P, C).rows.map(r => r.num).join()') === '1,2,3,4,5,6,7,8' && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-8  does a row'), J(`campPanelView(P, C).rows.map(r => r.num).join()`));
   const r8 = J(`__k('Digit8', 200)`);
   check('digit 8 does row 8: the warp blink ran, it was taken, and the list closed', r8.row === 'blink' && r8.ran === true && r8.ok === true && r8.open === '', JSON.stringify(r8));
-  g.run(`__new(1, ['blink']); __k('KeyS', 100);`);
+  g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
   const n8 = J(`__k('Numpad8', 300)`);
   check('the keypad\'s 8 does row 8 too', n8.row === 'blink' && n8.ran === true && n8.ok === true, JSON.stringify(n8));
-  g.run(`__new(1, []); __k('KeyS', 100);`);
+  g.run(`__new(1, []); __k('KeyQ', 100);`);
   const rows7 = J('__rows().map(r => r.id)'), r7 = J(`__k('Digit8', 200)`);
   check('without the blink tech the list has seven rows, the foot says 1-7, and digit 8 does nothing (no row 8)', rows7.length === 7 && J('campPanelView(P, C).last') === 7 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-7  does a row') && r7.ran === false && r7.row === '' && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(r7));
-  g.run(`__new(3, []); __k('KeyS', 100);`);
+  g.run(`__new(3, []); __k('KeyQ', 100);`);
   check('the third level (no outpost, no blink tech) has six rows and the foot says 1-6: the words follow the live length', J('__rows().length') === 6 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-6  does a row'));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));

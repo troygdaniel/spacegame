@@ -21,7 +21,7 @@ const CAMPPANELS_LOOK = {
 function campPanelsGeometry(def, rows, capt) { // capt: the list is picking a target (a corner list has a caption then, and no heading otherwise)
   const K = CAMPPANELS_LOOK, B = K.box, right = def.side === 'right', n = Math.max(1, Math.min(CAMP_PANELS.show | 0, rows > 0 ? rows : CAMP_PANELS.show | 0));
   let x = right ? W - K.edgeRight - B.w : K.edge, top = right ? K.topRight : K.top, hh = B.head;
-  if (def.corner && typeof campCornerGeom === 'function') { const T = campCornerGeom(def.corner, 0, 0).title; x = T.x; top = T.y + T.h + CAMP.corner.gap; hh = capt ? B.capt : 0; } // a CORNER list (S CRUISER, card space-game-layout-cruiser) opens right under its corner's title row (src/campcorner.js): no heading of its own, no counter
+  if (def.corner && typeof campCornerGeom === 'function') { const T = campCornerGeom(def.corner, 0, 0).title; x = T.x; top = T.y + T.h + CAMP.corner.gap; hh = capt ? B.capt : 0; } // a CORNER list (Q CRUISER, card space-game-layout-cruiser) opens right under its corner's title row (src/campcorner.js): no heading of its own, no counter
   const ry = top + hh + B.pad, lh = n * (B.row + B.gap) - B.gap;
   return { x, y: top, w: B.w, h: hh + B.pad + lh + B.pad + B.foot, n, head: { x, y: top, w: B.w, h: hh }, rowH: B.row, rowY: i => ry + i * (B.row + B.gap), foot: { x, y: ry + lh + B.pad, w: B.w, h: B.foot }, list: { x, y: ry, w: B.w, h: lh } };
 }
