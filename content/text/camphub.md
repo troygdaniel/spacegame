@@ -19,7 +19,8 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.foot.refit | Enter  open the refit |
 | camp.hub.foot.rank | Enter  open your rank |
 | camp.hub.foot.launch | Enter  LAUNCH |
-| camp.hub.keys | 1 to 4 pick   Up Down move   Enter open   Left back   L launch   Esc title |
+| camp.hub.keys | 1 to 4 pick   Up Down move   Enter open   Left back   {keyready} briefing, again launch   Esc title |
+| camp.hub.keys.dock | 1 to 3 pick   Up Down move   Enter open   Left back   {keyready} or Esc undock |
 | camp.hub.kind.recon | RECON |
 | camp.hub.kind.escort | ESCORT |
 | camp.hub.kind.attack | ATTACK |
@@ -50,7 +51,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.rank.flown | Missions flown: {n} of {all} |
 | camp.hub.rank.wing | Wing: {f} fighters |
 | camp.hub.launch.head | NEXT: MISSION {n} OF {of}  -  {title} |
-| camp.hub.launch.go | Enter or L launches the cruiser. |
+| camp.hub.launch.go | Enter launches the cruiser; {keyready} shows the briefing first. |
 | camp.hub.launch.level | Level {n} begins with this mission: {name}. |
 | camp.hub.launch.pad | The cruiser stands ready on the pad. |
 | camp.hub.pilot | YOU |

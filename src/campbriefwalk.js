@@ -100,7 +100,7 @@ function campWalkGo(plan, wk, i) {
 function campWalkNav(plan, wk, code) {
   const last = plan.steps.length - 1;
   if (code === 'Escape') return { i: wk.i, act: 'close' };
-  if (code === 'KeyL') return { i: wk.i, act: 'launch' };
+  if (campKeyIs('ready', code)) return { i: wk.i, act: 'launch' };
   if (code === 'Enter' || code === 'NumpadEnter') return wk.i >= last ? { i: wk.i, act: 'launch' } : { i: wk.i + 1, act: '' };
   if (code === 'ArrowRight') return { i: Math.min(last, wk.i + 1), act: '' };
   if (code === 'ArrowLeft') return { i: Math.max(0, wk.i - 1), act: '' };

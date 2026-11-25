@@ -97,8 +97,8 @@ class CampHub extends Phaser.Scene {
     });
     this.footT = this.add.text(CAMP_HUBS.foot.x, CAMP_HUBS.foot.y, '', uiFont(13, '#ffb454')).setDepth(82);
     this.slots = {}; // the page's lines, made when first used: one Text for each column of each line
-    this.add.rectangle(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, 560, 24, 0x04101c, 0.88).setDepth(89); // a dark band: the south wall's machines are busy behind a line of text
-    this.keyT = this.add.text(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, campHubKeyLine(), uiFont(14, '#bfe9ff')).setOrigin(0.5).setDepth(90);
+    this.add.rectangle(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, 640, 24, 0x04101c, 0.88).setDepth(89); // a dark band: the south wall's machines are busy behind a line of text
+    this.keyT = this.add.text(CAMP_HUBS.keys.x, CAMP_HUBS.keys.y, campHubKeyLine(!!(this.d && this.d.dock)), uiFont(14, '#bfe9ff')).setOrigin(0.5).setDepth(90);
     const O = CAMP_HUBS.over; // the overlay, made once and shown when a row is opened: the glass over the top of the screen, its title, a bar behind the refit's choice, and its lines (made when first used)
     this.ovGlass = this.add.rectangle(O.x + O.w / 2, O.y + O.h / 2, O.w, O.h, 0x04101c, 0.97).setStrokeStyle(1, hex, 0.9).setDepth(86);
     this.ovTitle = this.add.text(O.x + O.pad, O.y + 12, '', uiFont(16, this.accent, { letterSpacing: 2 })).setDepth(87);
@@ -293,4 +293,4 @@ class CampHub extends Phaser.Scene {
 CAMP_HUBS.page = { board: s => s.pageBoard() }; // a dock's room has the board's page; the hall's rows are in the desc and overlay tables
 CAMP_HUBS.desc = { board: 1, refit: 1, rank: 1, launch: 1 }; // the rows of the hall that say in a sentence or two what they are (camp.room.desc.<id>, pageDesc); a dock's room does not
 CAMP_HUBS.overlay = { board: s => s.overBoard(), refit: s => s.overRefit(), rank: s => s.overRank() }; // the rows that open an overlay on Enter, by id (CAMP_HUB.over in src/camphub.js has their keys)
-CAMP_HUBS.run = { launch: s => s.launch(), title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission under the cursor (src/campbriefdraw.js), opened from the missions overlay
+CAMP_HUBS.run = { launch: s => s.launch(), ready: s => { if (typeof s.d.onLaunch === 'function' || !(typeof campBriefOpen === 'function' && campBriefOpen(s))) s.launch(); }, title: s => s.leave(), brief: s => { if (typeof campBriefOpen === 'function') campBriefOpen(s); } }; // brief: the big briefing of the mission under the cursor (src/campbriefdraw.js), opened from the missions overlay
