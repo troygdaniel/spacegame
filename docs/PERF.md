@@ -210,6 +210,21 @@ So about three quarters of the added allocation and about half of the added fram
 
 **To price a part of a frame** (added by this card): `PERF_PATCH='window.campTgtPaint = () => {}' node tools/perfcampaign.mjs frames,alloc,profile busy1` runs the code after the fight is set up and before anything is measured. `window.campFdispSync = () => {}` switches the WHO box off, `window.campTdispSync = () => {}` the target box, `Campaign.prototype.paintHud = () => {}` the HUD, `window.campPanelsPaint = () => {}` the lists, `window.campNavEdge = () => null` the arrow at the edge. Nothing is saved. `PERF_ROOT=<a checkout of another commit>` runs the same tool on that code, to set two builds side by side.
 
+## Flat rocks (card `space-game-b3-e-flat-rocks`, 25 Nov 2026)
+
+The rocks of the asteroid fields are one grey polygon and one darker facet in a 64 by 64 texture painted once (`src/shiplookrock.js`), in place of the boulder `waAsteroid` paints (craters, speckle, glowing veins). The number of rock sprites, their size, their blend and the texture's size are the same, so the draw cost should not move: measured to be sure. `node tools/perfcampaign.mjs frames busy1` (600 stepped frames of level 1's busiest fight, the ships' new look on in both), the rocks' key swapped inside one page by `PERF_PATCH` (the old boulders: `window.slookRockKey = () => ''`, then the rock sprites are made again), four runs each, alternating, on a Mac at load 10 to 14 (a frame time is a size, not a speed: the spread between runs of the same build is larger than the difference between the two):
+
+| Mean of a frame (ms) | Old boulders | Flat rocks |
+|---|---|---|
+| Frame, median of four runs (range) | 3.79 (3.37 to 4.17) | 3.83 (2.85 to 3.99) |
+| Update | 2.93 (2.61 to 3.26) | 2.99 (2.19 to 3.11) |
+| Render (the drawing) | 0.59 (0.53 to 0.64) | 0.59 (0.47 to 0.62) |
+| Sprite sync | 0.14 | 0.14 |
+| Display list / visible | 284 / 178 | 284 / 178 |
+| Heap | 10.8 MB | 10.8 MB |
+
+No difference that the noise does not cover; the three new textures (`look-rock-0` to `look-rock-2`, 64 by 64, painted once with fills and paths, no gradient) cost nothing a frame. (A first set of runs against the card's parent, with the look off in both because the test harness boots with `?shiplook=0`, drew boulders on both sides and is not the comparison.)
+
 ## Measuring again
 
 ```

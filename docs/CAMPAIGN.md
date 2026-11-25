@@ -579,6 +579,14 @@ Behind `CAMP.flags.shiplook` (the N panel's New ship look row, `?shiplook=1`; of
 - **Amber.** `slookGunTone` turns the gun reach ring, the mounts' dots and barrels and the muzzle flash from the HUD's gold to the friend blue (#6fd6ff); `slookTorpTone` turns the pirates' amber and the aliens' red torpedo rings, flames and lines to the hostile pink. The gold of goals and caches is untouched.
 - **Tests.** `tests/shiplookfx.mjs` (a stand-in scene that has no tweens and no particles, so the file cannot use them).
 
+## Rocks, flat cut (card `space-game-b3-e-flat-rocks`; Troy approved the cloud brief of 28 Nov 2026, part 3 item 9: "rocks are drawn flat cut: one polygon and one darker facet, in a neutral grey, painted once into the sheet")
+
+`src/shiplookrock.js` (its own file: a rock is not a ship). The rocks of the asteroid fields, the ore field's pickups of kind `rock` and the briefing's picture of a rock are one straight-edged polygon (nine corners, 20 to 28 px from the middle of a 64 by 64 picture, from a seeded generator: the same rock every run), a thin dark rim (the ships': `rgba(5,8,14,.9)`) and ONE darker facet: the corners of the outline that face away from the light (the lower right), joined by a straight cut, a fifth to a third of the rock. The grey is the new look's neutral (`SLOOK.C.neutral`, #9fb3c8) mixed a quarter toward the dark (so a rock is not taken for a neutral ship), the facet that grey mixed 45 percent toward the dark. No gradient, craters, speckle or glowing veins: the boulder `waAsteroid` (`src/art_world.js`) paints is the Long Haul's, and it keeps it.
+
+- **Painted once.** `slookRockTexture(scene, i)` bakes variant i into `look-rock-<i>` on first use (3 textures, 64 by 64 px, the boulders' size) with fills and plain paths only; `slookRockKey(scene, id)` gives the key of `rock-<n>` (variant n mod 3, as the boulders were picked) while `slookOn()` is true and `''` when it is off (`?shiplook=0`: the scene keeps `asteroid`, `asteroid2`, `asteroid3`).
+- **Only the picture.** The scene's scale of a rock (its radius times 2.4 over 64), its hit circle, `CAMP.ore.rock`, the cracks, the tint when it is cut and the 'rockbreak' effect are the lines they were; `src/campaign.js` is not touched.
+- **Pinned by** `tests/shiplookrock.mjs` (17 checks: the outline, the one facet, the colours, the texture's draw calls, the keys, the scene's and the briefing's calls) and `tests/shiplookpic.mjs` (a rock of the briefing is `look-rock-0` with the look on, the boulder with it off).
+
 ## How it is built
 
 - `src/campaign.js` is the whole game in plain numbers, no Phaser: the level table, the ships, the waves, the five orders, the aliens' flying (the game's own `pirateSteer` and `PIRATES` from `src/enemies.js`), win and lose, the tech pick and its save. `tests/campaign.mjs` runs whole battles of it in Node.
