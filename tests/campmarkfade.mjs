@@ -18,7 +18,7 @@ const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
 
 g.run(`
-  window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; return C; }; // the three pilots are out beside the cruiser
+  window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; const f = campSpawn(C, 'freighter', C.carrier.x + 500, C.carrier.y); f.id = 'freighter-tt'; C.by[f.id] = f; f.cname = 'Transport'; f.named = true; return C; }; // (the one ship you protect: the miner of 1.1 is no friend until he calls, card space-game-11-e-reaches-miner, and the transport is not out at t 0) the three pilots are out beside the cruiser
   window.__foe = (dx, dy) => campSpawn(C, 'raider', C.carrier.x + dx, C.carrier.y + dy);
   window.__M = () => campMarkNow(C);
   window.__at = ms => { C.t = ms; return campMarkNow(C); };
