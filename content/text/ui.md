@@ -101,7 +101,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | spoken.short | the first sentence or two is said |
 | spoken.full | the whole answer is said |
 | spoken.off | answers are never said aloud |
-| music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. The Sound button mutes all. |
+| music.use | Music is made by the game as you fly and steps back when the ship speaks. Effects is the engine, the drone and every shot and click; they ease off a little while music plays. Sound button mutes all. |
 | camp.l1.before.1 | Lunar Base. A transport waits to run to Ceres. |
 | camp.l1.before.2 | Pirates work the lane. Escort her through. |
 | camp.l1.after.1 | First contact. We beat their scouts and took their tech. |
