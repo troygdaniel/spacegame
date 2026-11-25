@@ -1,6 +1,6 @@
 // not in the smoke: a boot of the Campaign's outposts, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-outposts)
-// The rules are in tests/campoutpost.mjs and tests/campdock.mjs (plain Node). This boots the belt (level 1: the cruiser starts by Occator Works) and does what Troy does: opens the ship list (P) and its dock list (U, card list-shortcuts) undocked, docks
-// through it (U, Down to the dock row, Enter), mends the hull in the ready room (nothing is built any more), undocks with L, and flies away hurt and alone to see the retreat line and the map's stations.
+// The rules are in tests/campoutpost.mjs and tests/campdock.mjs (plain Node). This boots the belt (level 1: the cruiser starts by Occator Works) and does what Troy does: opens the cruiser list (Q) undocked, docks
+// through it (Q, then the digit of the dock row, read from the list of this mission), mends the hull in the ready room (nothing is built any more), undocks with L, and flies away hurt and alone to see the retreat line and the map's stations.
 //   node tests/campoutpost-boot.mjs
 // Pictures go to the folder in OUTPOST_SHOTS (default ~/dev/spacegame-night/shots/outpost-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -15,7 +15,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.OUTPOST_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, KeyE: 69, KeyF: 70, KeyL: 76, KeyP: 80, KeyQ: 81, KeyU: 85, KeyR: 82, KeyW: 87, KeyO: 79, KeyI: 73, Enter: 13, Tab: 9, Minus: 189, Escape: 27, ArrowDown: 40 };
+const VK = { Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, Digit7: 55, Digit8: 56, Digit9: 57, KeyE: 69, KeyF: 70, KeyL: 76, KeyP: 80, KeyQ: 81, KeyU: 85, KeyR: 82, KeyW: 87, KeyO: 79, KeyI: 73, Enter: 13, Tab: 9, Minus: 189, Escape: 27, ArrowDown: 40 };
 
 const t = await launch('?campaign=1', ROOT);
 try {
@@ -24,7 +24,7 @@ try {
   const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(300); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'outpost-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture outpost-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
-  // an order is given through the list its row is in (cards one-list-keys and list-shortcuts): that list's own key (Q W E R, P O I U), Down to the row, Enter; a list with no key of its own (the stances) is opened from its parent:
+  // an order is given through the list its row is in (cards one-list-keys and list-shortcuts): that list's own key (Q), then the row's digit in a numbered list, or Down to the row and Enter; a list with no key of its own (the stances) is opened from its parent:
   // the parent's key, Down to the part's row, Enter. The list is read from the key table (campKeyVia) and the row's place from the list of THIS mission in the page, never a letter or a number written here
   // listWay(row): { list, keys: [[the key to press, how many Downs after it], ...] }, or null when the row is not in this mission's list;   listGo(row): the list open with the highlight on the row (not given);   listOrder(row): and Enter
   const listWay = row => j(`(() => { const C = ${SCN}.camp, id = ${JSON.stringify(row)}, p = campKeyVia(id); if (!p) return null; const at = campPanelList(C, p.id).findIndex(r => r.id === id); if (at < 0) return null;
@@ -34,12 +34,13 @@ try {
     if ((await j(`${SCN}.mode`)) !== 'play') return false; // a card has the keys: Enter would be the card's
     const way = await listWay(row); if (!way) return false; // the row is not in this mission's list
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${SCN}.pn)`)); n++) await key('Escape'); // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): pressed until every list is closed (it pauses only when none is open)
-    for (const [code, downs] of way.keys) { await key(code); const cur = await j(`${SCN}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SCN}.pn); return o ? campPanelList(${SCN}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await key('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
+    NUM = 0; for (const [code, downs] of way.keys) { await key(code); if (await j(`campPanelNumbered(${SCN}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${SCN}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${SCN}.pn); return o ? campPanelList(${SCN}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await key('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
     return true;
   };
+  let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
   const listOrder = async row => {
-    if (!(await listGo(row))) return false; await key('Enter');
-    if (await j(`!!${SCN}.pn.pick`)) await key('Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
+    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q) has no highlight and takes neither the arrows nor Enter: the row's digit gives the order; Enter would give the one order (card space-game-keys6-enter)
+    if (await j(`!!${SCN}.pn.pick`)) await key(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${SCN}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
@@ -57,7 +58,7 @@ try {
   const yardRows = crRows, yardTitle = '';
   const dockRow = yardRows.find(x => /^Dock at the outpost \|/.test(x)) || '';
   check('the cruiser list undocked: no build row (in a level with outposts nothing is built), and the dock row is ready and names the outpost ("Occator Works")', yardRows.length > 0 && !yardRows.some(x => /^Build /.test(x)) && (await j(`campKeyVia('dock').id`)) === 'cruiser' && /\| Occator Works$/.test(dockRow), yardRows.join(' // '));
-  await listOrder('dock'); // S, the digit of "Dock at the outpost"
+  await listOrder('dock'); // Q, the digit of "Dock at the outpost"
   check('the dock row docks: the Campaign scene is paused and the ready room opens as that outpost', await settle(`game.scene.isActive('CampHub') && ${HUB}.hub && ${HUB}.look && ${HUB}.look.name === 'Occator Works'`) && await j(`${SCN}.scene.isPaused() && ${SCN}.docked === true && ${SCN}.camp.docked === 'ceres'`));
   await t.run(1200); await snap('3-dock-room-build');
   check('the room has the dock\'s page: REPAIR, the ore of the battle on it (nothing is built here any more: card space-game-three-pilots)', (await shown()).some(x => /^REPAIR$/.test(x)) && (await shown()).some(x => /Ore in the store: 100$/.test(x)), (await shown()).join(' | '));
