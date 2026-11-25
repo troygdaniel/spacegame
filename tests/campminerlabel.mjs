@@ -1,8 +1,8 @@
-// smoke: the miner's canvas edge label while the page HUD is on: none; with it off, and for every other ship you protect, as before (plain Node, no Chrome)
+// smoke: the canvas edge arrows of the ships you protect while the page HUD is on: none (the miner's since 25 Nov, every ship's with card space-game-page-hud-friend-edge-pill); with it off, as before (plain Node, no Chrome)
 // Card space-game-page-hud-miner-edge-label (Troy, 25 Nov 2026): the miner already has his ring in the left panel and the page's pill at the edge, so the amber arrow and label the canvas draws for him are left out while the page HUD
 // is on. src/campsight.js campSightFriends is the rule (it asks campPageHudHides('friendlies'), the page HUD's own switch); the sight scene (src/campsightscene.js) draws what it is given and is not changed.
 //   A  the miner, off the screen and hit: one amber arrow with the page HUD off, none with it on
-//   B  the other ships you protect (a hauler of 1.3) keep theirs with it on; a miner and a hauler together: only the hauler's is left, and it has the first place
+//   B  the other ships you protect (a hauler of 1.3) had theirs with it on; since card space-game-page-hud-friend-edge-pill they have none either (each has its pill at the edge of the page, tests/camppagehud.mjs section O); with it off both have one, the nearer first
 //   C  the hostiles' arrows are as they were (campSightArrows); the page HUD's own edge pill is not touched (campPageHudEdge)
 //   D  the scene files: campsightscene.js and camppagehud.js are as they were (the rule is one line of campsight.js)
 // Run: node tests/campminerlabel.mjs   (exit code 1 on a failed check)
@@ -40,9 +40,9 @@ g.run(`__new(1, 2); C.god = true; for (let i = 0; i < 450 && !C.result; i++) cam
   window.HA = campChargeBars(C).map(b => C.by[b.id]).find(u => u && u.kind === 'freighter'); window.MI = campSpawn(C, 'miner', C.carrier.x + 2000, C.carrier.y); MI.team = 'neutral';`); // 1.3 after 15 s: the first hauler is out; a miner beside it
 check('1.3 after 15 s: the first hauler is out and has a health bar; the miner put beside it too', J('!!HA') && J(`campChargeBars(C).some(b => b.id === MI.id && b.kind === 'miner')`));
 g.run(`__far(HA, 4000, 0); __hit(HA);`);
-check('page HUD on: a hauler hit and off the screen keeps its arrow', J('__arrows().length') === 1 && J('__arrows()[0].what') === J('campTdispName(HA)') && J('__arrows()[0].friend') === true, JSON.stringify(J('__arrows()')));
+check('page HUD on: a hauler hit and off the screen has no canvas arrow now (its pill is at the edge of the page: asked for with `all`, it is there and hot)', J('__arrows().length') === 0 && J('campSightFriends(C, view, 1280, 720, 1, true).filter(a => a.id === HA.id).map(a => a.hot)')[0] === true, JSON.stringify(J('__arrows()')));
 g.run(`__far(MI, 2000, 0); __hit(MI);`);
-check('a miner and a hauler together: only the hauler\'s arrow is left (the miner is nearer and would have had the first)', J('__arrows().length') === 1 && J('__arrows()[0].what') === J('campTdispName(HA)'));
+check('a miner and a hauler together: no canvas arrow for either; the page asks for them all (`all`), the miner before the hauler (nearer first)', J('__arrows().length') === 0 && J('campSightFriends(C, view, 1280, 720, 1, true).map(a => a.id)').filter(id => id === J('MI.id') || id === J('HA.id')).join() === J('[MI.id, HA.id]').join() && J('campSightFriends(C, view, 1280, 720, 1, true).length') === 4); // (the two other haulers of 1.3 are off the screen too: four in all, only the hit ones hot)
 g.run(`CAMP.flags.pagehud = false;`);
 check('page HUD off: both have one, the nearer (the miner) first', J('__arrows().length') === 2 && J('__arrows()[0].what') === J('campTdispName(MI)'), JSON.stringify(J('__arrows().map(a => a.what)')));
 
