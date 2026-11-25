@@ -174,6 +174,7 @@ function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and list
 function campPageHudHideLines(s, on) { // the canvas lines the page HUD replaces that the scene keeps as objects: the bottom key line and its strip, and the labels the world draws at the places (landing 3)
   const off = on && campPageHudHides('keys'), put = (o, v) => { if (o && typeof o.setVisible === 'function' && o.visible !== v) o.setVisible(v); };
   if (s.hud && s.hudOn !== false) put(s.hud.keys, !off); put(s.keysBack, !off);
+  const offG = on && campPageHudHides('goal'); if (s.hud) { put(s.hud.obj, !offG); put(s.hud.wave, !offG); } // the goal line and the wave line of the canvas (their words are still set: the column's flow is as it was)
   const offP = on && campPageHudHides('places'); (s.placeLabels || []).forEach(o => { if (o && o.active !== false) put(o, !offP); });
 }
 function campPageHudSync(s, now) {

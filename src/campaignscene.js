@@ -409,8 +409,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
     if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
     if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
-    if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campPageHudSync === 'function') campPageHudSync(this, this.time.now); // the page HUD, when its switch is on (src/camppagehud.js); before the corners, which open under its panel
+    if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
     if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: the four stacked at the top, Q CRUISER and W FLEET at the left, ] HOSTILES and [ FRIENDLIES at the right (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)
     if (typeof campTcornerSync === 'function') campTcornerSync(this, this.time.now); // the ship's picture in the details of [ ] HOSTILES and O P FRIENDLIES (src/camptcornerscene.js)
@@ -600,9 +600,9 @@ class Campaign extends Phaser.Scene {
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
     if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
     const waves = C.L.waves;
-    this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(typeof campPageHudHides === 'function' && campPageHudHides('goal') ? '' : campObjective(C));
+    this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
-    this.hud.wave.setText(typeof campPageHudHides === 'function' && campPageHudHides('goal') ? '' : typeof campWaveLineOn === 'function' && !campWaveLineOn(C) ? '' : uiText('camp.ui.wave', { n: wc.n, total: wc.total })); // no wave line in an escort mission (CAMP.hud.noWave: the goal line stands first)
+    this.hud.wave.setText(typeof campWaveLineOn === 'function' && !campWaveLineOn(C) ? '' : uiText('camp.ui.wave', { n: wc.n, total: wc.total })); // no wave line in an escort mission (CAMP.hud.noWave: the goal line stands first)
     this.hud.mother.setText(m ? uiText('camp.ui.mother') : '');
     if (this.hud.repair) { const rp = campRepairState(C); this.hud.repair.setText(rp.n ? uiText('camp.ui.repair', { n: rp.n, s: rp.next }) : ''); } // (a stand-in scene in a test may have no repair text)
     // an arrow at the edge of the screen pointing at the goal with its distance (src/campnav.js; docs/night/graphics.md finding 3); the autopilot's readout under the goal line is gone with its line (card space-game-hud-topleft-trim)
