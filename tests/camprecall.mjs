@@ -32,7 +32,7 @@ console.log('A. the rule');
   g.run(`__new(0.7); window.__before = { out: campWing(C).length, q: C.launchQ.length, bay: C.bay.fighters };`);
   check('the set-up: the bay is still emptying (some ships out, some in the queue) and nothing is lost', J('__before.out') >= 1 && J('__before.q') >= 1 && J('__before.bay') === 0 && J('__total()') === 3, J('JSON.stringify(__before)'));
   g.run(`window.__r = campOrder(C, 'recall');`);
-  check('Recall is accepted and says the old line ("Wing, return to the carrier.")', J('__r.ok') === true && J('__r.code') === 'recall' && J('__r.say') === 'Wing, return to the carrier.', J('__r.say'));
+  check('Recall is accepted and says the old line ("Wing, return to the cruiser.")', J('__r.ok') === true && J('__r.code') === 'recall' && J('__r.say') === 'Wing, return to the cruiser.', J('__r.say'));
   check('the queue is empty at once and the bay has the ships back (the ones that were queued, no more, no less)', J('C.launchQ.length') === 0 && J('C.bay.fighters') === J('__before.q') && J('__r.queued') === J('__before.q'));
   check('the ships already out are recalled as before (their order is recall)', J('campWing(C).length') === J('__before.out') && J('campWing(C).every(u => u.order.type === "recall")'));
   g.run(`window.__launched = C.launched; __run(C, 20);`);

@@ -19,7 +19,7 @@ The words of the Campaign's radio chatter (card space-game-campaign-chatter). Th
 | camp.chat.copy.3 | Roger. Moving in. |
 | camp.chat.copy.4 | On it. |
 | camp.chat.home.1 | Going home. |
-| camp.chat.home.2 | Heading back to the carrier. |
+| camp.chat.home.2 | Heading back to the cruiser. |
 | camp.chat.home.3 | Returning to base. |
 | camp.chat.contact.1 | Contact! Bandits inbound. |
 | camp.chat.contact.2 | I have contacts. |

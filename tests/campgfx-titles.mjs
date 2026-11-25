@@ -14,7 +14,7 @@ for (const c of cards) {
   check(`level ${c.n}: the won card is headed with its level and WON`, c.won.title === `LEVEL ${c.n} WON`, c.won.title);
   check(`level ${c.n}: the lost card is headed with its level and LOST`, c.lost.title === `LEVEL ${c.n} LOST` && c.lost2.title === c.lost.title, c.lost.title);
   check(`level ${c.n}: the won card still shows the story lines and the way on`, c.won.lines.length >= 1 && /Enter/.test(c.won.hint), c.won.hint);
-  check(`level ${c.n}: the lost card still says why and how to try again`, c.lost.lines[0] === 'The carrier is lost.' && c.lost2.lines[0] === "Earth's shield has failed." && /try again/.test(c.lost.hint));
+  check(`level ${c.n}: the lost card still says why and how to try again`, c.lost.lines[0] === 'The cruiser is lost.' && c.lost2.lines[0] === "Earth's shield has failed." && /try again/.test(c.lost.hint));
 }
 check('neither is the old shared title', cards.every(c => c.won.title !== 'CAMPAIGN' && c.lost.title !== 'CAMPAIGN'));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));

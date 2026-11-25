@@ -15,7 +15,7 @@ The words of the Campaign's wing orders with groups and explicit targets (card s
 | camp.say.wing.attacknear | {group}, attack the nearest. |
 | camp.say.wing.escort | {group}, escort {name}. |
 | camp.say.wing.guard | {group}, guard {name}. |
-| camp.say.wing.guardcarrier | {group}, guard the carrier. |
+| camp.say.wing.guardcarrier | {group}, guard the cruiser. |
 | camp.say.wing.hold | {group}, hold at {name}. |
 | camp.say.wing.fetch | {group}, fetch {name}. |
 | camp.say.wing.mine | {group}, mine {name}. |

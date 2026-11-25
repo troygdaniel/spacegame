@@ -993,7 +993,7 @@ function campFind(C, text) {
   const q = String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\b(the|a|an|to|at|for|by|with|around|near|beside|of|our|my)\b/g, ' ').replace(/\s+/g, ' ').trim();
   if (!q) return null;
   if (/\b(mothership|mother|boss|flagship|big one)\b/.test(q)) return { kind: 'mother' };
-  if (/\b(carrier|me|us|ship|home)\b/.test(q) && !/\bconvoy\b/.test(q)) return { kind: 'carrier' };
+  if (/\b(carrier|cruiser|me|us|ship|home)\b/.test(q) && !/\bconvoy\b/.test(q)) return { kind: 'carrier' };
   const cv = campConvoys(C);
   for (const u of cv) { const n = String(u.id).split('-')[1]; if (q.indexOf(n) >= 0 || q.indexOf(campConvoyName(u).toLowerCase()) >= 0) return { kind: 'convoy', id: u.id }; }
   if (/\b(convoy|convoys|freighter|freighters|cargo|supplies|hauler|haulers)\b/.test(q)) { const n = campNearest(cv, C.carrier); return n ? { kind: 'convoy', id: n.id } : null; }
@@ -1854,7 +1854,7 @@ function campSummary(C) {
   if (!C) return 'Campaign: not in a battle.';
   const L = C.L, c = C.carrier, m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
   const out = campWing(C, 'fighter').length, al = campAliens(C).filter(u => u.faction !== 'pirate').length, pi = campAliens(C).length - al, cv = campConvoys(C).map(u => campConvoyName(u));
-  return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Carrier hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.mends.length ? ', mending ' + C.mends.length + ' ship' + (C.mends.length === 1 ? '' : 's') : '') + '.'
+  return 'Campaign level ' + C.level + ', ' + L.name + '. Goal: ' + campObjective(C) + ' Cruiser hull ' + Math.round(c.hp) + ' of ' + Math.round(c.maxHp) + ', shield ' + Math.round(C.shield) + ' of ' + CAMP.carrier.shield + '. Ore in the store: ' + Math.floor(C.ore) + ' of ' + CAMP.ore.cap + (C.mends.length ? ', mending ' + C.mends.length + ' ship' + (C.mends.length === 1 ? '' : 's') : '') + '.'
     + (C.earth ? ' Earth shield ' + Math.round(C.earth.shield / C.earth.max * 100) + ' percent.' : '') + ' In the bay: ' + C.bay.fighters + ' fighters' + (campRepairing(C) ? ', ' + campRepairing(C) + ' being mended' : '') + '. Out: '
     + out + ' fighters. Missiles in the magazine: ' + C.missiles + ' of ' + C.magazine + ' (' + campKeyVar('keymissile') + ' fires one at the target, or with none picked at ' + (L.win === 'mother' || m ? 'the mothership or ' : '') + 'the nearest big ship).' + (al || C.alienSeen ? ' Aliens alive: ' + al + '.' : '') + (pi ? ' Pirates alive: ' + pi + '.' : '') + campAnomLine(C) + (L.convoys.length ? ' Convoys flying: ' + cv.join(', ') + (cv.length ? '' : 'none') + '.' : '')
     + (L.win === 'mother' ? (m ? ' The alien mothership is ' + Math.round(campDist(m, c) / 10) + ' km away.' : ' The mothership has not come yet.') : '');
