@@ -604,7 +604,7 @@ class Campaign extends Phaser.Scene {
     return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
-  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? CAMPMAP.frame.y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
+  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };

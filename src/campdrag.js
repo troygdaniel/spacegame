@@ -138,13 +138,13 @@ function campDragInstall(s) {
 }
 // the map: a press on the frame waits for the release (a click then, as it was; a drag pans); a press anywhere else (the list at the side, the buttons) is a click at once, as before
 function campDragMapDown(s, p) {
-  const mp = s.mp, F = CAMPMAP.frame;
+  const mp = s.mp, F = campMapFrameOf(mp);
   if (mp.recentre && mp.recentre.visible && p.x >= mp.recentre.x && p.x <= mp.recentre.x + mp.recentre.width && p.y >= mp.recentre.y && p.y <= mp.recentre.y + mp.recentre.height) { campMapRecentre(mp, F); mp.namesZ = -1; return; }
   if (p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h) campDragDown(s.dragIn, p.x, p.y); else campMapClick(s, p.x, p.y);
 }
 function campDragMapMove(s, r) {
   const mp = s.mp; if (!mp) return;
-  campMapPan(mp, CAMPMAP.frame, r.dx, r.dy); mp.dragging = true;
+  campMapPan(mp, campMapFrameOf(mp), r.dx, r.dy); mp.dragging = true;
 }
 function campDragMapUp(s, u) {
   const mp = s.mp; if (!mp) return;

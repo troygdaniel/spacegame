@@ -1,0 +1,38 @@
+/* The Tab map in the panel look (card space-game-b3-f-tab-map-build; Troy, 25 Nov 2026; the mock is docs/tab-map-mock.html, layout A; src/campmappanel.js): the header and the footer of the map's card and the column of panels beside it, in the look of the page HUD
+   (the root has the class ph-root, so it has the HUD's tokens, its panel .ph-p, its chip .ph-k, its label .ph-lab and its meter; src/camppagehud.css). Everything is inside .mp-root: no other element of the page is touched. The map itself is on the canvas under it.
+   The root takes no click (pointer-events none, inherited); only a list row, a button pill and the wheel over them are live. System typeface, no web font, no image, no request. Sizes are in em of the root's font size, which the script sets from the canvas's width. */
+.mp-root .mp-head, .mp-root .mp-foot, .mp-root .mp-col { position: absolute; }
+.mp-head, .mp-foot { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+.mp-hl { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.mp-title { font-size: 1.5em; font-weight: 600; letter-spacing: -.01em; }
+.mp-hr { display: flex; align-items: center; gap: .9em; flex: none; }
+.mp-kk { display: inline-flex; align-items: center; gap: .35em; }
+.mp-sm { font-size: .86em; color: #c3cde0; }
+.mp-big { font-size: 1.05em; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-pill { display: inline-flex; align-items: center; gap: .45em; padding: .28em .8em; border-radius: 2em; background: rgba(255, 255, 255, .06); border: 1px solid var(--ph-line); font-size: .86em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mp-col { display: flex; flex-direction: column; gap: .75em; }
+.mp-col > .ph-p { position: relative; flex: none; }
+.mp-pn { display: flex; flex-direction: column; gap: .5em; padding: .7em 1em; }
+.mp-gold { color: var(--ph-ore); }
+.mp-pn .ph-meter { flex: 1; }
+.mp-radio { padding: .55em 1em; }
+.mp-rad { --rc: #9fe9ff; border-left: .25em solid var(--rc); padding-left: .7em; white-space: pre-line; font-size: .92em; line-height: 1.35; transition: opacity .1s linear; }
+.mp-col > .mp-list { flex: 1 1 0; min-height: 0; overflow: hidden; gap: .1em; } /* (the column's panels are flex: none; the list takes what is left, so the legend stays inside the column however many lines the set and radio panels add) */
+.mp-rows { display: flex; flex-direction: column; gap: .05em; min-height: 0; overflow: hidden; }
+.mp-head2 { margin: .5em 0 .1em .6em; }
+.mp-tile { display: flex; align-items: center; justify-content: space-between; gap: .6em; padding: .3em .6em; border: 1px solid transparent; border-radius: .7em; font-variant-numeric: tabular-nums; }
+.mp-tile.act { pointer-events: auto; cursor: pointer; }
+.mp-tile:hover { background: rgba(255, 255, 255, .05); }
+.mp-tile.on { border-color: var(--ph-ink); background: rgba(255, 255, 255, .08); }
+.mp-tile.goal > span:first-child { color: var(--ph-ore); font-weight: 600; }
+.mp-km { color: var(--ph-mute); }
+.mp-tile.on .mp-km { color: var(--ph-ink); }
+.mp-keys { margin-top: auto; padding-top: .6em; }
+.mp-leg { gap: .5em; }
+.mp-lr { display: flex; align-items: center; gap: .6em; font-size: .86em; color: #c3cde0; }
+.mp-sw { display: inline-flex; width: 1.15em; height: 1.15em; flex: none; }
+.mp-sw svg { width: 100%; height: 100%; }
+.mp-btn { position: absolute; display: inline-flex; align-items: center; gap: .55em; padding: .22em .5em .22em .9em; border-radius: 2em; background: #0e1626; border: 1px solid rgba(140, 170, 210, .3); font-size: .9em; font-weight: 600; white-space: nowrap; box-shadow: 0 .3em 1em rgba(0, 0, 0, .4); pointer-events: auto; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.mp-btn i { font-style: normal; font-weight: 400; color: var(--ph-mute); }
+.mp-btn.on { border-color: var(--ph-ink); background: #1b2740; }
+.mp-btn:hover { border-color: rgba(230, 237, 247, .6); }

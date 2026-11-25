@@ -23,6 +23,9 @@ const CAMPMAP = {
   color: { star: 0xffe29a, earth: 0x4aa3ff, place: 0xb9a37a, cache: 0xffd37a, relic: 0x7fe9ff, alien: 0xff4d6d, mother: 0xff4dff, tower: 0xff9a3a, convoy: 0xffb454, carrier: 0xffffff, wing: 0x6dff9c, anomaly: 0xc58cff, rock: 0x8c8c8c, pickup: 0xffd37a, pirate: 0xe8d24a, patrol: 0x5fd8c0, miner: 0xc9d4e8, torpedo: 0xffe08a }
 };
 
+// the frame the open map is drawn in: its own (mp.F: the page HUD's card, src/campmappanel.js, or the glass panel's), else the table's
+const campMapFrameOf = mp => (mp && mp.F) || CAMPMAP.frame;
+
 // a place for a small label among others: the first of the candidate centres (a list of { x, y }) where a w by h box overlaps none of the boxes ({ x, y, w, h }: top left and size); null when every one is taken.
 // The route label on the whole-system map used to sit on the middle of its line, on top of a belt's name (wrap-up hunt of level 3).
 function campMapFreeSpot(cands, w, h, boxes) {
