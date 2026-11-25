@@ -25,7 +25,7 @@ function campTgtPaint(s) {
   if (sl) slookMarksBegin(s);
   const play = s.mode === 'play' && !s.mp, K = CAMPTGT, z = s.cameras && s.cameras.main && s.cameras.main.zoom > 0 ? s.cameras.main.zoom : 1, al = campTgtPulse();
   const pk = play && typeof campSelUnits === 'function' ? campSelUnits(s.camp) : null; // the enemy (red) and the friendly ship picked (green), and WHO (green): the pilot picked, or all three pilots when All pilots is picked (card space-game-keys2-panels)
-  const who = pk ? (pk.who ? [pk.who] : (pk.whoShips || [])) : [];
+  const who = pk ? (pk.who ? [pk.who] : (sl ? [] : (pk.whoShips || []))) : []; // the new look: a ring marks ONE picked pilot, or a ship that is hurt (its arc: slookArcsPaint); with All pilots picked (the default, from the first second) none of the three wears one (card space-game-b3-b-rings-reach). The old look keeps its squares on all three
   const mk = pk && typeof campMarkNow === 'function' ? campMarkNow(s.camp) : { who: 1, held: 1 }; // the squares come and go (card space-game-pilot-squares-fade): CAMP.mark.show ms after a pick or an order, then a fade; the target stays held and its box stays
   [[pk && pk.hostile, K.color, al * mk.held], [pk && pk.friendly, K.friend, al * mk.held]].concat(who.map(u => [u, K.friend, al * mk.who])).forEach(([v, col, a]) => { if (v && v.hp > 0 && a > 0) { if (sl) slookPickMark(g, v, col, z, a, campTgtDrawn(s, v), s); else campTgtCorners(g, v, col, z, a, campTgtDrawn(s, v)); } });
   if (sl && !s.mp) slookArcsPaint(g, s, z); // the arcs of the hurt ships on the screen (the picked ones were drawn with their ring)
