@@ -81,7 +81,8 @@ function campSightStep(C) {
     const live = p.ids.filter(id => C.by[id] && C.by[id].hp > 0); if (!live.length) return;
     if (C.t - S.saidAt < K.sayEvery * 1000) { S.pending.push({ x: p.x, y: p.y, ids: p.ids, due: S.saidAt + K.sayEvery * 1000 }); return; } // a call was just made: this one waits its turn
     const line = campSightLine(C, live); if (!line) return;
-    S.saidAt = C.t; campSay(C, line.key, line.vars);
+    S.saidAt = C.t; if (typeof campPageHudHides === 'function' && campPageHudHides('contact')) return; // the page HUD's hostiles panel says it (card space-game-page-hud-2, Troy, 25 Nov 2026): no radio sentence while it is on; the time between calls still runs
+    campSay(C, line.key, line.vars);
   });
 }
 function campSightMarks(C) {

@@ -21,7 +21,7 @@ const CAMP_PAGEHUD = {
   low: 0.6, crit: 0.3,     // a pilot's ring: the good colour, the warning colour under 60 percent of the hull, the hostile colour under 30
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
   pills: 6,                // the most place pills at once
-  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'places', 'keys'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
+  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
 };
 const CAMP_PAGEHUD_MEM = new WeakMap(); // C -> when each number was last seen below full
 
@@ -46,14 +46,14 @@ const campPageHudCap1 = t => String(t || '').charAt(0).toUpperCase() + String(t 
 function campPageModel(C, view) {
   if (!C || !C.carrier) return null;
   const S = campCruiserStatus(C), m = campPageHudMem(C);
-  const ship = { key: campCornerCap('zoomreset'), label: uiText('camp.corner.cruiser'), shield: campPageHudBar(m, 'shield', S.shield, C), hull: campPageHudBar(m, 'hull', S.hull, C) };
+  const ship = { key: campCornerCap('zoomreset'), label: uiText('camp.corner.cruiser'), shield: Object.assign(campPageHudBar(m, 'shield', S.shield, C), { word: uiText('camp.corner.m.shield') }), hull: Object.assign(campPageHudBar(m, 'hull', S.hull, C), { word: uiText('camp.corner.m.hull') }) }; // word: the meter's name beside its icon (card space-game-page-hud-2: Shields, Hull, Ore, Missiles)
   const rows = typeof campPanelDef === 'function' && campPanelDef('fleet') ? campPanelList(C, 'fleet').filter(r => r.who && r.who !== 'all') : [], stops = typeof campSelList === 'function' ? campSelList(C) : [], now = typeof campSelNow === 'function' ? campSelNow(C) : null, K = CAMP_PAGEHUD;
   const items = rows.map((r, i) => {
     const e = stops.find(x => x.id === r.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, name = e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), frac = up ? campTdispHull(u).share : 0;
     return { id: r.who, name, initial: name.charAt(0).toUpperCase(), digit: String(i + 1), frac, color: frac < K.crit ? 'foe' : frac < K.low ? 'warn' : 'good', on: up, pick: !!now && (now.kind === 'all' || now.id === r.who) }; // pick: the digit is lit (All pilots lights every one: card space-game-w4-all-lit)
   });
   const out = now && now.kind === 'pilot' ? [now.unit] : (typeof campSelAllUnits === 'function' ? campSelAllUnits(C) : []), lead = out.find(u => u && u.hp > 0 && !u.gone);
-  return { ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), friend: campPageHudFriend(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view), pilots: { key: campCornerCap('who'), items, doing: lead ? campPageHudCap1(String(campTdispDoing(C, lead)).split(' ')[0].replace(/[^A-Za-z]+$/, '')) : uiText('camp.corner.bay'), who: now && now.kind === 'pilot' ? now.name : uiText('camp.sel.all') } };
+  return { ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), friend: campPageHudFriend(C), edge: campPageHudEdge(C, view), places: campPageHudPlaces(C, view), pilots: { key: campCornerCap('who'), ekey: campCornerCap('friendlies'), items, doing: lead ? campPageHudCap1(String(campTdispDoing(C, lead)).split(' ')[0].replace(/[^A-Za-z]+$/, '')) : uiText('camp.corner.bay'), who: now && now.kind === 'pilot' ? now.name : uiText('camp.sel.all') } };
 }
 
 // the goal (landing 2): the objective sentence of the level (campObjective: the first objective not done yet, so a second one shows only when it is the next thing to do) split at its colon into a label and a value ("Mine ore: 120 of 450." is "Mine ore" and
@@ -67,20 +67,26 @@ function campPageHudGoal(C) {
 // the stock (landing 2): the ore as a meter, the missiles as one pip each with the reload key's chip (the key table's). The credits are not shown in flight
 function campPageHudStock(C) {
   const S = campCruiserStatus(C), M = S.missiles;
-  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', key: campCruiserMissileKey() } };
+  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full, word: uiText('camp.corner.m.ore') }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', key: campCruiserMissileKey(), word: uiText('camp.corner.m.missiles') } };
 }
 
 // the hostiles (landing 3): drawn ONLY when a hostile is seen: the nearest group, what it is ("3 Skiffs" or "6 hostiles", the sight's own words), where (a compass point, the sight's words) and how far
 function campPageHudFoes(C) {
   const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : []; if (!gs.length) return null;
   const g = gs[0], c = C.carrier;
-  return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), what: campSightWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }) };
+  return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campSightWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }) };
+}
+// the Enter chip and the word of the order Enter gives now: the SAME function the key runs (campSelOrder 'engage', asked as a dry run: it gives no order), so the word is the order model's, the chip is the key table's; shown with a picked hostile (attack) or a picked friendly (guard); with nothing picked Enter forms up and there is no hint
+function campPageHudEnter(C, verb) {
+  if (typeof campSelOrder !== 'function' || !C) return null;
+  const r = campSelOrder(C, 'engage', 'key', true); if (!r || r.formup || r.verb !== verb) return null;
+  return { key: campCornerCap('order'), word: uiText('camp.corner.enter.' + verb), verb };
 }
 // the friendlies: drawn ONLY when a friendly is picked: its name, its hull (a ship; a place has none) and how far
 function campPageHudFriend(C) {
   const e = typeof campFriNow === 'function' ? campFriNow(C) : null; if (!e) return null;
   const u = e.unit, c = C.carrier, x = u ? u.x : e.x, y = u ? u.y : e.y;
-  return { key: campCornerCap('friendlies'), label: uiText('camp.corner.friendlies'), name: u ? campTdispName(u) : e.name, frac: u ? campTdispHull(u).share : null, km: uiText('camp.tdisp.km', { km: campNavKm(Math.hypot(x - c.x, y - c.y)) }) };
+  return { enter: campPageHudEnter(C, 'guard'), name: u ? campTdispName(u) : e.name, frac: u ? campTdispHull(u).share : null, km: uiText('camp.tdisp.km', { km: campNavKm(Math.hypot(x - c.x, y - c.y)) }) };
 }
 // hostiles off the screen: ONE pill at the edge with an arrow, the count and how far (the nearest group's arrow, src/campsight.js); null when none is off the screen or the camera is not known
 function campPageHudEdge(C, view) {
@@ -110,23 +116,25 @@ const CAMP_PAGEHUD_ICON = { // inline SVG (no image files): the shield and the h
   missile: '<svg class="ph-ic" viewBox="0 0 16 16" fill="#e6edf7"><path d="M8 1l2 4v7l-2 3-2-3V5z"/></svg>'
 };
 function campPageHudEl(doc, tag, cls, parent) { const e = doc.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
+function campPageHudEnterRow(doc, parent) { const row = campPageHudEl(doc, 'div', 'ph-row ph-enter', parent); return { el: row, key: campPageHudEl(doc, 'span', 'ph-k', row), word: campPageHudEl(doc, 'span', 'ph-lab', row) }; } // the Enter chip and the word of what Enter does (Attack, Guard)
 function campPageHudBuild(doc) {
   const root = campPageHudEl(doc, 'div', 'ph-root'), ship = campPageHudEl(doc, 'div', 'ph-p ph-ship', root), R = { root, ship: { el: ship, pilots: [] } };
   const head = campPageHudEl(doc, 'div', 'ph-row', ship); R.ship.key = campPageHudEl(doc, 'span', 'ph-k', head); R.ship.label = campPageHudEl(doc, 'span', 'ph-lab', head);
-  ['shield', 'hull'].forEach(id => { const row = campPageHudEl(doc, 'div', 'ph-row', ship), ic = campPageHudEl(doc, 'span', 'ph-icw', row), meter = campPageHudEl(doc, 'div', 'ph-meter', row), fill = campPageHudEl(doc, 'i', 'ph-fill ph-' + id, meter), num = campPageHudEl(doc, 'span', 'ph-num', row); ic.innerHTML = CAMP_PAGEHUD_ICON[id]; R.ship[id] = { fill, num }; });
+  const meters = campPageHudEl(doc, 'div', 'ph-meters', ship); // Shields and Hull side by side on ONE row, a half each (card space-game-page-hud-2): the icon, the word and the number over the meter
+  ['shield', 'hull'].forEach(id => { const half = campPageHudEl(doc, 'div', 'ph-half', meters), row = campPageHudEl(doc, 'div', 'ph-row', half), ic = campPageHudEl(doc, 'span', 'ph-icw', row), lab = campPageHudEl(doc, 'span', 'ph-lab', row), num = campPageHudEl(doc, 'span', 'ph-num', row), meter = campPageHudEl(doc, 'div', 'ph-meter', half), fill = campPageHudEl(doc, 'i', 'ph-fill ph-' + id, meter); ic.innerHTML = CAMP_PAGEHUD_ICON[id]; R.ship[id] = { fill, num, lab }; });
   const pl = campPageHudEl(doc, 'div', 'ph-pilots', ship); R.ship.plBox = pl; R.ship.pkey = campPageHudEl(doc, 'span', 'ph-k', pl);
-  R.ship.doingBox = campPageHudEl(doc, 'div', 'ph-doing', pl); R.ship.doing = campPageHudEl(doc, 'span', '', R.ship.doingBox); R.ship.who = campPageHudEl(doc, 'em', '', R.ship.doingBox);
+  R.ship.doingBox = campPageHudEl(doc, 'div', 'ph-doing', pl); R.ship.doing = campPageHudEl(doc, 'span', '', R.ship.doingBox); R.ship.who = campPageHudEl(doc, 'em', '', R.ship.doingBox); R.ship.ekey = campPageHudEl(doc, 'span', 'ph-k', pl); // E: the friendlies' key, at the end of the row, always there
   const goal = campPageHudEl(doc, 'div', 'ph-p ph-goal', root), g1 = campPageHudEl(doc, 'div', 'ph-row ph-between', goal); R.goal = { el: goal, label: campPageHudEl(doc, 'span', 'ph-lab', g1), value: campPageHudEl(doc, 'b', '', g1) };
   R.goal.meter = campPageHudEl(doc, 'div', 'ph-meter ph-fixed', goal); R.goal.fill = campPageHudEl(doc, 'i', 'ph-fill', R.goal.meter);
-  const stock = campPageHudEl(doc, 'div', 'ph-p ph-stock', root), o1 = campPageHudEl(doc, 'div', 'ph-row', stock), oic = campPageHudEl(doc, 'span', 'ph-icw', o1), ometer = campPageHudEl(doc, 'div', 'ph-meter', o1); oic.innerHTML = CAMP_PAGEHUD_ICON.ore;
-  const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
+  const stock = campPageHudEl(doc, 'div', 'ph-p ph-stock', root), o1 = campPageHudEl(doc, 'div', 'ph-row', stock), oic = campPageHudEl(doc, 'span', 'ph-icw', o1), olab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', o1), ometer = campPageHudEl(doc, 'div', 'ph-meter', o1); oic.innerHTML = CAMP_PAGEHUD_ICON.ore;
+  const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1), mlab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
   const foes = campPageHudEl(doc, 'div', 'ph-p ph-foes', root), f1 = campPageHudEl(doc, 'div', 'ph-row', foes);
-  R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) };
-  const fr = campPageHudEl(doc, 'div', 'ph-p ph-friend', root), r1 = campPageHudEl(doc, 'div', 'ph-row', fr);
-  R.friend = { el: fr, key: campPageHudEl(doc, 'span', 'ph-k', r1), label: campPageHudEl(doc, 'span', 'ph-lab', r1), name: campPageHudEl(doc, 'div', 'ph-big', fr) }; const r2 = campPageHudEl(doc, 'div', 'ph-row', fr); R.friend.meter = campPageHudEl(doc, 'div', 'ph-meter', r2); R.friend.fill = campPageHudEl(doc, 'i', 'ph-fill ph-hull', R.friend.meter); R.friend.km = campPageHudEl(doc, 'span', 'ph-sub', r2);
+  R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) }; R.foes.ent = campPageHudEnterRow(doc, foes);
+  const fr = campPageHudEl(doc, 'div', 'ph-friend', ship); // a friendly's details sit UNDER the pilots, inside the same panel, only while a friendly is picked (card space-game-page-hud-2)
+  R.friend = { el: fr, name: campPageHudEl(doc, 'div', 'ph-big', fr) }; const r2 = campPageHudEl(doc, 'div', 'ph-row', fr); R.friend.meter = campPageHudEl(doc, 'div', 'ph-meter', r2); R.friend.fill = campPageHudEl(doc, 'i', 'ph-fill ph-hull', R.friend.meter); R.friend.km = campPageHudEl(doc, 'span', 'ph-sub', r2); R.friend.ent = campPageHudEnterRow(doc, fr);
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = [];
-  R.stock = { el: stock, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
+  R.stock = { el: stock, oreLab: olab, missLab: mlab, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
   return R;
 }
 // the element's property is written only when its value is not the one it has (a repainted label every frame was a large cost): the last value is kept on the element
@@ -135,30 +143,31 @@ function campPageHudPilots(doc, R, n) { // the rings: made when the number of pi
   if (R.ship.pilots.length === n) return;
   R.ship.pilots.forEach(p => p.el.parentNode && p.el.parentNode.removeChild(p.el));
   R.ship.pilots = []; const box = R.ship.plBox;
-  for (let i = 0; i < n; i++) { const el = campPageHudEl(doc, 'div', 'ph-pilot'), ring = campPageHudEl(doc, 'div', 'ph-ring', el), letter = campPageHudEl(doc, 'span', '', ring), digit = campPageHudEl(doc, 'small', '', el); box.insertBefore ? box.insertBefore(el, R.ship.doingBox) : box.appendChild(el); R.ship.pilots.push({ el, ring, letter, digit }); }
+  for (let i = 0; i < n; i++) { const el = campPageHudEl(doc, 'div', 'ph-pilot'), halo = campPageHudEl(doc, 'i', 'ph-halo', el), ring = campPageHudEl(doc, 'div', 'ph-ring', el), letter = campPageHudEl(doc, 'span', '', ring), digit = campPageHudEl(doc, 'small', '', el); box.insertBefore ? box.insertBefore(el, R.ship.doingBox) : box.appendChild(el); R.ship.pilots.push({ el, halo, ring, letter, digit }); }
 }
 function campPageHudPips(doc, R, n) { // one pip for each missile the rack holds
   const S = R.stock; if (S.pips.length === n) return;
   S.pips.forEach(p => p.parentNode && p.parentNode.removeChild(p)); S.pips = [];
   for (let i = 0; i < n; i++) S.pips.push(campPageHudEl(doc, 'i', 'ph-pip', S.pipsBox));
 }
+function campPageHudPaintEnter(E, e) { const set = campPageHudSet; set(E.el, 'display', e ? '' : 'none'); if (e) { set(E.key, 'text', e.key); set(E.word, 'text', e.word); } }
 function campPageHudPaint(R, M, doc) {
   if (!R || !M) return;
   const S = R.ship, set = campPageHudSet;
   const G = R.goal; set(G.el, 'display', M.goal ? '' : 'none');
   if (M.goal) { set(G.label, 'text', M.goal.label); set(G.value, 'text', M.goal.value); set(G.meter, 'display', M.goal.frac === null ? 'none' : ''); set(G.fill, 'width', M.goal.frac === null ? '0%' : Math.round(M.goal.frac * 1000) / 10 + '%'); set(G.fill, 'cls', 'ph-fill ph-' + M.goal.tone); }
   const F = R.foes; set(F.el, 'display', M.foes ? '' : 'none');
-  if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); }
+  if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); }
   const Fr = R.friend; set(Fr.el, 'display', M.friend ? '' : 'none');
-  if (M.friend) { set(Fr.key, 'text', M.friend.key); set(Fr.label, 'text', M.friend.label); set(Fr.name, 'text', M.friend.name); set(Fr.meter, 'display', M.friend.frac === null ? 'none' : ''); set(Fr.fill, 'width', M.friend.frac === null ? '0%' : Math.round(M.friend.frac * 1000) / 10 + '%'); set(Fr.km, 'text', M.friend.km); }
+  if (M.friend) { set(Fr.name, 'text', M.friend.name); set(Fr.meter, 'display', M.friend.frac === null ? 'none' : ''); set(Fr.fill, 'width', M.friend.frac === null ? '0%' : Math.round(M.friend.frac * 1000) / 10 + '%'); set(Fr.km, 'text', M.friend.km); campPageHudPaintEnter(Fr.ent, M.friend.enter); }
   const E = R.edge; set(E.el, 'display', M.edge ? '' : 'none');
   if (M.edge) { set(E.text, 'text', M.edge.n + ' \u00b7 ' + M.edge.km); set(E.ic, '--a', String(Math.round(M.edge.angle * 180 / Math.PI)) + 'deg'); }
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) set(p, 'text', pl.name); });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
-  T.pips.forEach((p, i) => set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (i === k.missiles.n && k.missiles.building ? ' build' : ''))); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none');
-  set(S.key, 'text', M.ship.key); set(S.label, 'text', M.ship.label);
-  ['shield', 'hull'].forEach(id => { const b = M.ship[id]; set(S[id].fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(S[id].num, 'text', b.show ? String(b.n) : ''); });
+  T.pips.forEach((p, i) => set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (i === k.missiles.n && k.missiles.building ? ' build' : ''))); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
+  set(S.key, 'text', M.ship.key); set(S.label, 'text', M.ship.label); set(S.ekey, 'text', M.pilots.ekey);
+  ['shield', 'hull'].forEach(id => { const b = M.ship[id]; set(S[id].fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(S[id].num, 'text', b.show ? String(b.n) : ''); set(S[id].lab, 'text', b.word); });
   campPageHudPilots(doc, R, M.pilots.items.length);
   set(S.pkey, 'text', M.pilots.key);
   M.pilots.items.forEach((p, i) => { const e = S.pilots[i]; set(e.el, 'cls', 'ph-pilot' + (p.on ? ' on' : '') + (p.pick ? ' pick' : '')); set(e.ring, '--v', String(Math.round(p.frac * 100))); set(e.ring, '--c', 'var(--ph-' + p.color + ')'); set(e.letter, 'text', p.initial); set(e.digit, 'text', p.digit); });
@@ -197,8 +206,7 @@ function campPageHudSync(s, now) {
     const shipB = bot(R.ship.el), dyF = (s.cornerDy && s.cornerDy.friendlies) || 0;
     // the rows of the canvas that the panels replace keep their PLACE (the lists and the details open under it): the Q CRUISER row's under the ship panel; the FRIENDLIES row's under the friend panel (which slides down with the Q list); the HOSTILES row's under the lowest of the stock and hostiles panels
     CAMP_CORNER_SHIFT.tl = Math.round(shipB - th - A.tl.y);
-    set(R.friend.el, 'top', Math.round((shipB + dyF + gap) * k * 10) / 10 + 'px');
-    const friendB = shown(R.friend.el) ? bot(R.friend.el) : shipB + dyF + gap + th;
+    const friendB = shipB + dyF + gap + th; // a friendly's details are inside the ship panel now: shipB already has them
     CAMP_CORNER_SHIFT.bl = Math.round(friendB - th - A.bl.y - dyF);
     const stockB = bot(R.stock.el); set(R.foes.el, 'top', Math.round((stockB + gap) * k * 10) / 10 + 'px');
     const rightB = shown(R.foes.el) ? bot(R.foes.el) : stockB;

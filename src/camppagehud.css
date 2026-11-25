@@ -12,6 +12,11 @@
 }
 .ph-k { display: inline-grid; place-items: center; min-width: 1.55em; height: 1.55em; padding: 0 .35em; border-radius: .45em; font-size: .78em; font-weight: 600; color: #0a1420; background: #bfe9ff; box-sizing: border-box; }
 .ph-lab { font-size: .72em; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ph-mute); }
+.ph-meters { display: flex; gap: 1.1em; }
+.ph-half { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .4em; }
+.ph-half .ph-num { margin-left: auto; min-width: 0; }
+.ph-half .ph-meter { flex: none; } /* in the half's column the meter keeps its own height (a flex: 1 would be a height of 0) */
+.ph-mw { flex: none; width: 6.6em; } /* the word of a meter beside its icon (Shields, Hull, Ore, Missiles): every meter starts at the same place */
 .ph-row { display: flex; align-items: center; gap: .6em; }
 .ph-meter { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); overflow: hidden; }
 .ph-fill { display: block; height: 100%; border-radius: 1em; }
@@ -21,14 +26,16 @@
 .ph-ic { width: 1.05em; height: 1.05em; flex: none; }
 .ph-num { min-width: 2.2em; text-align: right; font-size: .78em; color: var(--ph-mute); font-variant-numeric: tabular-nums; }
 /* top left: the cruiser, then under a hairline the pilots */
-.ph-ship { left: 1.3em; top: 1.3em; width: 21em; display: flex; flex-direction: column; gap: .7em; }
+.ph-ship { left: 1.3em; top: 1.3em; width: 23em; display: flex; flex-direction: column; gap: .7em; }
 .ph-pilots { display: flex; gap: .9em; align-items: center; padding-top: .75em; border-top: 1px solid var(--ph-line); }
-.ph-pilot { display: flex; flex-direction: column; align-items: center; gap: .3em; opacity: .5; }
-.ph-pilot.on { opacity: 1; }
+.ph-pilot { position: relative; display: flex; flex-direction: column; align-items: center; gap: .3em; }
+.ph-pilot:not(.on) .ph-ring, .ph-pilot:not(.on) small { opacity: .5; } /* DIM means one thing: resting (in the bay or lost); a pilot is never dimmed for being unpicked */
+.ph-halo { display: none; position: absolute; left: 50%; top: -.3em; width: 3.5em; height: 3.5em; margin-left: -1.75em; box-sizing: border-box; border-radius: 50%; border: .14em solid #fff; box-shadow: 0 0 .9em rgba(230, 237, 247, .5); }
+.ph-pilot.pick .ph-halo { display: block; } /* the pick: a bright outline round the ring, kept at full strength even for a pilot at rest (card space-game-page-hud-2) */
 .ph-ring { --v: 100; --c: var(--ph-good); width: 2.9em; height: 2.9em; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--c) calc(var(--v) * 1%), rgba(255, 255, 255, .1) 0); }
 .ph-ring span { width: 2.3em; height: 2.3em; border-radius: 50%; display: grid; place-items: center; background: #0e1626; font-weight: 600; font-size: .95em; }
 .ph-pilot small { font-size: .68em; color: var(--ph-mute); letter-spacing: .06em; }
-.ph-pilot.pick small { color: var(--ph-ink); font-weight: 600; }
+.ph-pilot.pick small { color: #fff; font-weight: 600; opacity: 1; text-shadow: 0 0 .6em rgba(230, 237, 247, .6); } /* and its digit is lit */
 .ph-doing { margin-left: auto; text-align: right; font-size: .82em; color: var(--ph-good); }
 .ph-doing em { display: block; font-style: normal; color: var(--ph-mute); font-size: .86em; }
 /* top centre: the goal; one line (a label and its value) and one meter under it; no wave count */
@@ -39,7 +46,7 @@
 .ph-fill.ph-ore { background: var(--ph-ore); }
 .ph-fill.ph-good { background: var(--ph-good); }
 /* top right: the stock; the ore as a meter, the missiles as one pip each and the reload key's chip */
-.ph-stock { right: 1.3em; top: 1.3em; width: 15em; display: flex; flex-direction: column; gap: .65em; }
+.ph-stock { right: 1.3em; top: 1.3em; width: 17.5em; display: flex; flex-direction: column; gap: .65em; }
 .ph-pips { display: flex; gap: .28em; flex: 1; }
 .ph-pip { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); }
 .ph-pip.on { background: var(--ph-ink); }
@@ -51,8 +58,9 @@
 .ph-big { font-weight: 600; font-size: 1.05em; }
 .ph-sub { font-size: .82em; color: #f3bcd2; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: no-preference) { .ph-foes { animation: ph-pulse 2.4s ease-in-out infinite; } @keyframes ph-pulse { 50% { box-shadow: 0 0 0 .35em rgba(255, 111, 168, .12), 0 .6em 2em rgba(0, 0, 0, .35); } } }
-/* top left under the pilots: the friendly that is picked */
-.ph-friend { left: 1.3em; top: 13em; width: 21em; display: flex; flex-direction: column; gap: .4em; }
+/* inside the ship panel, under the pilots: a friendly's details, only while one is picked (name, hull, distance, and the Enter chip with Guard) */
+.ph-friend { display: flex; flex-direction: column; gap: .4em; padding-top: .75em; border-top: 1px solid var(--ph-line); }
+.ph-enter { margin-top: .15em; }
 .ph-friend .ph-sub { color: var(--ph-mute); }
 /* in space: a pill for a place, a pill at the screen edge for the hostiles off the screen (they move 10 times a second; the transition smooths the steps) */
 .ph-place { transform: translate(-50%, -50%); padding: .45em 1em; white-space: nowrap; border-radius: 2em; font-size: .82em; background: rgba(10, 16, 28, .96); color: #cfe3ff; transition: left .1s linear, top .1s linear; }

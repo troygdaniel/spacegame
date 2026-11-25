@@ -107,7 +107,7 @@ function campPanelKey(P, C, code, now) {
     if (!nums && code === 'ArrowLeft') { res.used = true; if (def.parent) { campPanelGo(P, C, def.parent, open); res.open = campPanelOpen(P); } return res; } // back to the list this one is a part of
     if (!nums && code === 'ArrowRight') { res.used = true; campPanelScroll(P, rows.length); const row = rows[P.at]; if (row && row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); } return res; } // into the part the highlight is on (the ship coasts while a list is open: the arrows are the list's)
     if (dn || (!nums && campKeyIs('pick', code))) { // Enter on the highlighted row, or (a numbered list) the digit of a row: the same doing
-      if (dn) { res.used = true; if (dn > rows.length) return res; P.at = dn - 1; } // a digit with no row on it does nothing
+      if (dn) { res.used = true; res.digit = dn; if (dn > rows.length) return res; P.at = dn - 1; } // a digit with no row on it does nothing
       campPanelScroll(P, rows.length); const row = rows[P.at]; res.used = true; if (!row) return res;
       if (row.open) { campPanelGo(P, C, row.open, '', open); res.open = campPanelOpen(P); return res; } // a part's row: its list opens (Esc comes back here)
       let item = null;

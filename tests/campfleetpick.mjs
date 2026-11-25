@@ -1,4 +1,4 @@
-// smoke: the fleet pick (cards space-game-keys5-qwe and space-game-keys7-trim, Troy 24 Nov 2026): each press of W steps WHO (Red 1 Wedge, Red 2 Kara, Red 3 Apollo, All pilots, round again) and keeps the pick open; a digit 1 to 4 jumps straight there; Form up on me is the last row of the Q list (all pilots, at once, the held target stays held); E picks a friendly, Enter is the order, X is gone, the target cycles wrap with no empty stop (plain Node, no Chrome)
+// smoke: the fleet pick (cards space-game-keys5-qwe and space-game-keys7-trim, Troy 24 Nov 2026): each press of W steps WHO (Wedge, Kara, Apollo, All pilots, round again) and keeps the pick open; a digit 1 to 4 jumps straight there; Form up on me is the last row of the Q list (all pilots, at once, the held target stays held); E picks a friendly, Enter is the order, X is gone, the target cycles wrap with no empty stop (plain Node, no Chrome)
 // Run: node tests/campfleetpick.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 
@@ -12,7 +12,7 @@ const k = code => J(`(() => { const r = campPanelKey(P, C, '${code}', 100); retu
 const ord = sq => J(`campWingShips(C, '${sq}').map(u => u.order && u.order.type).join()`);
 const sel = () => J('C.sel');
 
-check('the pick has four rows: Red 1 Wedge, Red 2 Kara, Red 3 Apollo, All pilots (the call signs are the pilots\'); All pilots is the default and is marked', J(`campPanelRows(C, 'fleet').map(r => r.label).join('|')`) === 'Red 1 Wedge|Red 2 Kara|Red 3 Apollo|All pilots' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'whoall').marked`) === true && sel() === 'all');
+check('the pick has four rows: Wedge, Kara, Apollo, All pilots (the call signs are the pilots\'); All pilots is the default and is marked', J(`campPanelRows(C, 'fleet').map(r => r.label).join('|')`) === 'Wedge|Kara|Apollo|All pilots' && J(`campPanelRows(C, 'fleet').find(r => r.id === 'whoall').marked`) === true && sel() === 'all');
 const w1 = k('KeyW');
 check('W opens the fleet pick and steps who to Wedge; it gives no order', w1.used && !w1.ran && w1.open === 'fleet' && sel() === 'pilot:red');
 check('W again steps to Kara, Apollo, All pilots, and round to Wedge; the pick stays open', [k('KeyW'), sel()][1] === 'pilot:green' && (k('KeyW'), sel()) === 'pilot:yellow' && (k('KeyW'), sel()) === 'all' && (k('KeyW'), sel()) === 'pilot:red' && J('campPanelOpen(P)') === 'fleet');
@@ -33,6 +33,6 @@ check('Enter with nothing held forms up (as before)', (() => { g.run(`C.tgt = ''
 const x = k('KeyX');
 check('X is no key: not used, nothing changes', !x.used && J(`campKeyIs('clear', 'KeyX')`) === false);
 check('] and E wrap with no empty stop: four presses with two enemies end on a ship, never on none', (() => { g.run(`C.tgt = ''; C.fsel = ''; C.tgtAt = 0;`); const seen = [1, 2, 3, 4].map(() => (k('BracketRight'), J('C.tgt'))); return seen.every(t => t !== ''); })());
-check('the label is the call sign and the name; the radio and the orders still say the name', J(`campSelList(C).filter(e => /^pilot:/.test(e.id)).map(e => e.label).join('|')`) === 'Red 1 Wedge|Red 2 Kara|Red 3 Apollo' && J(`campSelList(C).filter(e => /^pilot:/.test(e.id)).map(e => e.name).join('|')`) === 'Wedge|Kara|Apollo');
+check('the label is the call sign and the name; the radio and the orders still say the name', J(`campSelList(C).filter(e => /^pilot:/.test(e.id)).map(e => e.label).join('|')`) === 'Wedge|Kara|Apollo' && J(`campSelList(C).filter(e => /^pilot:/.test(e.id)).map(e => e.name).join('|')`) === 'Wedge|Kara|Apollo');
 check('a pilot who is not out is no stop: W steps past them', (() => { g.run(`campWingShips(C, 'yellow').forEach(u => { u.hp = 0; }); C.ships = C.ships.filter(u => u.hp > 0); C.sel = 'pilot:green'; campPanelClose(P);`); k('KeyW'); return sel() === 'all'; })());
 if (failed) { console.log('FLEET PICK FAIL (' + failed + ')'); process.exit(1); } else console.log('FLEET PICK OK');
