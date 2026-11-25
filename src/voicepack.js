@@ -98,6 +98,9 @@ const VOICEPACK_EXPAND = {
   'camp.warp.l2': () => vpWarps(),
   'camp.warp.l3': () => vpWarps()
 };
+// the three pilots' names: what the lines of a pilot taken off one order by another (camp.say.replaced.*, card space-game-order-replaced-line) are said with
+const vpPilotNames = () => (typeof CAMP === 'object' && CAMP.pilots ? CAMP.pilots.map(p => ({ name: p.name })) : []);
+['attack', 'escort', 'guard', 'hold', 'fetch', 'mine', 'recall'].forEach(v => { VOICEPACK_EXPAND['camp.say.replaced.' + v] = vpPilotNames; });
 const vpFill = (t, vars) => String(t).replace(/\{([a-z0-9_]+)\}/gi, (m, k) => (vars && vars[k] !== undefined ? String(vars[k]) : m));
 const VOICEPACK_SOURCES = [];
 function voicePackSource(src) { if (src && src.id && (typeof src.lines === 'function' || typeof src.keys === 'function')) { const i = VOICEPACK_SOURCES.findIndex(s => s.id === src.id); if (i >= 0) VOICEPACK_SOURCES[i] = src; else VOICEPACK_SOURCES.push(src); } return VOICEPACK_SOURCES.length; }

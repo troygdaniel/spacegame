@@ -217,6 +217,27 @@ const CAMPWING_ORDER = {
 const campWingNo = (code, vars) => ({ ok: false, code, say: uiText('camp.no.' + code, vars) });
 function campWingPlural(n, one, many) { return n === 1 ? one : many; }
 
+// ---- a new order that replaces another one says so (card space-game-order-replaced-line; Troy, 25 Nov 2026) ----
+// When an order takes a pilot off a DIFFERENT order that is still in progress, one pilot says so on the radio, once for the order however many pilots it reached: "Wedge: breaking off. Going in." (camp.say.replaced.<verb>, named for the NEW order).
+// Nothing when the new order is the one they were on (the same kind and the same aim), or when they were idle: guarding the cruiser, or on an order that has run out (its target is gone, the ore is taken). The speaker is the first pilot of CAMP.pilots among those taken off.
+// Words and a trigger only: what an order does, and that a new one replaces the old, are as they were. Said in the orders that put a pilot on a new order (campWingOrder: all its verbs, Escort with no convoy among them); not by a dry check.
+function campWingBusy(C, o) { // is this order still in progress?
+  if (!o) return false;
+  if (o.type === 'guard') return !!o.at && o.at.kind !== 'carrier'; // guarding the cruiser is where a pilot rests
+  if (o.type === 'attack') return o.target ? !!(C.by[o.target] && C.by[o.target].hp > 0) : campAliens(C).length > 0; // a named target still alive, or aliens about
+  if (o.type === 'escort') return !!(C.by[o.target] && C.by[o.target].hp > 0);
+  if (o.type === 'fetch') { const ft = campWingLive(C, o.tg); return !!ft && !(ft.kind === 'cache' && C.caches[+String(ft.id).slice(6)] && C.caches[+String(ft.id).slice(6)].got); }
+  if (o.type === 'mine') return C.pickups.length > 0 || C.rocks.some(r => r.hp > 0);
+  return true; // hold, recall
+}
+function campWingSayReplaced(C, ships, was, line) {
+  let who = null, at = 99;
+  ships.forEach((u, i) => {
+    const o = was[i]; if (!u.pilot || !campWingBusy(C, o) || campWingKeyOf(o) === campWingKeyOf(u.order)) return;
+    const k = CAMP.pilots.findIndex(p => p.id === u.pilot); if (k < at) { at = k; who = u; }
+  });
+  if (who && campPilotName(who)) campSay(C, 'camp.say.replaced.' + line, { name: campPilotName(who) });
+}
 function campWingOrder(C, group, verb, target, how, dry) {
   if (!C || C.result) return campNo('over');
   const V = CAMP.wing.verbs[verb]; if (!V) return campNo('what');
@@ -230,7 +251,8 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (verb === 'recall') {
     const rc = id === 'all' ? 'recall' : 'wing.recall', rv = { group: gname, name: '' }; // one part recalled is named: "Fighters, return to the carrier."
     if (dry) return campYes(rc, rv);
-    ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++;
+    const was = ships.map(u => u.order);
+    ships.forEach(u => { u.order = { type: 'recall' }; u.move = null; }); C.orders.recall++; campWingSayReplaced(C, ships, was, 'recall');
     const back = campWingQueueBack(C, id); // the ships of the group still waiting to leave the bay stay aboard (card space-game-recall-while-launching)
     (C.repairs || []).forEach(r => { r.stay = true; }); // a fighter still being mended stays aboard when it is whole (src/camprepair.js)
     const r = campWingDone(C, id, verb, null, ships, how, rc, rv); r.queued = back; return r;
@@ -246,7 +268,8 @@ function campWingOrder(C, group, verb, target, how, dry) {
       if (!C.L.convoys.length) { // no convoys in this level: Escort keeps the fighters close to the carrier
         if (dry) return campYes('escortcarrier');
         const mend0 = campWingLaunchDocked(C, docked, ships); campWingMendOrder(C, mend0, { type: 'guard', at: { kind: 'carrier' } });
-        ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++;
+        const was0 = ships.map(u => u.order);
+        ships.forEach(u => { u.order = { type: 'guard', at: { kind: 'carrier' } }; u.move = null; }); C.orders.escort++; campWingSayReplaced(C, ships, was0, 'guard');
         return campWingDone(C, id, verb, null, ships, how, 'escortcarrier');
       }
       const cv = campNearest(campConvoys(C), C.carrier); if (!cv) return campNo('noconvoy');
@@ -268,8 +291,9 @@ function campWingOrder(C, group, verb, target, how, dry) {
   if (dry) return campYes(say, vars);
   const mend = campWingLaunchDocked(C, docked, ships); // the pilots in the bay leave now, with this order; the ones being mended go out with it when whole
   if (mend.length) { const mo = CAMPWING_ORDER[verb](C, {}, tgo, 0); if (tgo) mo.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; if (verb === 'guard' && tgo && (tgo.kind === 'friend' || tgo.kind === 'convoy')) mo.grp = id; campWingMendOrder(C, mend, mo); }
+  const wasOrders = ships.map(u => u.order);
   ships.forEach((u, i) => { u.order = CAMPWING_ORDER[verb](C, u, tgo, i); if (tgo) u.order.tg = { kind: tgo.kind, id: tgo.id, ref: tgo.ref, name: tgo.name, x: tgo.x, y: tgo.y }; if (verb === 'guard' && tgo && (tgo.kind === 'friend' || tgo.kind === 'convoy')) u.order.grp = id; u.move = null; }); // grp: the group the guard of a ship was given to (campWingGuardStep says its end once for it)
-  C.orders[verb] = (C.orders[verb] | 0) + 1;
+  C.orders[verb] = (C.orders[verb] | 0) + 1; campWingSayReplaced(C, ships, wasOrders, verb);
   return campWingDone(C, id, verb, tgo, ships, how, say, vars);
 }
 function campWingDone(C, id, verb, tg, ships, how, code, vars) {
@@ -308,7 +332,8 @@ function campWingGuardStep(C) {
 }
 
 // ---- what the map draws ----
-const campWingOrderKey = u => { const o = u.order || { type: 'guard', at: { kind: 'carrier' } }; return o.type + '|' + (o.tg ? o.tg.id : o.target || (o.at && o.at.id) || (o.at && o.at.kind) || ''); };
+const campWingKeyOf = o => { o = o || { type: 'guard', at: { kind: 'carrier' } }; return o.type + '|' + (o.tg ? o.tg.id : o.target || (o.at && o.at.id) || (o.at && o.at.kind) || ''); }; // an order's kind and what it is aimed at: two orders with the same key are the same order
+const campWingOrderKey = u => campWingKeyOf(u.order);
 function campWingState(C) {
   const out = [], ids = Object.keys(CAMP.wing.groups).filter(id => id !== 'all').concat(Object.keys(C.groups || {})); // 'all' is the same ships as 'fighters' now (no escort ship, card space-game-cut-escorts): one row for them
   ids.forEach(id => {
