@@ -83,9 +83,15 @@ function campPageHudGoal(C) {
   return { label, value, frac: need ? Math.max(0, Math.min(1, o.got / need)) : null, tone: o && (o.type === 'ore' || o.type === 'cashin') ? 'ore' : 'good' };
 }
 // the stock (landing 2): the ore as a meter, the missiles as one pip each with the reload key's chip (the key table's). The credits are not shown in flight
+// the build under way (card space-game-page-hud-reload-progress; Troy, 25 Nov 2026): how far the missile being built is, 0 to 1 (C.reloadAt is when it is done, the build time is campReload(C), CAMP.missile.reload: nothing typed here; src/campmissilebuild.js), 0 when none is building. The next empty pip fills with it and turns solid when it lands; queued (C.queued) is the builds waiting behind it, shown as +N to the right of the pips. What R does, its cost and its time are not touched
+function campPageHudReloadFrac(C) {
+  if (!(C.reloadAt > 0)) return 0;
+  const total = typeof campReload === 'function' ? campReload(C) : CAMP.missile.reload;
+  return total > 0 ? Math.max(0, Math.min(1, 1 - (C.reloadAt - C.t) / total)) : 1;
+}
 function campPageHudStock(C) {
   const S = campCruiserStatus(C), M = S.missiles;
-  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full, word: uiText('camp.corner.m.ore') }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', key: campCruiserMissileKey(), word: uiText('camp.corner.m.missiles') } };
+  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full, word: uiText('camp.corner.m.ore') }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', progress: campPageHudReloadFrac(C), queued: Math.max(0, Math.floor(C.queued || 0)), key: campCruiserMissileKey(), word: uiText('camp.corner.m.missiles') } };
 }
 
 // the hostiles (landing 3): drawn ONLY when a hostile is seen: the nearest group, what it is ("3 Skiffs" or "6 hostiles", the sight's own words), where (a compass point, the sight's words) and how far
@@ -158,7 +164,7 @@ function campPageHudBuild(doc) {
   R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = [];
-  R.stock = { el: stock, oreLab: olab, missLab: mlab, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
+  R.stock = { el: stock, oreLab: olab, missLab: mlab, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), queue: campPageHudEl(doc, 'span', 'ph-q', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
   return R;
 }
 // the element's property is written only when its value is not the one it has (a repainted label every frame was a large cost): the last value is kept on the element
@@ -192,7 +198,7 @@ function campPageHudPaint(R, M, doc) {
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) set(p, 'text', pl.name); });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
-  T.pips.forEach((p, i) => set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (i === k.missiles.n && k.missiles.building ? ' build' : ''))); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
+  T.pips.forEach((p, i) => { const b = i === k.missiles.n && k.missiles.building; set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (b ? ' build' : '')); set(p, '--p', (b ? Math.round(k.missiles.progress * 100) : 0) + '%'); }); set(T.queue, 'text', k.missiles.queued > 0 ? '+' + k.missiles.queued : ''); set(T.queue, 'display', k.missiles.queued > 0 ? '' : 'none'); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
   set(S.key, 'text', M.ship.key);
   ['shield', 'hull'].forEach(id => campPageHudPaintMeter(S[id], M.ship[id]));
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);

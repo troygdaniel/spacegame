@@ -58,7 +58,8 @@
 .ph-pips { display: flex; gap: .28em; flex: 1; }
 .ph-pip { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); }
 .ph-pip.on { background: var(--ph-ink); }
-.ph-pip.build { background: var(--ph-mute); }
+.ph-pip.build { background: linear-gradient(90deg, var(--ph-mute) var(--p, 0%), rgba(255, 255, 255, .09) var(--p, 0%)); } /* the pip being built fills as a small bar (card space-game-page-hud-reload-progress; --p is the share, written at most 10 a second) */
+.ph-q { font-size: .72em; font-weight: 600; color: var(--ph-ink); font-variant-numeric: tabular-nums; white-space: nowrap; } /* +N: the builds queued behind it */
 /* top right under the stock: the hostiles; the one lit panel, drawn only when a hostile is seen */
 .ph-foes { right: 1.3em; top: 7.2em; width: 15em; background: rgba(58, 18, 40, .62); border-color: rgba(255, 111, 168, .45); display: flex; flex-direction: column; gap: .35em; }
 .ph-foes .ph-k, .ph-foes .ph-lab { background: #ffc3da; }
