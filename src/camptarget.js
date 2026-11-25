@@ -98,9 +98,20 @@ function campSelList(C) { // the stops of Q and W: All pilots, then the pilots a
   if (!C || !C.carrier) return [];
   const pilots = (CAMP.wing.squads || []).map(sq => {
     const ships = campWingShips(C, sq); if (!ships.length && !campWingDocked(C, sq).length) return null; // lost, with nothing in the bay to take its place: not a stop
-    return { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0] || null, units: ships.length ? [ships[0]] : [], name: campSelPilotName(ships[0] || null, sq) };
+    return { id: CAMP_SELPILOT + sq, kind: 'pilot', squad: sq, unit: ships[0] || null, units: ships.length ? [ships[0]] : [], name: campSelPilotName(ships[0] || null, sq), label: campSelLabel(CAMP_SELPILOT + sq) };
   }).filter(Boolean);
-  return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName() }].concat(pilots);
+  return [{ id: CAMP_SELALL, kind: 'all', squad: '', unit: null, units: campSelAllUnits(C), name: campSelAllName(), label: campSelAllName() }].concat(pilots);
+}
+function campSelLabel(id) { // a stop's words in the fleet pick and the corner: its call sign and name (CAMP.pilots: Red 1 Wedge; card space-game-keys5-qwe), or All pilots
+  if (id === CAMP_SELALL) return campSelAllName();
+  const sq = String(id).replace(CAMP_SELPILOT, ''), p = (CAMP.pilots || []).find(q => q.squad === sq);
+  return p ? (p.call ? p.call + ' ' : '') + p.name : sq;
+}
+const campSelIs = (C, id) => !!C && (id === CAMP_SELALL ? !C.sel || C.sel === CAMP_SELALL : C.sel === id); // is that stop the WHO now (nothing picked is All pilots)
+function campSelPick(C, id, how) { // a row of the fleet pick (W, then a digit): that pilot, or All pilots, is WHO. No order is given; a pilot who is lost (and has nothing in the bay) is no stop
+  if (!C || !C.carrier) return campNo('what');
+  const e = campSelList(C).find(x => x.id === id); if (!e) return campNo('nopilot');
+  C.sel = e.id; campMarkTouch(C, true, false); return { ok: true, say: '', who: e.id };
 }
 function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // the first stop of Q: WHO is all three pilots
 function campSelNow(C) { // WHO now: never null with a cruiser; '' (nothing picked), or a pilot who was lost or is home, is All pilots
@@ -109,7 +120,7 @@ function campSelNow(C) { // WHO now: never null with a cruiser; '' (nothing pick
   if (!e) { C.sel = CAMP_SELALL; return list[0]; }
   return e;
 }
-function campSelStep(C, dir) { // Q (1): the next who (-1: the last), round at the ends (All pilots, Wedge, Kara, Apollo, All pilots...)
+function campSelStep(C, dir) { // the next who (-1: the last), round at the ends (All pilots, Wedge, Kara, Apollo, All pilots...): no key steps it since card space-game-keys5-qwe (the fleet pick, W and a digit), the code and the tests keep it
   const list = campSelList(C); if (!list.length) { if (C) C.sel = CAMP_SELALL; return null; }
   const at = Math.max(0, list.findIndex(e => e.id === C.sel)), d = dir < 0 ? -1 : 1, i = (at + d + list.length) % list.length;
   C.sel = list[i].id; campMarkTouch(C, true, false); return list[i];
@@ -183,7 +194,7 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     return Object.assign({}, r, { verb: h ? 'attack' : 'guard', formup: !h && !fr }); // formup: nothing was picked, the pilots guard the cruiser
   }
   const f = campSelNow(C), group = f && f.kind === 'pilot' ? f.squad : 'fighters';
-  if (verb !== 'attack' && verb !== 'guard') return campNo('what');
+  if (verb !== 'attack' && verb !== 'guard' && verb !== 'formup') return campNo('what');
   if (!campWing(C, 'fighter').length && !campWingDocked(C, group).length) return campNo(C.launchQ.length ? 'launching' : 'nofighters'); // pilots in the bay take an order by launching (card space-game-keys-orders)
   if (verb === 'attack') {
     const h = campTgtNow(C);
@@ -191,5 +202,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     const near = !h && !dry ? campTgtNearest(C) : null; // nothing picked: the nearest hostile is picked now, as \ would (it is THE target: the bracket, the display, Fly to the target and the missile follow it)
     return campWingOrder(C, group, 'attack', h ? h.id : near ? near.id : null, how || 'key', dry);
   }
+  if (verb === 'formup') return campWingOrder(C, group, 'guard', null, how || 'key', dry); // W, then 5 (card space-game-keys5-qwe, Troy): form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
   const fr = campFriNow(C); return campWingOrder(C, group, 'guard', fr ? fr.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser
 }

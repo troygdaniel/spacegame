@@ -95,7 +95,7 @@ function campSquadNext(C) {
 // campSquadsLit(openId)             the squads a name is about: a squad's own name is that squad, 'squads' (the token the W order keeps) is all three, any other list or none is nobody's
 // campSquadsFocus(P, C)             the squads in focus now: the pilot Q picked, else none
 // campSquadsKeep(P, openId, now)    an order was given from list openId: its squads keep their ring (nothing for a list that is not a squad's)
-// campSquadsFree(P)                 X: the kept ring goes
+// campSquadsFree(P)                 the kept ring goes (no key calls it now that X is gone: card space-game-keys5-qwe; the tests do)
 // campSquadsShown(P, C, now)        the squads to draw a ring round this frame: the focus, which replaces the kept ring, else the kept ring until its time is up
 function campSquadsLit(openId) {
   return openId === 'squads' ? CAMP.wing.squads.slice() : CAMP.wing.squads.indexOf(openId) >= 0 ? [openId] : [];

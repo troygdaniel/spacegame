@@ -19,6 +19,7 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
 g.run(`CAMP_CORNERS.splice(0, CAMP_CORNERS.length, ...CAMP_CORNERS.filter(d => d.id === 'fleet' || d.id === 'cruiser'));`); // this suite is the panel with FLEET, S CRUISER (card space-game-layout-cruiser, src/campcruiserhud.js) and the probe it adds: the target corners other cards register (HOSTILES, FRIENDLIES: tests/campcorners.mjs) are not in this world
+g.run(`window.__CRUISER = campCornerDef('cruiser');`);
 
 g.run(`
   window.__new = () => { const C = window.C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; C.t = 1000; return C; }; // the three pilots are out beside the cruiser
@@ -37,19 +38,19 @@ g.run(`
 console.log('A. the table and the words');
 const camp = src('src/campaign.js');
 check('CAMP.corner: 320 wide (room for the FLEET line, FRIENDLIES and a name beside it: cards space-game-layout-align and space-game-fleet-sentence); details open 4 s after the keys, 4 s after a hit, fade over 600 ms', J('CAMP.corner.w') === 320 && J('CAMP.corner.show') === 4000 && J('CAMP.corner.hit') === 4000 && J('CAMP.corner.fade') === 600);
-check('the four corners have a place each: top left, bottom left, top right, bottom right (the bottom ones open upward, the top ones downward)', J('Object.keys(CAMP.corner.at).join()') === 'tl,bl,tr,br' && J('CAMP.corner.at.bl.dir') === -1 && J('CAMP.corner.at.br.dir') === -1 && J('CAMP.corner.at.tl.dir') === 1 && J('CAMP.corner.at.tr.dir') === 1 && J('CAMP.corner.at.bl.x') < 640 && J('CAMP.corner.at.br.x') > 640);
+check('the three corners have a place each (card space-game-keys6-layout): Q CRUISER and W FLEET share the row at 78, E FRIENDLIES is under it (row 26 + stack 6), ] HOSTILES at 78 on the right, nothing at the bottom right; every one opens downward; the shared row splits at CAMP.corner.split', J('Object.keys(CAMP.corner.at).join()') === 'tl,bl,tr' && ['tl', 'bl', 'tr'].every(c => J(`CAMP.corner.at.${c}.dir`) === 1) && J('CAMP.corner.at.tl.y') === 78 && J('CAMP.corner.at.tr.y') === 78 && J('CAMP.corner.at.bl.y') === J('CAMP.corner.at.tl.y + CAMP.corner.title.h + CAMP.corner.stack') && J('CAMP.corner.stack') === 6 && J('CAMP.corner.radio') === 70 && J('CAMP.corner.split') === 114 && J('CAMP.corner.splitGap') === 4);
 check('every number has its comment in the table', /show: 4000, +\/\/ ms/.test(camp) && /hit: 4000, +\/\/ ms/.test(camp) && /fade: 600, +\/\/ ms/.test(camp) && /w: 320, +\/\/ px: a panel/.test(camp) && /edge: 18, +\/\/ px: THE margin/.test(camp) && /ink: 2, +\/\/ px: a text/.test(camp) && /at: \{ +\/\/ where each corner/.test(camp));
 check('the four titles and the pilot-in-the-bay word are content, not bare keys', J(`uiText('camp.corner.cruiser')`) === 'CRUISER' && J(`uiText('camp.corner.fleet')`) === 'FLEET' && J(`uiText('camp.corner.hostiles')`) === 'HOSTILES' && J(`uiText('camp.corner.friendlies')`) === 'FRIENDLIES' && J(`uiText('camp.corner.bay')`) === 'in the bay');
 
 // ---- B. the registry ----
 console.log('B. the registry');
 g.run(`__new();`);
-check('FLEET is registered: bottom left, key Q (the chip is its cap), the title\'s words', J('campCornerDef("fleet").at') === 'bl' && J('__N().chips').join() === 'Q' && J('__N().title') === 'FLEET');
-g.run(`window.__n0 = CAMP_CORNERS.length; campCornerAdd({ id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'S', codes: ['KeyS'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] }); window.__n1 = CAMP_CORNERS.length; campCornerAdd({ id: 'probe', at: 'tr', keys: [], title: 'camp.corner.hostiles' }); window.__n2 = CAMP_CORNERS.length;`);
+check('FLEET is registered: the second half of the row at 78 (part b: x 118, 202 wide), key W (the chip is its cap), the title\'s words, and it draws the fleet pick as its details', J('campCornerDef("fleet").at') === 'tl' && J('campCornerNow(C, "fleet").span').join() === '118,202' && J('campCornerNow(C, "cruiser").span').join() === '0,114' && J('__N().chips').join() === 'W' && J('__N().title') === 'FLEET' && J('campCornerDef("fleet").list') === 'fleet' && J('campCornerDrawsList("fleet")') === true && J('campCornerDrawsList("cruiser")') === false);
+g.run(`window.__n0 = CAMP_CORNERS.length; campCornerAdd({ id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'Z', codes: ['KeyZ'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] }); window.__n1 = CAMP_CORNERS.length; campCornerAdd({ id: 'probe', at: 'tr', keys: [], title: 'camp.corner.hostiles' }); window.__n2 = CAMP_CORNERS.length;`);
 check('a corner another card adds: added once, added again by the same id it is replaced, not doubled', J('__n1') === J('__n0') + 1 && J('__n2') === J('__n1'));
-g.run(`campCornerAdd({ id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'S', codes: ['KeyS'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] });`);
-check('its chips are the table\'s keys ([ and ]) and the one that is not in the table (S), in order', J('campCornerNow(C, "probe").chips').join() === '[,],S' && J('campCornerNow(C, "probe").selection') === 'Raider 9' && J('campCornerNow(C, "probe").at') === 'tr');
-check('its keys open it, the one outside the table too (KeyS), and no other key does', (() => { g.run(`C.t = 1000; campCornerKey(C, 'KeyA')`); const a = J('campCornerNow(C, "probe").open'); g.run(`campCornerKey(C, 'KeyS')`); const b = J('campCornerNow(C, "probe").items.length'); return a === 0 && b === 3; })());
+g.run(`campCornerAdd({ id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'Z', codes: ['KeyZ'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] });`);
+check('its chips are the table\'s keys (E and ]) and the one that is not in the table (Z), in order', J('campCornerNow(C, "probe").chips').join() === 'E,],Z' && J('campCornerNow(C, "probe").selection') === 'Raider 9' && J('campCornerNow(C, "probe").at') === 'tr');
+check('its keys open it, the one outside the table too (KeyZ), and no other key does', (() => { g.run(`C.t = 1000; campCornerKey(C, 'KeyA')`); const a = J('campCornerNow(C, "probe").open'); g.run(`campCornerKey(C, 'KeyZ')`); const b = J('campCornerNow(C, "probe").items.length'); return a === 0 && b === 3; })());
 check('the items it returns pass through as they are (a bar, a line of text, a key chip), their heights add up', J('campCornerItemsH(campCornerNow(C, "probe").items)') === J('CAMP.corner.item.bar + CAMP.corner.item.text + CAMP.corner.item.key'));
 check('a corner with no selection and no rows is fine (the title row alone): nothing throws', J('(() => { campCornerAdd({ id: "bare", at: "tl", keys: [], title: "camp.corner.cruiser" }); const r = campCornerNow(C, "bare"); CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === "bare"), 1); return r.selection === "" && r.items.length === 0 && r.chips.length === 0; })()'));
 g.run(`CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'probe'), 1);`);
@@ -59,39 +60,39 @@ console.log('C. FLEET');
 g.run(`__new();`);
 check('the selection is All pilots by default, and it is a line of the corner, not of its details', J('__N().selection') === 'All pilots' && J('__N().open') === 0 && J('__N().items.length') === 0);
 g.run(`campSelStep(C, 1);`);
-check('with one pilot picked (D) the selection is that pilot\'s name', J('C.sel') === 'pilot:red' && J('__N().selection') === 'Wedge');
+check('with one pilot picked the selection is that pilot\'s call sign and name', J('C.sel') === 'pilot:red' && J('__N().selection') === 'Red 1 Wedge');
 g.run(`C.sel = 'pilot:green';`);
-check('the selection follows the pick: Kara', J('__N().selection') === 'Kara');
+check('the selection follows the pick: Red 2 Kara', J('__N().selection') === 'Red 2 Kara');
 g.run(`C.sel = 'all'; C.t = 10000;`);
 check('closed: no details until a key of the corner is used', J('__N().open') === 0 && J('__N().items.length') === 0);
-g.run(`campCornerKey(C, 'KeyQ');`);
+g.run(`campCornerKey(C, 'KeyW');`);
 const o1 = J('__N()');
-check('Q opens the details: a row for each pilot, in order Wedge, Kara, Apollo, each a bar with its hull numbers (hull now / max)', o1.open === 1 && o1.items.map(i => i.name).join() === 'Wedge,Kara,Apollo' && o1.items.every(i => i.kind === 'bar' && /^\d+ \/ \d+$/.test(i.num) && i.share > 0 && i.share <= 1), JSON.stringify(o1.items));
-g.run(`campCornerKey(C, 'KeyQ'); C.t = 10000 + 3999;`);
+check('W opens the details: the fleet pick\'s rows, numbered: 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, each a bar with its hull numbers (hull now / max) and a digit chip, then the key rows: 4 All pilots and 5 Form up on me (five rows in all, as Troy asked)', o1.open === 1 && o1.items.length === J(`campPanelList(C, 'fleet').length`) && o1.items.slice(0, 3).map(i => i.name).join() === 'Red 1 Wedge,Red 2 Kara,Red 3 Apollo' && o1.items.slice(0, 3).every(i => i.kind === 'bar' && /^\d+ \/ \d+$/.test(i.num) && i.share > 0 && i.share <= 1) && o1.items.map(i => i.cap).join() === o1.items.map((x, i) => String(i + 1)).join() && o1.items[3].kind === 'key' && o1.items[3].label === 'All pilots' && o1.items.length === 5 && o1.items[4].cap === '5' && o1.items[4].kind === 'key' && o1.items[4].label === 'Form up on me', JSON.stringify(o1.items));
+g.run(`campCornerKey(C, 'KeyW'); C.t = 10000 + 3999;`);
 check('W opens them too, and they stay 4 s at full strength', J('__N().open') === 1);
 g.run(`C.t = 10000 + 4300;`);
 check('then a fade over 0.6 s: half way is half', near(J('__N().open'), 0.5));
 g.run(`C.t = 10000 + 4700;`);
-check('then they go: no details, the title and the selection stay', J('__N().open') === 0 && J('__N().items.length') === 0 && J('__N().title') === 'FLEET' && J('__N().selection') === 'All pilots' && J('__N().chips').join() === 'Q');
-g.run(`C.t = 10000 + 4700; campCornerKey(C, 'KeyA'); campCornerKey(C, 'KeyE'); campCornerKey(C, 'BracketRight');`);
-check('a key of another corner or of no corner does not open FLEET', J('__N().open') === 0);
-g.run(`C.sel = 'pilot:green'; C.t = 50000; campCornerKey(C, 'KeyQ');`);
+check('then they go: no details, the line (W, who) and the selection stay', J('__N().open') === 0 && J('__N().items.length') === 0 && J('__N().title') === 'FLEET' && J('__N().selection') === 'All pilots' && J('__N().chips').join() === 'W');
+g.run(`C.t = 10000 + 4700; campCornerKey(C, 'KeyA'); campCornerKey(C, 'Enter'); campCornerKey(C, 'KeyQ'); campCornerKey(C, 'BracketRight');`);
+check('a key of another corner (Q is the cruiser\'s) or of no corner (E is the order) does not open FLEET', J('__N().open') === 0);
+g.run(`C.sel = 'pilot:green'; C.t = 50000; campCornerKey(C, 'KeyW');`);
 const o2 = J('__N()');
-check('with Kara picked the details still list all three pilots, and Kara is the one that is lit', o2.items.length === 3 && o2.items.filter(i => i.sel).map(i => i.name).join() === 'Kara', JSON.stringify(o2.items.map(i => [i.name, i.sel])));
+check('with Kara picked the details still list all three pilots, and Red 2 Kara is the row that is lit', o2.items.filter(i => i.kind === 'bar').length === 3 && o2.items.filter(i => i.sel).map(i => i.name).join() === 'Red 2 Kara', JSON.stringify(o2.items.map(i => [i.name || i.label, i.sel])));
 g.run(`C.sel = 'all';`);
-check('with All pilots all three are lit', J('__N().items.every(i => i.sel)'));
+check('with All pilots the All pilots row is the one lit (the digit that picked it)', J('__N().items.filter(i => i.sel).map(i => i.label).join()') === 'All pilots');
 
 // ---- D. the hook and the hit ----
 console.log('D. the reopen hook and the hit');
 g.run(`__new(); C.t = 5000; __N();`);
 g.run(`campCornerOpen(C, 'fleet'); C.t = 5000 + 3999;`);
-check('campCornerOpen(C, id) is the reopen hook: open for the default 4 s', J('__N().open') === 1 && J('__N().items.length') === 3);
+check('campCornerOpen(C, id) is the reopen hook: open for the default 4 s', J('__N().open') === 1 && J('__N().items.length') === J(`campPanelList(C, 'fleet').length`));
 g.run(`C.t = 30000; campCornerOpen(C, 'fleet', 1000); C.t = 30000 + 999;`);
 check('with its own time: 1 s at full strength', J('__N().open') === 1);
 g.run(`C.t = 30000 + 1300;`);
 check('and then the same fade', near(J('__N().open'), 0.5));
 g.run(`__new(); C.t = 2000; __N(); C.t = 20000; window.__p = campSelList(C).find(e => e.kind === 'pilot').unit; __p.hp -= 5;`);
-check('a pilot is hit (its hull goes down): the details come back by themselves', J('__N().open') === 1 && J('__N().items.length') === 3);
+check('a pilot is hit (its hull goes down): the details come back by themselves', J('__N().open') === 1 && J('__N().items.length') === J(`campPanelList(C, 'fleet').length`));
 g.run(`C.t = 20000 + 3999;`);
 check('for 4 s at full strength', J('__N().open') === 1);
 g.run(`C.t = 20000 + 4700;`);
@@ -107,62 +108,80 @@ check('the first look in a mission is not a hit (what it saw is only remembered)
 // ---- E. where ----
 console.log('E. where');
 const geo = J('campCornerGeom("bl", campCornerItemsH([{ share: 1 }, { share: 1 }, { share: 1 }]), 0)');
-check('FLEET\'s title row is at the bottom left, ending at y 630 (where the who box ended), and its details open above it with a gap', geo.title.x === 18 && geo.title.w === 320 && geo.title.y + geo.title.h === 630 && geo.det.y + geo.det.h === geo.title.y - 4 && geo.det.w === 320 && geo.det.h === 3 * 46 + 16, JSON.stringify(geo));
+const geoS = J('campCornerGeom("bl", campCornerItemsH([{ share: 1 }, { share: 1 }, { share: 1 }]), 0, 200)');
+check('FLEET\'s title row is under Q CRUISER\'s at the top left (y 110, the stack gap under the 78 row), and its details open DOWNWARD under it with a gap', geo.title.x === 18 && geo.title.w === 320 && geo.title.y === 110 && geo.title.y === J('CAMP.corner.at.tl.y + CAMP.corner.title.h + CAMP.corner.stack') && geo.det.y === geo.title.y + geo.title.h + 4 && geo.det.w === 320 && geo.det.h === 3 * 46 + 16, JSON.stringify(geo));
+check('a row slid down (dy: the row above has its details open) moves its title and its details together, and nothing else', geoS.title.y === geo.title.y + 200 && geoS.det.y === geo.det.y + 200 && geoS.det.h === geo.det.h && geoS.title.x === geo.title.x);
 const geoT = J('campCornerGeom("tl", 66, 0)');
 check('a top corner opens downward: the details start under the title row', geoT.det.y === geoT.title.y + geoT.title.h + 4 && geoT.title.y === J('CAMP.corner.at.tl.y'), JSON.stringify(geoT));
 check('with no items there is no frame, and dx moves both rectangles sideways', J('campCornerGeom("bl", 0, 0).det') === null && J('campCornerGeom("bl", 138, 40).title.x') === 58 && J('campCornerGeom("bl", 138, 40).det.x') === 58);
-check('the three details fit the room the corner is given (the rectangle the list dodge and the arrows\' labels use): from y 430 to 630', geo.det.y >= J('campTdispBox(true).y') && geo.title.y + geo.title.h <= J('campTdispBox(true).y + campTdispBox(true).h') && J('campTdispBox(true).x') === 18);
+{ // the stack: the second row sits as far down as the first row's details are open (campCornerSlide), by their height and the gap, and comes back as they fade
+  g.run(`__new(); C.t = 1000; window.__Ns = () => { const o = {}; CAMP_CORNERS.forEach(d => { o[d.id] = campCornerNow(C, d.id); }); return o; };`);
+  const sl = (ext) => J(`campCornerSlide('probebl', __Ns(), ${ext ? JSON.stringify(ext) : 'null'})`), tcl = J('CAMP_CORNERS.find(d => d.at === "tl").id');
+  check('STACKED (card space-game-keys5-corners): with nothing open the second row is where it is; the first row (the top one) never slides', sl() === 0 && J(`campCornerSlide('${tcl}', __Ns(), null)`) === 0);
+  g.run(`campCornerAdd({ id: 'probebl', at: 'bl', keys: [], title: 'camp.corner.friendlies', selection: () => '', rows: () => [] }); campCornerAdd({ id: 'probetl', at: 'tl', keys: [{ cap: 'Z', codes: ['KeyZ'] }], title: 'camp.corner.cruiser', selection: () => '', rows: () => [{ kind: 'bar', name: 'a', num: '1', share: 1 }, { kind: 'text', text: 'b' }] }); CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'cruiser'), 1); C.t = 20000; campCornerKey(C, 'KeyZ');`);
+  const h1 = J('campCornerItemsH([{ kind: "bar" }, { kind: "text" }]) + CAMP.corner.pad * 2 + CAMP.corner.gap');
+  check('the first row\'s details open: the second row slides down by their frame\'s height and the gap', sl() === h1 && h1 === 46 + 20 + 16 + 4, sl());
+  g.run(`C.t = 20000 + 4300;`);
+  check('and back as they fade: half way is half', near(sl(), h1 / 2));
+  g.run(`C.t = 20000 + 4700;`);
+  check('and the row is where it was when they are gone', sl() === 0);
+  check('a list the first row has that this file does not know (the cruiser list hangs under it): ext { h, k } slides the row by its height times its strength', sl({ h: 340, k: 1 }) === 340 && near(sl({ h: 340, k: 0.5 }), 170) && sl({ h: 340, k: 0 }) === 0);
+  g.run(`CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'probetl'), 1); CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'probebl'), 1); campCornerAdd(__CRUISER);`);
+}
+check('the room of the left stack (campTdispBox(true)) is the two rows closed, from the top row down to the bottom of the second; the right stack\'s is the same at the right', J('campTdispBox(true).x') === 18 && J('campTdispBox(true).y') === 78 && J('campTdispBox(true).h') === 110 + 26 - 78 && J('campTdispBox(false).x') === 942 && J('campTdispBox(false).y') === 78 && J('campTdispBox(false).w') === 320 && J('campTdispBox(false).h') === 26);
 check('the MISSILES count is not under the FLEET corner any more (card space-game-missiles-cost-ore moved it into the status block at the top left): no CAMP.tdisp.count, no text of it in the scene', J('CAMP.tdisp.count') === null && !/H - CAMP\.tdisp\.count/.test(src('src/campaignscene.js')) && !/hud\.missiles/.test(src('src/campaignscene.js')));
-check('the room the corner takes is inside a rectangle the edge arrows\' labels keep out of', J('CAMP.nav.arrow.keep').some(r => r[0] === 0 && r[1] <= 446 && r[2] >= 18 + 260 && r[3] >= 630));
+check('the two stacks are inside rectangles the edge arrows\' labels keep out of: the rows closed, top left and top right', [J('campTdispBox(true)'), J('campTdispBox(false)')].every(b => J('CAMP.nav.arrow.keep').some(r => b.x >= r[0] && b.y >= r[1] && b.x + b.w <= r[2] && b.y + b.h <= r[3])));
 
 // ---- F. the drawing ----
 console.log('F. the drawing');
 g.run(`__new(); __scene(); campCornerSync(S, 0);`);
 const shown0 = J('__shown()');
-check('closed: the FLEET line (the chip Q, All pilots, the chip W, Form up: card space-game-fleet-sentence) and the S CRUISER corner (card space-game-layout-cruiser: chip S, title CRUISER, no selection), and nothing else', shown0.length === 6 && ['All pilots', 'Form up', 'Q', 'W', 'CRUISER', 'S'].every(t => shown0.includes(t)), JSON.stringify(shown0));
-g.run(`window.__PROBE = { id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'S', codes: ['KeyS'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] }; campCornerAdd(__PROBE); campCornerSync(S, 0);`);
-check('a corner another card adds is drawn by the same code, at its own corner (top right here: its title is on the right half of the screen) with its own chips, title and selection', ['HOSTILES', 'Raider 9', '[', ']', 'S'].every(t => J('__shown()').includes(t)) && J('S.hud.corner.probe.title.x') > 640 && J('S.hud.corner.probe.title.y') >= J('CAMP.corner.at.tr.y'));
-g.run(`campCornerKey(C, 'KeyS'); campCornerSync(S, 0);`);
+check('closed: the row at 78 (card space-game-keys6-layout): Q CRUISER, and W with the pilots\' digits (at the 202 px of its half the names do not fit: W 1 2 3 4), and nothing else', shown0.length === 7 && ['1', '2', '3', '4', 'W', 'CRUISER', 'Q'].every(t => shown0.includes(t)), JSON.stringify(shown0));
+g.run(`window.__PROBE = { id: 'probe', at: 'tr', keys: ['friendlies', 'hostiles', { cap: 'Z', codes: ['KeyZ'] }], title: 'camp.corner.hostiles', selection: C => 'Raider 9', rows: C => [{ kind: 'bar', name: 'Raider 9', num: '30 / 40', share: 0.75, color: 0xffb454 }, { kind: 'text', text: 'attacking Kara' }, { kind: 'key', cap: 'E', label: 'Attack', ok: true }] }; campCornerAdd(__PROBE); campCornerSync(S, 0);`);
+check('a corner another card adds is drawn by the same code, at its own corner (top right here: its title is on the right half of the screen) with its own chips, title and selection', ['HOSTILES', 'Raider 9', 'E', ']', 'Z'].every(t => J('__shown()').includes(t)) && J('S.hud.corner.probe.title.x') > 640 && J('S.hud.corner.probe.title.y') >= J('CAMP.corner.at.tr.y'));
+g.run(`campCornerKey(C, 'KeyZ'); campCornerSync(S, 0);`);
 check('its details open on its own key, a bar, a line of text and a key chip, under the title (the corner opens downward)', ['attacking Kara', 'Attack', 'E', '30 / 40'].every(t => J('__shown()').includes(t)) && J('S.objs.find(o => o.text === "attacking Kara").y') > J('S.hud.corner.probe.title.y'));
 g.run(`CAMP_CORNERS.splice(CAMP_CORNERS.findIndex(d => d.id === 'probe'), 1); campCornerHide(S.hud.corner.probe); S.hud.corner.probe.g.log = [];`);
-check('the title row is a frame and two chips (Q and the order key W of the line); no details frame', J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRoundedRect").length') === 3, JSON.stringify(J('S.hud.corner.fleet.g.log.map(l => l[0])')));
-check('the chip Q, who, the chip W and the order stand in the title row, in that order, left to right (no title word and no selection: the row is a line)', (() => { const V = 'S.hud.corner.fleet'; return J(`${V}.chips[0].x`) < J(`${V}.words[0].x`) && J(`${V}.words[0].x`) < J(`${V}.chips[1].x`) && J(`${V}.chips[1].x`) < J(`${V}.words[1].x`) && J(`${V}.words[0].y`) >= 604 && J(`${V}.words[0].y`) < 630 && !J(`${V}.title.vis`) && !J(`${V}.sel.vis`); })());
-g.run(`campCornerKey(C, 'KeyQ'); campCornerSync(S, 0);`);
+check('the fleet half of the row is a frame and one chip (W); no details frame', J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRoundedRect").length') === 2, JSON.stringify(J('S.hud.corner.fleet.g.log.map(l => l[0])')));
+check('the chip W then the pilots\' digits stand in the half of the row, left to right, inside its frame (x 118 on from the corner\'s, 202 wide), and the row is a line: no title word and no selection', (() => { const V = 'S.hud.corner.fleet', x0 = J('CAMP.corner.at.tl.x') + 118; return J(`${V}.chips[0].x`) >= x0 && J(`${V}.chips[0].x`) < J(`${V}.words[0].x`) && J(`${V}.words[0].x`) < J(`${V}.words[3].x`) && J(`${V}.words[3].x`) > J(`${V}.words[0].x`) && J(`${V}.words[0].y`) >= 78 && J(`${V}.words[0].y`) < 104 && !J(`${V}.title.vis`) && !J(`${V}.sel.vis`); })(), JSON.stringify(J('[S.hud.corner.fleet.chips[0].x, S.hud.corner.fleet.words.map(w => w.x), S.hud.corner.fleet.words[0].y]')));
+g.run(`campCornerKey(C, 'KeyW'); campCornerSync(S, 0);`);
 const shown1 = J('__shown()');
-check('opened by W: the three pilots\' names and numbers are drawn under the title, at full strength', ['Wedge', 'Kara', 'Apollo'].every(t => shown1.includes(t)) && shown1.filter(t => /^\d+ \/ \d+$/.test(t)).length === 3 && J('S.objs.filter(o => o.vis && ["Wedge", "Kara", "Apollo"].includes(o.text)).every(o => o.alpha === 1)'), JSON.stringify(shown1));
-check('and a frame for them and a bar for each pilot are drawn (the title row\'s frame and chip as well)', J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRoundedRect").length') === 4 && J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRect").length') >= 6, JSON.stringify(J('S.hud.corner.fleet.g.log.map(l => l[0])')));
-check('the details are above the title row (their names are higher on the screen than the line)', J('S.objs.find(o => o.text === "Wedge").y') < J('S.hud.corner.fleet.words[0].y'));
+check('opened by W: the three pilots\' names and numbers are drawn under the title, each after its digit chip, at full strength', ['Red 1 Wedge', 'Red 2 Kara', 'Red 3 Apollo', '1', '2', '3', '4'].every(t => shown1.includes(t)) && shown1.filter(t => /^\d+ \/ \d+$/.test(t)).length === 3 && J('S.objs.filter(o => o.vis && ["Red 1 Wedge", "Red 2 Kara", "Red 3 Apollo"].includes(o.text)).every(o => o.alpha === 1)'), JSON.stringify(shown1));
+check('and a frame for them and a bar for each pilot are drawn (the title row\'s frame and chip as well)', J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRoundedRect").length') === 3 + J('campCornerNow(C, "fleet").items.length') && J('S.hud.corner.fleet.g.log.filter(l => l[0] === "fillRect").length') >= 6, JSON.stringify(J('S.hud.corner.fleet.g.log.map(l => l[0])')));
+check('the details are UNDER the title row (their names are lower on the screen than the line)', J('S.objs.find(o => o.text === "Red 1 Wedge").y') > J('S.hud.corner.fleet.words[0].y'));
 g.run(`C.t += 4000 + 300; campCornerSync(S, 0);`);
-check('half way through the fade the names are half transparent and still drawn; the line is not', near(J('S.objs.find(o => o.text === "Kara").alpha'), 0.5) && J('S.objs.find(o => o.text === "Kara").vis') && J('S.hud.corner.fleet.words[0].alpha') === 1);
+check('half way through the fade the names are half transparent and still drawn; the line is not', near(J('S.objs.find(o => o.text === "Red 2 Kara").alpha'), 0.5) && J('S.objs.find(o => o.text === "Red 2 Kara").vis') && J('S.hud.corner.fleet.words[0].alpha') === 1);
 g.run(`C.t += 400; campCornerSync(S, 0);`);
 const shown2 = J('__shown()');
-check('faded away: the names and numbers are hidden; the line (the chips, who and the order) is still there', !shown2.includes('Wedge') && !shown2.includes('Kara') && shown2.includes('Form up') && shown2.includes('All pilots') && shown2.includes('Q') && shown2.includes('W'), JSON.stringify(shown2));
-g.run(`campCornerKey(C, 'KeyQ'); S.mode = 'map'; campCornerSync(S, 0);`);
+check('faded away: the names and numbers are hidden; the line (W and the digits) is still there', !shown2.includes('Red 1 Wedge') && !shown2.includes('Red 2 Kara') && shown2.includes('1') && shown2.includes('4') && shown2.includes('W') && shown2.includes('Q'), JSON.stringify(shown2));
+g.run(`campCornerKey(C, 'KeyW'); S.mode = 'map'; campCornerSync(S, 0);`);
 check('behind the map (or a card, the pause, the keys page) nothing of it is drawn', J('__shown()').length === 0 && J('S.hud.corner.fleet.g.log.length') === 0);
 g.run(`S.mode = 'play'; campCornerSync(S, 0);`);
-check('and it is back when the map is closed (a corner the game opened is still open)', J('__shown()').includes('Form up'));
+check('and it is back when the map is closed (a corner the game opened is still open)', J('__shown()').includes('W') && J('__shown()').includes('4'));
 g.run(`C.sel = 'pilot:green'; campCornerSync(S, 0);`);
-check('the selection is redrawn when the pick changes: Kara', J('__shown()').includes('Kara') && !J('__shown()').includes('All pilots'));
-check('an open left list (the convoy list: data, no key opens it) moves the corner right of it, with the same gap as the boxes always had; the corner goes back when it closes', (() => {
+check('the pick is redrawn when it changes: the digit of Red 2 Kara is the lit one (white) and the others are dim', J('S.hud.corner.fleet.words[1].text') === '2' && J('S.hud.corner.fleet.words[1].style.color') === '#ffffff' && J('S.hud.corner.fleet.words[0].style.color') === '#8fa6b8' && J('S.hud.corner.fleet.words[3].style.color') === '#8fa6b8');
+check('an open left list (the convoy list: data, no key opens it; it hangs from y 150, under both rows of the left stack) does not move the corners, and neither does the fleet pick (its rows are the corner\'s own details, drawn by the corner)', (() => {
   g.run(`S.pn = Object.assign(campPanelNew(), { open: 'convoy' }); S.pnl = null; campCornerSync(S, 0);`);
-  const moved = J('S.hud.corner.fleet.words[0].x'), dx = J('campBoxDx(S, true)'), G = J('(() => { const G = campPanelsGeometry(campPanelDef("convoy"), 0); return G.x + G.w; })()');
+  const dxL = J('campBoxDx(S, true)'), x1 = J('S.hud.corner.fleet.chips[0].x');
+  g.run(`S.pn = Object.assign(campPanelNew(), { open: 'fleet' }); campCornerSync(S, 0);`);
+  const dxF = J('campBoxDx(S, true)');
   g.run(`S.pn = campPanelNew(); campCornerSync(S, 0);`);
-  return dx > 0 && J('S.hud.corner.fleet.chips[0].x') < moved + 20 && G + J('CAMP.tdisp.beside') === 18 + dx && J('S.hud.corner.fleet.chips[0].x') === J('CAMP.corner.at.bl.x') + J('CAMP.corner.title.pad') + J('CAMP.corner.title.chipW') / 2;
+  return dxL === 0 && dxF === 0 && x1 === J('S.hud.corner.fleet.chips[0].x') && x1 === J('CAMP.corner.at.tl.x + CAMP.corner.split + CAMP.corner.splitGap') + J('CAMP.corner.title.pad') + J('CAMP.corner.title.chipW') / 2;
 })());
 
 // ---- H. the alignment (card space-game-layout-align; Troy, 24 Nov 2026, from his screenshot) ----
 console.log('H. the alignment');
 {
   const at = J('CAMP.corner.at'), K = J('CAMP.corner'), W = J('W'), scn = src('src/campaignscene.js');
-  check('(1) the two top corners start at the same y and the two bottom corners end at the same y: HOSTILES is level with S CRUISER (it was 88 px lower), FRIENDLIES with FLEET', at.tl.y === at.tr.y && at.bl.y === at.br.y && at.tl.y === 78 && at.bl.y === 630, JSON.stringify(at)); // (78 since card space-game-missiles-cost-ore: the status block over S CRUISER has a fourth line)
-  check('(4) one margin: the left corners start at CAMP.corner.edge and the right ones end the same distance from the right edge (x is W - edge - w)', at.tl.x === K.edge && at.bl.x === K.edge && at.tr.x === W - K.edge - K.w && at.br.x === W - K.edge - K.w && W - (at.tr.x + K.w) === at.tl.x, JSON.stringify(at));
+  check('(1) the right row is level with the row at 78 on the left (HOSTILES with Q CRUISER and W), and E FRIENDLIES is under it', at.tl.y === at.tr.y && at.tl.y === 78 && at.bl.y === at.tl.y + K.title.h + K.stack, JSON.stringify(at)); // (78 since card space-game-missiles-cost-ore: the status block over S CRUISER has a fourth line)
+  check('(4) one margin: the left corners start at CAMP.corner.edge and the right ones end the same distance from the right edge (x is W - edge - w)', at.tl.x === K.edge && at.bl.x === K.edge && at.tr.x === W - K.edge - K.w && W - (at.tr.x + K.w) === at.tl.x, JSON.stringify(at));
   check('(4) the key line and the radio line start where the frames do: x = edge - ink (the stroke and the letter\'s side put the first letter ink px right of x)', /keys: this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - 44/.test(scn) && /this\.hud\.chat = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, /.test(scn) && K.edge === 18 && K.ink === 2 && !/add\.text\(24, H - /.test(scn));
-  check('(4) the target box\'s room is the right corners\' column: its width is the panel\'s and its right edge is the margin', J('CAMP.tdisp.w') === K.w && J('CAMP.tdisp.right') === K.edge && J('campTdispBox().x') === at.br.x && J('campTdispBox(true).w') === K.w);
-  check('(5) the top and bottom of the screen: the title rows are inside the screen with room for the details, and the arrows\' labels keep out of all four title rows', [['tl', 78], ['tr', 78], ['bl', 604], ['br', 604]].every(([c, y]) => J('CAMP.nav.arrow.keep').some(r => at[c].x >= r[0] && y >= r[1] && at[c].x + K.w <= r[2] && y + K.title.h <= r[3])), JSON.stringify(J('CAMP.nav.arrow.keep')));
+  check('(4) the target box\'s room is the right corners\' column: its width is the panel\'s and its right edge is the margin', J('CAMP.tdisp.w') === K.w && J('CAMP.tdisp.right') === K.edge && J('campTdispBox().x') === at.tr.x && J('campTdispBox(true).w') === K.w);
+  check('(5) the title rows are inside the screen and the arrows\' labels keep out of all four title rows', [['tl', 78], ['tr', 78], ['bl', 110]].every(([c, y]) => J('CAMP.nav.arrow.keep').some(r => at[c].x >= r[0] && y >= r[1] && at[c].x + K.w <= r[2] && y + K.title.h <= r[3])), JSON.stringify(J('CAMP.nav.arrow.keep')));
   g.run(`__new(); __scene(); campCornerAdd({ id: 'probe2', at: 'tr', keys: ['hostiles'], title: 'camp.corner.hostiles', selection: C => 'Mothership Alpha Centauri Relay Station', rows: () => [] }); campCornerSync(S, 0);`);
   const T = id => J('S.hud.corner.' + id + '.title.x');
-  check('(3) the chip column is as wide in every corner: S CRUISER and the probe (one chip each) start their titles at the same distance from their left edge (FLEET is a line: its chip starts at the same place; tests/campfleetsentence.mjs)', T('cruiser') - at.tl.x === T('probe2') - at.tr.x && T('cruiser') - at.tl.x === K.title.pad + K.title.chips * (K.title.chipW + K.title.chipGap) - K.title.chipGap + K.title.gap && J('S.hud.corner.fleet.chips[0].x') - at.bl.x === J('S.hud.corner.cruiser.chips[0].x') - at.tl.x, [T('cruiser'), T('probe2')].join());
-  check('(3) the chips are the same size and on the same baseline in every corner: the first chip starts at the same distance from the corner\'s edge and is as high', J('S.hud.corner.cruiser.chips[0].x') - at.tl.x === J('S.hud.corner.fleet.chips[0].x') - at.bl.x && J('S.hud.corner.cruiser.chips[0].y') - at.tl.y === J('S.hud.corner.fleet.chips[0].y') - (at.bl.y - K.title.h) && J('S.hud.corner.probe2.chips[0].y') - at.tr.y === J('S.hud.corner.cruiser.chips[0].y') - at.tl.y);
+  check('(3) the chip column is as wide in every corner: S CRUISER and the probe (one chip each) start their titles at the same distance from their left edge (FLEET is a line: its chip starts at the same place; tests/campfleetsentence.mjs)', T('cruiser') - at.tl.x === T('probe2') - at.tr.x && T('cruiser') - at.tl.x === K.title.pad + K.title.chips * (K.title.chipW + K.title.chipGap) - K.title.chipGap + K.title.gap && J('S.hud.corner.fleet.chips[0].x') - at.tl.x - K.split - K.splitGap === J('S.hud.corner.cruiser.chips[0].x') - at.tl.x, [T('cruiser'), T('probe2')].join());
+  check('(3) the chips are the same size and on the same baseline in every corner: the first chip starts at the same distance from the corner\'s edge and is as high', J('S.hud.corner.cruiser.chips[0].x') - at.tl.x === J('S.hud.corner.fleet.chips[0].x') - at.tl.x - K.split - K.splitGap && J('S.hud.corner.cruiser.chips[0].y') - at.tl.y === J('S.hud.corner.fleet.chips[0].y') - at.tl.y && J('S.hud.corner.probe2.chips[0].y') - at.tr.y === J('S.hud.corner.cruiser.chips[0].y') - at.tl.y);
   check('(2) a long selection is cut short with an ellipsis so that it ends inside the frame (the stand-in text is 10 px a letter here); it is worked out when the name changes, not every frame', (() => {
     const V = 'S.hud.corner.probe2';
     g.run(`(() => { const t = ${V}.sel; window.__sets = 0; t.setText = v => { window.__sets++; t.text = v; t.width = v.length * 10; return t; }; t.width = t.text.length * 10; })(); __SELKEY = 1; ${V}.selK = ''; campCornerSync(S, 0);`);
