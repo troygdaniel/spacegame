@@ -580,6 +580,17 @@ Behind `CAMP.flags.shiplook` (the N panel's New ship look row, `?shiplook=1`; of
 - **Amber.** `slookGunTone` turns the gun reach ring, the mounts' dots and barrels and the muzzle flash from the HUD's gold to the friend blue (#6fd6ff); `slookTorpTone` turns the pirates' amber and the aliens' red torpedo rings, flames and lines to the hostile pink. The gold of goals and caches is untouched.
 - **Tests.** `tests/shiplookfx.mjs` (a stand-in scene that has no tweens and no particles, so the file cannot use them).
 
+## The alien family, flat cut: the lancer, the tower and the mothership (card `space-game-b3-a-alien-ships`; Troy approved the cloud brief of 28 Nov 2026, decision 11: "use these in place of what is built")
+
+The mock's second round (`docs/ship-look-mock.html`, the section The alien family, flat cut; its K table is the authority) drew the three alien ships the first round left out, and `SLOOK.K` (`src/shiplook.js`) now has its outlines point for point, in the mock's order (sixteen kinds; the table's test reads the mock file itself).
+
+- **Lancer.** The torpedo boat's plan drawn with curves and a little narrower, violet, the warhead tip white (`hot`); signal shape the torpedo boat's (`tribar`, a triangle with a bar). Length 44, hit circle 16: as before.
+- **Tower.** Eight-sided, one short barrel, straight edges (no `s`), violet; `still: 1`: it never moves, so `slookTrailSpec` gives it no engine trail whatever its velocity says. Signal shape `square`: a filled square, straight cornered, 0.72 of the length (the mock's, not the rounded one first built). Drawn 77 px long as before.
+- **Mothership.** A wide swept hull, pointed nose (the control polygon reaches 0.56), two swept wings, a deep notch in the tail, a dark spine (`d`, the facet's colour) and a lighter lobe on each wing (`e`: two more facets, `SLOOK.lobe` 0.35 toward the dark where the spine is 0.55). Signal shape `ring2`: a ring in a ring, 0.42 and 0.2 (the glyph's id is the mock's, was `ringring`). Drawn 250 px long as before; cut with its curves it is 0.9 of that long and 1.02 across its wings (a baked picture of 292 by 302 px).
+- **More than one facet.** `slookPaint` (`src/shiplookdraw.js`) draws a kind's `e` list after its facet, in `slookLobe(side)`; `slookLobePolygons(kind, L, n)` gives them as point lists, and the briefing's and the target panel's svg (`slookPicSvg`, `src/shiplookpic.js`) has them too. No other kind has an `e` list.
+- **Sizes are the game's own.** The table's `px` of the three is the mock's play size (31, 46, 97: the tower's and the mothership's were worked out, not measured); only the trail's and the kill's size rules read it, the hull is drawn as long as `CAMP.size` and `SLOOKDRAW.len` say, and no hit circle, speed or rule is touched. A look at the game's own sizes (play zoom, close and far) shows the shapes read: the mothership as a swept shape at about 85 px across at the start zoom, the tower an octagon with its barrel, the lancer a small dart with a white tip.
+- **Pinned by** `tests/shiplook.mjs` (the sixteen kinds equal the mock's, `e` and `still` included), `shiplookdraw.mjs`, `shiplookpic.mjs`, `shiplookglyph.mjs`, `shiplookfx.mjs` (a tower has no trail).
+
 ## How it is built
 
 - `src/campaign.js` is the whole game in plain numbers, no Phaser: the level table, the ships, the waves, the five orders, the aliens' flying (the game's own `pirateSteer` and `PIRATES` from `src/enemies.js`), win and lose, the tech pick and its save. `tests/campaign.mjs` runs whole battles of it in Node.
