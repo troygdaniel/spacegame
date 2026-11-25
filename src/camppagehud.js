@@ -21,7 +21,7 @@ const CAMP_PAGEHUD = {
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
   pills: 6,                // the most place pills at once
   first: { level: 1, mission: 0, secs: 60, fade: 3, ids: ['fly', 'fire', 'missile'] }, // the first-minute chips (card space-game-page-hud-first-minute-chips): mission 1.1 only (level 1, mission index 0), the mission clock's first 60 s, faded out over the last 3; the ids are the key table's, in the order they sit
-  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:hostiles'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
+  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet', 'box:hostiles'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels, except the friendlies' box and the W box of the pilots' pick, which the grown rings replace, and the hostiles' box, whose details are in the hostiles panel: box:friendlies, box:fleet, box:hostiles), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
 };
 
 // ---- the switch ----

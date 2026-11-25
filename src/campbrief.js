@@ -127,7 +127,7 @@ const CAMPBRIEF_SCREEN = ['where', 'what', 'how']; // the words of the screens' 
 function campBriefNav(screen, code) {
   const last = CAMPBRIEF.screens - 1, at = Math.max(0, Math.min(last, screen | 0));
   if (code === 'Escape') return { screen: at, act: 'close' };
-  if (code === 'KeyL') return { screen: at, act: 'launch' };
+  if (campKeyIs('ready', code)) return { screen: at, act: 'launch' };
   if (code === 'Enter' || code === 'NumpadEnter') return at >= last ? { screen: at, act: 'launch' } : { screen: at + 1, act: '' };
   if (code === 'ArrowRight') return { screen: Math.min(last, at + 1), act: '' };
   if (code === 'ArrowLeft') return { screen: Math.max(0, at - 1), act: '' };

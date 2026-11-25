@@ -129,7 +129,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
     await key('Escape'); await t.run(400); // the overlay closes back to the room (the launch is L)
     note('after Esc on the briefing: scene ' + await j(`['CampHub', 'Campaign', 'Title', 'Pause'].filter(k => game.scene.isActive(k)).join()`) + ' | ' + (await shown()).join(' | ').slice(0, 300));
   }
-  await key('KeyL'); // launches the mission from the room
+  await key('KeyL'); await t.run(400); await key('KeyL'); // launches the mission from the room
   if (await settle(`game.scene.isActive('CampWarp')`, 30)) { await t.run(1500); await snap('3-warp'); await key('Enter'); }
   check('the Campaign scene starts on the mission', await settle(`game.scene.isActive('Campaign') && ${S}.camp`));
   for (let i = 0; i < 4 && (await j(`${S}.mode`)) !== 'play'; i++) { note('mode ' + await j(`${S}.mode`) + ': ' + await card()); await snap('4-card-' + i); await key('Enter'); await t.run(700); }

@@ -30,7 +30,7 @@ g.run('campPowerSet(false)');
 check('and campPowerSet(false) takes it all away again, byte for byte', g.run(SNAP) === off0);
 
 console.log('B. the keys and the list');
-check('J, K and L are no key: no code in CAMP_KEYS, no letter on the keys table', J('[CAMP_KEYS.shields, CAMP_KEYS.engines, CAMP_KEYS.weapons].every(k => k.k === "" && k.codes.length === 0)') && J('["KeyJ", "KeyK", "KeyL"].every(c => !Object.keys(CAMP_KEYS).some(id => CAMP_KEYS[id].codes.indexOf(c) >= 0))'));
+check('J, K and L are no key: no code in CAMP_KEYS, no letter on the keys table in flight (the ready room\'s L, CAMP_KEYS.ready marked room, is another scene\'s: card space-game-ready-l-briefing-first)', J('[CAMP_KEYS.shields, CAMP_KEYS.engines, CAMP_KEYS.weapons].every(k => k.k === "" && k.codes.length === 0)') && J('["KeyJ", "KeyK", "KeyL"].every(c => !Object.keys(CAMP_KEYS).some(id => !CAMP_KEYS[id].room && CAMP_KEYS[id].codes.indexOf(c) >= 0))'));
 check('the H page has no J K L row and no POWER heading', J("controlsGroup('campaign').rows.every(r => r.k.join() !== 'J,K,L' && r.sub !== 'POWER')"));
 check('the gauges have no direct key and the key text of each dial is empty', J('Object.keys(CAMP_GAUGE.keys).length') === 0 && J(`campGauges(${NEW}).every(d => d.key === '')`));
 check('there is no power list (deleted: card space-game-delete-off-lists); no list lists it with a key on the H page', J("CAMP_PANELS.panels.every(x => x.id !== 'power')") && J("campPanelKeyRows().every(r => !/^Power/.test(r.t))"));

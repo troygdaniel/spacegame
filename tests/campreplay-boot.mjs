@@ -38,7 +38,7 @@ try {
   check('H opens the ready room\'s page of keys (and any key closes it)', await j(`${HUB}.ck && ${HUB}.ck.open === true`)); await key('Escape'); await t.run(300);
   check('...closed, and the room is still the room', await j(`!${HUB}.ck && game.scene.isActive('CampHub')`));
   await t.run(900); await snap('5-launch-page');
-  await key('KeyL');
+  await key('KeyL'); await t.run(400); await key('KeyL'); // (card space-game-ready-l-briefing-first: the first L opens the briefing, the second launches)
   check('L launches the replay: the Campaign scene is on belt mission 2 as a replay, goes straight to the flight (no story), with the current wing (the three pilots, and the second bay, the extras and the rank as their strength: what the room shows) and ore (77)', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.camp && ${CAMPS}.mode === 'play'`) && await j(`${CAMPS}.replay === true && ${CAMPS}.mi === 1 && ${CAMPS}.camp.ore === 77 && ${CAMPS}.camp.bay.fighters + ${CAMPS}.camp.ships.filter(u => u.team === 'earth' && /^fighter-/.test(u.id)).length === 3 && ${CAMPS}.camp.strength >= CAMP.pilotStrength + CAMP.tech.bay2.fighters + 1`), await j(`JSON.stringify([${CAMPS}.mode, ${CAMPS}.camp.ore, ${CAMPS}.camp.bay, ${CAMPS}.camp.strength])`)); // (the pilots start each mission out beside the cruiser, so the three are the ones in the bay plus the ones out; the wing is the three pilots whatever the extras; the bay2 tech, the one bought extra and the rank are the strength: card space-game-three-pilots)
   await t.run(1500); await snap('6-replay-flight');
   // win it with a better score: the battle ends as won (the game's own end), the scene's debrief follows

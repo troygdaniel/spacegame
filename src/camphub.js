@@ -25,7 +25,7 @@
 //   campHubTechChange(id, P)       what a tech changes, in plain words with the numbers of CAMP.tech ("Carrier hull: 600 to 900")
 //   campHubRank(P)                 { ranked, name, n, of, points, next, nextName, wing, flown, all }: campRankStatus(P) (the ranks card, src/campranks.js) when it is there, else the plain score
 //   campHubBuy(P, what) / campHubGiveBack(P, what)   what: 'fighters'  -> { ok, key, vars }
-//   campHubKey(H, P, code, ctx)    one key -> { used, moved, action: '' | 'launch' | 'undock' | 'title', changed, ok, say: { key, vars } | { text } | null }; ctx: the scene's data, handed to a row's keys
+//   campHubKey(H, P, code, ctx)    one key -> { used, moved, action: '' | 'launch' | 'ready' | 'undock' | 'title', changed, ok, say: { key, vars } | { text } | null }; ctx: the scene's data, handed to a row's keys
 //   REPLAYS (card space-game-campaign-replay): on the board A D (or the arrows) choose a mission already done, R makes it the one the Briefing and Launch are for, X goes back to the next mission. campHubDone(P) is the list
 //   of missions that can be replayed; campHubTarget(P, H) is the mission Launch flies: the replay picked, else the next one; campHubLaunch(P, H) says { level, mission, via: 'hub', replay }. The story and the progress do not move.
 //   campHubLaunch(P)               what the Campaign scene is started with: { level, mission, via: 'hub' }
@@ -38,6 +38,7 @@ const CAMP_HUB = {
     3: { name: 'Aegir Watch', accent: '#ffb454', art: 'foundry' }
   },
   boardLines: 12,                                        // lines of the mission board shown at once (a level's name is a line): three levels of three missions fit
+  actReady: 'ready',                                     // what L does in the hall (card space-game-ready-l-briefing-first): the briefing of the mission Launch flies opens first (a mission with no briefing launches at once); L again, in the briefing, launches (src/campbrief.js). In a dock L is the row's own way out (undock)
   act: { launch: 'launch', board: 'brief' },             // what Enter does on a row, by id: the action the scene carries out; a row with none goes on to the next one (board: INSIDE its overlay, Enter opens the big briefing, src/campbriefdraw.js)
   over: {},                                              // the rows that open an overlay on Enter, by id (filled below, where the helpers are): { len(P) the list's length, get(H) / set(H, i) the cursor, go(H, P, res) what Enter does on the choice, key(H, P, code, res) its own keys }. Not in a dock's room: its rows go on as ever
   note: {},                                              // the live note under a row's name, by id: (P) => text (filled below, where the helpers are)
@@ -249,7 +250,7 @@ function campHubRows(P, ids, ctx) { // ctx: the scene's data (a dock passes { do
   return campHubIds(ids).map((id, k) => { let note = ''; try { note = String(CAMP_HUB.note[id](P, ctx)); } catch (e) { note = ''; } return { id, n: k + 1, name: uiText('camp.hub.row.' + id), note }; });
 }
 const campHubFoot = (row, ctx) => { const k = 'camp.hub.dockfoot.' + row, t = ctx && ctx.dock ? uiText(k) : k; return /^camp\./.test(t) ? uiText('camp.hub.foot.' + row) : t; }; // a dock's room has its own foot lines for the rows that go on to another one
-const campHubKeyLine = () => uiText('camp.hub.keys');
+const campHubKeyLine = dock => uiText(dock ? 'camp.hub.keys.dock' : 'camp.hub.keys'); // a dock's room has its own line (three rows, L undocks)
 const campHubLaunch = (P, H) => { const t = campHubTarget(P, H); return { level: t.level, mission: t.i, via: 'hub', replay: t.replay }; }; // replay: the Campaign scene flies it from its standard start and moves nothing
 
 // ---- the keys ----
@@ -299,7 +300,7 @@ function campHubKey(H, P, code, ctx) {
       return res;
     }
   }
-  if (code === 'KeyL') { const out = rows.find(r => CAMP_HUB.act[r] === 'launch' || CAMP_HUB.act[r] === 'undock'); if (out) { res.used = true; res.action = CAMP_HUB.act[out]; } return res; } // L: from any row, when the room has a way out (Launch, or Undock in a dock)
+  if (campKeyIs('ready', code)) { const out = rows.find(r => CAMP_HUB.act[r] === 'launch' || CAMP_HUB.act[r] === 'undock'); if (out) { res.used = true; const a = CAMP_HUB.act[out], hall = !(ctx && (ctx.dock || typeof ctx.onLaunch === 'function')); res.action = a === 'launch' && hall ? CAMP_HUB.actReady : a; } return res; } // L: from any row, when the room has a way out: the hall's Launch row shows the briefing first (the briefing's own L launches), a dock's Undock row (or a room that has its own onLaunch) goes out at once
   if (code === 'KeyT' || (code === 'Escape' && !ov)) { res.used = true; res.action = 'title'; return res; }
   const rk = ov ? ov.key : (!dock && CAMP_HUB.over[id]) ? null : CAMP_HUB.rowKey[id]; if (rk) { const r = rk(H, P, code, res, ctx); if (r) return r; }
   return res;
