@@ -29,6 +29,7 @@
 //     campCornerLineLayout(segs, T0, measure)   where a line's chips and words stand: { chips: [{ x, cap, ok }], words: [{ x, text, ink, bold, size }] } (measure(text, segment) gives a width in px)
 //     campCornerFit(text, room, width)   the text cut short with an ellipsis until width(text) is at most room px (the selection beside a title: card space-game-layout-align)
 const CAMP_CORNERS = []; // the registered corners, in the order they were added
+const CAMP_CORNER_SHIFT = {}; // pos -> px: a corner's row (and what hangs under it) is moved down this far: the page HUD (src/camppagehud.js, card space-game-page-hud) puts a panel where the rows were, and the lists and details open under it
 const CAMP_CORNER_STATE = new WeakMap(); // C -> { open: { id: { at, ms } }, mem: { id: {} } }: a new C (the next mission) starts with every corner closed
 function campCornerAdd(def) { const i = CAMP_CORNERS.findIndex(d => d.id === def.id); if (i >= 0) CAMP_CORNERS[i] = def; else CAMP_CORNERS.push(def); return def; }
 // a corner that is one HALF of a row (part 'a': the first CAMP.corner.split px; part 'b': the rest, less CAMP.corner.splitGap): [x offset, width] in the row; null for a corner that has the whole row. Its details are as wide as the whole row
@@ -65,7 +66,7 @@ function campCornerSlide(id, Ns, ext) {
 const campCornerKind = it => it.kind || (it.share !== undefined ? 'bar' : 'text');
 const campCornerItemsH = items => (items || []).reduce((h, it) => h + (CAMP.corner.item[campCornerKind(it)] || CAMP.corner.item.text), 0);
 function campCornerGeom(pos, itemsH, dx, dy, span) { // the title row and the details' frame: the row sits at the corner, the details open away from the screen's edge (all four open downward since card space-game-keys5-corners); dy: the row is slid down (the row above has its details open)
-  const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0), th = K.title.h, ty = (a.dir < 0 ? a.y - th : a.y) + (dy || 0), dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
+  const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0), th = K.title.h, ty = (a.dir < 0 ? a.y - th : a.y) + (dy || 0) + (CAMP_CORNER_SHIFT[pos] || 0), dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
   return { title: { x: x + (span ? span[0] : 0), y: ty, w: span ? span[1] : K.w, h: th }, det: dh ? { x, y: a.dir < 0 ? ty - K.gap - dh : ty + th + K.gap, w: K.w, h: dh } : null };
 }
 function campCornerFit(text, room, width) { // text cut short with an ellipsis until width(text) fits room (width: a function giving a text's width in px); a text that fits is returned as it is
@@ -91,7 +92,7 @@ function campCornerNow(C, id) {
   const d = campCornerDef(id); if (!d || !C) return null;
   const st = campCornerState(C); if (d.hit && d.hit(C, st.mem[id] || (st.mem[id] = {}))) campCornerOpen(C, id, CAMP.corner.hit); // it was hit: the details come back for a while
   const open = campCornerShown(C, d);
-  return { id, at: d.at, span: campCornerSpan(d), chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', line: d.line ? d.line(C) || null : null, items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
+  return { id, at: d.at, rowHidden: typeof campPageHudHides === 'function' && campPageHudHides(d.id), span: campCornerSpan(d), chips: campCornerKeyList(d).map(k => k.cap), title: uiText(typeof d.title === 'function' ? d.title(C) : d.title), selection: d.selection ? String(d.selection(C) || '') : '', line: d.line ? d.line(C) || null : null, items: open > 0 && d.rows ? d.rows(C) || [] : [], open };
 }
 // ---- FLEET, the second half of the row at 78 (cards space-game-layout-fleet, space-game-fleet-sentence, space-game-keys5-corners and space-game-keys6-layout): the W chip and the pilots, one line that never fades; the details are the fleet pick ----
 // the fleet's half of the row (card space-game-keys6-layout; Troy, 24 Nov 2026: "Q CRUISER and W with the pilots on ONE row (W 1 Wedge 2 Kara 3 Apollo 4 All; if too tight at 320 px show W 1 2 3 4 and the names when W is pressed)"): the W chip, then each stop of the fleet pick with its digit, the picked one lit (All pilots: every digit lit), a pilot who is lost grey;

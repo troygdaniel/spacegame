@@ -74,8 +74,12 @@ function campCruiserHudMake(sc, uiFontFn) {
 function campCruiserHudPaint(g, H, C) {
   if (!g || !H || !H.crOre) return; // (a stand-in scene in a test has none)
   const K = CAMPCRUISERHUD, Z = campCruiserHudGeom(), S = campCruiserStatus(C), P = Z.plate, Q = Z.right.plate;
-  g.fillStyle(K.color.plate, K.plateAlpha).fillRect(P.x, P.y, P.w, P.h).fillRect(Q.x, Q.y, Q.w, Q.h);
-  [['shield', K.color.shield, 'crShieldN'], ['hull', K.color.hull, 'crHullN']].forEach(([id, col, num], i) => {
+  const hideL = typeof campPageHudHides === 'function' && campPageHudHides('status'); // the page HUD has the shield and hull (card space-game-page-hud): the left plate, its bars and words are not drawn
+  ['crShieldL', 'crShieldN', 'crHullL', 'crHullN'].forEach(k => { if (H[k] && typeof H[k].setVisible === 'function' && H[k].visible !== !hideL) H[k].setVisible(!hideL); });
+  const hideR = typeof campPageHudHides === 'function' && campPageHudHides('stock'); // the page HUD has the ore and missiles (landing 2)
+  ['crOre', 'crCash', 'crMis', 'crMisWhy', 'crMisKey'].forEach(k => { if (H[k] && typeof H[k].setVisible === 'function' && H[k].visible !== !hideR) H[k].setVisible(!hideR); });
+  g.fillStyle(K.color.plate, K.plateAlpha); if (!hideL) g.fillRect(P.x, P.y, P.w, P.h); if (!hideR) g.fillRect(Q.x, Q.y, Q.w, Q.h);
+  if (!hideL) [['shield', K.color.shield, 'crShieldN'], ['hull', K.color.hull, 'crHullN']].forEach(([id, col, num], i) => {
     const b = Z.rows[i].bar, d = S[id], w = b.x1 - b.x0, color = d.warn ? K.color.warn : col;
     g.fillStyle(K.color.off, 0.9).fillRect(b.x0, b.y0, w, b.y1 - b.y0);
     g.fillStyle(color, 1).fillRect(b.x0, b.y0, Math.max(0, w * d.frac), b.y1 - b.y0);

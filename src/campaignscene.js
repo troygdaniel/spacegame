@@ -122,8 +122,8 @@ class Campaign extends Phaser.Scene {
     const im = p.kind === 'star' && typeof starTexture === 'function'
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
-    made.push(im, label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16));
-    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13)); }
+    const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
+    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
     return made;
   }
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
@@ -409,6 +409,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
     if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
     if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
+    if (typeof campPageHudSync === 'function') campPageHudSync(this, this.time.now); // the page HUD, when its switch is on (src/camppagehud.js); before the corners, which open under its panel
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
     if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: the four stacked at the top, Q CRUISER and W FLEET at the left, ] HOSTILES and [ FRIENDLIES at the right (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)
@@ -585,7 +586,7 @@ class Campaign extends Phaser.Scene {
     const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
     if (H.mother && H.mother.text) b = Math.max(b, col + 20 + 12);
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
-    return b;
+    return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
   toastTop() { return this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; }

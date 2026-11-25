@@ -16,7 +16,8 @@ function campCornerSync(s, now) {
   const C = s.camp; if (!C || !s.hud || !s.add || typeof CAMP_CORNERS === 'undefined') return;
   const all = s.hud.corner || (s.hud.corner = {}), on = campTdispOn(s), Ns = {}, ext = on ? campCornerListUnder(s, now) : null;
   CAMP_CORNERS.forEach(d => { Ns[d.id] = on ? campCornerNow(C, d.id) : null; }); // every corner first: the second row of a stack sits as far down as the first row's details are open
-  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = Ns[d.id]; if (!N) campCornerHide(V); else campCornerDraw(s, V, N, campCornerSlide(d.id, Ns, ext)); });
+  s.cornerDy = {}; // (how far each row slid down this frame: the page HUD's friend panel slides with it, src/camppagehud.js)
+  CAMP_CORNERS.forEach(d => { const V = all[d.id] || (all[d.id] = campCornerMake(s)), N = Ns[d.id], dy = campCornerSlide(d.id, Ns, ext); s.cornerDy[d.id] = dy; if (!N) campCornerHide(V); else campCornerDraw(s, V, N, dy); });
 }
 // the cruiser list (the first row of the left stack has no details of its own: this list hangs under it): its frame's height plus the gap, and how strong it is (it fades); null when none is open
 function campCornerListUnder(s, now) {
@@ -29,7 +30,9 @@ function campCornerDraw(s, V, N, dy) {
   const K = CAMP.corner, T = K.title, left = N.at.charAt(1) === 'l', dx = campBoxDx(s, left), G = campCornerGeom(N.at, campCornerItemsH(N.items), dx, dy, N.span), g = V.g, o = N.open, T0 = G.title; V.on = true;
   const cy = T0.y + (T0.h - T.chipH) / 2, chipX = i => T0.x + T.pad + i * (T.chipW + T.chipGap);
   let CL, WL = []; // CL: the chips as drawn { x, cap, ok }; WL: the words of a line
-  if (N.line) { // a LINE (FLEET: card space-game-fleet-sentence): chips and words from the left, never fading; the title and the selection are not drawn
+  if (N.rowHidden) { // the page HUD has the row (card space-game-page-hud): no title, chips or words here, only the details under it
+    CL = []; V.title.setVisible(false); V.sel.setVisible(false); V.words.forEach(w => w.setVisible(false));
+  } else if (N.line) { // a LINE (FLEET: card space-game-fleet-sentence): chips and words from the left, never fading; the title and the selection are not drawn
     const mt = sg => (sg.bold ? V.meas.b : V.meas.p), L = campCornerLineLayout(N.line, T0, (t, sg) => { const m = mt(sg); m.setText(t); return m.width || t.length * (sg.bold ? 8.4 : 7); });
     CL = L.chips; WL = L.words; V.title.setVisible(false); V.sel.setVisible(false);
     while (V.words.length < WL.length) { const w = WL[V.words.length]; V.words.push(V.tx(w.size, w.ink, w.bold ? { fontStyle: 'bold' } : {})); } // (a word's size and weight are the first ones its place in the line was made with)
@@ -50,7 +53,7 @@ function campCornerDraw(s, V, N, dy) {
   const key = [CL.map(c => [c.x, c.cap, c.ok].join(':')).join(), N.title, dx, Math.round(T0.y), G.det ? G.det.h : 0, Math.round(o * 20), N.items.map(it => [campCornerKind(it), it.name || it.text || it.cap, it.num || it.label || '', Math.round((it.share || 0) * 100), it.color, it.ok, it.sel, it.cap, it.capOk].join(':')).join('|')].join('#');
   if (V.gkey !== key) { // the frame, the chips, the bars: drawn again when something they show changes
     V.gkey = key; g.clear();
-    g.fillStyle(0x04101c, 0.85).fillRoundedRect(T0.x, T0.y, T0.w, T0.h, 6); g.lineStyle(1, 0x38e1ff, 0.45).strokeRoundedRect(T0.x, T0.y, T0.w, T0.h, 6);
+    if (!N.rowHidden) { g.fillStyle(0x04101c, 0.85).fillRoundedRect(T0.x, T0.y, T0.w, T0.h, 6); g.lineStyle(1, 0x38e1ff, 0.45).strokeRoundedRect(T0.x, T0.y, T0.w, T0.h, 6); }
     CL.forEach(c => g.fillStyle(c.ok ? K.chip : 0x2a3b4c, c.ok ? 0.95 : 0.9).fillRoundedRect(c.x, cy, T.chipW, T.chipH, 4));
     if (G.det && o > 0) {
       const D = G.det; g.fillStyle(0x04101c, 0.9 * o).fillRoundedRect(D.x, D.y, D.w, D.h, 7); g.lineStyle(2, K.chip, 0.9 * o).strokeRoundedRect(D.x, D.y, D.w, D.h, 7);
