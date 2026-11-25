@@ -1,4 +1,4 @@
-// smoke: the Campaign keys of card space-game-keys6-enter (Troy, 24 Nov 2026): E the next friendly (ships you protect only, never a pilot; [ does nothing), Enter the one order (not with a list that takes Enter open, not just after a card closes), M a missile at the target, mute off M in a battle (Settings, from the pause card with S), Q then 3 mines the nearest ore by itself, W then 5 forms every pilot up (plain Node, no Chrome)
+// smoke: the Campaign keys of card space-game-keys6-enter (Troy, 24 Nov 2026): E the next friendly (ships you protect only, never a pilot; [ does nothing), Enter the one order (not with a list that takes Enter open, not just after a card closes), M a missile at the target, mute off M in a battle (Settings, from the pause card with S), Q then 3 mines the nearest ore by itself, Q then 7 forms every pilot up (plain Node, no Chrome)
 // Run: node tests/campkeys6.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
 import { readFileSync } from 'node:fs';
@@ -40,5 +40,5 @@ check('Q then 3 mines the nearest ore at once: the order is given, no field to p
 g.run(`window.C3 = campNew('home', [], { seed: 3, god: true }); C3.ships = C3.ships.filter(u => u.team !== 'alien'); campOrder(C3, 'launch'); __run(C3, 8); C3.rocks.forEach(r => { r.hp = 0; }); C3.pickups.length = 0; window.P3 = campPanelNew(); campPanelKey(P3, C3, 'KeyQ', 0);`);
 const none = J(`(() => { const r = campPanelKey(P3, C3, 'Digit3', 0); return { ran: r.ran, ok: r.ok, say: r.say, open: r.open }; })()`);
 check('no ore in reach: Q then 3 says so in the usual short no-line and the list stays open', none.ran && !none.ok && none.say === J(`uiText('camp.no.noore')`) && none.open === 'cruiser', JSON.stringify(none));
-check('W then 5 forms up every pilot when All pilots is picked', (() => { k('KeyW', 30000); k('Digit4', 30000); k('KeyW', 30001); const r = k('Digit5', 30001); return r.ran && r.ok && J(`['red', 'green', 'yellow'].every(s => campWingShips(C, s).every(u => u.order.type === 'guard'))`); })());
+check('Q then 7 (Form up on me, the last row) forms up every pilot, whoever is picked (card space-game-keys7-trim)', (() => { k('KeyQ', 30000); const r = k('Digit7', 30001); return r.ran && r.ok && r.row === 'formup' && J(`['red', 'green', 'yellow'].every(s => campWingShips(C, s).every(u => u.order.type === 'guard'))`); })());
 if (failed) { console.log('KEYS6 FAIL (' + failed + ')'); process.exit(1); } else console.log('KEYS6 OK');

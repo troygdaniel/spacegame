@@ -37,7 +37,7 @@ g.run(`
 {
   g.run(`__new(1); __k('KeyQ', 100);`);
   const rows = J('__rows().map(r => r.id)'), nrows = rows.length;
-  check('S opens the list: seven rows in a level with an outpost and a goal (goal, target, mine, dock, repair, reload, emergency)', J('campPanelOpen(P)') === 'cruiser' && rows.join() === 'goal,target,fmine,dock,srepair,sreload,emergency', rows.join());
+  check('Q opens the list: seven rows in a level with an outpost and a goal (goal, target, mine, dock, repair, emergency, form up on me)', J('campPanelOpen(P)') === 'cruiser' && rows.join() === 'goal,target,fmine,dock,srepair,emergency,formup', rows.join());
   const V = J('campPanelView(P, C)');
   check('the view is numbered: every row carries its number 1 to 7, none is highlighted (at -1), the foot says the digits', V.numbers === true && V.rows.map(r => r.num).join() === '1,2,3,4,5,6,7' && V.at === -1 && V.last === 7 && V.keys === 'camp.ui.listnums', JSON.stringify([V.numbers, V.rows.map(r => r.num), V.at, V.last, V.keys]));
   check('Down, Up, Left and Right are not used: the list does not move, the ship flies', ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].every(c => { const r = J(`__k('${c}')`); return !r.used && !r.ran; }) && J('P.at') === 0 && J('campPanelOpen(P)') === 'cruiser');
@@ -59,7 +59,7 @@ g.run(`
   check('8 with only seven rows: nothing (used, no order, no words), the list stays open', none.used && !none.ran && none.say === '' && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(none));
   check('9 and 0: 9 is no row either; 0 is no key of the list at all', J(`__k('Digit9')`).used && !J(`__k('Digit9')`).ran && !J(`__k('Digit0')`).used);
   g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
-  check('with the warp tech the list has an eighth row, the blink: 8 does it (the blink hop needs to be ready; the key reaches the row)', J('__rows().length') === 8 && J(`__k('Digit8', 1700).row`) === 'blink');
+  check('with the warp tech and the blink switched on the list has an eighth row, the blink, before Form up on me: 7 does it (the blink hop needs to be ready; the key reaches the row)', (g.run('campBlinkSet(true)'), J('__rows().length') === 8 && J(`__k('Digit7', 1700).row`) === 'blink' && (g.run('campBlinkSet(false)'), true)));
   g.run(`__new(1);`);
   check('with no list open a digit is nothing (a digit key belongs to the open S list only)', !J(`__k('Digit1')`).used && !J(`__k('Digit4')`).used && J('campPanelOpen(P)') === '');
   g.run(`__k('KeyQ', 100);`);
@@ -114,7 +114,7 @@ g.run(`
   g.run(`window.S = __scene(); campPanelsInstall(S); S.mode = 'play'; campPanelKey(S.pn, S.camp, 'KeyQ', 1000); campPanelsPaint(S, 1000);`);
   check('each visible row has its number in the chip at the left: 1 to 7, in order', J('S.pnl.rows.filter(r => r.name.visible).map(r => r.cap.t).join()') === '1,2,3,4,5,6,7', J('S.pnl.rows.filter(r => r.name.visible).map(r => r.cap.t).join()'));
   check('the words of the rows start after the chip (every row, so they line up)', J('S.pnl.rows.filter(r => r.name.visible).every(r => r.name.x > S.pnl.rows[0].cap.x + 10)'));
-  check('only the Reload missiles row has the second chip (its R), and no other', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()') === 'Reload missiles:R', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()'));
+  check('no row has the second chip: the Reload missiles row (its R) is off the list now (card space-game-keys7-trim)', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()') === '', J('S.pnl.rows.filter(r => r.cap2.visible).map(r => r.name.t + ":" + r.cap2.t).join()'));
   check('the foot says the digits and Esc (1-7  does a row    Esc close), no highlighted row\'s state under it', J('S.pnl.keys.t') === '1-7  does a row    Esc close', J('S.pnl.keys.t'));
   g.run(`campPanelClose(S.pn); campPanelGo(S.pn, S.camp, 'convoy'); campPanelsPaint(S, 1000);`);
   check('a list that is not numbered draws no digit in its chips (the convoy list, opened by data)', J('S.pnl.rows.filter(r => r.cap.visible).every(r => !/^[1-9]$/.test(r.cap.t))'));
@@ -122,30 +122,30 @@ g.run(`
 // ---- G. the words follow the real length (card space-game-s-list-eight-rows: the H page said 1-7 while the S list has eight rows, the warp blink the eighth) ----
 {
   const most = J(`campPanelMost('cruiser')`);
-  check('the S list can have eight rows: the table has eight that are not switched off (goal, target, mine, dock, repair, reload, emergency, warp blink), and campPanelMost says 8', most === 8 && J(`campPanelDef('cruiser').rows.filter(r => !r.off).map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,sreload,emergency,blink', most);
-  check('the H page\'s chip says 1-8 (it is read from the table, not typed in)', J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-8')`) && !J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-7')`), J(`CONTROLS.find(x => x.id === 'panels').rows.map(r => r.k.join()).join(' | ')`));
-  check('the pause card says 1 to 8 (the {cruiserlast} placeholder), and the placeholder is the S list\'s most rows; a list with no digits says nothing', J(`uiText('camp.ui.pausepanels')`).includes('then 1 to 8 does a row') && J(`campKeyVar('cruiserlast')`) === '8' && J(`campKeyVar('squadslast')`) === '' && J(`campKeyVar('nolast')`) === '');
-  g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.push({ id: 'zextra', order: 'repair', label: 'Extra', help: 'x' }); }`);
+  check('the Q list has seven rows: the table has seven that are not switched off (goal, target, mine, dock, repair, emergency, form up on me), and campPanelMost says 7', most === 7 && J(`campPanelDef('cruiser').rows.filter(r => !r.off).map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency,formup', most);
+  check('the H page\'s chip says 1-7 (it is read from the table, not typed in)', J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-7')`) && !J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-8')`), J(`CONTROLS.find(x => x.id === 'panels').rows.map(r => r.k.join()).join(' | ')`));
+  check('the pause card says 1 to 7 (the {cruiserlast} placeholder), and the placeholder is the Q list\'s most rows; a list with no digits says nothing', J(`uiText('camp.ui.pausepanels')`).includes('then 1 to 7 does a row') && J(`campKeyVar('cruiserlast')`) === '7' && J(`campKeyVar('squadslast')`) === '' && J(`campKeyVar('nolast')`) === '');
+  g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.push({ id: 'zextra', order: 'repair', label: 'Extra', help: 'x' }); cr.rows.push({ id: 'zextra1', order: 'repair', label: 'Extra 1', help: 'x' }); }`);
   check('a ninth row moves the words with it: the chip and the pause card say 9, and the digits stop at 9 (a tenth row is not counted)', J(`campPanelMost('cruiser')`) === 9 && J(`campPanelKeyRows().some(r => r.k.join() === '1-9')`) && J(`uiText('camp.ui.pausepanels')`).includes('1 to 9 does a row'));
   g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.push({ id: 'zextra2', order: 'repair', label: 'Extra 2', help: 'x' }); }`);
   check('a tenth row is not a digit: still 9', J(`campPanelMost('cruiser')`) === 9);
-  g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.splice(cr.rows.findIndex(r => r.id === 'zextra2'), 1); cr.rows.splice(cr.rows.findIndex(r => r.id === 'zextra'), 1); }`);
-  check('taking them away puts the words back to 8', J(`campPanelMost('cruiser')`) === 8 && J(`uiText('camp.ui.pausepanels')`).includes('1 to 8 does a row'));
-  // the live list: eight rows only with the warp blink tech (the foot says the live length), and digit 8 does row 8, the warp blink
-  g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
+  g.run(`{ const cr = campPanelDef('cruiser'); ['zextra2', 'zextra1', 'zextra'].forEach(id => cr.rows.splice(cr.rows.findIndex(r => r.id === id), 1)); }`);
+  check('taking them away puts the words back to 7', J(`campPanelMost('cruiser')`) === 7 && J(`uiText('camp.ui.pausepanels')`).includes('1 to 7 does a row'));
+  // the live list: eight rows only with the blink switched on AND its tech (card space-game-keys7-trim: the blink is off in the game); the foot says the live length, and digit 7 does the warp blink, 8 is Form up on me
+  g.run(`campBlinkSet(true); __new(1, ['blink']); __k('KeyQ', 100);`);
   const rows8 = J('__rows().map(r => r.id)');
-  check('with the blink tech the S list has eight rows and the eighth is the warp blink', rows8.length === 8 && rows8[7] === 'blink', rows8.join());
+  check('with the blink switched on and its tech the Q list has eight rows: the blink is the seventh and Form up on me the eighth', rows8.length === 8 && rows8[6] === 'blink' && rows8[7] === 'formup', rows8.join());
   check('the view and the foot say 1-8 (last 8, eight number chips 1 to 8)', J('campPanelView(P, C).last') === 8 && J('campPanelView(P, C).rows.map(r => r.num).join()') === '1,2,3,4,5,6,7,8' && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-8  does a row'), J(`campPanelView(P, C).rows.map(r => r.num).join()`));
-  const r8 = J(`__k('Digit8', 200)`);
-  check('digit 8 does row 8: the warp blink ran, it was taken, and the list closed', r8.row === 'blink' && r8.ran === true && r8.ok === true && r8.open === '', JSON.stringify(r8));
+  const r8 = J(`__k('Digit7', 200)`);
+  check('digit 7 does row 7: the warp blink ran, it was taken, and the list closed', r8.row === 'blink' && r8.ran === true && r8.ok === true && r8.open === '', JSON.stringify(r8));
   g.run(`__new(1, ['blink']); __k('KeyQ', 100);`);
-  const n8 = J(`__k('Numpad8', 300)`);
-  check('the keypad\'s 8 does row 8 too', n8.row === 'blink' && n8.ran === true && n8.ok === true, JSON.stringify(n8));
-  g.run(`__new(1, []); __k('KeyQ', 100);`);
+  const n8 = J(`__k('Numpad7', 300)`);
+  check('the keypad\'s 7 does row 7 too', n8.row === 'blink' && n8.ran === true && n8.ok === true, JSON.stringify(n8));
+  g.run(`campBlinkSet(false); __new(1, []); __k('KeyQ', 100);`);
   const rows7 = J('__rows().map(r => r.id)'), r7 = J(`__k('Digit8', 200)`);
-  check('without the blink tech the list has seven rows, the foot says 1-7, and digit 8 does nothing (no row 8)', rows7.length === 7 && J('campPanelView(P, C).last') === 7 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-7  does a row') && r7.ran === false && r7.row === '' && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(r7));
+  check('as the game is (no blink) the list has seven rows, the foot says 1-7, and digit 8 does nothing (no row 8)', rows7.length === 7 && J('campPanelView(P, C).last') === 7 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-7  does a row') && r7.ran === false && r7.row === '' && J('campPanelOpen(P)') === 'cruiser', JSON.stringify(r7));
   g.run(`__new(3, []); __k('KeyQ', 100);`);
-  check('the third level (no outpost, no blink tech) has six rows and the foot says 1-6: the words follow the live length', J('__rows().length') === 6 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-6  does a row'));
+  check('the third level (no outpost) has six rows and the foot says 1-6: the words follow the live length', J('__rows().length') === 6 && J(`uiText(campPanelView(P, C).keys, { last: campPanelView(P, C).last })`).startsWith('1-6  does a row'));
 }
 check('the game made no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nS LIST NUMBERS FAIL (${failed} of ${n})` : `\nS LIST NUMBERS PASS (${n} checks)`);

@@ -47,7 +47,7 @@ const campYardRows = () => CAMP_YARD.map(r => { const o = { id: r.id, order: r.d
 // (CAMP.power.on is false: src/campaign.js). true: all of it as it was. campPowerSet(on) is the one place that moves all of it; the tests of the pips switch it on first and say so.
 const CAMP_POWER = false;
 // THE SWITCH FOR THE WARP BLINK (card space-game-keys7-trim; Troy, 24 Nov 2026: removed everywhere the player can see it). false: no Q list row, and the tech is no longer offered after level 1 (campTechChoices). The code (campBlinkWhy, the hop in campStep, CAMP.tech.blink) is switched off, not deleted; true brings the row and the tech back.
-const CAMP_BLINK = false;
+const CAMP_BLINK = { on: false }; // campBlinkSet(on) moves it, the row's `off` too; the tests of the blink switch it on first and say so, as the tests of the pips do with campPowerSet
 // THE SWITCH FOR HOLD TO SPEAK (card space-game-keys-select; Troy, 23 Nov 2026, through ORCH: "disable voice orders for now"). false: no key is bound to it (the period is the friendlies' now), the floating key cap is not drawn, the key line, the H page and the hints do not name it. Typing an order (/) is untouched, and the code (src/listen.js) stays.
 // true: the voice has a key again. campVoiceSet(on, key) is the one place that moves it; the card that brings the voice back says which key (a { k, codes } like the other entries of CAMP_KEYS): nothing picks one here.
 const CAMP_VOICE = false;
@@ -64,7 +64,7 @@ const CAMP_PANELS = {
       { id: 'sreload', off: 1, order: 'reload', cap: 'reload', cost: 'missiles', label: 'Reload missiles', help: 'Queue one missile to build, for ore (R)' }, // card space-game-missiles-cost-ore: the Q list's row of the R key; `cap` is the CAMP_KEYS id whose key cap the row shows, `cost` what the rack would cost now (campPanelCost)
       { id: 'gdock', open: 'yard', off: 1, label: 'Dock and repair', help: 'Dock, mend the hull and the ships you protect' }, // the row that opens the dock list: switched off (`off`), not deleted: Dock at the outpost is a row of the Q list and Repair hull its own, the dock list has no way in
       { id: 'emergency', order: 'emergency', label: 'Emergency shields', help: 'Fill the shields at once, for ore' },
-      { id: 'blink', blink: 1, off: CAMP_BLINK ? 0 : 1, when: 'blink', label: 'Warp blink ahead', help: 'Warp blink hop (needs that tech)' }, // switched off with CAMP_BLINK (card space-game-keys7-trim)
+      { id: 'blink', blink: 1, off: 1, when: 'blink', label: 'Warp blink ahead', help: 'Warp blink hop (needs that tech)' }, // switched off with CAMP_BLINK (card space-game-keys7-trim)
       { id: 'formup', formup: 1, label: 'Form up on me', help: 'All pilots form up on the cruiser at once' } // the last row, 7 with an outpost (card space-game-keys7-trim, Troy, 24 Nov 2026: it was W then 5): all pilots, whoever is picked; the held target stays held; Enter with nothing held does the same
     ] },
     { id: 'fleet', side: 'left', corner: 'tl', head: 1, numbers: 1, key: 'W', code: 'KeyW', step: 1, fades: 1, title: 'FLEET', tab: 'Fleet', name: 'the fleet pick', rows: [ // card space-game-keys5-qwe (Troy, 24 Nov 2026): W opens the pick, a digit says WHO takes the order (C.sel), and 5 is Form up on me; W alone only opens it. It fades like the cruiser list and opens in the same place, with a heading of its own (`head`). A row with `who` is no order: it sets WHO (src/camptarget.js campSelPick); its label is the pilot's call sign and name (CAMP.pilots: Red 1 Wedge) and it is marked while it is the pick
@@ -138,6 +138,7 @@ function campPowerSet(on) { // the switch (CAMP_POWER): J K L, their row on the 
   }
   return on;
 }
+function campBlinkSet(on) { CAMP_BLINK.on = !!on; const r = CAMP_PANELS.panels[0].rows.find(x => x.id === 'blink'); if (r) r.off = on ? 0 : 1; } // the warp blink (card space-game-keys7-trim): its Q list row and its tech after level 1, together
 campPowerSet(CAMP_POWER);
 campVoiceSet(CAMP_VOICE);
 const campKeyCodes = id => (CAMP_KEYS[id] || { codes: [] }).codes;

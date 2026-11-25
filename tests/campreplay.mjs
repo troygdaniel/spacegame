@@ -15,6 +15,7 @@ import { BRIEF_STAND } from './briefstand.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame(); belt(g, 1); // the old Level 1, the belt, as level 1: this suite was written for it and pins its missions (card space-game-l1-rim-missions)
+g.run('campBlinkSet(true)'); // card space-game-keys7-trim: the warp blink (its row and its tech) is switched off in the game; this suite is about it, so it switches it on
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run(BRIEF_STAND);
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
