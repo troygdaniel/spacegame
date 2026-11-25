@@ -186,14 +186,14 @@ check('2 the style: the outline is on the ring\'s wrapper (.ph-rw, so a dim ring
 
 // 3 W then a digit
 g.run(`__new(); window.P = campPanelNew(); campCornerKey(C, 'KeyW'); window.__w1 = campPanelKey(P, C, 'KeyW', 100); window.__w2 = campPanelKey(P, C, 'KeyW', 150);`);
-check('3 W opens the menu and its details; tapping W again steps who and keeps both open', J('__w1.open') === 'fleet' && J('__w2.open') === 'fleet' && J('campCornerNow(C, "fleet").open') > 0 && J('C.sel') === 'pilot:red');
+check('3 W opens the menu; tapping W again steps who and keeps it open (the canvas details box of W is not drawn while the page HUD is on: the grown rings carry the digits and names, card space-game-page-hud-canvas-leftovers)', J('__w1.open') === 'fleet' && J('__w2.open') === 'fleet' && J('campCornerNow(C, "fleet").open') === 0 && J('C.sel') === 'pilot:red');
 g.run(`window.__d = campPanelKey(P, C, 'Digit3', 200); window.__shut = __d.ok && !__d.open && __d.fleet && __d.digit === 3 && /^who/.test(String(__d.row || ''));`);
 check('3 a digit takes the pick and closes the list; the scene\'s test for that is true for a who row only', J('__shut') === true && J('C.sel') === 'pilot:yellow' && J('campPanelOpen(P)') === '');
 g.run(`campCornerShut(C, 'fleet');`);
 const N3 = J('campCornerNow(C, "fleet")');
 check('3 the scene shuts the corner\'s details at once; the title row, the key chips and the selection stay', N3.open === 0 && N3.items.length === 0 && N3.title === 'FLEET' && N3.selection === 'Apollo' && N3.chips.length > 0, JSON.stringify([N3.open, N3.title, N3.selection]));
 g.run(`campCornerKey(C, 'KeyW');`);
-check('3 W opens the details again', J('campCornerNow(C, "fleet").open') > 0);
+check('3 W opens the details again (the switch off: the canvas box is drawn as it was; the switch on: not)', (g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'KeyW');`), J('campCornerNow(C, "fleet").open') > 0) && (g.run(`CAMP.flags.pagehud = true;`), J('campCornerNow(C, "fleet").open') === 0));
 g.run(`window.P = campPanelNew(); campPanelKey(P, C, 'KeyQ', 300); window.__q = campPanelKey(P, C, 'Digit1', 350);`);
 check('3 a digit in the Q list is no who row: the scene shuts nothing for it', !/^who/.test(String(J('__q.row') || '')));
 const sc3 = src('src/campaignscene.js');
@@ -264,9 +264,20 @@ check('10 the word and the chip are not written in the HUD: the verb is what cam
 g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'KeyE'); window.__off = campCornerNow(C, 'friendlies');`);
 const offBox = J('__off.open'), offItems = J('__off.items.length');
 g.run(`CAMP.flags.pagehud = true; window.__on = campCornerNow(C, 'friendlies'); window.__ow = (campCornerKey(C, 'KeyW'), campCornerNow(C, 'fleet'));`);
-check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the other corners are not touched', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') > 0 && J('__ow.items.length') > 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
+check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the W box is hidden too (card space-game-page-hud-canvas-leftovers) and the hostiles\' is not', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') === 0 && J('__ow.items.length') === 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("fleet"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
 g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = ''; CAMP.flags.pagedigit = true;`);
 check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 40000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
+
+console.log('L. the canvas leftovers (card space-game-page-hud-canvas-leftovers)');
+g.run(`CAMP.flags.pagehud = true; CAMP.flags.pagedigit = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.PL = campPanelNew(); campTcornerLook(PL, 0); window.RL = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); campTgtNearest(C); campPanelKey(PL, C, 'KeyW', 100); campCornerKey(C, 'KeyW'); campTcornerLook(PL, 100);`);
+check('L W is open with the page HUD on: the canvas W box draws nothing (its rows were the pilots\' digits, names and hull bars), and the page rings of the pilots are grown (digit, name, ring share) instead', J('campCornerPanelId()') === 'fleet' && J('campCornerNow(C, "fleet").open') === 0 && J('campCornerNow(C, "fleet").items.length') === 0 && J('campPageModel(C).pilots.open') === true && J('campPageModel(C).pilots.items.map(x => x.digit + " " + x.name).join()') === '1 Wedge,2 Kara,3 Apollo' && J('campPageModel(C).pilots.items.every(x => x.frac > 0 && x.color)') === true);
+check('L the canvas box of the HOSTILES is KEPT while the page HUD is on (the picked ship\'s picture, hull, shield and what it does): the page hostiles panel carries none of those, only the group, its direction and distance', J('campCornerNow(C, "hostiles").open') > 0 && J('campCornerNow(C, "hostiles").items.some(r => r.kind === "pic")') === true && J('campCornerNow(C, "hostiles").items.some(r => r.kind === "bar")') === true && J('Object.keys(campPageModel(C).foes).filter(k => /hull|shield|doing|pic/i.test(k)).length') === 0 && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
+check('L the hide list has the W box and not the hostiles\' (box:fleet, box:friendlies)', J('CAMP_PAGEHUD.hides.filter(x => /^box:/.test(x)).join()') === 'box:friendlies,box:fleet');
+g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'KeyW');`);
+check('L the switch off: the canvas W box is drawn as it was (three rows), the hostiles\' too', J('campCornerNow(C, "fleet").open') > 0 && J('campCornerNow(C, "fleet").items.length') === 3 && J('campCornerNow(C, "hostiles").open') > 0);
+g.run(`CAMP.flags.pagehud = true; campPanelClose(PL); campCornerShut(C, 'fleet'); campCornerKey(C, 'KeyE');`);
+check('L the W box\'s room is not given to anything else: the friendlies\' box stays hidden, the FLEET row (title, chips, the pilots\' line) is hidden by the page HUD as before', J('campCornerNow(C, "friendlies").open') === 0 && J('campCornerNow(C, "fleet").rowHidden') === true);
+g.run(`CAMP.flags.pagehud = false; C.tgt = ''; C.fsel = '';`);
 
 console.log('J. a full card hides the panels (card space-game-page-hud-hide-on-cards)');
 g.run(`
