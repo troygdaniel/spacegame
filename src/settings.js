@@ -450,8 +450,18 @@ class Settings extends Phaser.Scene {
 
   // ---------- CONTENT ----------
   draw_content() {
-    const by = this.by;
-    this.slots.contentEnd = contentBody(this, this.body, this.bx, by + 8, this.bw - 20);
+    const by = this.by, bx = this.bx, on = scrOn();
+    // the new screens (card space-game-screens-f-foundation): the switch is here so Troy can flip it from any scene (the N panel is flight-only); Enter does it too
+    this.label(bx, by + 4, uiText('scr.set.row').toUpperCase());
+    this.slots.scrOn = this.button(bx, by + 42, 220, uiText(on ? 'scr.set.on' : 'scr.set.off'), () => this.screensToggle(), { on, edge: on ? GREEN : CYAN, size: 13 });
+    this.txt(bx + 236, by + 32, uiText('scr.set.hint'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: this.bw - 270 }, lineSpacing: 3 } });
+    this.slots.status = this.txt(bx, by + 64, '', 13, '#9fe9ff', { oy: 0, style: { wordWrap: { width: this.bw } } });
+    this.slots.contentEnd = contentBody(this, this.body, this.bx, by + 84, this.bw - 20);
+  }
+  screensToggle() {
+    const on = scrSet(!scrOn());
+    this.slots.scrOn.set(uiText(on ? 'scr.set.on' : 'scr.set.off')).mark(on); this.slots.scrOn.edge = on ? GREEN : CYAN; this.slots.scrOn.draw(false);
+    this.say(uiText(on ? 'scr.set.said.on' : 'scr.set.said.off'), on ? '#6dff9c' : '#ffd37a');
   }
 
   // ---------- RESET ----------
@@ -537,6 +547,7 @@ class Settings extends Phaser.Scene {
       else if (this.section === 'listen') { listenSetOn(!LISTEN.on); this.listenRefresh(); }
       else if (this.section === 'flight') this.stepFeel(1);
       else if (this.section === 'reset') this.press('reset');
+      else if (this.section === 'content') this.screensToggle();
     }
   }
   close() {

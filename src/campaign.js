@@ -33,7 +33,8 @@ const CAMP = {
     hints: true,                           // the first-minute hints and the beats' tips (src/campnudge.js, src/campbeats.js): off, none shows
     pagehud: true,                         // the page HUD (card space-game-page-hud, src/camppagehud.js): the flight HUD as page elements over the canvas, in the look of the agent board. ON for every player since card space-game-page-hud-default-on (Troy, 25 Nov 2026: "no need to switch back"): no row of the N panel, nothing remembered. The canvas HUD is still in the code, for the tests and a comparison only: the address ?pagehud=0 (or this flag set false by a test) draws it; undo point: the tag pagehud-default-before
     pagedigit: true,                       // the page HUD's rings (card space-game-page-hud-3; Troy, 25 Nov 2026: the DIGIT inside the ring, for the pilots and the ships you protect, and the name under the ring only while its list is open): true; false puts the initial inside the ring and "1 Wedge" under it (a row of the N panel)
-    shiplook: true                         // the new ship look, the flat cut (card space-game-ship-look-default-on; Troy played it on 25 Nov 2026: "no switch back"; the mock is docs/ship-look-mock.html, the table src/shiplook.js). ON for every player: no row of the N panel, nothing is remembered. ?shiplook=0 draws today's pictures (the tests' and the comparison's way, not shown to a player; the old drawing code stays for now)
+    shiplook: true,                        // the new ship look, the flat cut (card space-game-ship-look-default-on; Troy played it on 25 Nov 2026: "no switch back"; the mock is docs/ship-look-mock.html, the table src/shiplook.js). ON for every player: no row of the N panel, nothing is remembered. ?shiplook=0 draws today's pictures (the tests' and the comparison's way, not shown to a player; the old drawing code stays for now)
+    screens: false                         // the new screens around the flight (card space-game-screens-f-foundation; the mock is docs/screens-mock.html, the shared pieces src/screens.js, src/scrhost.js, src/screens.css). OFF for now: landing F changes no screen, and the pieces after it each draw one screen new only while this is on. Settings > CONTENT has the row (scrSet: kept in this browser), ?screens=1 or 0 in the address wins either way (the tests' way)
   },
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36
@@ -1833,7 +1834,7 @@ function campScore(C) {
 }
 
 // the key of an objective's words: its type, then what is killed (a kill) or an optional word for what is delivered (a deliver row says `word: 'transport'` when it is one ship and not haulers: card space-game-hunt-l1-fleet)
-const campObjKey = o => 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : o.type === 'deliver' && o.word ? '.' + o.word : '');
+const campObjKey = (o, flying) => 'camp.o.' + o.type + (o.type === 'kill' ? '.' + String(o.what).replace(/:.*/, '') : o.type === 'deliver' && o.word ? '.' + o.word : '') + (o.type === 'deliver' && !o.word && flying > (o.need != null ? o.need : o.n) ? '.of' : ''); // flying: how many haulers the mission sends; more than it needs and the goal says both ("0 of 3, need 1": card space-game-b3-d-panel-cap-pill-goal; how the goal is written, not the rule)
 // what the level asks of you, in the words of content/text/ui.md (camp.obj.<win>): the HUD shows it, the ship computer is told it
 function campObjective(C) {
   const L = C.L, win = L.win;
@@ -1841,7 +1842,7 @@ function campObjective(C) {
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
     if (o.type === 'deliver' && C.delivered >= o.need) return uiText('camp.o.deliverleft', { n: C.delivered, left: campConvoys(C).length + C.L.convoys.filter((cv, k) => !C.convoys[k].started).length }); // the haulers needed are home but the mission waits for the rest of them: say so (it read "0 of 1" with two haulers home; card space-game-night-hunt-l1-rim)
-    return uiText(campObjKey(o), { got: o.got, need: o.need, secs: o.need });
+    return uiText(campObjKey(o, C.L.convoys.length), { got: o.got, need: o.need, total: C.L.convoys.length, secs: o.need });
   }
   if (win === 'mother') return uiText(C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'camp.obj.mother' : 'camp.obj.motherwait'); // the mothership comes with the last wave: until then the goal is to hold
   if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });

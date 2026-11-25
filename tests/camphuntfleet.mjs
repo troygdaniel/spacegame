@@ -38,7 +38,11 @@ const g11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campS
 check('1.1: the HUD goal says "Transport arrived: 0 of 1."', g11.hud === 'Transport arrived: 0 of 1.', g11.hud);
 check('1.1: the briefing\'s goal says the same, and the ship computer is told it', g11.brief.length === 1 && g11.brief[0] === 'Transport arrived: 0 of 1.' && g11.sum.indexOf('Goal: Transport arrived: 0 of 1.') >= 0, JSON.stringify([g11.brief, g11.sum.slice(0, 120)]));
 const g13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); campStep(C, 1 / 30); return { hud: campObjective(C), brief: campHubBrief(campProgressNew(), 1, 2).objectives }; })()`);
-check('1.3: the three haulers keep "Haulers delivered"', /^Haulers delivered: 0 of 1\.$/.test(g13.hud) && g13.brief[0] === 'Haulers delivered: 0 of 1.', JSON.stringify(g13));
+check('1.3: the three haulers keep "Haulers delivered", and say both numbers (card space-game-b3-d-panel-cap-pill-goal: three fly, one must arrive: "0 of 3, need 1", not "0 of 1"); the briefing says the same', g13.hud === 'Haulers delivered: 0 of 3, need 1.' && g13.brief[0] === 'Haulers delivered: 0 of 3, need 1.', JSON.stringify(g13));
+const g13r = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); const need = campObjectives(C).find(o => o.type === 'deliver').need, hud = campPageHudGoal(C); C.delivered = 1; for (let i = 0; i < 2; i++) campStep(C, 1 / 30); return { need, flying: C.L.convoys.length, hud, after: campObjective(C), win: C.L.objectives[0].n }; })()`);
+check('1.3: only how the goal is written changed: it still needs 1 (the row\'s n and the objective\'s need), three fly; the goal panel reads "0 / 3, need 1" (label "Haulers delivered"); with one counted home (none of the other two has left yet) it is "Haulers home: 1. Still flying: 3."', g13r.need === 1 && g13r.win === 1 && g13r.flying === 3 && g13r.hud.label === 'Haulers delivered' && g13r.hud.value === '0 / 3, need 1' && g13r.after === 'Haulers home: 1. Still flying: 3.', JSON.stringify(g13r));
+const g11b = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 1 / 30); return { hud: campObjective(C), flying: C.L.convoys.length }; })()`);
+check('1.1: one transport and one needed: the words are as they were (no "of 3, need 1")', g11b.flying === 1 && g11b.hud === 'Transport arrived: 0 of 1.', JSON.stringify(g11b));
 
 const l11 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); return campLoseLines(C, 'convoy'); })()`), l13 = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 2 }); return campLoseLines(C, 'convoy'); })()`);
 check('1.1: the lost card says the transport is lost; 1.3 says the haulers', l11[0] === 'The transport is lost.' && l13[0] === 'The haulers are lost.', JSON.stringify([l11[0], l13[0]]));
@@ -47,6 +51,8 @@ check('1.1\'s lost card tip names the transport, the pick keys and the order key
 
 const dl = J(`['camp.o.deliver', 'camp.o.deliver.transport'].map(k => uiText(k, { got: 0, need: 1 }).length)`);
 check('both deliver goals fit one line of the map\'s column (15 px type, 246 px: 27 letters): "Transport delivered: 0 of 1." wrapped its "1." alone', dl.every(n => n <= 27), JSON.stringify(dl));
+const dw = J(`toastWrap(uiText('camp.o.deliver.of', { got: 0, total: 3, need: 1 }), 27)`);
+check('the "of 3, need 1" goal (34 letters) wraps in the map\'s column at the comma, the need on its own second line ("need 1."), not a figure alone', dw.length === 2 && dw[0] === 'Haulers delivered: 0 of 3,' && dw[1] === 'need 1.', JSON.stringify(dw));
 
 // ---- 4. there is no Scout order any more (the scout-escort was cut, card space-game-cut-escorts): no function, no act, no words ----
 check('no Scout order: campScoutDo is gone and "scout Mars" is no order', J(`typeof campScoutDo`) === 'undefined' && J(`campIntent('scout mars')`) === null && J(`campOrder(campNew(1, [], { seed: 1 }), 'scout', 'mars').ok`) === false);
