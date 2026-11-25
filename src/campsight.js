@@ -11,7 +11,7 @@
 //   campSightStep(C)             each tick: the hostiles that come into sight for the first time are called on the radio, after CAMP.sensor.delay ms, one line for a few seconds' worth
 //   campSightLine(C, ids)        the call: { key: 'camp.say.sight', vars: { what, dir, km } } or null: how many, which way, how far; the kinds too when a fighter or the carrier is near enough to tell
 //   campSightMarks(C)            the groups that came into sight in the last CAMP.sensor.mark ms: [{ x, y, age: 0..1 }] (the edge arrow blinks)
-//   campSightArrows(C, scroll, W_, H_, zoom)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, tx, ty, n, dist, what, fresh }] (tx, ty: where the group is on the screen: the arrow turns to it when it is slid along the edge, src/campedgespread.js)
+//   campSightArrows(C, scroll, W_, H_, zoom, page)   the edge arrows: a group that is off the screen (or under the HUD) gets one at the edge, pointing at it: [{ x, y, angle, tx, ty, n, dist, what, fresh }] (tx, ty: where the group is on the screen: the arrow turns to it when it is slid along the edge, src/campedgespread.js); `page` { was } (card space-game-edge-pills-position): the page HUD's pill instead of the canvas's arrow: the pill's own on-screen rule with a little play (campEdgeOffscreen; was: what showed last time) and no HUD rectangles, the point where the line from the screen's middle crosses the border
 //   campSightDir(dx, dy)         'north', 'north-east' ... for a vector (up on the screen is north)
 //   campSensors(C)              the sensor circles of the fighters that are out: [{ id, x, y, r: CAMP.sensor.wing }]
 //   campSightFighter(C, x, y, r)  the first fighter of yours that is out within r px of a point, or null: what a cloaked anomaly asks of a ship that is not the cruiser (src/campanomaly.js)
@@ -89,13 +89,13 @@ function campSightMarks(C) {
   const K = CAMP.sensor, S = C && C.sight; if (!S) return [];
   return campSightGroups(C, true).filter(g => C.t - g.at < K.mark).map(g => ({ x: g.x, y: g.y, age: Math.max(0, (C.t - g.at) / K.mark) }));
 }
-function campSightArrows(C, scroll, W_, H_, zoom) {
+function campSightArrows(C, scroll, W_, H_, zoom, page) {
   if (!C || !C.carrier) return [];
   const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [];
   campSightGroups(C, true).forEach(g => {
     const sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
-    if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
-    const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
+    if (page ? !campEdgeOffscreen(sx, sy, W_, H_, !!(page.was && page.was.hostiles)) : sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is (page: the pill's rule, no HUD rectangles)
+    const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, page ? null : A.keep) : null; if (!e) return; // page: the point where the line from the screen's middle to the group crosses the border, not walked round to a free spot
     out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark });
   });
   return out.slice(0, K.arrows);
@@ -104,14 +104,14 @@ function campSightArrows(C, scroll, W_, H_, zoom) {
 // the ships you protect that are in trouble and off the screen (card space-game-target-display: the radar showed every ship of the convoy, and it is gone): one that is under attack (the full health bar, src/campcharge.js: hit in the
 // last CAMP.charge.loud ms) or nearly lost (the bar's red band) gets an arrow at the edge too, nearest the cruiser first, at most CAMP.sensor.friends; { x, y, angle, tx, ty, dist, what: its name, pct, friend: true, fresh: just hit, id, kind, hot: under attack or nearly lost }.
 // While the page HUD is on the canvas draws NONE (cards space-game-page-hud-miner-edge-label and space-game-page-hud-friend-edge-pill, Troy, 25 Nov 2026): every ship you protect that is off the screen has its pill at the edge of the page instead (src/camppagehud.js campPageHudFriendEdges), which asks for ALL of them with `all` (not only the ones in trouble, no cap here; `hot` says which are); with the page HUD off every ship in trouble has its arrow as before.
-function campSightFriends(C, scroll, W_, H_, zoom, all) {
+function campSightFriends(C, scroll, W_, H_, zoom, all, page) {
   if (!C || !C.carrier || typeof campChargeBars !== 'function') return [];
   const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [], ring = typeof campPageHudHides === 'function' && campPageHudHides('friendlies'); // ring: the page HUD is on and has the ships you protect as rings in its left panel and pills at the edge
   if (ring && !all) return [];
   campChargeBars(C).filter(b => all || b.loud > 0 || b.band === 'red').sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier)).forEach(b => {
     const sx = (b.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (b.y - scroll.y - H_ / 2) * z + H_ / 2;
-    if (sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is
-    const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, A.keep) : null; if (!e) return;
+    if (page ? !campEdgeOffscreen(sx, sy, W_, H_, !!(page.was && page.was[b.id])) : sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is (page: the pill's rule, no HUD rectangles)
+    const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, page ? null : A.keep) : null; if (!e) return;
     out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0, id: b.id, kind: b.kind, hot: b.loud > 0 || b.band === 'red' });
   });
   return all ? out : out.slice(0, K.friends);

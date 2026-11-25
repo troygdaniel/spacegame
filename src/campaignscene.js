@@ -621,7 +621,7 @@ class Campaign extends Phaser.Scene {
     if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
     if (typeof toastKeep === 'function' && this.toastTop) toastKeep(this, this.toastTop()); // a toast that is up follows the column's end
     if (this.hud.arrow) {
-      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null, ar = ar0 && ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill)
+      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null, ar = ar0 && ((ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref)) || (ar0.kind === 'alien' && typeof campPageHudHasFoePill === 'function' && campPageHudHasFoePill(this))) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill), none for the nearest hostile while the hostiles' pill is up (card space-game-edge-pills-position)
       if (!ar) this.hud.arrow.setVisible(false);
       else {
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));

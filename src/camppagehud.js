@@ -67,8 +67,9 @@ function campPageModel(C, view) {
     const e = stops.find(x => x.id === r.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, name = e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), frac = up ? campTdispHull(u).share : 0;
     return Object.assign(campPageHudRing(name, i + 1, frac, up, !!now && (now.kind === 'all' || now.id === r.who), true), { id: r.who }); // pick: the ring has its outline and the digit is lit (All pilots outlines every one: card space-game-w4-all-lit); on: out in space (dim is resting, in the bay)
   });
-  const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C), edge = campPageHudEdge(C, view); // open: the pick that is open now, '' none (the rings of that group grow in place)
-  return { first: campPageHudFirst(C), ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), edge: edge, fedges: campPageHudFriendEdges(C, view, edge), places: campPageHudPlaces(C, view),
+  const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C), edge = campPageHudEdge(C, view), fedges = campPageHudFriendEdges(C, view, edge); // open: the pick that is open now, '' none (the rings of that group grow in place)
+  const was = {}; if (edge) was.hostiles = true; fedges.forEach(f => { was[f.id] = true; }); // the pills that show now: the next look at the ships (view.was) keeps them a little longer (campEdgeOffscreen: no flicker at the edge)
+  return { first: campPageHudFirst(C), ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), edge: edge, fedges, was, places: campPageHudPlaces(C, view),
     pilots: { key: campCornerCap('who'), items, open: open === 'fleet' },
     friends: { key: campCornerCap('friendlies'), items: ships, open: open === 'friends', enter: ships.some(x => x.pick) ? campPageHudEnter(C, 'guard') : null } }; // enter: the Enter chip and Guard, while a ship you protect is picked
 }
@@ -124,8 +125,9 @@ function campPageHudEnter(C, verb) {
 // hostiles off the screen: ONE pill at the edge with an arrow, the count and how far (the nearest group's arrow, src/campsight.js); null when none is off the screen or the camera is not known
 function campPageHudEdge(C, view) {
   if (!view || typeof campSightArrows !== 'function') return null;
-  const a = campSightArrows(C, { x: view.x, y: view.y }, W, H, view.zoom > 0 ? view.zoom : 1)[0]; if (!a) return null;
-  return { n: a.n, km: uiText('camp.tdisp.km', { km: campNavKm(a.dist) }), angle: a.angle, x: a.x, y: a.y, tx: a.tx, ty: a.ty }; // tx, ty: where the group is on the screen (a pill slid along the edge turns to it)
+  const a = campSightArrows(C, { x: view.x, y: view.y }, W, H, view.zoom > 0 ? view.zoom : 1, { was: view.was || {} })[0]; if (!a) return null; // the pill's own rule: off the screen only (card space-game-edge-pills-position), no HUD rectangles
+  const km = uiText('camp.tdisp.km', { km: campNavKm(a.dist) }), z = campPageHudPillSize(a.n + ' \u00b7 ' + km), px = Math.max(z.w / 2 + 6, Math.min(W - z.w / 2 - 6, a.x)), py = Math.max(z.h / 2 + 6, Math.min(H - z.h / 2 - 6, a.y)); // where the pill's middle ends up (whole on the screen): the arrow points at the group from there
+  return { n: a.n, km, angle: Math.atan2(a.ty - py, a.tx - px), x: a.x, y: a.y, tx: a.tx, ty: a.ty }; // tx, ty: where the group is on the screen (a pill slid along the edge turns to it)
 }
 // a pill's size in game px, from its words (no DOM at the model: the font is CAMP_PAGEHUD.em of the width, the pill's .86 em; about .6 em a letter, its padding and the arrow; the height is the line and the padding, 2.6 of its em, as measured in a browser)
 const campPageHudPillSize = text => { const em = W * CAMP_PAGEHUD.em * 0.86; return { w: (String(text).length * 0.6 + 3.4) * em, h: 2.6 * em }; };
@@ -143,6 +145,8 @@ function campPageHudEdgeFit(items, fixed) {
     const r = pick || { x: p0.x, y: p0.y, moved: false, b: box(p0, it) }; taken.push(r.b); return { x: r.x, y: r.y, moved: r.moved };
   });
 }
+// does the page have the hostiles' pill now? (the last model: s.pageHud.last.edge): the canvas's amber goal arrow for the nearest hostile (src/campaignscene.js paintHud: "Pirate 201 km") is not drawn then, the pill carries it (card space-game-edge-pills-position)
+function campPageHudHasFoePill(s) { const L = s && s.pageHud && s.pageHud.last; return !!L && !!L.edge; }
 // does the page have a pill for this ship now? (the last model the scene's sync wrote, 10 a second: s.pageHud.last.fedges): the canvas's amber goal arrow (src/campaignscene.js paintHud) is not drawn for a ship that has one
 function campPageHudHasPill(s, id) { const L = s && s.pageHud && s.pageHud.last; return !!id && !!L && Array.isArray(L.fedges) && L.fedges.some(f => f.id === id); }
 // the pills at the edge keep clear of the page's PANELS too (card space-game-goal-panel-hides-text; Troy, playing 1.2: the hostiles' pill stood on the text of the HOSTILES panel at the right edge): the hostiles' pill and the ships' pills are fitted once more, in that order, against the rectangles of the panels that are
@@ -151,7 +155,7 @@ function campPageHudEdgesClear(M, panels) {
   const items = [], z = t => campPageHudPillSize(t);
   if (M && M.edge) items.push(Object.assign({ x: M.edge.x, y: M.edge.y, tx: M.edge.tx, ty: M.edge.ty, angle: M.edge.angle }, z(M.edge.n + ' \u00b7 ' + M.edge.km)));
   ((M && M.fedges) || []).forEach(f => items.push(Object.assign({ x: f.x, y: f.y, tx: f.tx, ty: f.ty, angle: f.angle }, z(f.text))));
-  const put = campPageHudEdgeFit(items, panels || []), out = items.map((it, i) => ({ x: put[i].x, y: put[i].y, angle: put[i].moved && it.tx != null ? Math.atan2(it.ty - put[i].y, it.tx - put[i].x) : it.angle }));
+  const put = campPageHudEdgeFit(items, panels || []), out = items.map((it, i) => ({ x: put[i].x, y: put[i].y, angle: it.tx != null ? Math.atan2(it.ty - put[i].y, it.tx - put[i].x) : it.angle })); // every pill points at its ship from where it ends (card space-game-edge-pills-position)
   return { edge: M && M.edge ? out[0] : null, fedges: out.slice(M && M.edge ? 1 : 0) };
 }
 // the rectangles of the panels that are up now, in game px as centres { x, y, w, h }: every element of the root that is a panel (ph-p), not a pill (the edge pills and the place pills), shown; a rectangle as wide as the screen is no panel (a stand-in page's)
@@ -169,13 +173,13 @@ function campPageHudPanelRects(R, r, k) {
 function campPageHudFriendEdges(C, view, edge) {
   if (!view || typeof campSightFriends !== 'function' || typeof campFriNumbered !== 'function') return [];
   const num = {}; campFriNumbered(C).forEach(e => { if (e.alive) num[e.id] = e; });
-  const list = campSightFriends(C, { x: view.x, y: view.y }, W, H, view.zoom > 0 ? view.zoom : 1, true).filter(a => num[a.id]).slice(0, CAMP_PAGEHUD.fedges).map(a => {
+  const list = campSightFriends(C, { x: view.x, y: view.y }, W, H, view.zoom > 0 ? view.zoom : 1, true, { was: view.was || {} }).filter(a => num[a.id]).slice(0, CAMP_PAGEHUD.fedges).map(a => {
     const e = num[a.id], km = uiText('camp.tdisp.km', { km: campNavKm(a.dist) }), text = e.number + ' ' + e.name + ' \u00b7 ' + km;
     return Object.assign({ id: a.id, n: e.number, name: e.name, km, text, hot: !!a.hot, angle: a.angle, x: a.x, y: a.y, tx: a.tx, ty: a.ty }, campPageHudPillSize(text));
   });
   const ed = edge === undefined ? campPageHudEdge(C, view) : edge, fixed = ed ? [Object.assign({ x: Math.max(70, Math.min(W - 70, ed.x)), y: Math.max(30, Math.min(H - 30, ed.y)) }, campPageHudPillSize(ed.n + ' \u00b7 ' + ed.km))] : [];
   const put = campPageHudEdgeFit(list, fixed);
-  return list.map((f, i) => ({ id: f.id, n: f.n, name: f.name, km: f.km, text: f.text, hot: f.hot, x: put[i].x, y: put[i].y, angle: put[i].moved && f.tx != null ? Math.atan2(f.ty - put[i].y, f.tx - put[i].x) : f.angle, tx: f.tx, ty: f.ty })); // slid: it points at its ship from where it ends
+  return list.map((f, i) => ({ id: f.id, n: f.n, name: f.name, km: f.km, text: f.text, hot: f.hot, x: put[i].x, y: put[i].y, angle: f.tx != null ? Math.atan2(f.ty - put[i].y, f.tx - put[i].x) : f.angle, tx: f.tx, ty: f.ty })); // it points at its ship from where it ends (slid along the edge or kept whole on the screen: not the way the arrow's point on the border pointed)
 }
 // the places in view: one pill each, in place of the two labels the world draws (the place and its outpost): "Ceres · Occator Works"; game px of the pill (above the place); only near enough to read (not at the far marks' zoom)
 function campPageHudPlaces(C, view) {
@@ -300,7 +304,7 @@ function campPageHudSync(s, now) {
   const r = canvas.getBoundingClientRect(), set = campPageHudSet, cam = s.cameras && s.cameras.main, fs = r.width * K.em; // the HUD sits over the canvas, the same size; the font size is a share of its width
   set(R.root, 'display', ''); // shown again when a card closes (set 'none' while one is up)
   set(R.root, 'left', Math.round(r.left) + 'px'); set(R.root, 'top', Math.round(r.top) + 'px'); set(R.root, 'width', Math.round(r.width) + 'px'); set(R.root, 'height', Math.round(r.height) + 'px'); set(R.root, 'fontSize', Math.round(fs * 100) / 100 + 'px');
-  const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom } : null;
+  const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom, was: R.was || {} } : null; // was: which edge pills showed at the last look (a pill stays until its ship is well inside the screen)
   campPageHudPaint(R, campPageModel(C, view), document);
   campPageHudHideLines(s, true);
   if (R.ship.el.getBoundingClientRect && r.width > 0 && typeof CAMP_CORNER_SHIFT === 'object') {
@@ -318,7 +322,7 @@ function campPageHudSync(s, now) {
     s.pageHudStack = gb > 0 ? Math.ceil(gb) : 0;
     if (s.hudBack && s.hudBack.setAlpha) { if (R.backAlpha === undefined) R.backAlpha = s.hudBack.alpha; s.hudBack.setAlpha(0); }
     // in space: the pill at the edge for the hostiles off the screen, and a pill for each place in view (world px to the canvas's px)
-    const M = R.last = campPageModel(C, view);
+    const M = R.last = campPageModel(C, view); R.was = M.was; // (the same view as the paint above: both looks gave the same pills)
     const PC = campPageHudEdgesClear(M, campPageHudPanelRects(R, r, k)); // the pills are put clear of the panels (and of each other) now that the panels are in place
     if (PC.edge) { set(R.edge.el, 'left', Math.round(PC.edge.x * k) + 'px'); set(R.edge.el, 'top', Math.round(PC.edge.y * k) + 'px'); set(R.edge.ic, '--a', String(Math.round(PC.edge.angle * 180 / Math.PI)) + 'deg'); }
     R.fedges.forEach((p, i) => { const f = PC.fedges[i]; if (f) { set(p.el, 'left', Math.round(f.x * k) + 'px'); set(p.el, 'top', Math.round(f.y * k) + 'px'); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
