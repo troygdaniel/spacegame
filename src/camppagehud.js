@@ -20,7 +20,7 @@ const CAMP_PAGEHUD = {
   low: 0.6, crit: 0.3,     // a pilot's ring: the good colour, the warning colour under 60 percent of the hull, the hostile colour under 30
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=1
   pills: 6,                // the most place pills at once
-  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
+  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels, except the friendlies' box and the W box of the pilots' pick, which the grown rings replace: box:friendlies, box:fleet), the edge arrows of the hostiles, the labels of the places in the world, the bottom key line)
 };
 
 // ---- the switch ----
