@@ -476,8 +476,8 @@ class Campaign extends Phaser.Scene {
     const lit = this.pn && typeof campSquadsShown === 'function' ? campSquadsShown(this.pn, C, (this.time && this.time.now) || 0) : []; // (the squads' rings: src/campwing.js campSquadsShown)
     sg.clear();
     if (!lit.length) return;
-    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(); // the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
-    C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) campTgtCorners(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u)); });
+    const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(), sl = typeof slookOn === 'function' && slookOn() && typeof slookPickMark === 'function'; // (sl: the new ship look: the bright ring in place of the square, src/shiplookmarks.js) the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
+    C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) { if (sl) slookPickMark(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u), this); else campTgtCorners(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u)); } });
   }
   sync() {
     const C = this.camp, seen = {}, F = typeof slookFrame === 'function' ? slookFrame(this) : null; // F: the new ship look's state for this frame, asked once for all the ships (src/shiplookdraw.js)

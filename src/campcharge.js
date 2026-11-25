@@ -26,10 +26,10 @@ function campChargeOne(C, u) {
 const campChargeBars = C => campChargeShips(C).map(u => campChargeOne(C, u));
 const campChargeMark = (C, id) => { const u = campChargeShips(C).find(x => x.id === id); return u ? campChargeOne(C, u) : null; };
 
-// where the percentage of a full bar goes, in px of the screen: a = { sx, sy: the ship's place, ny: the number's middle line, tw, th: its box }; the bar is K.bar.w wide at sx. The number does not draw half off the screen (card space-game-edge-percent-label-cut: a ship that
+// where the percentage of a full bar goes, in px of the screen: a = { sx, sy: the ship's place, ny: the number's middle line, tw, th: its box, off: optional, how far from sx the number's near edge stands }; the bar is K.bar.w wide at sx. The number does not draw half off the screen (card space-game-edge-percent-label-cut: a ship that
 // was just off the left edge had it cut to "1%" over its pill) nor for a ship that is off the screen or under a HUD corner, whose edge arrow or page pill says it already (the very test of campSightFriends: CAMP.nav.arrow margin and keep).
 function campChargeNumberSide(a, W_, H_) {
-  const K = CAMP.charge, A = CAMP.nav.arrow, m = A.margin, e = K.number.edge, off = K.bar.w / 2 + K.number.gap;
+  const K = CAMP.charge, A = CAMP.nav.arrow, m = A.margin, e = K.number.edge, off = a.off > 0 ? a.off : K.bar.w / 2 + K.number.gap; // a.off: how far from the ship the number stands, when it is not the bar's half width and the gap (the new ship look: beside the hull arc; see the draw file of the bars)
   if (!(a.sx > m && a.sx < W_ - m && a.sy > m && a.sy < H_ - m) || (A.keep || []).some(r => a.sx >= r[0] && a.sx <= r[2] && a.sy >= r[1] && a.sy <= r[3])) return null;
   if (a.ny - a.th / 2 < e || a.ny + a.th / 2 > H_ - e) return null;
   if (a.sx + off + a.tw <= W_ - e) return 'right';
