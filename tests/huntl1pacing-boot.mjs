@@ -1,5 +1,5 @@
 // not in the smoke: missions 1.2 and 1.3 flown as a player in the real game, beat by beat (one Chrome, muted, through the test lock; card space-game-hunt-l1-pacing)
-// It is tests/huntfleet-boot.mjs with another player: the three pilots are ordered apart (W opens the fleet pick and a digit picks the pilot, the backslash and ] pick the enemy, E sends that pilot; then W and 4 put who back on All pilots: card space-game-keys5-qwe), the miners or the
+// It is tests/huntfleet-boot.mjs with another player: the three pilots are ordered apart (W opens the fleet pick and a digit picks the pilot, the backslash and ] pick the enemy, Enter sends that pilot; then W and 4 put who back on All pilots: cards space-game-keys5-qwe and space-game-keys6-enter), the miners or the
 // haulers are tucked in when torpedo boats come (the convoy's order: it has no key and no row now, so it is given as the strip gives it and said so), the power goes to the shields for the heavy raid and first contact while the key
 // table still has power keys (card space-game-power-removed takes them out), a missile goes at the big ships. There is no recall and no launch: the pilots start out, and a badly hurt one flies home and comes back by itself.
 // It writes down every beat (BEAT: a wave that came, a wave that is gone, a call, a quiet stretch of 40 s or more) and every order it gave (DECIDE), with the mission clock.
@@ -53,21 +53,22 @@ try {
     if (p.code) return [[p.code, at]];
     const up = campKeyList(p.parent), pat = up ? campPanelList(C, up.id).findIndex(r => r.open === p.id) : -1; return up && up.code && pat >= 0 ? [[up.code, pat], [${JSON.stringify(K.pick)}, at]] : null; })()`);
   const K = {}; // filled after the boot
-  const DIRECT = ['shields', 'engines', 'weapons', 'balance', 'missile']; // not rows: keys of their own (J K L ; and Enter while no list is open)
+  const DIRECT = ['shields', 'engines', 'weapons', 'balance', 'missile']; // not rows: keys of their own, read from the key table (the missile is M since card space-game-keys6-enter)
   const listOpen = () => j(`campPanelOpen(${S}.pn)`);
   const closeLists = async () => { for (let n = 0; n < 6 && (await listOpen()); n++) await key(K.esc); }; // Esc goes back ONE step (a target sub-list to its list, a list a row opened to Q or P; a list its own key opened closes): until every list is closed (it pauses only when none is open)
   // An order as a player gives it in the game NOW (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select; the old lists, fleet, all squads, ship, power, autopilot, are switched off and this walk leaves them off):
   //   a row of the cruiser list (Q: Fly to the goal, Fly to the target, Mine ore, Emergency shields ...): the key of the list the row is in, Down to the row, Enter, read from the table as before
-  //   E, the one order key (card space-game-keys5-qwe; it was W): an enemy picked, the pilots attack it (the caller picks it: the backslash); a friendly picked ([), they guard it. Form up on the cruiser is the fleet pick's fifth row (W, then 5): there is no X and no empty stop
+  //   Enter, the one order key (card space-game-keys6-enter; it was E, before that W): an enemy picked, the pilots attack it (the caller picks it: the backslash); a friendly picked (E), they guard it. Form up on the cruiser is a row of a list (formRow: W then 5 on main fe1d31eb, a row of the Q list after card space-game-keys7-trim): there is no X and no empty stop
   //   no key and no row at all: the launch (the pilots start the mission out), and the convoy's orders and the dock while the table has no keyed row for them: given as the order the strip's words give, and said so in a note
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
-  const KEYED = { attack: () => [K.order], fguard: () => [K.who, 'Digit' + FORMUP], escort: () => [FRIEND, K.order] }; // form up is the fleet pick's fifth row (W, 5: an order to who at once, the held target stays); FRIEND: a friendly held first (aFriend below)
+  const KEYED = { attack: () => [K.order], escort: () => [FRIEND, K.order] }; // FRIEND: a friendly held first (aFriend below). Form up is a ROW (formRow below), given through the list it is in
+  const formRow = () => j(`(() => { const C = ${S}.camp; for (const p of CAMP_PANELS.panels) { const r = campPanelList(C, p.id).find(r => r.formup); if (r) return r.id; } return null; })()`); // the id of the Form up on me row, read from the lists of this mission: W then 5 on main fe1d31eb, a row of the Q list after card space-game-keys7-trim; null when no list has it
   const WORDS = { ctuck: ['convoy', 'tuck in'], crun: ['convoy', 'run for it'], chold: ['convoy', 'hold here'], ccarry: ['convoy', 'carry on'], dock: ['dock', ''] };
   const ALIAS = { burn: 'goal' }; // the fast burn rows have no way in: Fly to the goal burns by itself on a long clear leg (card space-game-keys2-cruiser)
   let lastSay = '';
-  const FRIEND = 'friend', FORMUP = 5, WHO_DIGIT = { red: 1, green: 2, yellow: 3, all: 4 }; // the fleet pick's digits (card space-game-keys5-qwe): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots, 5 Form up on me
+  const FRIEND = 'friend', WHO_DIGIT = { red: 1, green: 2, yellow: 3, all: 4 }; // the fleet pick's digits (card space-game-keys5-qwe): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots
   const who = async squad => { const want = squad === 'all' ? 'all' : 'pilot:' + squad, sel = () => j(`${S}.camp.sel || 'all'`); if ((await sel()) === want) return true; if (!K.who) return false; await closeLists(); await key(K.who); if ((await listOpen()) === 'fleet') await key('Digit' + WHO_DIGIT[squad]); await closeLists(); return (await sel()) === want; }; // WHO takes the order (C.sel): W opens the fleet pick (a numbered list), then the digit picks; W alone only opens it; a digit that is refused (a lost pilot) leaves the pick open: it is closed
-  const aFriend = async wait => { if (!(await j(`!!${S}.camp.fsel`))) await key(K.friendlies, wait); return j(`!!${S}.camp.fsel`); }; // a friendly held: [ picks one when none is (it lets an enemy go: one target); nothing clears and the cycles have no empty stop (card space-game-keys5-qwe: X is gone)
+  const aFriend = async wait => { if (!(await j(`!!${S}.camp.fsel`))) await key(K.friendlies, wait); return j(`!!${S}.camp.fsel`); }; // a friendly held: the friendlies key (E) picks one when none is (it lets an enemy go: one target); nothing clears and the cycles have no empty stop (card space-game-keys5-qwe: X is gone)
   const press = async (id, wait = 50) => { // an order: a direct key, the order key, or a row of a list (the key of the list it is in, Down to the row, Enter)
     lastSay = '';
     if ((await j(`${S}.mode`)) !== 'play') return false; // a card has the keys
@@ -78,13 +79,14 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
       await closeLists();
       await key(c, wait); return true;
     }
-    const one = /^(red|green|yellow)(attack|recall)$/.exec(id); // an order to ONE pilot: W opens the fleet pick and the pilot's digit picks that pilot, E gives the order, then W and 4 put who back on All pilots
+    const one = /^(red|green|yellow)(attack|recall)$/.exec(id); // an order to ONE pilot: W opens the fleet pick and the pilot's digit picks that pilot, the order key (Enter) gives the order, then W and 4 put who back on All pilots
     if (one) {
       if (one[2] === 'recall') { note(`(no recall now: a badly hurt pilot flies home by itself and comes out again mended, card space-game-keys2-orders; nothing pressed for ${id})`); return false; }
       if (!K.who || !K.order) { note(`(no key for ${id}: the table has none)`); return false; }
       await closeLists(); const got = await who(one[1]); if (got) await key(K.order, wait); else note(`(${one[1]} is not a stop of the who key now: lost, or none of that squad)`); await who('all'); return got;
     }
     if (KEYED[id]) { await who('all'); const ks = KEYED[id](); if (ks.some(c => !c)) { note(`(no key for ${id}: the table has none)`); return false; } await closeLists(); for (const c of ks) { if (c === FRIEND) await aFriend(wait); else await key(c, wait); } await closeLists(); return true; }
+    if (id === 'fguard') { await who('all'); const fr = await formRow(); if (!fr) { note('(no Form up on me row in this mission\'s lists: nothing pressed)'); return false; } id = fr; } // form up: the row's own list and digit, from the table
     const way = await wayTo(id);
     if (!way && WORDS[id]) { // no keyed row in this mission's lists: the order itself, as the strip gives it
       const r = await j(`campOrder(${S}.camp, ${JSON.stringify(WORDS[id][0])}, ${JSON.stringify(WORDS[id][1])}, 'strip')`); lastSay = (r && r.say) || '';
@@ -93,7 +95,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
     if (!way) { note(`(the row ${id} is not in this mission's lists, or its list has no key)`); return false; }
     await closeLists(); // an open list is closed first (Esc pauses only when none is open)
     NUM = 0; for (const [code, downs] of way) { await key(code, wait); if (await j(`campPanelNumbered(${S}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${S}.pn.at`), n = await j(`campPanelList(${S}.camp, campPanelOpen(${S}.pn)).length`); for (let i = 0, d = ((downs - cur) % n + n) % n; i < d; i++) await key(K.down, wait); } // (a list can open on its first row that can be given: the Downs count from the highlight)
-    await key(NUM ? 'Digit' + NUM : K.pick, wait); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+    await key(NUM ? 'Digit' + NUM : K.pick, wait); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would give the one order (card space-game-keys6-enter)
     if (await j(`!!${S}.pn.pick`)) await key(NUM ? 'Digit1' : K.pick, wait); // a row that needs a target (Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one
     await closeLists(); // an order that is refused leaves the list open (its reason is the toast): it is closed, the keys go back to the ship
     return true;
@@ -197,7 +199,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
       if (live.indexOf(4) >= 0) {
         if (!did.heavy) { did.heavy = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'the heavy raid: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at it (the backslash, E)'); await snap('heavy'); }
         if (again('w4', 9)) await send(clock, 'all', 4);
-        if (q.missiles > 0 && again('msl', 12) && (await aim(4, 'brute'))) { if (await press('missile')) say(clock, 'a missile at a brute (Enter)'); }
+        if (q.missiles > 0 && again('msl', 12) && (await aim(4, 'brute'))) { if (await press('missile')) say(clock, 'a missile at a brute (the missile key)'); }
       }
       // between the raids: hurt squads home to be mended (the hint says so), then out again and back to the rock
       if (!q.any && !did.dockGo) {
@@ -225,7 +227,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
       if (live.indexOf(5) >= 0) {
         if (!did.contact) { did.contact = true; if (K.shields) { await key(K.shields); await key(K.shields); } say(clock, 'first contact: ' + (K.shields ? 'two pips to the shields, ' : '') + 'all pilots at them (the backslash, E)'); await snap('contact'); }
         if (again('w5', 9)) await send(clock, 'all', 5);
-        if (q.missiles > 0 && again('msl', 12) && (await aim(5, 'gunship'))) { if (await press('missile')) say(clock, 'a missile at a gunship (Enter)'); }
+        if (q.missiles > 0 && again('msl', 12) && (await aim(5, 'gunship'))) { if (await press('missile')) say(clock, 'a missile at a gunship (the missile key)'); }
         if (q.shield < 30 && !did.emer) { did.emer = true; const n0 = await j('window.__log.length'); await press('emergency'); await t.run(200); say(clock, 'the shield is down: O, Emergency shields: ' + (await toasts(n0)).filter(x => /TOAST/.test(x)).join(' | ').slice(0, 160)); }
       }
       if (!live.length && !q.any) { // a quiet stretch of road: hurt squads home to be mended, then out again; the rest guard the cruiser

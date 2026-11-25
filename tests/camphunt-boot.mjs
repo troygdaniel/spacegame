@@ -1,7 +1,7 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
-// (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select, then space-game-keys5-qwe: Q opens the cruiser list and a digit gives its row; W opens the fleet pick and a digit says who; the backslash and ] pick an enemy, [ a friendly; E is the one order key;
-// nothing clears (X is gone; W then 5 is form up); Enter a missile, the arrows to fly, the map on Tab, Space held; every code is read from the key table), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
+// (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select, then space-game-keys5-qwe: Q opens the cruiser list and a digit gives its row; W opens the fleet pick and a digit says who; the backslash and ] pick an enemy, E a friendly; Enter is the one order key;
+// nothing clears (X is gone; form up is a row of a list); M a missile, Enter the one order, the arrows to fly, the map on Tab, Space held; every code is read from the key table), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
 //   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat | --panels | --replay]      the mission number is the one on the board (1 to 3)
 // --replay: the mission before the next one is picked in the ready room as a REPLAY (Enter, Up, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
 // --panels: every row of the lists the game has now given once in the flight (the key of the list the row is in, Down to the row, Enter), the target keys, who, the friendlies, E after each kind of pick, X, the power keys while the table has them, the missile, the map zoomed out to the whole system: what each one says (the toasts are written down at the end)
@@ -51,11 +51,11 @@ try {
     NUM = 0; for (const [code, downs] of way.keys) { await key(code); if (await j(`campPanelNumbered(${S}.pn)`)) { NUM = downs + 1; continue; } const cur = await j(`${S}.pn.at`), n = await j(`(() => { const o = campPanelOpen(${S}.pn); return o ? campPanelList(${S}.camp, o).length : 0; })()`); for (let i = 0, d = n ? ((downs - cur) % n + n) % n : 0; i < d; i++) await key('ArrowDown'); } // a list can open with its highlight on its first usable row (start: 'usable', All squads): Down only the difference
     return true;
   };
-  // The keys of the flight, read from the key table (CAMP_KEYS), never a letter written here: the nearest threat, the next and the last enemy, who, the friendlies, clear, and E, the one order key
+  // The keys of the flight, read from the key table (CAMP_KEYS), never a letter written here: the nearest threat, the next and the last enemy, who, the friendlies, and the one order key (Enter)
   const ck = id => j(`campKeyCodes(${JSON.stringify(id)})[0] || ''`);
   const closeLists = async () => { for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); }; // Esc is pressed only while a list is open: with none open it would pause
   // Orders that are no row of a list in the game now (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select: the fleet, all-squads, ship, power, autopilot lists are switched off; the one order list is the cruiser's, on Q, and W opens the fleet pick: card space-game-keys5-qwe):
-  //   launch: nothing to press (the pilots start the mission out);   attack: the backslash picks the nearest threat, the order key (E since card space-game-keys5-qwe) sends all pilots at it;   burn, burntarget: the Fly rows of the cruiser list (Fly to the goal burns by itself on a long clear leg);
+  //   launch: nothing to press (the pilots start the mission out);   attack: the backslash picks the nearest threat, the order key (Enter since card space-game-keys6-enter) sends all pilots at it;   burn, burntarget: the Fly rows of the cruiser list (Fly to the goal burns by itself on a long clear leg);
   //   dock: while no keyed list has its row, the order as the strip's word gives it (said in a note).   Anything else with no row: left out, false
   const noRow = async row => {
     if (row === 'launch') return true;
@@ -67,7 +67,7 @@ try {
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
   const listOrder = async row => {
     if ((await j(`${S}.mode`)) === 'play' && !(await listWay(row))) return noRow(row);
-    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would give the one order (card space-game-keys6-enter)
     if (await j(`!!${S}.pn.pick`)) await key(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
@@ -122,17 +122,18 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
 
   if (PANELS) {
     let mark = 0; const say = async what => { await t.run(300); const all = await j('window.__toasts'); note(what + ' -> ' + (all.slice(mark).join(' || ') || '(no toast)')); mark = all.length; };
-    // every key of the flight and every row of the lists the game has now, once: the cruiser list's rows (Q), the target keys (the backslash, the brackets), the fleet pick (W and a digit), the friendlies, E after each kind of pick, form up (W, 5), the power keys while the table has them.
+    // every key of the flight and every row of the lists the game has now, once: the cruiser list's rows (Q), the target keys (the backslash, ]), the fleet pick (W and a digit), the friendlies (E), the order key (Enter) after each kind of pick, form up (its row), the missile and the reload, the power keys while the table has them.
     // A list of [what to do, what it is]: a string is a direct key (its code read from the key table), [row] is an order given through the list it is in (or as noRow gives it)
     const via = async row => { const w = await listWay(row); return w ? w.keys.map(k => k[0].replace(/^Key/, '') + (k[1] ? ', Down x ' + k[1] : '')).join(', ') + ', Enter' : '(no row: see the notes)'; }; // the keys of an order as they were pressed
-    const CK = {}; for (const id of ['near', 'hostiles', 'who', 'friendlies', 'order', 'shields', 'engines', 'weapons']) CK[id] = await ck(id); // one key each (card space-game-keys5-qwe): W the fleet pick (then a digit: 1 2 3 a pilot, 4 all pilots), E the order, [ the friendlies, ] the hostiles; none steps back, none clears (X is gone; 5 in the fleet pick is Form up on me), and S O P X are free
+    const CK = {}; for (const id of ['near', 'hostiles', 'who', 'friendlies', 'order', 'missile', 'reload', 'shields', 'engines', 'weapons']) CK[id] = await ck(id); // one key each (cards space-game-keys5-qwe and space-game-keys6-enter): W the fleet pick (then a digit: 1 2 3 a pilot, 4 all pilots), Enter the order, E the friendlies, ] the hostiles, M a missile, R a missile to build; none steps back, none clears ([ and X do nothing), and O P X are free
+    const FORM = await j(`(() => { const C = ${S}.camp; for (const p of CAMP_PANELS.panels) { const r = campPanelList(C, p.id).find(r => r.formup); if (r) return r.id; } return null; })()`); // the Form up on me row, from the lists of this mission: the fleet pick's fifth (W, 5) on main fe1d31eb, a row of the Q list after card space-game-keys7-trim; null: no list has it
     note('keys from the table: ' + JSON.stringify(CK));
-    check('the key table has the nearest threat, the hostiles, who (the fleet pick), the friendlies and the one order key, no clear key, and this walk can press them', !(await ck('clear')) && ['near', 'hostiles', 'who', 'friendlies', 'order'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
+    check('the key table has the nearest threat, the hostiles, who (the fleet pick), the friendlies, the one order key, the missile and the reload, no clear key, and this walk can press them', !(await ck('clear')) && ['near', 'hostiles', 'who', 'friendlies', 'order', 'missile', 'reload'].every(id => CK[id] && VK[CK[id]]), JSON.stringify(CK));
     const done = [], acts = [[['fmine'], 'mine ore'], [CK.near, 'the nearest threat'], [CK.order, 'the order key with an enemy picked: attack it'], [CK.hostiles, 'the hostiles key: the nearest enemy first'], [CK.hostiles, 'the hostiles key again: the next one out'], [CK.who, 'the fleet key: it opens the pick, numbered, and picks nobody by itself'], ['Digit1', '1 in the fleet pick: the first pilot is who'], [CK.order, 'the order key with one pilot as who'], [CK.who, 'the fleet key again'], ['Digit2', '2 in the fleet pick: the second pilot'],
-      [CK.friendlies, 'the friendlies key (it replaces the enemy: one target is held)'], [CK.order, 'the order key with a friendly picked: guard it'], [CK.friendlies, 'the friendlies key again'], [['target'], 'fly to the target'], [CK.who, 'the fleet key'], ['Digit4', '4 in the fleet pick: all pilots'], [CK.who, 'the fleet key'], ['Digit5', '5 in the fleet pick: form up on me, an order to who at once (the held target stays held; there is no X and no empty stop)'],
-      [['emergency'], 'emergency shields'], [['blink'], 'the warp blink'], [['dock'], 'dock (away from it)']]
+      [CK.friendlies, 'the friendlies key (it replaces the enemy: one target is held)'], [CK.order, 'the order key with a friendly picked: guard it'], [CK.friendlies, 'the friendlies key again'], [['target'], 'fly to the target'], [CK.who, 'the fleet key'], ['Digit4', '4 in the fleet pick: all pilots']].concat(FORM ? [[[FORM], 'form up on me, at once (the held target stays held; there is no X and no empty stop)']] : []).concat([[CK.missile, 'the missile key: a missile at the target'], [CK.reload, 'the reload key: one missile queued to build, for ore'],
+      [['emergency'], 'emergency shields'], [['blink'], 'the warp blink (no row while it is switched off: card space-game-keys7-trim)'], [['dock'], 'dock (away from it)']])
       .concat(CK.shields ? [[CK.shields, 'a pip to the shields'], [CK.engines, 'a pip to the engines'], [CK.weapons, 'a pip to the weapons']] : [])
-      .concat([['Digit1', '1 with no list open (no key of the flight)'], ['KeyX', 'X (no key of the flight: clear is gone)'], ['KeyG', 'G (no key of the flight: there is no guard key)'], ['KeyR', 'R (no key of the flight: there is no recall)']]);
+      .concat([['Digit1', '1 with no list open (no key of the flight)'], ['KeyX', 'X (no key of the flight: clear is gone)'], ['KeyG', 'G (no key of the flight: there is no guard key)'], ['BracketLeft', '[ (no key of the flight: the friendlies are on E)']]);
     for (const [act, what] of acts) {
       mark = await j('window.__toasts.length');
       if (typeof act === 'string') { if (!act) { note(what + ': (no key in the table)'); continue; } await key(act); if (/^Digit/.test(act)) await closeLists(); // (a digit the fleet pick refuses leaves it open: closed, so the next key is the flight's)
@@ -140,14 +141,14 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
       else { done.push(act[0]); const keys = await via(act[0]), gave = await listOrder(act[0]); await say(keys + ': ' + what + (gave ? '' : ' (not given: the row is left out of this mission\'s list, or was refused)')); }
       await t.run(1200);
     }
-    check('a digit with no list open and a letter that is no key of the table (1 X G R) opened no list', (await j(`campPanelOpen(${S}.pn)`)) === '');
+    check('a digit with no list open and a key that is no key of the table (1 X G [) opened no list', (await j(`campPanelOpen(${S}.pn)`)) === '');
     for (const id of await j(`CAMP_PANELS.panels.filter(p => !p.off && (p.code || p.parent)).map(p => p.id)`)) for (const r of await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).map(r => ({ id: r.id, label: r.label, open: r.open || '', stay: !!r.stay }))`)) { // the rows of the lists that are on and were not given above, but for the one that flies to the goal: it was given before. A row that opens a part gives no order: its part's rows are given
       if (r.open || done.indexOf(r.id) >= 0 || r.id === 'goal' || r.id === 'burn') continue;
       if (!(await listWay(r.id))) continue; // no key reaches it
       mark = await j('window.__toasts.length'); const keys = await via(r.id); await listOrder(r.id); await say(keys + ': ' + r.label + ' (the ' + id + ' list)'); await t.run(600);
     }
     await closeLists();
-    mark = await j('window.__toasts.length'); await key('Enter'); await say('Enter missile, with no list open (nothing big in reach)');
+    mark = await j('window.__toasts.length'); await key(CK.missile); await say('the missile key, with no list open (nothing big in reach)');
     await key('Tab'); await t.run(400); for (let i = 0; i < 8; i++) await key('Minus', 30); await t.run(900); await snap('12-map-whole'); for (let i = 0; i < 8; i++) await key('Equal', 30); await t.run(400); await snap('13-map-zoom'); await key('Tab'); await t.run(300); // - zooms the map out to the whole system, = back in; Tab closes it (the zoom reset is Q, which over the map closes the map and opens the cruiser list: not pressed here)
     note('mode after the map: ' + await j(`${S}.mode`));
   }

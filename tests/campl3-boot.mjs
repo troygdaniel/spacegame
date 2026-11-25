@@ -67,7 +67,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
     return true;
   };
   // the three pilots are out beside the cruiser when the mission begins (card space-game-keys-orders): there is no launch row and no launch key
-  const CK = await j(`({ near: campKeyCodes('near')[0] || '', order: campKeyCodes('order')[0] || '' })`); // the nearest threat (the backslash) and the one order key (E: card space-game-keys5-qwe; it was W), read from the key table
+  const CK = await j(`({ near: campKeyCodes('near')[0] || '', order: campKeyCodes('order')[0] || '' })`); // the nearest threat (the backslash) and the one order key (Enter: card space-game-keys6-enter; it was E), read from the key table
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
