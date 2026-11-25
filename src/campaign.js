@@ -173,7 +173,8 @@ const CAMP = {
     ink: { hostile: '#ff9aae', friend: '#9fe9ff' },  // the name and the line of what it is doing
     depth: 64                              // the draw order: over the edge arrows (62), under the lists (160)
   },
-  sayhold: { ms: 5000, queue: 3, keep: ['camp.say.distress', 'camp.say.miner.short', 'camp.say.miner.all', 'camp.say.miner.bait', 'camp.say.stray'] }, // the radio lines that stay up (card space-game-price-line-held): the miner's call, the price of answering it, the stray ship's warning stay for ms, and the lines that come in that time wait (at most queue) instead of replacing them. src/campsayhold.js
+  sayhold: { ms: 5000, queue: 3, keep: ['camp.say.distress', 'camp.say.miner.short', 'camp.say.miner.all', 'camp.say.miner.bait', 'camp.say.stray', 'camp.say.l13.turrets', 'camp.say.l13.behind'] }, // the radio lines that stay up (card space-game-price-line-held): the miner's call, the price of answering it, the stray ship's warning stay for ms, and the lines that come in that time wait (at most queue) instead of replacing them. src/campsayhold.js
+  l13: { turretsWait: 3, gapFar: 1100, gapGrace: 4, gapAgain: 25 },   // mission 1.3's two radio lines (card space-game-13-radio-lines, src/camp13lines.js): s after the first raid comes that the radio says to hold the turrets key; px the last hauler may be behind the next one (the haulers leave 12 s apart at 62 px/s: 744 px) before the radio says so, s of it before the first warning, s between two warnings
   card: { lock: 400 },                     // ms: after a card closes (the story, the briefing, a result, the pause) the missile key and a click on a ship do nothing for this long, and so does the first part of a new battle: the Enter that closed the card is not also a missile (card space-game-enter-card-fires-missile; missiles cost ore now). campPanelHold, src/camppanel.js
   corner: {                                // the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 2026: "four corners, each a small title that never leaves, starting with its keys as plain key-cap chips; the details under a title open when its keys are used and fade after a few seconds; the current selection is written beside the title and never fades"): top left Q CRUISER, bottom left Q W FLEET, top right [ ] HOSTILES, bottom right O P FRIENDLIES. src/campcorner.js (the rule and the registry), src/campcornerscene.js (the drawing)
     edge: 18,                              // px: THE margin: from the screen's left and right edges to the corners' frames (the right ones end this far from the right edge: at.tr.x and at.br.x are W - edge - w), and where the glyphs of the bottom left texts start (the key line, the MISSILES count, the radio: x = edge - ink); card space-game-layout-align, Troy, 24 Nov 2026: the left corners and the bottom key strip shared no left edge
@@ -1137,6 +1138,7 @@ function campTick(C, dt) {
   campAnomalies(C, dt);
   if (typeof campRivals === 'function') campRivals(C, dt); // the rival ships of the mission row (src/camprival.js)
   if (typeof campBeats === 'function') campBeats(C); // a saved miner's thanks (src/campbeats.js)
+  if (typeof camp13Tick === 'function') camp13Tick(C); // mission 1.3's two radio lines: the turrets' key at the first raid, the last hauler falling behind (src/camp13lines.js)
   if (typeof campPirates === 'function') campPirates(C, dt); // the cues, the pirates that break off and run, and the ones that got away (src/camppirates.js)
   campRelic(C, dt);
   campRepair(C, dt);
@@ -1690,7 +1692,7 @@ function campMissiles(C, dt) {
 }
 
 // ---------- tech, story and the save ----------
-function campTechChoices(level, P) { return Object.keys(CAMP.tech).filter(id => CAMP.tech[id].after === level).concat(P ? campAnomTechs(P.found, P.techs) : []); } // the level's own, then the items looted from the cloaked caches that are not picked yet (src/campanomaly.js)
+function campTechChoices(level, P) { return Object.keys(CAMP.tech).filter(id => CAMP.tech[id].after === level && (id !== 'blink' || (typeof CAMP_BLINK === 'undefined' || CAMP_BLINK.on))).concat(P ? campAnomTechs(P.found, P.techs) : []); } // the level's own, then the items looted from the cloaked caches that are not picked yet (src/campanomaly.js)
 function campPick(P, id) {
   if (!CAMP.tech[id] || P.techs.indexOf(id) >= 0) return false;
   P.techs.push(id); return true;

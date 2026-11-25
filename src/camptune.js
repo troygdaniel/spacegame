@@ -53,6 +53,7 @@ const CAMP_TUNE = {
     { id: 'minergone', group: 'wing', root: 'CAMPMINER', path: 'gone', min: 300, max: 3000, step: 100, unit: 'px', when: 'now' },         // the miner's call of mission 1.1: how far from the cruiser a pilot is to count as away
     { id: 'minernear', group: 'wing', root: 'CAMPMINER', path: 'near', min: 300, max: 3000, step: 100, unit: 'px', when: 'now' },         // and how near the miner he must be to count as away at him
     { id: 'minerwait', group: 'wing', root: 'CAMPMINER', path: 'wait', min: 0, max: 10, step: 0.5, unit: 's', when: 'now' },              // how long the price line waits after the first pilot is seen away (so three sent together are counted together)
+    { id: 'haulgap', group: 'wing', root: 'CAMP', path: 'l13.gapFar', min: 300, max: 4000, step: 100, unit: 'px', when: 'now' },                // card space-game-13-radio-lines: how far the last hauler may be behind the next one before the radio says so (the haulers leave 12 s apart: 744 px)
     // the enemy
     { id: 'baittboats', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.tboat', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // the THIRD wave of mission 1.1 (the bait: it goes for the transport ten seconds after the miner's call): its torpedo boats. The wave reads its ships when it comes, so a change is felt unless it has come
     { id: 'baitskiffs', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.skiff', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // and its skiffs

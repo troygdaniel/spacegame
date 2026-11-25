@@ -16,6 +16,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 500) + ')' : ''}`); } };
 const g = nodeGame();
+g.run("CAMP_PANELS.panels[0].rows.find(r => r.id === 'sreload').off = 0"); // card space-game-keys7-trim: the Reload missiles row is off the Q list in the game (the R key and the rack stay); this suite is about the row, so it puts it back
 g.run('campPowerSet(true)'); // the pips are OFF in the game (card space-game-power-removed; CAMP_POWER in src/data_controls.js): this suite is about the lists and the keys as they were, with the power list, so it switches them on. The game as it is now: tests/powerremoved.mjs
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
@@ -93,8 +94,8 @@ console.log('C. what is in force, the window, the rows a mission has');
   g.run(`window.S7 = __scene(); S7.camp = campNew(3, [], { seed: 1 }); campPanelsInstall(S7); __open(S7, 'yard', 0); campPanelsPaint(S7, 0);`);
   const bd = J(`__rows(S7)`);
   check('where there is no outpost (level 3) the dock list is "Repair the hull" alone, with the hull sound, and the plate is one row tall', bd.map(r => r.name).join('|') === 'Repair the hull' && J('S7.pnl.count.t') === '1 / 1' && J(`S7.pnl.g.log.filter(l => l[0] === 'fillRoundedRect')[0][4]`) === tall(1), JSON.stringify(bd));
-  g.run(`window.S8 = __scene(); S8.camp = campNew(2, ['blink'], { seed: 1 }); campPanelsInstall(S8); __key(S8, 'KeyQ', 0); campPanelsPaint(S8, 0);`);
-  check('with the warp tech the cruiser list has the blink as its last row: its digit in the chip, "ready" at the right; without it the row is not there', (() => { const r = J('__rows(S8)'); const last = r[r.length - 1]; return last.name === 'Warp blink ahead' && last.suffix === 'ready' && last.cap === String(r.length); })());
+  g.run(`campBlinkSet(true); window.S8 = __scene(); S8.camp = campNew(2, ['blink'], { seed: 1 }); campPanelsInstall(S8); __key(S8, 'KeyQ', 0); campPanelsPaint(S8, 0);`);
+  check('with the warp tech (and the blink switched on) the cruiser list has the blink row, before Form up on me: its digit in the chip, "ready" at the right; without the tech the row is not there', (() => { const r = J('__rows(S8)'); const b = r.find(x => x.name === 'Warp blink ahead'); g.run('campBlinkSet(false)'); return !!b && b.suffix === 'ready' && b.cap === String(r.indexOf(b) + 1) && r[r.length - 1].name === 'Form up on me'; })());
   g.run(`campPanelClose(S.pn); __key(S, 'KeyQ', 3300); __key(S, 'KeyQ', 3300); __key(S, 'KeyQ', 3300); __p(3300);`);
   check('a list opened again is at the top, whatever was done with it', J('S.pn.open') === 'cruiser' && J(`__rows(S)[0].name`) === 'Fly to the goal');
   g.run(`campPanelClose(S.pn);`);
@@ -119,7 +120,7 @@ console.log('E. one component, the screen\'s own camera');
   check('a row put in the table is drawn at the end of the list (no line of drawing code knows it), with its own digit', J('__rows(S2).length') === J(`campPanelList(S2.camp, 'cruiser').length`) && J('__rows(S2)[__rows(S2).length - 1].name') === 'Ninth row' && J('__rows(S2)[__rows(S2).length - 1].cap') === String(J('__rows(S2).length')));
   g.run(`__T.rows.pop(); CAMP_PANELS.panels.push({ id: 'xl', side: 'left', key: '', code: '', title: 'EXTRA', tab: '', name: 'the extra list', rows: [{ id: 'x1', order: 'recall', label: 'A row of the extra list', help: 'From the data' }] }); window.S9 = __scene(); campPanelsInstall(S9); campPanelGo(S9.pn, S9.camp, 'xl'); campPanelsPaint(S9, 0); window.__x2 = [S9.pnl.title.t, S9.pnl.count.t, __rows(S9)[0].name, S9.pnl.keys.t]; CAMP_PANELS.panels.pop();`);
   check('a whole list put in the table is drawn like the others, with no line of code: its heading, its one row and its foot (a list that is not numbered says Up, Down, Enter)', J('__x2[0]') === 'EXTRA' && J('__x2[1]') === '1 / 1' && J('__x2[2]') === 'A row of the extra list' && /Enter/.test(J('__x2[3]')));
-  check('and the table is as it was: four lists with their rows (cruiser, fleet pick, convoy, dock)', J(`CAMP_PANELS.panels.length`) === 4 && J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '9,5,4,2');
+  check('and the table is as it was: four lists with their rows (cruiser 10, fleet pick 4, convoy, dock)', J(`CAMP_PANELS.panels.length`) === 4 && J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '10,4,4,2');
   const objs = J(`S.pnl.objs.map(o => o.sf)`);
   check('every object of the lists (the key caps too) has scroll factor 0: it is on the camera that never zooms (src/camzoom.js sorts by it), so - = and the wheel never scale them', objs.length === 1 + 2 + 4 * J('CAMP_PANELS.show') + 2 && objs.every(sf => sf === 0), objs.length);
   check('the lists are drawn over the map (their depth)', K.depth > 156);

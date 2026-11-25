@@ -23,7 +23,7 @@ g.run(`
 // ---- A. the table ----
 {
   const keep = J('CAMP.sayhold.keep');
-  check('the hold is 5 s, at most three lines wait, and the kept lines are the miner\'s call, the price (one or two pilots away, or all), the call was bait, and the stray ship', J('CAMP.sayhold.ms') === 5000 && J('CAMP.sayhold.queue') === 3 && keep.slice().sort().join() === 'camp.say.distress,camp.say.miner.all,camp.say.miner.bait,camp.say.miner.short,camp.say.stray', keep.join());
+  check('the hold is 5 s, at most three lines wait, and the kept lines are the miner\'s call, the price (one or two pilots away, or all), the call was bait, the stray ship, and mission 1.3\'s two (the turrets\' key, the last hauler behind: card space-game-13-radio-lines)', J('CAMP.sayhold.ms') === 5000 && J('CAMP.sayhold.queue') === 3 && keep.slice().sort().join() === 'camp.say.distress,camp.say.l13.behind,camp.say.l13.turrets,camp.say.miner.all,camp.say.miner.bait,camp.say.miner.short,camp.say.stray', keep.join());
   check('every kept line has its words (a key with none would show its own name)', keep.every(k => J(`uiText(${JSON.stringify(k)})`) !== k));
   const said = f => [...src(f).matchAll(/campSay\(C, [^']*'(camp\.say\.[a-z.]+)'(?:[^']*'(camp\.say\.[a-z.]+)')?/g)].flatMap(m => m.slice(1).filter(Boolean));
   const price = said('src/campminer.js').concat(said('src/campstray.js'));

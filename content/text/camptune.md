@@ -46,6 +46,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.missilereload | Missile build time |
 | camp.ui.tune.row.missilecost | Ore for a missile |
 | camp.ui.tune.row.sayhold | Hold of the kept radio lines |
+| camp.ui.tune.row.haulgap | Last hauler's gap before the warning |
 | camp.ui.tune.row.lasertank | Laser tank size |
 | camp.ui.tune.row.laserrefill | Laser refill |
 | camp.ui.tune.row.fighterhull | Fighter hull |
