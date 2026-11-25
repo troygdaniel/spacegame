@@ -235,7 +235,10 @@ function campMapPaint(s, time) {
   } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnTake.setVisible(false); }
   if (mp.routeAt) { // the route label, beside the line, where it is on no name and under no button: the whole-system map has the belts' names on the route; the buttons are boxes like the names
     const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnTake].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
-    const { cp, q } = mp.routeAt, spot = campMapFreeSpot(campMapRouteSpots(cp, q), mp.routeText.width || 120, mp.routeText.height || 16, names.concat(btns)) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
+    const { cp, q } = mp.routeAt, rw = mp.routeText.width || 120, rh = mp.routeText.height || 16, gt = mp.goalText, goalBox = gt && gt.visible && gt.width ? [{ x: gt.x - gt.width / 2, y: gt.y - gt.height / 2, w: gt.width, h: gt.height }] : [];
+    // a line too short to hold the label (the cruiser at the goal's own place) puts it beside the two marks, not on them (card space-game-map-title-and-labels); the word GOAL is a box it keeps out of too
+    const short = Math.hypot(q.x - cp.x, q.y - cp.y) < rw + 2 * CAMPMAP.routeR, spots = (short ? campMapRouteBeside(cp, q, rw, rh, F) : []).concat(campMapRouteSpots(cp, q));
+    const spot = campMapFreeSpot(spots, rw, rh, names.concat(btns, goalBox)) || { x: (cp.x + q.x) / 2, y: (cp.y + q.y) / 2 - 10 };
     mp.routeText.setPosition(spot.x, spot.y); mp.routeAt = null;
   }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view

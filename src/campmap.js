@@ -15,6 +15,8 @@ const CAMPMAP = {
   key: 'Tab',                               // KeyboardEvent.code of the key that opens and closes the map (the key line and the pause card say "Tab": src/campaignscene.js, content/text/ui.md camp.ui.*)
   frame: { x: 100, y: 100, w: 790, h: 520 },// px: where the map is drawn on the screen (inside the glass panel of 1140 by 650 that src/campmapdraw.js draws)
   pad: 0.08,                                // the share of the level's width and height left empty round it
+  toastIn: 8,                               // px under the frame's top edge: where a radio line's box sits while the map is open (card space-game-map-title-and-labels: at its usual place it covered the end of the title)
+  routeR: 20,                               // px: the room the route label keeps clear round the two marks it joins (the cruiser and the goal); a line shorter than the label and this twice is too short to hold it
   crowdZ: 0.6,                              // under this zoom a place's name that cannot be put clear of the others is not drawn (the whole system: the inner planets are a few pixels apart)
   minExtent: 3000,                          // px of space: never zoom in closer than this across (a level with only one place in it)
   km: 10,                                   // px of space in a km (the ship computer's "the mothership is N km away" says px / 10)
@@ -31,6 +33,16 @@ function campMapRouteSpots(a, b, off) {
   off = off == null ? 11 : off; const out = [];
   [0.5, 0.38, 0.62, 0.26, 0.74, 0.14, 0.86].forEach(t => { const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t; out.push({ x, y: y - off }, { x, y: y + off });  });
   return out;
+}
+// the centres to try for the route label when its line is too short to hold it (card space-game-map-title-and-labels: the cruiser is at the goal's own place, 16 km on a map 2,900 km across is a few pixels, and the label
+// sat on the two marks, over the word GOAL and the place's name): beside the pair of marks, CAMPMAP.routeR clear of both, at their middle height. The side towards the nearer edge of the frame comes first (away from the middle of
+// the screen, where the radio box is), then the other side, then both sides one line up and one line down, then clear above and below the pair. Only the places where a w by h label is inside the frame F.
+function campMapRouteBeside(a, b, w, h, F) {
+  const R = CAMPMAP.routeR, gap = 6, x0 = Math.min(a.x, b.x) - R, x1 = Math.max(a.x, b.x) + R, y0 = Math.min(a.y, b.y) - R, y1 = Math.max(a.y, b.y) + R, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const right = dy => ({ x: x1 + gap + w / 2, y: my + dy }), left = dy => ({ x: x0 - gap - w / 2, y: my + dy }), sides = mx < F.x + F.w / 2 ? [left, right] : [right, left], out = [];
+  [0, -(h + 3), h + 3].forEach(dy => sides.forEach(f => out.push(f(dy))));
+  out.push({ x: mx, y: y0 - 30 - h / 2 }, { x: mx, y: y1 + 30 + h / 2 }); // the word GOAL is over the goal and the place's name under it: 30 px clear
+  return out.filter(c => c.x - w / 2 >= F.x + 2 && c.x + w / 2 <= F.x + F.w - 2 && c.y - h / 2 >= F.y + 2 && c.y + h / 2 <= F.y + F.h - 2);
 }
 // the colour of a ship (u: a ship of the battle): the radar and the map agree
 function campDotColor(u) {
