@@ -128,6 +128,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.bf\.\d+\.\d+\.w\d$/, why: 'the other steps of a mission\'s walkthrough: on the big briefing, for the eyes (only the first is read, once, when it opens)' },
   { re: /^camp\.bf\./, why: 'the big briefing\'s headings, its enemies, readiness and warning lines, the route, the keys it lists, its key line and the ship\'s own line over a screen of mission 1.1: on the screen, and a key line or a number is not a fixed spoken line' },
   { re: /^camp\.bw\./, why: 'the names of the ships and the marks on the briefing\'s walking map (WING, PATROL, PIRATES?): drawn on the map, not said' },
+  { re: /^scr\./, why: 'the words of the new screens around the flight (src/screens.js, the mock docs/screens-mock.html): the Settings row that turns them on and, in the pieces after landing F, each screen\'s own few words; drawn on the screens, never said (the ship speaks through the camp.* lines)' },
   { re: /^camp\.sel\./, why: 'the friend selection\'s words ("All pilots", Q): the friend display\'s title; shown, never said' },
   { re: /^camp\.tdisp\./, why: 'the target display\'s words: the box\'s names (hull, shield), a ship\'s type, how far, and the line of what it is doing; shown, never said (a line of the radio would crowd the pilots)' },
   { re: /^camp\.corner\./, why: 'the four corner panels\' titles (CRUISER, FLEET, HOSTILES, FRIENDLIES) and the word for a pilot in the bay: drawn in the corners beside their key chips, never said (the radio and the ship speak through camp.say)' },
