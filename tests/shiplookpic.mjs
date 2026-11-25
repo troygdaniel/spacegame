@@ -4,6 +4,7 @@
 //   A  slookPic: the key and scale of a kind for a side, nothing with the switch off or for what is not a ship
 //   B  the target panel on a stand-in scene: the held enemy, a friend picked, a squad's fighter, a ship you protect; the texture is made once; a switch flipped while the panel shows is felt at once; no tint in the new look
 //   C  the briefing: campBriefSprite and campBriefDrawPic: the flat-cut ship of its usual side, no tint; today's with the switch off; pod, rock and ore unchanged
+//   E  the picture as markup (slookPicSvg) for the page HUD's hostiles panel: the same outline, facet and colours as the textures
 //   D  the rules: the switch is asked once for a pass, no picture is drawn by the page HUD, no image or web, the script is in the page after the others of the look
 // Run: node tests/shiplookpic.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -85,6 +86,16 @@ check('a picture drawn with the switch on: the carrier and the raider are the fl
 g.run(`CAMP.flags.shiplook = false; window.B2 = __bs(); campBriefDrawPic(B2.s, BPARTS, 100, 100, 2);`);
 const ims2 = J('B2.ims');
 check('with the switch off the same picture is today\'s: the part\'s tint on the raider, none of the new keys', ims2.length === 3 && !ims2.some(i => /^look-/.test(i.key)) && ims2[1].tint === 0x66ccff, JSON.stringify(ims2));
+
+console.log('E. the picture as markup for the page HUD (card space-game-page-hud-target-picture)');
+const svgs = J(`(() => { const o = {}; slookKinds().forEach(k => { o[k] = { svg: slookPicSvg(k), poly: slookPolygon(k, 1, 8), facet: slookFacetPolygon(k, 1, 8), side: slookKindSide(k), hot: !!SLOOK.K[k].hot }; }); return o; })()`);
+const rd = a => a.map(v => Math.round(v * 1000) / 1000);
+const ptsOf = (svg, i) => { const m = [...svg.matchAll(/points="([^"]*)"/g)][i]; return m ? m[1].split(' ').flatMap(p => p.split(',').map(Number)) : []; };
+check('every kind of the table has an svg: an inline <svg> with the outline and the facet as two polygons (the very outline and facet the textures are baked from, to three decimals), nose up (turned a quarter), in a square box', Object.keys(svgs).length === Object.keys(sides).length && Object.entries(svgs).every(([k, v]) => /^<svg class="ph-pic" viewBox="-0\.58 -0\.58 1\.16 1\.16"/.test(v.svg) && /rotate\(-90\)/.test(v.svg) && (v.svg.match(/<polygon /g) || []).length === 2 && JSON.stringify(ptsOf(v.svg, 0)) === JSON.stringify(rd(v.poly)) && JSON.stringify(ptsOf(v.svg, 1)) === JSON.stringify(rd(v.facet))));
+check('the colours are the table\'s: the outline the side\'s colour, the facet the side\'s colour mixed toward the dark (white for a warhead: the torpedo boats), the rim the table\'s', Object.entries(svgs).every(([k, v]) => { const fills = [...v.svg.matchAll(/fill="([^"]*)"/g)].map(m => m[1]); return fills[0] === J(`slookColor(${JSON.stringify(v.side)})`) && fills[1] === J(`slookFacet(${JSON.stringify(v.side)}, ${v.hot})`) && v.svg.indexOf(J('SLOOK.rim.color')) > 0; }) && svgs.tboat.svg.indexOf('fill="#ffffff"') > 0 && svgs.lancer.svg.indexOf('fill="#ffffff"') > 0);
+check('the whole picture is inside the box (every corner, turned, within 0.58 of the middle), so nothing is cut at any size', Object.values(svgs).every(v => ptsOf(v.svg, 0).every(n => Math.abs(n) <= 0.58)));
+check('a side asked for is used (a raider as a pirate\'s foe is pink), the usual side otherwise; a kind with no row, none', J('slookPicSvg("raider", "foe")').indexOf('fill="#ff6fa8"') > 0 && J('slookPicSvg("raider")').indexOf('fill="#d58bff"') > 0 && J('slookPicSvg("rock")') === '' && J('slookPicSvg("")') === '');
+check('no image, no link, no script in the markup (inline shapes only)', Object.values(svgs).every(v => !/href|url\(|<image|<script|on[a-z]+=/i.test(v.svg)));
 
 console.log('D. the rules');
 const pic = src('src/shiplookpic.js'), code = pic.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, ''), ct = src('src/camptcornerscene.js'), cb = src('src/campbriefdraw.js'), html = src('index.html');

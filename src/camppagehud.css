@@ -86,4 +86,8 @@
 .ph-tgm { align-items: flex-start; gap: .8em; }
 .ph-tgm .ph-m { flex: 1; width: auto; }
 .ph-tgm .ph-none { flex: 1; align-self: center; letter-spacing: .06em; text-transform: none; }
+/* the picked target's flat-cut picture (card space-game-page-hud-target-picture): small, nose up, in its side's colour, at the top right of the hostiles panel beside the target's name and distance (the meters stay full width: the panel's height is as it was); the two lines give it the room */
+.ph-tpic { position: absolute; right: 1em; top: 2.3em; width: 3.3em; height: 3.3em; display: flex; align-items: center; justify-content: center; }
+.ph-tpic .ph-pic { width: 100%; height: 100%; overflow: visible; }
+.ph-foes.pic .ph-big, .ph-foes.pic .ph-sub { box-sizing: border-box; max-width: calc(100% - 4.1em); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ph-act { font-size: .82em; color: #f3bcd2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -8,6 +8,7 @@
 //   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
 //   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
 //   O  an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)
+//   R  the picked target's flat-cut picture in the hostiles panel (card space-game-page-hud-target-picture)
 //   Q  nothing a player needs under a page panel (card space-game-goal-panel-hides-text): the canvas column starts under the goal panel; the edge pills are put clear of the panels
 //   P  the page HUD is the default look (card space-game-page-hud-default-on): the table's value, no N panel row, an old save, the address ?pagehud=0, the boot helper
 //   E  the rules: no web font, two weights, no image files, the script and the style are in the page
@@ -508,6 +509,26 @@ g.run(`SQ.pageHud.foes.el.getBoundingClientRect = () => ({ left: 10 + 1050, top:
 const e1 = J('({ l: parseInt(SQ.pageHud.edge.el.style.left), t: parseInt(SQ.pageHud.edge.el.style.top) })');
 check('Q on a stand-in page: with the hostiles panel standing where the pill was, the pill is put elsewhere (not on the panel\'s rectangle) at the next sync, and when the panel is gone it comes back; the canvas of a page with no real panels (rectangles as big as the screen) is as it was', e0.on === '' && !(e1.l > 1050 - 60 && e1.t > e0.t - 40 - 20 && e1.t < e0.t + 70 + 20) && (g.run(`SQ.pageHud.foes.el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1280, height: 720, bottom: 150 }); campPageHudSync(SQ, 900);`), J('parseInt(SQ.pageHud.edge.el.style.top)') === e0.t), JSON.stringify([e0, e1]));
 g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('R. the picked target\'s flat-cut picture in the hostiles panel (card space-game-page-hud-target-picture)');
+g.run(`CAMP.flags.pagehud = true; CAMP.flags.shiplook = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); window.RP = campSpawn(C, 'raider', C.carrier.x + 420, C.carrier.y - 60); RP.vx = RP.vy = 0; window.SR = __scene(); SR.hud = { keys: { visible: true, setVisible(v) { this.visible = v; } }, obj: { visible: true, setVisible(v) { this.visible = v; } }, wave: { visible: true, setVisible(v) { this.visible = v; } } }; SR.keysBack = { visible: true, setVisible(v) { this.visible = v; } }; SR.placeLabels = []; SR.cameras = { main: { scrollX: C.carrier.x - W / 2, scrollY: C.carrier.y - H / 2, zoom: 1 } }; campPageHudSync(SR, 0);`);
+check('R nothing picked: the hostiles panel (a raider seen) has no target block and no picture, and its class is the panel\'s own', J('SR.pageHud.foes.tg.pic.style.display') === 'none' && J('SR.pageHud.foes.el._cls') === 'ph-p ph-foes' && J('campPageModel(C).foes.target') === null);
+g.run(`campTgtStep(C, 1); campPageHudSync(SR, 300);`);
+check('R a hostile picked, the new look on: the model has the picture of its kind and side (a raider is an alien: violet), the picture is shown in the panel as the ship\'s flat-cut svg, and the panel has the class that makes room for it', J('campPageModel(C).foes.target.pic.kind') === 'raider' && J('campPageModel(C).foes.target.pic.side') === J('slookSide(RP, false)') && J('SR.pageHud.foes.tg.pic.style.display') === '' && J('SR.pageHud.foes.tg.pic.innerHTML') === J('slookPicSvg("raider", slookSide(RP, false))') && J('SR.pageHud.foes.tg.pic.innerHTML').indexOf('#d58bff') > 0 && J('SR.pageHud.foes.el._cls') === 'ph-p ph-foes pic');
+g.run(`window.PK = SR.pageHud.foes.tg.pic; PK.innerHTML = 'MARK'; campPageHudSync(SR, 600);`);
+check('R written only when the ship\'s kind or side changes: the same frame again does not write the picture', J('SR.pageHud.foes.tg.pic.innerHTML') === 'MARK');
+g.run(`RP.kind = 'skiff'; RP.faction = 'pirate'; campPageHudSync(SR, 900);`);
+check('R another kind and side (a pirate\'s skiff is pink) is written at once', J('SR.pageHud.foes.tg.pic.innerHTML').indexOf('#ff6fa8') > 0 && J('SR.pageHud.foes.tg.pic.innerHTML') !== 'MARK');
+g.run(`RP.kind = 'raider'; RP.faction = ''; CAMP.flags.shiplook = false; campPageHudSync(SR, 1200);`);
+check('R the new look switched off while it shows: the picture goes at once, the class is the panel\'s own again, and the model has none (today\'s pictures are the canvas\'s and are not drawn in the page)', J('SR.pageHud.foes.tg.pic.style.display') === 'none' && J('SR.pageHud.foes.el._cls') === 'ph-p ph-foes' && J('campPageModel(C).foes.target.pic') === null);
+g.run(`CAMP.flags.shiplook = true; campPageHudSync(SR, 1500); C.tgt = ''; campPageHudSync(SR, 1800);`);
+check('R and on again: back; the target let go: no picture, no class', J('SR.pageHud.foes.tg.pic.style.display') === 'none' && J('SR.pageHud.foes.el._cls') === 'ph-p ph-foes');
+g.run(`window.RT = campSpawn(C, 'raider', C.carrier.x + 300, C.carrier.y); campTgtStep(C, 1); RP.kind = 'zzz'; C.tgt = RP.id; campPageHudSync(SR, 2100);`);
+check('R a kind the look table has no row for has no picture (and no room made for it)', J('campPageModel(C).foes.target.pic') === null && J('SR.pageHud.foes.tg.pic.style.display') === 'none');
+const cssR = src('src/camppagehud.css'), pjR = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
+check('R the panel\'s height is the same: the picture is positioned over the panel\'s top right beside the name and the distance (absolute, in em), so it adds no row and no height; the two lines give it room; no image file, no web font', /\.ph-tpic \{[^}]*position: absolute[^}]*width: 3\.3em[^}]*height: 3\.3em/.test(cssR) && /\.ph-foes\.pic \.ph-big, \.ph-foes\.pic \.ph-sub \{[^}]*max-width: calc\(100% - 4\.1em\)/.test(cssR) && !/url\(|@font-face/.test(cssR));
+check('R the script asks the ships\' picture function (slookPicSvg, src/shiplookpic.js: the same table the textures are baked from) behind the switch (slookOn), with no image and no request of its own', /slookPicSvg\(/.test(pjR) && /slookOn\(\)/.test(pjR) && !/new Image|createElement\('img'\)|fetch\(/.test(pjR));
+g.run(`CAMP.flags.pagehud = false; CAMP.flags.shiplook = false;`);
 
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');
