@@ -30,7 +30,8 @@ const CAMP = {
     convoyorders: true,                    // Tuck in, Run for it, Hold here, Carry on (src/campconvoy.js): off, the escorted ships fly their own way and the Convoy part is not in the list
     autofire: false,                       // true: the turrets fire by themselves at what is in reach (Space is not needed); false: they fire only while Space is held
     laser: true,                           // the turrets' charge (CAMP.tank): off, a shot costs nothing and the tank is always full
-    hints: true                            // the first-minute hints and the beats' tips (src/campnudge.js, src/campbeats.js): off, none shows
+    hints: true,                           // the first-minute hints and the beats' tips (src/campnudge.js, src/campbeats.js): off, none shows
+    pagehud: false                         // the page HUD (card space-game-page-hud, src/camppagehud.js): the flight HUD as page elements over the canvas, in the look of the agent board; off by default (the canvas HUD), on from this row of the N panel or the address ?pagehud=1
   },
   size: {                                  // how big your ships are: the one place for it (card space-game-campaign-look: another 30 percent smaller than the 140 x 100, 31 x 23 and 40 x 29 px they were drawn at). len: the drawn length in px (the scene scales the picture to it); hit: the hit circle's radius in px, about half of len over two, as it always was
     carrier: { len: 98, hit: 25 },         // it was 140 and 36

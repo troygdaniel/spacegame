@@ -89,7 +89,8 @@ const CAMP_TUNE = {
     { id: 'convoyorders', kind: 'flag', group: 'systems', flag: 'convoyorders', when: 'now' },
     { id: 'autofire', kind: 'flag', group: 'systems', flag: 'autofire', when: 'now' },
     { id: 'laser', kind: 'flag', group: 'systems', flag: 'laser', when: 'now' },
-    { id: 'hints', kind: 'flag', group: 'systems', flag: 'hints', when: 'now' }
+    { id: 'hints', kind: 'flag', group: 'systems', flag: 'hints', when: 'now' },
+    { id: 'pagehud', kind: 'flag', group: 'systems', flag: 'pagehud', when: 'now' } // card space-game-page-hud: the new look of the HUD, to flip between the two while playing
   ],
   state: { over: {}, snap: null, loaded: false }
 };

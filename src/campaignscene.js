@@ -410,6 +410,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
     if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
+    if (typeof campPageHudSync === 'function') campPageHudSync(this, this.time.now); // the page HUD, when its switch is on (src/camppagehud.js); before the corners, which open under its panel
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
     if (typeof campCornerSync === 'function') campCornerSync(this, this.time.now); // the corner panels: the four stacked at the top, Q CRUISER and W FLEET at the left, ] HOSTILES and [ FRIENDLIES at the right (and the ones other cards add): the title and the selection stay, the details open on use and fade (src/campcorner.js, src/campcornerscene.js)
     if (typeof campTcornerSync === 'function') campTcornerSync(this, this.time.now); // the ship's picture in the details of [ ] HOSTILES and O P FRIENDLIES (src/camptcornerscene.js)

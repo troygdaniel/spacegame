@@ -1,0 +1,33 @@
+/* The page HUD (card space-game-page-hud; src/camppagehud.js): the Campaign's flight HUD as page elements over the canvas, in the look of the agent board. The tokens are the mock's (docs/hud-mock.html).
+   The typeface is the system one (no web font), two weights only, 400 and 600; every size is in em of the root's font size, which the script sets from the canvas width (about 1.1 percent of it). No image files: icons are inline SVG. */
+.ph-root {
+  --ph-ink: #e6edf7; --ph-mute: #8794ab; --ph-line: rgba(140, 170, 210, .16); --ph-panel: rgba(14, 22, 36, .62);
+  --ph-good: #4fe0a6; --ph-shield: #6fd6ff; --ph-warn: #ffc857; --ph-foe: #ff6fa8; --ph-ore: #e9b872;
+  position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 5; overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 400; color: var(--ph-ink); font-size: 14px; line-height: 1.5;
+}
+.ph-p {
+  position: absolute; background: var(--ph-panel); border: 1px solid var(--ph-line); border-radius: 1.15em; padding: .85em 1em;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 .6em 2em rgba(0, 0, 0, .35); box-sizing: border-box;
+}
+.ph-k { display: inline-grid; place-items: center; min-width: 1.55em; height: 1.55em; padding: 0 .35em; border-radius: .45em; font-size: .78em; font-weight: 600; color: #0a1420; background: #bfe9ff; box-sizing: border-box; }
+.ph-lab { font-size: .72em; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ph-mute); }
+.ph-row { display: flex; align-items: center; gap: .6em; }
+.ph-meter { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); overflow: hidden; }
+.ph-fill { display: block; height: 100%; border-radius: 1em; }
+.ph-fill.ph-shield { background: var(--ph-shield); }
+.ph-fill.ph-hull { background: var(--ph-good); }
+.ph-icw { display: inline-flex; flex: none; }
+.ph-ic { width: 1.05em; height: 1.05em; flex: none; }
+.ph-num { min-width: 2.2em; text-align: right; font-size: .78em; color: var(--ph-mute); font-variant-numeric: tabular-nums; }
+/* top left: the cruiser, then under a hairline the pilots */
+.ph-ship { left: 1.3em; top: 1.3em; width: 21em; display: flex; flex-direction: column; gap: .7em; }
+.ph-pilots { display: flex; gap: .9em; align-items: center; padding-top: .75em; border-top: 1px solid var(--ph-line); }
+.ph-pilot { display: flex; flex-direction: column; align-items: center; gap: .3em; opacity: .5; }
+.ph-pilot.on { opacity: 1; }
+.ph-ring { --v: 100; --c: var(--ph-good); width: 2.9em; height: 2.9em; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--c) calc(var(--v) * 1%), rgba(255, 255, 255, .1) 0); }
+.ph-ring span { width: 2.3em; height: 2.3em; border-radius: 50%; display: grid; place-items: center; background: #0e1626; font-weight: 600; font-size: .95em; }
+.ph-pilot small { font-size: .68em; color: var(--ph-mute); letter-spacing: .06em; }
+.ph-pilot.pick small { color: var(--ph-ink); font-weight: 600; }
+.ph-doing { margin-left: auto; text-align: right; font-size: .82em; color: var(--ph-good); }
+.ph-doing em { display: block; font-style: normal; color: var(--ph-mute); font-size: .86em; }
