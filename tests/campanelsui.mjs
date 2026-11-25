@@ -51,14 +51,14 @@ console.log('A. on the screen in the battle only, and only when asked for');
 {
   paint(0);
   check('until a key opens one, no list is drawn: no heading, no row, no plate; the pointer is listened for', J('__rows(S).length') === 0 && !J('S.pnl.title.vis') && !J('S.pnl.count.vis') && !J('S.pnl.keys.vis') && J(`S.pnl.g.log.filter(l => /Rect$/.test(l[0])).length`) === 0 && J('S.input.handlers.length') === 1);
-  g.run(`__key(S, 'KeyS', 0); __p(0);`);
+  g.run(`__key(S, 'KeyQ', 0); __p(0);`);
   const want = J(`campPanelList(S.camp, 'cruiser').map(r => r.label)`);
   check('S: the cruiser list is drawn, a row for each of the mission\'s rows, in the table\'s words and order, each with its digit in the chip at its left (the list is numbered: no highlight, no arrow)', J('__rows(S).map(r => r.name).join("|")') === want.join('|') && J('__rows(S).map(r => r.cap).slice(0, 4).join()') === '1,2,3,4' && J('S.pnl.rows.length') === J('CAMP_PANELS.show'));
   const gl = geo('convoy'), gr = geo('yard');
   check('a list of the left is at the left edge and one of the right at the right edge, both inside the screen', gl.x === K.edge && gr.x + gr.w === 1280 - K.edgeRight && gl.w === K.box.w && gr.w === K.box.w);
   check('the left list sits below the lines of text at the left (it opens at y ' + K.top + ') and the right list right under the top (y ' + K.topRight + ')', gl.y === K.top && gr.y === K.topRight);
-  check('the lists show in the battle only: over the story, the pause card, the pick, the end every object is hidden and an open list is closed', ['intro', 'pause', 'pick', 'won', 'lost', 'end', 'refit'].every((m, i) => (g.run(`S.mode = 'play'; campPanelClose(S.pn); __key(S, 'KeyS', ${10 + i}); __p(${10 + i}); S.mode = '${m}'; __p(${20 + i});`), J('__rows(S).length') === 0 && J('S.pn.open') === '' && !J('S.pnl.title.vis'))));
-  g.run(`S.mode = 'play'; campPanelClose(S.pn); __key(S, 'KeyS', 15); __p(15); S.mp = {}; __p(20);`);
+  check('the lists show in the battle only: over the story, the pause card, the pick, the end every object is hidden and an open list is closed', ['intro', 'pause', 'pick', 'won', 'lost', 'end', 'refit'].every((m, i) => (g.run(`S.mode = 'play'; campPanelClose(S.pn); __key(S, 'KeyQ', ${10 + i}); __p(${10 + i}); S.mode = '${m}'; __p(${20 + i});`), J('__rows(S).length') === 0 && J('S.pn.open') === '' && !J('S.pnl.title.vis'))));
+  g.run(`S.mode = 'play'; campPanelClose(S.pn); __key(S, 'KeyQ', 15); __p(15); S.mp = {}; __p(20);`);
   check('and with the Tab map open (its frame would run under them)', J(`__rows(S).length`) === 0 && !J('S.pnl.title.vis'));
   g.run(`S.mp = null; S.ck = { open: true }; __p(30);`);
   check('and with the page of every key open', J(`__rows(S).length`) === 0);
@@ -70,7 +70,7 @@ console.log('A. on the screen in the battle only, and only when asked for');
 
 console.log('B. the rows');
 {
-  g.run(`campPanelClose(S.pn); S.camp.carrier.hp = S.camp.carrier.maxHp; __key(S, 'KeyS', 1000); __p(1000);`);
+  g.run(`campPanelClose(S.pn); S.camp.carrier.hp = S.camp.carrier.maxHp; __key(S, 'KeyQ', 1000); __p(1000);`);
   const rows = J(`__rows(S)`);
   check('every row has its name, a live word at the right, and a greyed look with the reason when it cannot be done: Repair hull with the hull whole says "hull sound" and its name is grey-blue; Fly to the goal is white with the distance', (() => { const rep = rows.find(r => r.name === 'Repair hull'), goal = rows.find(r => r.name === 'Fly to the goal'); return !!rep && rep.suffix === 'hull sound' && rep.nameColor === K.rowInk.no && !!goal && goal.nameColor === K.rowInk.ok && /km/.test(goal.suffix || 'km') ; })(), JSON.stringify(rows.slice(0, 5)));
   check('the row of the key R (Reload missiles) has its key in a second chip after its words, the others have none', J(`S.pnl.rows.filter(r => r.cap2.vis).map(r => r.name.t + ':' + r.cap2.t).join()`) === 'Reload missiles:R');
@@ -93,9 +93,9 @@ console.log('C. what is in force, the window, the rows a mission has');
   g.run(`window.S7 = __scene(); S7.camp = campNew(3, [], { seed: 1 }); campPanelsInstall(S7); __open(S7, 'yard', 0); campPanelsPaint(S7, 0);`);
   const bd = J(`__rows(S7)`);
   check('where there is no outpost (level 3) the dock list is "Repair the hull" alone, with the hull sound, and the plate is one row tall', bd.map(r => r.name).join('|') === 'Repair the hull' && J('S7.pnl.count.t') === '1 / 1' && J(`S7.pnl.g.log.filter(l => l[0] === 'fillRoundedRect')[0][4]`) === tall(1), JSON.stringify(bd));
-  g.run(`window.S8 = __scene(); S8.camp = campNew(2, ['blink'], { seed: 1 }); campPanelsInstall(S8); __key(S8, 'KeyS', 0); campPanelsPaint(S8, 0);`);
+  g.run(`window.S8 = __scene(); S8.camp = campNew(2, ['blink'], { seed: 1 }); campPanelsInstall(S8); __key(S8, 'KeyQ', 0); campPanelsPaint(S8, 0);`);
   check('with the warp tech the cruiser list has the blink as its last row: its digit in the chip, "ready" at the right; without it the row is not there', (() => { const r = J('__rows(S8)'); const last = r[r.length - 1]; return last.name === 'Warp blink ahead' && last.suffix === 'ready' && last.cap === String(r.length); })());
-  g.run(`campPanelClose(S.pn); __key(S, 'KeyS', 3300); __key(S, 'KeyS', 3300); __key(S, 'KeyS', 3300); __p(3300);`);
+  g.run(`campPanelClose(S.pn); __key(S, 'KeyQ', 3300); __key(S, 'KeyQ', 3300); __key(S, 'KeyQ', 3300); __p(3300);`);
   check('a list opened again is at the top, whatever was done with it', J('S.pn.open') === 'cruiser' && J(`__rows(S)[0].name`) === 'Fly to the goal');
   g.run(`campPanelClose(S.pn);`);
 }
@@ -104,10 +104,10 @@ console.log('D. the target');
 {
   g.run(`S.camp.ships = S.camp.ships.filter(u => u.team !== 'earth' || u.kind === 'carrier' || (u.kind !== 'fighter' && u.kind !== 'escort')); campSpawn(S.camp, 'raider', S.camp.carrier.x + 600, S.camp.carrier.y); __key(S, 'BracketRight', 4000); __p(4000); __p(4300);`);
   check('] picks the target with no list open (the target display in the bottom right shows it: tests/camptdisp.mjs; the lists have no line of it)', /^raider-/.test(J('S.camp.tgt')) && J('S.pn.open') === '' && !('tgt' in J('Object.fromEntries(Object.keys(S.pnl).map(k => [k, 1]))')));
-  g.run(`__key(S, 'KeyS', 4360); __p(4360);`);
-  check('the target stays picked with a list open too (] [ X work in both)', /^raider-/.test(J('S.camp.tgt')) && J('S.pnl.rows.some(r => r.name.vis)'));
+  g.run(`__key(S, 'KeyQ', 4360); __p(4360);`);
+  check('the target stays picked with a list open too (] [ work in both)', /^raider-/.test(J('S.camp.tgt')) && J('S.pnl.rows.some(r => r.name.vis)'));
   g.run(`__key(S, 'KeyX', 4400); __p(4400); __p(4700);`);
-  check('X lets it go', J('S.camp.tgt') === '');
+  check('X is no flight key any more (card space-game-keys5-qwe): the target stays picked', /^raider-/.test(J('S.camp.tgt')));
   g.run(`campPanelClose(S.pn); __p(5000);`);
   check('no pilot\'s call has a plate any more: the scene paints none and nothing of it is in the game (card space-game-no-pilot-popups)', J(`typeof campCallPaint`) === 'undefined' && !J('S.callUi') && J(`__rows(S).length`) === 0);
 }
@@ -115,11 +115,11 @@ console.log('D. the target');
 console.log('E. one component, the screen\'s own camera');
 {
   check('the lists are one component: one set of objects made once from the one table (CAMP_PANELS) draws whichever is open', !/function campPanelsBuild|function campPanelsPaintOne/.test(src('src/campanelsdraw.js')) && (src('src/campanelsdraw.js').match(/function campPanelsInstall/g) || []).length === 1);
-  g.run(`window.__T = CAMP_PANELS.panels.find(p => p.id === 'cruiser'); __T.rows.push({ id: 'x9', order: 'recall', label: 'Ninth row', help: 'A row from the data' }); window.S2 = __scene(); campPanelsInstall(S2); __key(S2, 'KeyS', 1000); S2.time.now = 1000; campPanelsPaint(S2, 1000);`);
+  g.run(`window.__T = CAMP_PANELS.panels.find(p => p.id === 'cruiser'); __T.rows.push({ id: 'x9', order: 'recall', label: 'Ninth row', help: 'A row from the data' }); window.S2 = __scene(); campPanelsInstall(S2); __key(S2, 'KeyQ', 1000); S2.time.now = 1000; campPanelsPaint(S2, 1000);`);
   check('a row put in the table is drawn at the end of the list (no line of drawing code knows it), with its own digit', J('__rows(S2).length') === J(`campPanelList(S2.camp, 'cruiser').length`) && J('__rows(S2)[__rows(S2).length - 1].name') === 'Ninth row' && J('__rows(S2)[__rows(S2).length - 1].cap') === String(J('__rows(S2).length')));
   g.run(`__T.rows.pop(); CAMP_PANELS.panels.push({ id: 'xl', side: 'left', key: '', code: '', title: 'EXTRA', tab: '', name: 'the extra list', rows: [{ id: 'x1', order: 'recall', label: 'A row of the extra list', help: 'From the data' }] }); window.S9 = __scene(); campPanelsInstall(S9); campPanelGo(S9.pn, S9.camp, 'xl'); campPanelsPaint(S9, 0); window.__x2 = [S9.pnl.title.t, S9.pnl.count.t, __rows(S9)[0].name, S9.pnl.keys.t]; CAMP_PANELS.panels.pop();`);
   check('a whole list put in the table is drawn like the others, with no line of code: its heading, its one row and its foot (a list that is not numbered says Up, Down, Enter)', J('__x2[0]') === 'EXTRA' && J('__x2[1]') === '1 / 1' && J('__x2[2]') === 'A row of the extra list' && /Enter/.test(J('__x2[3]')));
-  check('and the table is as it was: three lists with their rows', J(`CAMP_PANELS.panels.length`) === 3 && J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '9,4,2');
+  check('and the table is as it was: four lists with their rows (cruiser, fleet pick, convoy, dock)', J(`CAMP_PANELS.panels.length`) === 4 && J(`CAMP_PANELS.panels.map(p => p.rows.length).join()`) === '9,5,4,2');
   const objs = J(`S.pnl.objs.map(o => o.sf)`);
   check('every object of the lists (the key caps too) has scroll factor 0: it is on the camera that never zooms (src/camzoom.js sorts by it), so - = and the wheel never scale them', objs.length === 1 + 2 + 4 * J('CAMP_PANELS.show') + 2 && objs.every(sf => sf === 0), objs.length);
   check('the lists are drawn over the map (their depth)', K.depth > 156);
