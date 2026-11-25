@@ -20,10 +20,28 @@ const CAMPMAPPANEL = {
   face: 'system-ui, -apple-system, "Segoe UI", sans-serif', // the typeface of the names on the map: the page's own (no web font)
   names: '#a9b8d0', belt: '#8b99b3',                // the names of the places are pale (amber is for the ships you protect) and the belts' dimmer
   every: 100,                                       // ms between two paints of the panels (the page HUD's own rate)
+  dock: 0xcfe6ff,                                   // the thin ring round a place you can dock at (the level's outposts): yours, pale blue; gold stays for the goal. It was a bright green square with a beacon
   glyph: 11,                                        // px: a swatch's sign length
   kinds: { carrier: 'carrier', wing: 'fighter', convoy: 'freighter', alien: 'skiff', pirate: 'skiff', tboat: 'tboat', patrol: 'patrol', miner: 'miner', mother: 'mother', rival: 'pirateleader', tower: 'tower' } // a legend row's ship kind, for its sign
 };
 const campMapPanelsOn = s => typeof document !== 'undefined' && !!s && !!s.game && !!s.game.canvas && typeof s.game.canvas.getBoundingClientRect === 'function' && typeof campPageHudOn === 'function' && campPageHudOn();
+
+// ---- where a place's name may stand (card space-game-tab-map-labels-rings; Troy, 25 Nov 2026: "LUNA is under the cruiser icon, the green square cuts through CERES"): the names are put clear of the marks on top of the places ----
+const CAMPMAPPANEL_OBST = { carrier: 12, mother: 12, rival: 10, wing: 8, convoy: 8, patrol: 8, miner: 8, pirate: 8, tboat: 8, alien: 8, tower: 8, torpedo: 6 }; // the radius (screen px) a ship's mark keeps clear: the cruiser's long arrow is the widest
+function campMapObstacles(mp, marks) { // the circles { x, y, r } in the frame that a name keeps out of: every ship's mark, and the ring of the mission's place (at most 24 px: a big ring is not a wall)
+  const F = campMapFrameOf(mp), out = [];
+  (marks || []).forEach(m => {
+    let r = CAMPMAPPANEL_OBST[m.type]; if (m.type === 'objective') r = Math.min(24, Math.max(17, (m.r || 0) * mp.fit.s + 5)); if (!r) return;
+    const p = campMapPoint(mp.fit, F, m.x, m.y); if (p.x < F.x - r || p.x > F.x + F.w + r || p.y < F.y - r || p.y > F.y + F.h + r) return;
+    out.push({ x: p.x, y: p.y, r });
+  });
+  return out;
+}
+function campMapNamesBad(boxes, marks) { // how much of the names (boxes { x, y, w, h }: centres, in the order they were placed) lies over an earlier name or a mark ({ x, y, r }; marks[i] is name i's own: twice as bad), as mapPlace (src/map.js) counts it
+  const ov = (a, b) => Math.max(0, Math.min(a.x + a.w / 2, b.x + b.w / 2) - Math.max(a.x - a.w / 2, b.x - b.w / 2)) * Math.max(0, Math.min(a.y + a.h / 2, b.y + b.h / 2) - Math.max(a.y - a.h / 2, b.y - b.h / 2));
+  let bad = 0; boxes.forEach((b, i) => { for (let j = 0; j < i; j++) bad += ov(b, boxes[j]); (marks || []).forEach((q, j) => { bad += ov(b, { x: q.x, y: q.y, w: q.r * 2, h: q.r * 2 }) * (j === i ? 2 : 1); }); });
+  return bad;
+}
 
 // the map's own keys, from the table: Up and Down and Enter and the zoom keys are CAMP_KEYS'; the X that clears a trip is the CAMPAIGN row of the map's group (THE MAP); Tab and Esc close it
 function campMapKeyCaps() {
@@ -39,6 +57,7 @@ function campMapSwatch(type, color, flat) { // a legend row's swatch: the ship l
     if (type === 'torpedo') return { color: slookColor(slookMapType('torpedo')), shapes: [{ t: 'poly', pts: [5.5, 0, 0, 4.4, -5.5, 0, 0, -4.4], dark: false }] };
   }
   if (type === 'cache') return { color: hex, shapes: [{ t: 'poly', pts: [0, -5, 5, 0, 0, 5, -5, 0], dark: false }] };
+  if (type === 'outpost') return { color: hex, shapes: [{ t: 'ring', x: 0, y: 0, r: 4.8, w: 1.4 }] }; // a dock: the thin ring round a place you can dock at
   if (type === 'relic' || type === 'anomaly') return { color: hex, shapes: [{ t: 'ring', x: 0, y: 0, r: 4.2, w: 1.8 }] };
   return { color: hex, shapes: [D(0, 0, 4.4)] };
 }
@@ -62,7 +81,7 @@ function campMapPanelModel(C, mp, I) {
     set: set ? { lab: set.lab, name: set.name, km: typeof campNavKm === 'function' ? campNavKm(set.dist) + ' km' : '', key: K.clear } : null,
     list: { title: uiText('camp.map.flyto'), lines: win.lines.filter(l => !(l.head && l.head === goalHead)).map(l => l.head ? { head: l.head } : { id: l.row.id, name: String(l.row.name), km: (typeof campNavKm === 'function' ? campNavKm(l.row.dist) : '') + ' km', on: l.i === I.sel, goal: !!l.row.goal }),
       keys: [{ k: [K.up, K.down], w: uiText('camp.map.kchoose') }, { k: [K.fly], w: uiText('camp.map.kfly') }, { k: [K.clear], w: uiText('camp.map.kclear') }] },
-    legend: (I.legend || []).map(r => ({ type: r.type, text: r.text, sw: campMapSwatchSvg(campMapSwatch(r.type, r.color, !!I.flat)) })),
+    legend: (I.legend || []).concat(I.docks > 0 ? [{ type: 'outpost', color: CAMPMAPPANEL.dock, text: uiText('camp.map.dock', { n: I.docks }) }] : []).map(r => ({ type: r.type, text: r.text, sw: campMapSwatchSvg(campMapSwatch(r.type, r.color, !!I.flat)) })), // a place you can dock at has a thin ring on the map, so the legend says it (a row only while there is one)
     foot: { keys: [K.map, K.close], w: uiText('camp.map.closew'), live: uiText('camp.map.live') }
   };
 }

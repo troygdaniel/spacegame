@@ -95,10 +95,13 @@ function campMapNames(s) {
   const places = campMapMarks(C, mp.whole).filter(m => m.type === 'place' && (mp.z <= 1.01 || inF(campMapPoint(mp.fit, F, m.x, m.y)))), names = [], pts = [];
   const items = places.map(m => {
     const t = own(s.add.text(0, 0, m.name.toUpperCase(), mp.dom ? uiFont(12, m.color === CAMPMAP.color.star ? '#ffe29a' : CAMPMAPPANEL.names, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y); // on the page HUD's card the names are pale (amber is for a ship you protect) and in the page's typeface
-    names.push(t); pts.push(p); t.world = { x: m.x, y: m.y }; return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4, w: t.width, h: t.height, side: 'below' };
+    names.push(t); pts.push(p); t.world = { x: m.x, y: m.y }; return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4 + (mp.dom && m.outpost ? 5 : 0), w: t.width, h: t.height, side: 'below' }; // (a dock's thin ring is 8 px out: its name stands outside it)
   });
   const crowd = mp.z < CAMPMAP.crowdZ, L = C.L || CAMP.levels[C.level], keep = places.map(m => !!m.outpost || m.id === L.place); // far out, the inner system is a few pixels across: a name that cannot be put clear of the others is left out (the mission's place and the outposts keep theirs, and are placed first; zoom in and the rest are there)
-  const ord = items.map((_, i) => i).sort((a, b) => (crowd ? (keep[b] ? 1 : 0) - (keep[a] ? 1 : 0) : 0) || a - b), put = mapPlace(ord.map(i => items[i]), F), at = []; ord.forEach((i, k) => { at[i] = put[k]; });
+  const ord = items.map((_, i) => i).sort((a, b) => (crowd ? (keep[b] ? 1 : 0) - (keep[a] ? 1 : 0) : 0) || a - b);
+  const obst = mp.dom && typeof campMapObstacles === 'function' ? campMapObstacles(mp, campMapMarks(C, mp.whole, [])) : []; // on the page HUD's card a name also keeps clear of the ships on the map (the cruiser's mark sat over LUNA): they are marks with no name of their own
+  const put = mapPlace(ord.map(i => items[i]).concat(obst.map(o => ({ x: o.x, y: o.y, r: o.r, w: 0, h: 0, side: 'below' }))), F), at = []; ord.forEach((i, k) => { at[i] = put[k]; });
+  if (mp.dom) mp.namePlan = { names, ord, items, worlds: places.map(m => ({ x: m.x, y: m.y })), bad: ord.reduce((a, _, k) => a + put[k].bad, 0) }; // what was done, for campMapNamesRecheck
   names.forEach((t, i) => { t.setPosition(at[i].x, at[i].y); t.off = { x: at[i].x - pts[i].x, y: at[i].y - pts[i].y }; t.drop = crowd && at[i].bad > 0.5 && !keep[i]; if (t.drop) t.setVisible(false); }); // off: where the name sits from its mark, kept while the zoom eases
   const wd = typeof campWorldOf === 'function' ? campWorldOf(C.level) : null; // a belt is named where its ring is nearest the middle of the frame
   if (wd) wd.bands.forEach(b => {
@@ -106,6 +109,15 @@ function campMapNames(s) {
     const x = st.x + Math.cos(a) * mid * mp.fit.s, y = st.y + Math.sin(a) * mid * mp.fit.s;
     if (x > F.x + 30 && x < F.x + F.w - 30 && y > F.y + 10 && y < F.y + F.h - 10) own(s.add.text(x, y - 12, String(b.name.split(/,| \+/)[0]).toUpperCase(), mp.dom ? uiFont(11, CAMPMAPPANEL.belt, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(11, '#b9a37a'))).setOrigin(0.5).setDepth(154).band = true;
   });
+}
+// the card's names against the ships as they are NOW (card space-game-tab-map-labels-rings): a ship that has come to stand over a name (the cruiser parks at a place) moves the names again, but only when that is clearly better than where they stand, so a name does not jump about while the ships move
+function campMapNamesRecheck(s, time) {
+  const mp = s.mp, P = mp && mp.namePlan; if (!mp || !mp.dom || !P || !P.names.length || mp.dragging || mp.z !== mp.zWant) return;
+  if (time - (mp.nameChk == null ? -1e9 : mp.nameChk) < 1200) return; mp.nameChk = time;
+  const F = campMapFrameOf(mp), obst = campMapObstacles(mp, campMapMarks(s.camp, mp.whole, []));
+  const marks = P.ord.map(i => { const p = campMapPoint(mp.fit, F, P.worlds[i].x, P.worlds[i].y); return { x: p.x, y: p.y, r: P.items[i].r }; }).concat(obst);
+  const boxes = P.ord.map(i => ({ x: P.names[i].x, y: P.names[i].y, w: P.names[i].width, h: P.names[i].height })).filter((b, k) => P.names[P.ord[k]].visible !== false || true);
+  if (campMapNamesBad(boxes, marks) > P.bad + 30) { campMapNames(s); mp.namesZ = mp.z; }
 }
 // the names of the places follow their marks while the zoom eases (each keeps its place from its mark); the belts' names wait for it to arrive, and a place that has gone out of the frame is hidden
 function campMapNamesMove(s) {
@@ -128,7 +140,7 @@ function campMapPaint(s, time) {
   const F = campMapFrameOf(mp), dt = mp.tAt == null ? 0 : Math.max(0, Math.min(100, time - mp.tAt)); mp.tAt = time;
   const moving = campMapZoomStep(mp, F, dt); // the zoom eases to where + - 0 or the wheel put it, and mp.fit is the view at that zoom: everything below and every click reads it
   campMapFar(s); // the far bodies and their names come in when the zoom goes under 1 and go when it is back
-  if (moving || mp.dragging) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
+  if (moving || mp.dragging) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } else if (mp.dom) campMapNamesRecheck(s, time); // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
   if (!mp.dom) mp.zoomText.setText(uiText('camp.map.zoom', { pct: Math.round(mp.zWant * 100) }));
   mp.recentre.setVisible(!!mp.panned); // a dragged map shows its way back
   const C = s.camp, f = mp.fit, g = mp.g, col = CAMPMAP.color;
@@ -174,7 +186,7 @@ function campMapPaint(s, time) {
     if (flat && m.type === 'torpedo') m.color = slookInt(slookColor(slookMapType('torpedo'))); // a torpedo coming at you is hostile: pink
     if (flat && m.type === 'convoy' && m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a convoy's course to where it is heading, as before (the sign replaces only its dot)
     if (flat && m.kind && slookGlyphMark(g, m, p.x, p.y)) { if (m.arming) g.lineStyle(1.5, slookInt(SLOOK.C.foe), 0.5 + 0.5 * Math.sin(time / 120)).strokeCircle(p.x, p.y, 8 + 2 * Math.sin(time / 120)); } // a ship: its signal shape (a torpedo boat keeps its ring while it arms, pink)
-    else if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); if (m.outpost) { const q = r + 9; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(p.x - q, p.y - q, q * 2, q * 2); g.fillStyle(0x6dff9c, 0.95).fillRect(p.x - 2, p.y - q - 5, 4, 4); } } // a friendly outpost (the level's `outposts`) wears a green frame and a beacon: the dock
+    else if (m.type === 'place') { const r = Math.max(m.color === col.star ? 7 : 5, m.r * f.s); g.fillStyle(m.color, 0.85).fillCircle(p.x, p.y, r); g.lineStyle(1, m.color, 0.5).strokeCircle(p.x, p.y, r + 4); if (m.outpost) { if (mp.dom) g.lineStyle(1.5, CAMPMAPPANEL.dock, 0.85).strokeCircle(p.x, p.y, r + 8); else { const q = r + 9; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(p.x - q, p.y - q, q * 2, q * 2); g.fillStyle(0x6dff9c, 0.95).fillRect(p.x - 2, p.y - q - 5, 4, 4); } } } // a friendly outpost (the level's `outposts`) wears a green frame and a beacon: the dock // a dock (the level's `outposts`): a thin pale ring on the page HUD's card (yours: pale blue; gold is for the goal), a green frame and a beacon on the glass map
     else if (m.type === 'lane') { // a lane of a fork in the road (src/camproute.js): the chosen one is a firm green line, the others are dashed; one that a scout has read is brighter
       const pts = m.pts.map(q => pin(X(q.x), Y(q.y))), col = m.chosen ? 0x6dff9c : 0x7fe9ff;
       for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], dist = Math.hypot(b.x - a.x, b.y - a.y), n = m.chosen ? 1 : Math.max(1, Math.round(dist / 12)); g.lineStyle(m.chosen ? 2 : 1.2, col, m.chosen ? 0.9 : m.known ? 0.7 : 0.4); for (let k = 0; k < n; k += (m.chosen ? 1 : 2)) { const t0 = k / n, t1 = Math.min(1, (k + (m.chosen ? 1 : 0.55)) / n); g.lineBetween(a.x + (b.x - a.x) * t0, a.y + (b.y - a.y) * t0, a.x + (b.x - a.x) * t1, a.y + (b.y - a.y) * t1); } }
@@ -224,7 +236,10 @@ function campMapPaint(s, time) {
     const q = route(goal, gc.goal, 0.55), d = cp ? Math.hypot(goal.x - C.carrier.x, goal.y - C.carrier.y) : 0;
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
-    if (mp.dom) { const gw = mp.goalText.width + 14, gh = mp.goalText.height + 3; g.fillStyle(0xe9b872, 0.16).fillRoundedRect(q.x - gw / 2, q.y - 22 - gh / 2, gw, gh, gh / 2); g.lineStyle(1, 0xe9b872, 0.5).strokeRoundedRect(q.x - gw / 2, q.y - 22 - gh / 2, gw, gh, gh / 2); } // the word is a gold pill on the card
+    if (mp.dom) { // the word is a gold pill on the card, kept inside the frame (over the ring when the goal is at the top edge it is under it)
+      const gw = mp.goalText.width + 14, gh = mp.goalText.height + 3, gx = Math.max(F.x + gw / 2 + 3, Math.min(F.x + F.w - gw / 2 - 3, q.x)), gy = q.y - 22 - gh / 2 < F.y + 3 ? q.y + 22 : q.y - 22;
+      mp.goalText.setPosition(gx, gy); g.fillStyle(0xe9b872, 0.16).fillRoundedRect(gx - gw / 2, gy - gh / 2, gw, gh, gh / 2); g.lineStyle(1, 0xe9b872, 0.5).strokeRoundedRect(gx - gw / 2, gy - gh / 2, gw, gh, gh / 2);
+    }
     mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, campNavFlight(C, goal, d)) }));
     mp.routeAt = cp ? { cp, q } : null; // where the label goes is decided below, once the Fly and Fast buttons are placed (card space-game-l1-mine-goal: it sat under them when the goal was near)
     if (!cp) mp.routeText.setPosition(0, 0);
@@ -262,7 +277,7 @@ function campMapPaint(s, time) {
   }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
   if (mp.dom) { // the column of the card (src/campmappanel.js): page panels written from a pure model, ten a second (the radio panel fades every frame)
-    const M = campMapPanelDue(s, time) ? campMapPanelModel(C, mp, { rows: mp.rows, sel, win, setRow, setDist: setRow ? Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y) : 0, legend: campMapLegend(C, marks), km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10), flat }) : null;
+    const M = campMapPanelDue(s, time) ? campMapPanelModel(C, mp, { rows: mp.rows, sel, win, setRow, setDist: setRow ? Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y) : 0, legend: campMapLegend(C, marks), docks: marks.filter(m => m.type === 'place' && m.outpost).length, km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10), flat }) : null;
     if (typeof campPageHudHideLines === 'function') campPageHudHideLines(s, true); // the canvas lines the page HUD replaces (the goal line at the top centre, the key line at the bottom) stay hidden while the card is up: it does not cover the screen's edge as the glass did
     campMapPanelPaint(s, M, time);
     return;
