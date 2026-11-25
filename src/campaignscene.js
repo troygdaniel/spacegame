@@ -421,8 +421,8 @@ class Campaign extends Phaser.Scene {
     if (this.hud.chat && typeof chatterSpot === 'function') { const sp = chatterSpot(C, typeof campBoxDx === 'function' ? campBoxDx(this, true) : 0); this.hud.chat.setPosition(sp.x, sp.bottom); } // the radio line stands just above the FLEET corner (or its open details), after the corner is drawn (src/campchatter.js chatterSpot)
     if (typeof campTorpedoSync === 'function') campTorpedoSync(this, Math.min(dt, 100)); // the torpedoes and the boats that arm (src/camptorpedoscene.js)
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
-    if (typeof campShieldHitPaint === 'function') campShieldHitPaint(this, this.time.now); // the shield's arcs, once the sprites are in place (src/campshieldhit.js)
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
+    if (typeof campShieldHitPaint === 'function') campShieldHitPaint(this, this.time.now); // the shield's arcs, after the sprites are in place and the health numbers (src/campshieldhit.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { return CAMP.nav.arrow.keep; } // the places the edge arrow's label keeps out of: the table's (the target display's corner is one of them: its box, campTdispBox, is inside it)
