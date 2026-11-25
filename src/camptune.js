@@ -56,6 +56,8 @@ const CAMP_TUNE = {
     // the enemy
     { id: 'baittboats', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.tboat', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // the THIRD wave of mission 1.1 (the bait: it goes for the transport ten seconds after the miner's call): its torpedo boats. The wave reads its ships when it comes, so a change is felt unless it has come
     { id: 'baitskiffs', group: 'foes', root: 'CAMP', path: 'levels.1.missions.0.waves.2.ships.skiff', min: 0, max: 8, step: 1, unit: 'ships', when: 'now' },  // and its skiffs
+    { id: 'contactdrones', group: 'foes', root: 'CAMP', path: 'levels.1.missions.2.waves.5.ships.drone', min: 0, max: 6, step: 1, unit: 'ships', when: 'now' },     // the drones of FIRST CONTACT in 1.3 (card space-game-13-all-haulers-savable; the wave reads it when it comes, so a change is felt if the wave has not come yet)
+    { id: 'contactgunships', group: 'foes', root: 'CAMP', path: 'levels.1.missions.2.waves.5.ships.gunship', min: 0, max: 6, step: 1, unit: 'ships', when: 'now' }, // and its gunships, the ships that killed the lead hauler
     { id: 'enemyhull', group: 'foes', root: 'CAMP', path: 'alien.hpScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     { id: 'enemydamage', group: 'foes', root: 'CAMP', path: 'alien.damageScale', min: 0.2, max: 5, step: 0.1, unit: 'x', when: 'next' },
     // time

@@ -53,6 +53,8 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.repairtime | Pilot's mend, seconds |
 | camp.ui.tune.row.fighterdamage | Fighter damage a shot |
 | camp.ui.tune.row.convoyspeed | Transport and hauler speed |
+| camp.ui.tune.row.contactdrones | First contact (1.3): drones |
+| camp.ui.tune.row.contactgunships | First contact (1.3): gunships |
 | camp.ui.tune.row.enemyhull | Enemy hull (times the mission's) |
 | camp.ui.tune.row.enemydamage | Enemy damage (times the mission's) |
 | camp.ui.tune.row.pace | Battle pace (1 is Normal) |
