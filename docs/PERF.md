@@ -12,6 +12,17 @@ below come from runs that alternate old and new code in the same page.
 Base: `main` at `c0c5dd91` (the merge of pull request 12), switch off. Every piece of the new look (A the ships, B the ring and arc, C fire and trails, D the signal shapes, E the panel and briefing; scope report on card `space-game-ship-look-scope`) puts its before and after beside these lines. The Mac was quiet (load 3).
 - **The sim, no Chrome** (`node --expose-gc --max-semi-space-size=128 tools/perfcampaign.mjs sim busy1`, two runs): one step 0.46 ms median, 0.53 to 0.59 ms at the 95th percentile, 0.46 to 0.47 ms mean (2.8 percent of a 16.7 ms frame), 2.7 to 2.8 KB allocated a step. The new look does not touch the sim, so this should not move; if it does, the piece that moved it is wrong.
 - **The drawing, Chrome (NOT measured in this landing: the card said no Chrome)**: the number the pieces must hold is the stepped frame of JavaScript in the busiest fight, `node tools/perfcampaign.mjs frames busy1`. The card text gave 1.3 ms; this file's own table (22 Nov, below) has 2.27 ms mean and 5.9 ms max for the same measure, and 1.27 ms was the 20 Nov build. Whoever lands piece A takes `frames busy1` on `c0c5dd91` and on the piece in one page, swapping the code under test (the ratio method in "Measuring again"), and writes both here; B and C do the same against the new base.
+- **Piece C, fire, trails, missile and kill (card `space-game-ship-look-c-fire-trails`, 25 Nov 2026).** The stepped frame of JavaScript in `busy1` (`node tools/perfcampaign.mjs frames busy1`, 600 frames), the same checkout (`d1794dec` plus piece C) with the switch flipped in the page after the fight is set up (`PERF_PATCH='CAMP.flags.shiplook = false'` or `true`), four runs back to back, off, on, on, off, Mac load 5.6 to 6.2, headless Chrome with the GPU, 1 in line at the lock each time:
+
+  | Run | frame mean (median, p95, max) ms | sprites in the display list | tweens | textures | heap |
+  |---|---|---|---|---|---|
+  | off 1 | 1.24 (1.2, 1.9, 3.9) | 274 | 35 | 191 | 11.05 MB |
+  | **on 1** | **1.24** (1.1, 2.1, 4.1) | 295 | 2 | 204 | 10.7 MB |
+  | **on 2** | **1.25** (1.2, 1.8, 3.6) | 295 | 2 | 204 | 10.7 MB |
+  | off 2 | 1.58 (1.5, 2.1, 4.6) | 274 | 35 | 191 | 11.05 MB |
+
+  The switch costs nothing you can measure in the frame: on is 1.24 and 1.25 ms against 1.24 and 1.58 ms off (the second off run caught a busier Mac). What it changes is the count of things: the display list is 295 sprites against 274 (a look at the same fight with the switch on counted about 30 trail sprites, one for each ship that moves, and three kill records of eight sprites made in 9 seconds; the missiles' and torpedoes' smoke puffs are no longer made, which is why the tweens are 2 against 35), 13 more textures (the bolts, the dart and its tail, the four trails, the two rings, the core and the shard, baked once at the first use), and the heap is 0.35 MB lower with it on. With the switch off the only new work in a frame is the `postupdate` handler's first line (`slookOn()` false: a flag lookup) and a `typeof` guard in each of the six places the scene calls. The kill pool is at most 12 effects, 96 sprites, hidden when done. The sim is not touched (`sim busy1` unchanged by construction: no rule file reads the look).
+
 
 ## Campaign fights on this Mac (card `space-game-choppy-fights`, 22 Nov 2026)
 
