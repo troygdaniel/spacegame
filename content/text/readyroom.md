@@ -19,7 +19,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.col.change | WHAT IT CHANGES |
 | camp.room.col.cost | COST |
 | camp.room.item.fighters | Fighter |
-| camp.room.change.fighters | Wing strength: {from} to {to} fighters |
+| camp.room.change.fighters | Wing strength: {from} to {to} |
 | camp.room.have.ship | You have {credits} credits and {ore} ore. Bought here: {n} of {most}. |
 | camp.room.can | You can buy it. |
 | camp.room.need | Not yet: {need} more credits or ore. |
@@ -34,7 +34,7 @@ The words of the ready room's menu and its overlays (card space-game-ready-room-
 | camp.room.tech.beam | Turret damage x{dmg}, reach {from} to {to} px, and shots go through |
 | camp.room.tech.blink | {viablink} list: hop the cruiser {dist} px ahead, ready again after {secs} seconds |
 | camp.room.tech.plating | Cruiser hull: {from} to {to} |
-| camp.room.tech.bay2 | Wing strength: {from} to {to} fighters |
+| camp.room.tech.bay2 | Wing strength: {from} to {to} |
 | camp.room.tech.repair | The cruiser and ships within {reach} px mend {rate} hit points a second |
 | camp.room.tech.overdrive | Cruiser top speed: {from} to {to} px a second |
 | camp.room.tech.lens | Anomaly sense range: {from} to {to} px |
