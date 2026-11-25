@@ -6,6 +6,7 @@ import { tmpdir, loadavg, cpus } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { acquire, release, cleanupOrphans, removeDir, stopProfileProcesses } from './lock.mjs';
+import { canvasHudAddr } from './canvashud.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT = join(ROOT, 'tests', 'out');
@@ -175,7 +176,7 @@ async function launchOnce(hash, root) {
   // and a queued scene.stop() never runs. Any key does it (M too), not only V (docs/PLAYTEST2.md finding 2). A real window does not.
   // Focus emulation keeps the page focused and visible, so a test that lets the real loop run behaves like a player's browser.
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
-  await send('Page.navigate', { url: 'file://' + root + '/index.html' + hash });
+  await send('Page.navigate', { url: 'file://' + root + '/index.html' + canvasHudAddr(hash) });
   // goto(hash, root): the same Chrome opens another page, or another copy of the game. A test with several cases uses it instead of a second
   // launch(), which would wait for its turn at the test lock all over again. The profile is cleaned first (localStorage and sessionStorage), as a new
   // launch would give it, and errors starts empty, so a case cannot see the last one's keys, saves or console errors. A page of its own is a
@@ -184,7 +185,7 @@ async function launchOnce(hash, root) {
     try { await ev('(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* no storage on this page */ } return 1; })()'); } catch (e) { /* nothing loaded to clean */ }
     errors.length = 0;
     await send('Page.navigate', { url: 'about:blank' }); await sleep(100);
-    await send('Page.navigate', { url: 'file://' + r + '/index.html' + h });
+    await send('Page.navigate', { url: 'file://' + r + '/index.html' + canvasHudAddr(h) });
   };
   return { send, ev, waitFor, press, clock, run, key, shot, close, errors, goto, pid: chrome.pid };
 }

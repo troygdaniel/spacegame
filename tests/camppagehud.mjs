@@ -8,6 +8,7 @@
 //   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
 //   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
 //   O  an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)
+//   P  the page HUD is the default look (card space-game-page-hud-default-on): the table's value, no N panel row, an old save, the address ?pagehud=0, the boot helper
 //   E  the rules: no web font, two weights, no image files, the script and the style are in the page
 // Run: node tests/camppagehud.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -24,8 +25,8 @@ g.run(`
 `);
 
 console.log('A. the switch');
-check('CAMP.flags.pagehud is false: the canvas HUD is what the game shows', J('CAMP.flags.pagehud') === false && J('campPageHudOn()') === false);
-check('it has a row on the N panel, in the systems group, with words', J(`campTuneRow('pagehud').kind`) === 'flag' && J(`campTuneRow('pagehud').flag`) === 'pagehud' && J(`campTuneRow('pagehud').group`) === 'systems' && J(`uiText('camp.ui.tune.row.pagehud')`) === 'Page HUD (the new look)');
+check('the table says the page HUD is ON (src/campaign.js: pagehud: true, card space-game-page-hud-default-on); the node harness makes THIS game with the flag off, the twin of ?pagehud=0, so it draws the canvas HUD until a section turns the flag on (section P reads the table\'s own value)', /\n\s+pagehud: true,/.test(src('src/campaign.js')) && J('CAMP.flags.pagehud') === false && J('campPageHudOn()') === false);
+check('it has NO row on the N panel any more (nothing to switch, nothing remembered): the row and its words are gone (section P)', J(`campTuneRow('pagehud')`) === null && J(`CAMP_TUNE.rows.some(r => r.flag === 'pagehud')`) === false);
 check('the address flag: ?pagehud, =1, =on, =true, =yes are on; no flag, =0 and =off are not', ['?campaign=1&pagehud', '?pagehud=1', '?x=1&pagehud=on', '#pagehud=true', '?pagehud=yes'].every(s => J(`campPageHudAddr(${JSON.stringify(s)})`) === true) && ['', '?campaign=1', '?pagehud=0', '?pagehud=off', '?pagehudx=1'].every(s => J(`campPageHudAddr(${JSON.stringify(s)})`) === false));
 check('off: the canvas leaves nothing out', ['status', 'cruiser', 'fleet', 'hostiles', 'friendlies'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === false));
 g.run(`CAMP.flags.pagehud = true;`);
@@ -439,6 +440,29 @@ check('O the fit rule on its own: items at one spot slide apart along the edge; 
 const cssO = src('src/camppagehud.css'), pjO = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
 check('O the style and the script: the pill is amber (the convoy\'s, the canvas arrow\'s colour), no image or web font; the words are the numbered list\'s and the existing km key (no new text key); the pills are written only through the diff-writer', /\.ph-fedge \{[^}]*255, 180, 84/.test(cssO) && /\.ph-fedge\.hot \{/.test(cssO) && !/url\(|@font-face/.test(cssO) && /camp\.tdisp\.km/.test(pjO) && !/uiText\('camp\.pagehud\./.test(pjO.slice(pjO.indexOf('function campPageHudFriendEdges'), pjO.indexOf('function campPageHudPlaces'))) && !/\.style\.(left|top)\s*=/.test(pjO));
 g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('P. the page HUD is the default look (card space-game-page-hud-default-on)');
+const gT = nodeGame({ pagehud: 'table' }), JT = e => JSON.parse(gT.run(`JSON.stringify(${e}) ?? 'null'`));
+check('P the table\'s own value (nodeGame({ pagehud: \'table\' })): the flag is true and the page HUD is on for a player who touched nothing; the canvas leaves out what the page HUD has', JT('CAMP.flags.pagehud') === true && JT('campPageHudOn()') === true && ['status', 'cruiser', 'fleet', 'hostiles', 'friendlies', 'sight'].every(id => JT(`campPageHudHides(${JSON.stringify(id)})`) === true));
+check('P no row on the N panel (nothing to switch back, nothing to remember) and no word for it; the other row of the page HUD (digits in the rings) stays', JT(`campTuneRow('pagehud')`) === null && JT(`CAMP_TUNE.rows.some(r => r.flag === 'pagehud')`) === false && JT(`uiText('camp.ui.tune.row.pagehud')`) === 'camp.ui.tune.row.pagehud' && JT(`campTuneRow('pagedigit').flag`) === 'pagedigit' && !/row\.pagehud/.test(src('content/text/camptune.md') + src('src/contenttables.js')));
+const keyT = JT('CAMP_TUNE.store'), gS = nodeGame({ pagehud: 'table', store: new Map([[keyT, JSON.stringify({ v: JT('CAMP_TUNE.ver'), over: { pagehud: false } })]]) }), JS = e => JSON.parse(gS.run(`JSON.stringify(${e}) ?? 'null'`));
+const gC = nodeGame({ pagehud: 'table', store: new Map([[keyT, JSON.stringify({ v: JT('CAMP_TUNE.ver'), over: { pagehud: false, hints: false } })]]) }), JC = e => JSON.parse(gC.run(`JSON.stringify(${e}) ?? 'null'`));
+check('P an old save with the switch turned off (a saved override of pagehud) is dropped when the panel loads (an id this build does not know): the page HUD is on; another saved row of the same save is still put in (hints)', JS('campTuneLoad()') === 0 && JS('campPageHudOn()') === true && JC('campTuneLoad()') === 1 && JC('CAMP.flags.hints') === false && JC('campPageHudOn()') === true);
+check('P the address: ?pagehud=0, =off, =false, =no put it OFF (a way for the tests and a comparison; no row and no word of it for a player); ?pagehud, =1, =on, =true, =yes put it on; none, another key or a longer key is neither; the last pagehud in the address counts', ['?pagehud=0', '?campaign=1&pagehud=off', '#pagehud=false', '?pagehud=no'].every(a => JT(`campPageHudAddrOff(${JSON.stringify(a)})`) === true && JT(`campPageHudAddr(${JSON.stringify(a)})`) === false) && ['', '?campaign=1', '?pagehud', '?pagehud=1', '?pagehudx=0'].every(a => JT(`campPageHudAddrOff(${JSON.stringify(a)})`) === false) && JT(`campPageHudAddrOff('?pagehud=1&pagehud=0')`) === true && JT(`campPageHudAddr('?pagehud=0&pagehud=1')`) === true && JT(`campPageHudAddrOff('?pagehud=0&pagehud=1')`) === false);
+gT.run(`window.__loc0 = location; location = { search: '?campaign=1&pagehud=0' };`);
+const offA = JT('campPageHudOn()'), offH = JT(`campPageHudHides('status')`);
+gT.run(`location = { search: '?campaign=1' };`);
+const plainA = JT('campPageHudOn()');
+gT.run(`CAMP.flags.pagehud = false; location = { search: '?pagehud=1' };`);
+const onA = JT('campPageHudOn()');
+gT.run(`location = __loc0; CAMP.flags.pagehud = true;`);
+check('P ?pagehud=0 in the page\'s own address puts the page HUD off whatever the flag says (the canvas keeps everything); no flag in the address leaves it on; ?pagehud=1 with the flag off is on; the address is read again when it changes', offA === false && offH === false && plainA === true && onA === true);
+gT.run(`CAMP.flags.pagehud = false;`);
+check('P the old canvas HUD is intact: with the flag off the canvas leaves nothing out, as before', ['status', 'cruiser', 'fleet', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet', 'box:hostiles'].every(id => JT(`campPageHudHides(${JSON.stringify(id)})`) === false));
+gT.run(`CAMP.flags.pagehud = true;`);
+const { canvasHudAddr } = await import('./canvashud.mjs');
+check('P the boot helper adds ?pagehud=0 to every address that does not name pagehud (the query before the #hash), so the boot tests still see the canvas HUD; a boot of the page HUD names pagehud=1; the helper uses it for the first page and for goto; the node harness sets the flag off unless asked', canvasHudAddr('') === '?pagehud=0' && canvasHudAddr('#space') === '?pagehud=0#space' && canvasHudAddr('?campaign=1') === '?campaign=1&pagehud=0' && canvasHudAddr('?campaign=1&pagehud=1') === '?campaign=1&pagehud=1' && canvasHudAddr('?pagehud') === '?pagehud' && canvasHudAddr('?campaign=1#x') === '?campaign=1&pagehud=0#x' && /canvasHudAddr\(hash\)/.test(src('tests/cd' + 'p.mjs')) && /canvasHudAddr\(h\)/.test(src('tests/cd' + 'p.mjs')) && /pagehud = false/.test(src('tests/nodegame.mjs')));
+check('P no new text key, no image or web font: the change is the table\'s value, one address rule and the removal of a row', !/camp\.ui\.tune\.row\.pagehud/.test(src('src/camptune.js')));
 
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');

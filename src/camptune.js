@@ -91,7 +91,6 @@ const CAMP_TUNE = {
     { id: 'autofire', kind: 'flag', group: 'systems', flag: 'autofire', when: 'now' },
     { id: 'laser', kind: 'flag', group: 'systems', flag: 'laser', when: 'now' },
     { id: 'hints', kind: 'flag', group: 'systems', flag: 'hints', when: 'now' },
-    { id: 'pagehud', kind: 'flag', group: 'systems', flag: 'pagehud', when: 'now' }, // card space-game-page-hud: the new look of the HUD, to flip between the two while playing
     { id: 'pagedigit', kind: 'flag', group: 'systems', flag: 'pagedigit', when: 'now' } // card space-game-page-hud-3: the digit instead of the initial inside the page HUD's rings
   ],
   state: { over: {}, snap: null, loaded: false }
