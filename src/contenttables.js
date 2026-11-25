@@ -1238,7 +1238,7 @@ const UI_TEXT = {
   'camp.say.miner.all': 'All pilots away at the miner. The transport has only us.',
   'camp.say.miner.bait': 'Torpedo boats on the transport. The call was bait.',
   'camp.say.l13.turrets': 'Pirates. Hold {keyfire}: the turrets fire at ships in reach.',
-  'camp.say.l13.behind': '{name} is {km} km behind the convoy. Send a squad to guard her.',
+  'camp.say.l13.behind': '{name} is {km} km behind the convoy. Guard her with a squad.',
   'camp.bf.1.2.w5': 'Torpedo boats hunt the miners: tuck them in, or send a squad.',
   'camp.bf.1.3.w5': 'Something else is out there. Be ready.',
   'camp.say.rim10': 'They keep coming. Stay on her.',

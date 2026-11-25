@@ -7,4 +7,4 @@ The words of two radio lines of mission 1.3, Haulers home (card space-game-13-ra
 | key | text |
 |---|---|
 | camp.say.l13.turrets | Pirates. Hold {keyfire}: the turrets fire at ships in reach. |
-| camp.say.l13.behind | {name} is {km} km behind the convoy. Send a squad to guard her. |
+| camp.say.l13.behind | {name} is {km} km behind the convoy. Guard her with a squad. |

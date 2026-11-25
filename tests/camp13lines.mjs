@@ -28,7 +28,7 @@ g.run(`
   g.run(`window.__was = CAMP_KEYS.fire.k; CAMP_KEYS.fire.k = 'Z';`);
   check('a remap moves it (the words are read from the table, no letter is typed in the line)', J(`uiText('camp.say.l13.turrets')`) === 'Pirates. Hold Z: the turrets fire at ships in reach.' && !/Space/.test(src('content/text/camp13.md').split('| camp.say.l13.turrets |')[1].split('\n')[0]));
   g.run(`CAMP_KEYS.fire.k = __was;`);
-  check('the warning says who and how far, curt (about 12 words), and what to do', J(`uiText('camp.say.l13.behind', { name: 'Hauler 3', km: 120 })`) === 'Hauler 3 is 120 km behind the convoy. Send a squad to guard her.');
+  check('the warning says who and how far, curt (about 12 words), and what to do', J(`uiText('camp.say.l13.behind', { name: 'Hauler 3', km: 120 })`) === 'Hauler 3 is 120 km behind the convoy. Guard her with a squad.');
   check('the N panel has the distance (Last hauler\'s gap before the warning: CAMP.l13.gapFar, 300 to 4000 px) and its words', J(`CAMP_TUNE.rows.some(r => r.id === 'haulgap' && r.root === 'CAMP' && r.path === 'l13.gapFar' && r.min === 300 && r.max === 4000)`) && J(`uiText('camp.ui.tune.row.haulgap')`) === 'Last hauler\'s gap before the warning');
 }
 
@@ -65,7 +65,7 @@ g.run(`
   g.run(`__stepPin(2);`);
   const first = J(`__seen('camp.say.l13.behind')`);
   check('after the grace the radio says it once', first.length === 1, JSON.stringify(first));
-  check('the words: her name and the distance in km (ten px a km on the HUD, the stray warning\'s helper: the line says the distance to the hauler ahead of her)', /^Hauler 3 is \d+ km behind the convoy\. Send a squad to guard her\.$/.test(first[0] && first[0].text) && Math.abs(+/is (\d+) km/.exec(first[0].text)[1] - J('Math.round(camp13Gap(C).d / 10)')) <= 2, first[0] && first[0].text);
+  check('the words: her name and the distance in km (ten px a km on the HUD, the stray warning\'s helper: the line says the distance to the hauler ahead of her)', /^Hauler 3 is \d+ km behind the convoy\. Guard her with a squad\.$/.test(first[0] && first[0].text) && Math.abs(+/is (\d+) km/.exec(first[0].text)[1] - J('Math.round(camp13Gap(C).d / 10)')) <= 2, first[0] && first[0].text);
   g.run(`__stepPin(20);`);
   check('and not again inside 25 s', J(`__seen('camp.say.l13.behind').length`) === 1);
   g.run(`__stepPin(8);`);
