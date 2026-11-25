@@ -165,7 +165,7 @@ class CampHub extends Phaser.Scene {
     if (legend) { const m = this.msg && this.msg.until > this.time.now && this.hub.rows[this.hub.row] === 'board' ? this.msg : null; this.line(CAMP_HUBS.pane.lines - 1, 0, m ? m.text : uiText('camp.hub.replay.keys'), m ? (m.ok ? '#6dff9c' : '#ffb454') : '#8fb4c9'); } // the keys, or the answer of the last one
   }
   // ----- the overlays: the top of the screen, opened by Enter on a row -----
-  ovFoot() { const m = this.msg && this.msg.until > this.time.now ? this.msg : null, O = CAMP_HUBS.over; if (this.hub.ask && this.hub.open === 'board') return { text: uiText('camp.hub.restart.ask'), color: '#ffb454' }; return m ? { text: m.text, color: m.ok ? '#6dff9c' : '#ffb454' } : { text: uiText('camp.room.hint.' + this.hub.open), color: '#8fb4c9' }; }
+  ovFoot() { const m = this.msg && this.msg.until > this.time.now && this.msg.over === this.hub.open ? this.msg : null, O = CAMP_HUBS.over; if (this.hub.ask && this.hub.open === 'board') return { text: uiText('camp.hub.restart.ask'), color: '#ffb454' }; return m ? { text: m.text, color: m.ok ? '#6dff9c' : '#ffb454' } : { text: uiText('camp.room.hint.' + this.hub.open), color: '#8fb4c9' }; } // (the answer of a key stays on the overlay it was given in: a fighter bought at the refit does not stand on the rank's foot)
   ovHint(line) { const f = this.ovFoot(); this.ovLine(line, 0, f.text, f.color); }
   overBoard() { // the missions on the left, the chosen one's briefing beside them; under them the last row, Start the campaign over, and what the marks mean
     const P = this.P, H = this.hub, O = CAMP_HUBS.over, sel = campHubSelectable(P), pk = H.pick, over = campHubOverRow(P);
@@ -269,7 +269,7 @@ class CampHub extends Phaser.Scene {
     H.row = k; H.open = ''; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
   }
   apply(r) {
-    if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg }; sfx(r.ok ? 'chime' : 'empty'); }
+    if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg, over: this.hub.open || '' }; sfx(r.ok ? 'chime' : 'empty'); }
     if (r.changed) campProgressSave(this.P); // a purchase is kept at once
     if (r.moved) { sfx('tick'); this.stand(false); }
     this.paint();
