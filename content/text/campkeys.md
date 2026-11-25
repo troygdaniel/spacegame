@@ -11,6 +11,6 @@ The words of the Campaign's page of every key and of its links (card space-game-
 | camp.keys.debug | DEBUG KEYS (THE TUNE KIT) |
 | title.camp.keys | H  all the keys |
 | camp.sel.all | All pilots |
-| camp.ui.pausepanels | {keywho}, then 1 to 4, picks who. {keyhostiles} an enemy, {keyfriendlies} a friendly, {keyorder} gives the order. {cruiserkey} the cruiser: fly, mine, dock, repair, shields; then 1 to {cruiserlast} does a row. {keyfocus} looks at it. H lists every key. |
+| camp.ui.pausepanels | {keywho} picks who, {keyhostiles} an enemy, {keyfriendlies} a friendly, {keyorder} gives the order. {cruiserkey} the cruiser: fly, mine, dock, repair, shields; then 1 to {cruiserlast} does a row. {keyfocus} looks at it. H lists every key. |
 | camp.keys.roomtitle | READY ROOM  -  ALL THE KEYS |
 | camp.keys.roomfooter | H or Esc closes this page. |
