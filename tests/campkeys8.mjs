@@ -14,7 +14,12 @@ const idOf = n => J(`(campFriNumbered(C).find(e => e.number === ${n}) || {}).id 
 
 // ---- A. the numbers: fixed for the whole mission, in the mission's own order ----
 mission(0, 20);
-check('1.1: the Transport is 1 although the mission\'s miner is in space before it; the miner is 2', nums() === '1:Transport | 2:Miner', nums());
+check('1.1 before the call: the Transport is 1 and the miner is NOT on the list (he joins at his call: card space-game-11-e-reaches-miner)', nums() === '1:Transport' && J(`C.cues.distress == null`), nums());
+g.run(`for (let i = 0; i < 150 * 30 && C.cues.distress == null; i++) campStep(C, 1 / 30); campStep(C, 1 / 30);`);
+check('1.1 from the moment he calls the miner joins as the next free number, 2, and the Transport stays 1', J(`C.cues.distress != null`) && nums() === '1:Transport | 2:Miner', nums());
+check('W, 2, E, 2, Enter sends ONE pilot (Kara) to guard the miner, and nobody else', (() => { g.run(`campWingOrder(C, null, 'guard', null, 'test');`); k('KeyW'); k('Digit2'); const e = k('KeyE'); const d = k('Digit2'); const r = k('Enter'); return e.open === 'friends' && d.ok && J('C.fsel') === idOf(2) && r.ran && r.ok && r.row === 'guard' && J(`campWingShips(C, 'green').every(u => u.order && u.order.type === 'guard' && u.order.at && u.order.at.id === '${idOf(2)}')`) && J(`['red', 'yellow'].every(q => campWingShips(C, q).every(u => u.order && u.order.type === 'guard' && !(u.order.at && u.order.at.id === '${idOf(2)}')))`); })());
+g.run(`campPanelClose(P); C.fsel = ''; C.sel = 'all';`);
+mission(0, 20);
 mission(1, 20);
 check('1.2: the miners are 1 and 2', nums() === '1:Miner 1 | 2:Miner 2', nums());
 mission(2, 1);
