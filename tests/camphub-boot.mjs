@@ -41,7 +41,7 @@ try {
   await key('Digit2'); const there = await settle(`Math.abs(${HUB}.player.x - 640) < 4 && Math.abs(${HUB}.player.y - 246) < 4`, 80); await t.run(300); await snap('3-refit');
   check('2: the refit at the repair bay: the pilot has walked to it', there);
   await key('Enter'); await t.run(300); await snap('3-refit-overlay');
-  check('Enter opens the refit overlay: each choice says what it changes, its cost and what you have', (await shown()).some(x => /^Wing strength: 8 to 9 fighters$/.test(x)) && (await shown()).some(x => /^25 ore$/.test(x)) && (await shown()).some(x => /^You can buy it\.$/.test(x)) && (await shown()).some(x => /^Damage the carrier takes: 100 to 60 percent$/.test(x)));
+  check('Enter opens the refit overlay: each choice says what it changes, its cost and what you have', (await shown()).some(x => /^Wing strength: 8 to 9$/.test(x)) && (await shown()).some(x => /^25 ore$/.test(x)) && (await shown()).some(x => /^You can buy it\.$/.test(x)) && (await shown()).some(x => /^Damage the carrier takes: 100 to 60 percent$/.test(x)));
   await key('KeyF'); await key('KeyF'); await key('KeyF'); await t.run(300); await snap('3b-refit-bought');
   const sv = await j(`JSON.parse(localStorage.getItem('longhaul.campaign'))`);
   check('F, F, F bought three fighters (there is no escort to buy): 100 - 25 - 25 - 25 = 25 ore, in the save at once', sv.ore === 25 && sv.bonus.fighters === 3 && sv.bonus.escorts === undefined, JSON.stringify(sv.bonus) + ' ore ' + sv.ore);
