@@ -133,7 +133,7 @@ g.run(`
   check('the first row is drawn inside the box, under the title row', rows[0] > T.y + Th + gap && rows[0] < T.y + Th + gap + B.pad + B.row, JSON.stringify([rows[0], T.y + Th]));
   check('a click on a row of the list is still the list\'s (over, click)', J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (Math.round(rows[0])) + ')') === true && J('campPanelsOver(S, ' + (T.x + 40) + ', ' + (T.y + 4) + ')') === false);
   const BX = J('campBoxDx(S, true)');
-  check('the bottom left corner needs no step aside: the list ends well above it', BX === 0, BX);
+  check('the corners need no step aside: the list hangs under its own row (Q CRUISER) and the row under it, W FLEET, slides down below it (card space-game-keys5-corners)', BX === 0, BX);
   g.run(`S.pn.touch = 0; campPanelsPaint(S, 1000 + CAMP_PANELS.anim.idle + CAMP_PANELS.anim.out + 10);`);
   check('untouched, the list fades and closes: back to the title row alone', J('campPanelOpen(S.pn)') === '' && J('S.pnl.rows.every(r => !r.name.visible)'));
 }
