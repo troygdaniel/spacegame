@@ -249,7 +249,7 @@ sec('J', () => {
   g.run("__go(10)");
   const cool = erow();
   check('J  after it, the emergency row counts down: "ready in 9 s" (20 s from its start), and the power keys work again', cool.ok === false && /^ready in \d+ s$/.test(cool.state) && /^\d+ s$/.test(cool.short) && key('KeyJ', 80).ok === true, JSON.stringify(cool));
-  check('J  the key line says every list with a key: "Q Cruiser  W Fleet" and nothing else', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet    ' && J('campPanelKeyLine()') === J("['left', 'right'].map(s => CAMP_PANELS.panels.filter(p => p.side === s && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ')"));
+  check('J  the key line says every list with a key: "Q Cruiser  W Fleet  E Friends" and nothing else', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet  E Friends    ' && J('campPanelKeyLine()') === J("['left', 'right'].map(s => CAMP_PANELS.panels.filter(p => p.side === s && p.key).map(p => p.key + ' ' + p.tab).join('  ')).join('    ')"));
 });
 
 sec('H', () => {

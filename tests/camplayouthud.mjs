@@ -54,7 +54,7 @@ console.log('D. the bottom key line');
   check('it is Arrows fly  Space turrets  M missile  Tab Map  H Keys, from the table\'s keys', k === 'Arrows fly  Space turrets  M missile  Tab Map  H Keys' && k === J(`uiText('camp.ui.keys')`), k);
   check('it has no list key and no S Cruiser, no placeholder, and fits the screen (8.6 px a letter from x 24 to 1272)', !/Cruiser|Fleet|Power|Autopilot|Dock|[{}]/.test(k) && 24 + k.length * 8.6 <= 1272, k.length + ' letters');
   check('the text file and the default say the same, with no {panels}', /\| camp\.ui\.keys \| \{keyfly\} fly  \{keyfire\} turrets  \{keymissile\} missile  \{keymap\} Map  \{keyhelp\} Keys \|/.test(src('content/text/ui.md')) && !/\{panels\}/.test(src('content/text/ui.md')) && !/'camp\.ui\.keys': '\{panels\}/.test(src('src/contenttables.js')));
-  check('the lists\' keys are still read from the table (campPanelKeyLine), for the ship computer and the H page', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet    ', J('campPanelKeyLine()'));
+  check('the lists\' keys are still read from the table (campPanelKeyLine), for the ship computer and the H page', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet  E Friends    ', J('campPanelKeyLine()'));
 }
 
 console.log('E. the rival\'s bars');

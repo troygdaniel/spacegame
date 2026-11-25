@@ -97,8 +97,8 @@ console.log('D. the keys and the lists');
   g.run('window.__a = __foe(900, 0); campTgtNearest(C);');
   const tg = J('C.tgt');
   const pick = n => (key('KeyW'), key('Digit' + n), J('C.sel'));
-  const s1 = pick(1), s2 = pick(2), s3 = pick(3), s4 = pick(4);
-  check('W then 1 to 4 picks who: the pilots red, green, yellow and All pilots (the default); it is no order and opens no list', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'all' && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
+  const s1 = pick(1), s2 = pick(2), s3 = pick(3); key('KeyW'); const s4 = J('C.sel'), w4 = key('Digit4'), s4b = J('C.sel'), s4o = J('campPanelOpen(__PP)'); key('Escape'); // item 5 of card space-game-keys8-e-digit: the first tap of W picks ALL pilots and opens the pick; the digit 4 is gone
+  check('W then 1 to 3 picks who: the pilots red, green and yellow; W alone picks All pilots (the default) and opens the pick, and W then 4 does nothing; it is no order', s1 === 'pilot:red' && s2 === 'pilot:green' && s3 === 'pilot:yellow' && s4 === 'all' && s4b === 'all' && s4o === 'fleet' && !w4.ok && J('campPanelOpen(__PP)') === '' && J('C.orders.attack | 0') === 0);
   g.run(`C.sel = 'pilot:green';`);
   const e0 = key('Enter');
   check('W with the green pilot picked: the green squad attacks the picked target (a fleet order) and only the green squad', e0.ran && e0.ok && e0.row === 'attack' && e0.open === '' && e0.fleet === true && J('__ord("green")') === R3('attack:' + tg) && J('__ord("red")').startsWith('guard') && J('__ord("yellow")').startsWith('guard'), JSON.stringify(e0));
@@ -115,7 +115,7 @@ console.log('D. the keys and the lists');
   check('E with All pilots and none picked forms all three squads up on the cruiser', J('C.sel') === 'all' && J('C.fsel') === '' && J('C.tgt') === '' && rg.ran && rg.ok && rg.row === 'guard' && J(`campWing(C, 'fighter').every(u => u.order.type === 'guard')`));
   const old = ['Enter', 'KeyR', 'KeyT'].map(c => J(`(() => { campPanelClose(__PP); return campPanelKey(__PP, C, '${c}', 0).open; })()`)).join();
   check('E, R and T open no list any more: they give an order (or are refused in words) and the panel stays shut', old === ',,', old);
-  check('the key line, the H page and the hints say the keys, read from the table: the key line is Q Cruiser and W Fleet alone, the order key is a direct key, in the texts as {keyorder}, who as {keywho} and the friendlies\' as {keyfriendlies}', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet    ' && J(`['keyorder', 'keywho', 'keyfriendlies', 'keyhostiles'].map(campKeyVar).join('')`) === 'EnterWE]');
+  check('the key line, the H page and the hints say the keys, read from the table: the key line is Q Cruiser, W Fleet and E Friends alone, the order key is a direct key, in the texts as {keyorder}, who as {keywho} and the friendlies\' as {keyfriendlies}', J('campPanelKeyLine()') === 'Q Cruiser  W Fleet  E Friends    ' && J(`['keyorder', 'keywho', 'keyfriendlies', 'keyhostiles'].map(campKeyVar).join('')`) === 'EnterWE]');
 }
 
 console.log('E. the words');

@@ -1153,6 +1153,7 @@ function campTick(C, dt) {
   campWarn(C);
   if (typeof campSightStep === 'function') campSightStep(C); // the hostiles that come into sight for the first time are called on the radio (src/campsight.js)
   if (typeof campOutpostTick === 'function') campOutpostTick(C, dt); // the retreat line (src/campoutpost.js)
+  if (typeof campFriRegister === 'function') campFriRegister(C); // every ship you protect has its number before the dead leave (card space-game-keys8-e-digit: a number is the ship's for the whole mission)
   C.ships = C.ships.filter(u => u.hp > 0 || (delete C.by[u.id], false)); // the dead leave the list (the scene was told by the boom event)
 }
 

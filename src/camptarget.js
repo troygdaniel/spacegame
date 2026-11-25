@@ -25,7 +25,8 @@
 //   campSelClear(C)             WHO back to All pilots
 //   C.fsel                      the FRIENDLY: the id of a ship you protect (the transport, a miner, a hauler) or of an outpost ('place:...'); '' for none. C.tgt and C.fsel are never both set (one target): a pick of one lets go of the other, and the step with nothing to pick changes neither
 //   campHeldNow(C)             the ONE target held now (card space-game-keys2-select): { kind: 'hostile' | 'friendly', id, name, unit (a ship; null for an outpost), post (the outpost's entry; null for a ship) }, or null. What the target box, the bracket and the order keys read
-//   campFriList(C)              the stops of [: the SHIPS you protect, nearest the cruiser first: [{ id, kind: 'ward', unit, name, x, y, r }]
+//   campFriList(C)              the SHIPS you protect, nearest the cruiser first (a click on one holds it): [{ id, kind: 'ward', unit, name, x, y, r }]
+//   campFriNumbered(C) / campFriJump(C, n)   the numbered friends (card space-game-keys8-e-digit): the pure list for both HUDs [{ id, name, number, alive, hull, picked, unit }], fixed for the mission; E then a digit holds that ship (campFriRegister gives the numbers, campFriLabel the words of a row)
 //   campFriHold(C, 'place:luna')  a click on an outpost or a planet of the Tab map (src/campmapdraw.js campMapClick): that place is the target held (the enemy is let go); campFriNow then says { id, kind: 'post', unit: null, name, x, y, r }
 //   campHeldRow(C)              the nav row of the target held (an enemy's, a place's, a ship's): what Fly to the target flies to
 //   campFriNow(C) / campFriStep(C, dir) / campFriClear(C)   the friendly now (or null); [ is step 1, the next; -1 the last, round at the ends; none
@@ -135,6 +136,29 @@ function campFriList(C) { // the stops of [: the SHIPS you protect (the transpor
   if (!C || !C.carrier || typeof campPickGuardees !== 'function') return [];
   return campPickGuardees(C).filter(i => i.what !== 'post').map(i => ({ id: i.id, kind: 'ward', unit: C.by[i.id] || null, name: i.name, x: i.x, y: i.y, r: i.r })).filter(e => e.unit && e.unit.hp > 0);
 }
+// THE NUMBERED FRIENDS (card space-game-keys8-e-digit; Troy, 25 Nov 2026: "a letter says what kind of thing, a digit says which"): every ship you protect gets a number the first time it is seen and keeps it for the WHOLE mission, in the mission's own order (1.1: the transport is 1; 1.2: the miners 1 and 2; 1.3: the haulers 1, 2, 3, each as it comes); a ship that is lost (or has arrived) keeps its number, which goes dark, and nothing moves up. ONE pure list for both HUDs (the canvas corner and the page): campFriNumbered(C)
+// = [{ id, name, number, alive, hull (0..1; 0 when dark), picked (C.fsel is it), unit (the ship, null when dark) }] in number order; E steps through the live ones in that order, E then a digit (1 to 9) is campFriJump. The numbers are C.fnums = { next, plan: { id: n } (the level's convoys, in the level's order, reserved at the first look), by: { id: { n, name } } (a ship seen) }, written by the step of the sim (campFriRegister, before the dead leave the list) and by any first look
+const campFriShipName = u => (u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u)); // (the name src/camppick.js gives a ship you protect)
+function campFriRegister(C) { // give a number to every ship you protect that has none (C.ships order is the order they were made in); the registry, or null when there is no mission
+  if (!C || !C.ships || typeof campPickGuarded !== 'function') return null;
+  let R = C.fnums;
+  if (!R) { // the first look of the mission: the convoys of the level hold their numbers in the level's own order (1.1: the Transport is 1 although the miner of that mission is in space first); the miners and anything else come after, as they are seen
+    R = C.fnums = { next: 1, by: {}, plan: {} };
+    ((C.L && C.L.convoys) || []).forEach(cv => { R.plan['freighter-' + cv.id] = R.next++; });
+  }
+  campPickGuarded(C).forEach(u => { if (!R.by[u.id]) R.by[u.id] = { n: R.plan[u.id] || R.next++, name: campFriShipName(u) }; }); // (a number is in the list only from the moment its ship is first seen: no row for a hauler that has not come yet)
+  return R;
+}
+function campFriNumbered(C) { // the numbered list, dark ships included, in number order
+  const R = campFriRegister(C); if (!R) return [];
+  return Object.keys(R.by).map(id => { const r = R.by[id], u = C.by[id], up = !!u && u.hp > 0; return { id, name: r.name, number: r.n, alive: up, hull: up ? Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1))) : 0, picked: C.fsel === id, unit: up ? u : null }; }).sort((a, b) => a.number - b.number);
+}
+function campFriJump(C, n, how) { // E then a digit: that ship is THE target held (the enemy is let go), as E would make it; a number that is dark (or none) does nothing and says so
+  if (!C || !C.carrier) return campNo('what');
+  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e || !e.alive) return campNo('nofriend');
+  C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return { ok: true, say: '', fri: e.id };
+}
+const campFriLabel = (C, n) => { const e = campFriNumbered(C).find(x => x.number === n); return e ? e.name : 'Friend ' + n; }; // a row's words in the friends pick: the ship's name
 function campFriPlace(C, id) { // an outpost or a planet (a place of the level, id 'place:...') as the friendly: { id, kind: 'post', unit: null, name, x, y, r }, or null (no such place, or it is hidden)
   const m = /^place:(.+)$/.exec(String(id || '')); if (!m || !C || !C.carrier || typeof campPlaces !== 'function') return null;
   const p = campPlaces(C.level)[m[1]]; if (!p || p.hidden) return null;
@@ -154,10 +178,10 @@ function campFriNow(C) { // the friendly now: a ship of the list, or the place a
   if (!e) { C.fsel = ''; return null; }
   return e;
 }
-function campFriStep(C, dir) { // [ (1): the friendly after (-1: before), round at the ends; with none, 1 takes the first and -1 the last. One target: the enemy is let go
-  const list = campFriList(C); if (!list.length) return null; // no ship to protect: a place held by a map click stays held (campFriNow lets go of a ship that is lost)
+function campFriStep(C, dir) { // E (1): the next ship you protect in NUMBER order (card space-game-keys8-e-digit: it was nearest first), the lit ones only, round at the ends; with none, 1 takes the first and -1 the last. One target: the enemy is let go
+  const list = campFriNumbered(C).filter(e => e.alive); if (!list.length) return null; // no ship to protect: a place held by a map click stays held (campFriNow lets go of a ship that is lost)
   const at = list.findIndex(e => e.id === C.fsel), d = dir < 0 ? -1 : 1, i = at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length;
-  C.fsel = list[i].id; C.tgt = ''; campMarkTouch(C, false, true); return list[i];
+  C.fsel = list[i].id; C.tgt = ''; campMarkTouch(C, false, true); return campFriList(C).find(x => x.id === list[i].id) || list[i]; // (the entry of campFriList, as it always was)
 }
 function campFriClear(C) { const had = !!(C && C.fsel); if (C) C.fsel = ''; return had; }
 function campPicksClear(C) { const had = !!(C && (C.tgt || C.fsel || (C.sel && C.sel !== CAMP_SELALL))); campTgtClear(C); campFriClear(C); campSelClear(C); return had; } // X: no enemy, no friendly, WHO is All pilots again

@@ -90,7 +90,10 @@ function campPanelKey(P, C, code, now) {
   const pk = code ? CAMP_PANELS.panels.find(p => p.code && p.code === code) : null;
   if (pk) { // a list's key (S): open that list at its first row, or close it when it is the one open
     res.used = true;
-    if (pk.step && C && typeof campSelStep === 'function') { campSelStep(C, 1); if (campPanelOpen(P) !== pk.id) campPanelGo(P, C, pk.id); else { P.at = 0; P.top = 0; } res.open = campPanelOpen(P); res.sel = C.sel || ''; return res; } // the fleet pick's key (card space-game-keys7-trim, Troy, 24 Nov 2026): each press steps who (Wedge, Kara, Apollo, all, round again) and keeps the pick open; a digit still jumps there; Esc or the fade closes it
+    if (pk.step && C && typeof campSelStep === 'function') {
+      if (pk.step === 'fri') { if (!campFriNumbered(C).some(e => e.alive)) { res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res; } campFriStep(C, 1); } else if (campPanelOpen(P) !== pk.id) campSelAll(C); else campSelStep(C, 1); // W (card space-game-keys8-e-digit item 5): the first tap, the pick closed, picks ALL pilots and opens it; the next taps step Wedge, Kara, Apollo, all // E (card space-game-keys8-e-digit) steps the ships you protect in their numbers, the same way: no ship to protect, no pick
+      if (campPanelOpen(P) !== pk.id) campPanelGo(P, C, pk.id); else { P.at = 0; P.top = 0; } res.open = campPanelOpen(P); res.sel = C.sel || ''; res.fsel = C.fsel || ''; res.tgt = C.tgt || ''; return res;
+    } // the fleet pick's key (card space-game-keys7-trim, Troy, 24 Nov 2026): each press steps who (Wedge, Kara, Apollo, all, round again) and keeps the pick open; a digit still jumps there; Esc or the fade closes it
     if (campPanelOpen(P) === pk.id) campPanelClose(P); else campPanelGo(P, C, pk.id);
     res.open = campPanelOpen(P); return res;
   }
@@ -117,16 +120,16 @@ function campPanelKey(P, C, code, now) {
         if (plan.how === 'auto') item = plan.item;
       }
       const r = campPanelRun(C, row, 'key', item);
-      res.ran = !row.who || !(r && r.ok); res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now; // (a pick of who is no order: it says nothing unless it is refused)
+      res.ran = (!row.who && !row.fri) || !(r && r.ok); res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now; // (a pick of who is no order: it says nothing unless it is refused)
       if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
       if (res.ok) campPanelClose(P); // the order is given: the keys go back to the ship. A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
     }
   }
-  const tk = typeof campTgtStep === 'function' ? (campKeyIs('hostiles', code) ? 'hostiles' : campKeyIs('friendlies', code) ? 'friendlies' : campKeyIs('near', code) ? 'near' : '') : '';
-  if (tk) { // ] the next enemy, E the next friendly, \ the nearest threat: one key and one direction each, each cycle going round with no empty stop (src/camptarget.js; cards space-game-keys4-onekey, space-game-keys5-qwe and space-game-keys6-enter: W is the fleet pick, a list's key; X is gone)
+  const tk = typeof campTgtStep === 'function' ? (campKeyIs('hostiles', code) ? 'hostiles' : campKeyIs('near', code) ? 'near' : '') : '';
+  if (tk) { // ] the next enemy, \ the nearest threat: one key and one direction each, each cycle going round with no empty stop (src/camptarget.js; cards space-game-keys4-onekey, space-game-keys5-qwe, space-game-keys6-enter and space-game-keys8-e-digit: W is the fleet pick and E the friends pick, lists' keys above; X is gone)
     res.used = true; res.fleet = true; if (!C) return res;
-    if (tk === 'near') campTgtNearest(C); else if (tk === 'friendlies') campFriStep(C, 1); else campTgtCycle(C);
+    if (tk === 'near') campTgtNearest(C); else campTgtCycle(C);
     res.tgt = C.tgt || ''; res.sel = C.sel || ''; res.fsel = C.fsel || ''; return res;
   }
   const ok = typeof campSelOrder === 'function' && campKeyIs('order', code) ? 'engage' : '';
@@ -165,6 +168,7 @@ function campPanelRun(C, row, how, item) {
   if (!C || !row) return { ok: false, say: '' };
   if (row.open) return { ok: true, say: '', open: row.open }; // a part's row: the caller opens its list
   if (row.who) return campSelPick(C, row.who, how || 'key'); // a row of the fleet pick: WHO takes the order (no order is given)
+  if (row.fri) return campFriJump(C, row.fri, how || 'key'); // a row of the friends pick (E, then a digit): that ship is the friendly held
   if (row.formup) return campSelOrder(C, 'formup', how || 'key'); // 5 of the fleet pick: form up on the cruiser, at once, whoever is picked
   if (item && row.pick === 'ward') return campOrder(C, 'mendship', item.id, how || 'key'); // the ship that was chosen is mended (src/campmend.js)
   else if (item && row.pick === 'field') return campWingOrder(C, row.wing ? row.wing[0] : 'all', 'mine', item.rock, how || 'key'); // the wing starts at the rock of the field that was chosen
@@ -203,6 +207,7 @@ const campPanelCost = (C, row, short) => {
 };
 function campPanelState(C, row) {
   if (row.who) return campSelIs(C, row.who) ? 'picked' : ''; // the fleet pick: what is picked now says so
+  if (row.fri) return campFriNumbered(C).some(e => e.number === row.fri && e.picked) ? 'picked' : '';
   if (row.cost) return campPanelCost(C, row); // a yard row: what it costs (now)
   switch (row.id) {
     case 'fmine': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' fighters out' : C.bay.fighters + ' in the bay'; } // pilots in the bay take the order by launching (card space-game-keys-orders)
@@ -224,6 +229,7 @@ function campPanelShortWhy(r) {
 }
 function campPanelShortState(C, row) {
   if (row.who) return campSelIs(C, row.who) ? 'picked' : '';
+  if (row.fri) return campFriNumbered(C).some(e => e.number === row.fri && e.picked) ? 'picked' : '';
   if (row.cost) return campPanelCost(C, row, true);
   switch (row.id) {
     case 'fmine': { const out = campWing(C, 'fighter').length; return out || !(C.bay.fighters > 0) ? out + ' out' : C.bay.fighters + ' in bay'; }
@@ -240,6 +246,7 @@ function campPanelRowState(C, row) {
   const ok = () => ({ ok: true, state: campPanelState(C, row), short: campPanelShortState(C, row) }), no = (why, sh) => ({ ok: false, state: CAMP_PANELS.why[why] || CAMP_PANELS.why.what, short: CAMP_PANELS.shortWhy[sh || why] || CAMP_PANELS.shortWhy.what });
   if (row.open) return ok(); // a part's row is always open to go into
   if (row.who) return campSelList(C).some(e => e.id === row.who) ? ok() : no('nopilot'); // a pilot who is lost or home is no stop of the pick
+  if (row.fri) return campFriNumbered(C).some(e => e.number === row.fri && e.alive) ? ok() : no('nofriend'); // a ship that is lost: its number is dark
   if (row.formup) { const r = campSelOrder(C, 'formup', 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.wing) { const r = campWingOrder(C, row.wing[0], row.wing[1], null, 'key', true); return r.ok ? ok() : { ok: false, state: campPanelWhy(r), short: campPanelShortWhy(r) }; }
   if (row.fly === 'objective') {
@@ -265,7 +272,7 @@ const campPanelShips = n => n + (n === 1 ? ' ship' : ' ships'); // "1 ship", "3 
 const campPanelConvoyMarked = (C, row) => row.order === 'convoy' && campConvoyState(C) === campConvoyVerb(String(row.arg || '')); // the convoy order that all the escorted ships are under
 function campPanelRows(C, id) {
   if (!campPanelDef(id) || !C) return [];
-  return campPanelList(C, id).map(row => { const part = row.open ? campPanelDef(row.open) : null; return Object.assign({ id: row.id, label: row.who ? campSelLabel(row.who) : row.label, key: part ? part.key : row.cap && CAMP_KEYS[row.cap] ? CAMP_KEYS[row.cap].k : '', more: !!part, marked: row.who ? campSelIs(C, row.who) : campPanelConvoyMarked(C, row) }, campPanelRowState(C, row)); });
+  return campPanelList(C, id).map(row => { const part = row.open ? campPanelDef(row.open) : null; return Object.assign({ id: row.id, label: row.who ? campSelLabel(row.who) : row.fri ? campFriLabel(C, row.fri) : row.label, key: part ? part.key : row.cap && CAMP_KEYS[row.cap] ? CAMP_KEYS[row.cap].k : '', more: !!part, marked: row.who ? campSelIs(C, row.who) : row.fri ? campFriNumbered(C).some(e => e.number === row.fri && e.picked) : campPanelConvoyMarked(C, row) }, campPanelRowState(C, row)); });
 }
 function campPanelView(P, C) {
   const id = campPanelOpen(P), def = campPanelDef(id); if (!def || !C) return null;

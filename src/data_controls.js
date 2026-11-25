@@ -71,7 +71,18 @@ const CAMP_PANELS = {
       { id: 'whowedge', who: 'pilot:red', label: 'Red 1 Wedge', help: 'Wedge takes the orders' },
       { id: 'whokara', who: 'pilot:green', label: 'Red 2 Kara', help: 'Kara takes the orders' },
       { id: 'whoapollo', who: 'pilot:yellow', label: 'Red 3 Apollo', help: 'Apollo takes the orders' },
-      { id: 'whoall', who: 'all', label: 'All pilots', help: 'All three pilots take the orders' }
+      { id: 'whoall', who: 'all', off: 1, label: 'All pilots', help: 'All three pilots take the orders' } // OFF (card space-game-keys8-e-digit item 5, Troy, 25 Nov 2026): the first tap of W picks ALL pilots, so the pick has three digits, 1 Wedge, 2 Kara, 3 Apollo; the row stays in the table (the stop 'all' is still the cycle's and the default)
+    ] },
+    { id: 'friends', side: 'left', corner: 'bl', head: 1, numbers: 1, key: 'E', code: 'KeyE', step: 'fri', fades: 1, title: 'FRIENDS', tab: 'Friends', name: 'the friends pick', rows: [ // card space-game-keys8-e-digit (Troy, 25 Nov 2026: "a letter says what kind of thing, a digit says which"): E works like W. A tap steps through the ships you protect and keeps the pick open, E then a digit jumps straight to that ship and closes it. A ship's number is fixed for the whole mission (src/camptarget.js campFriNumbered); a row does nothing until its ship has been seen and goes dark when the ship is lost (the nine rows are always there: a digit is the row's place in the list, so a number that has not come yet must still hold its place; the corner draws only the numbers seen). The corner FRIENDLIES draws these rows (list: 'friends'); Enter then guards the one picked
+      { id: 'fri1', fri: 1, label: 'Friend 1', help: 'Pick the ship you protect that has number 1' },
+      { id: 'fri2', fri: 2, label: 'Friend 2', help: 'Pick the ship you protect that has number 2' },
+      { id: 'fri3', fri: 3, label: 'Friend 3', help: 'Pick the ship you protect that has number 3' },
+      { id: 'fri4', fri: 4, label: 'Friend 4', help: 'Pick the ship you protect that has number 4' },
+      { id: 'fri5', fri: 5, label: 'Friend 5', help: 'Pick the ship you protect that has number 5' },
+      { id: 'fri6', fri: 6, label: 'Friend 6', help: 'Pick the ship you protect that has number 6' },
+      { id: 'fri7', fri: 7, label: 'Friend 7', help: 'Pick the ship you protect that has number 7' },
+      { id: 'fri8', fri: 8, label: 'Friend 8', help: 'Pick the ship you protect that has number 8' },
+      { id: 'fri9', fri: 9, label: 'Friend 9', help: 'Pick the ship you protect that has number 9' }
     ] },
     { id: 'convoy', side: 'left', key: '', code: '', title: 'CONVOY ORDERS', tab: '', name: 'the convoy list', rows: [ // orders for the escorted ships (src/campconvoy.js): no key opens this list now (it was a row of the deleted fleet list); the strip and the voice give them: "tuck in", "run for it", "carry on", "haulers hold"
       { id: 'ctuck', order: 'convoy', arg: 'tuck in', label: 'Tuck in', help: 'Convoy flies in the cruiser\'s shield' },
@@ -85,12 +96,12 @@ const CAMP_PANELS = {
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', noearth: 'no Earth here', what: 'cannot do that now', mending: 'already being mended', farward: 'too far from the cruiser', noward: 'no ship of ours is hurt', nobuild: 'nothing is built now',
     cnone: 'no escorted ships', cwhat: 'cannot do that now', nogoal: 'no objective', there: 'you are there', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', shieldfull: 'the shield is full', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s',
-    notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech', nopilot: 'that pilot is not out', rackfull: 'the rack is full', reloading: 'already building' },
+    notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech', nopilot: 'that pilot is not out', nofriend: 'that ship is gone', rackfull: 'the rack is full', reloading: 'already building' },
   // the same, a word or two, beside a row of the list
   shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
     noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', what: 'not now', mending: 'mending', farward: 'too far', noward: 'none hurt', nobuild: 'no building',
     nogoal: 'no goal', nofoe: 'none seen', there: 'there', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', shieldfull: 'shield full', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
-    notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech', nopilot: 'not out', rackfull: 'rack full', reloading: 'building' }
+    notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech', nopilot: 'not out', nofriend: 'gone', rackfull: 'rack full', reloading: 'building' }
 };
 // the direct keys of the Campaign (the scene reads the codes here; a hint names the cap): { k: the cap or caps a hint prints, codes: the KeyboardEvent.codes that do it }. One key, one meaning, everywhere in flight
 const CAMP_KEYS = {
@@ -101,7 +112,7 @@ const CAMP_KEYS = {
   up: { k: 'Up', codes: ['ArrowUp'] }, down: { k: 'Down', codes: ['ArrowDown'] }, pick: { k: 'Enter', codes: ['Enter', 'NumpadEnter'] }, // in an open list that takes them, or a pilot's call: move the highlight, give the order
   map: { k: 'Tab', codes: ['Tab'] },                                                   // open and close the map (src/campmap.js CAMPMAP.key says the same)
   hostiles: { k: ']', codes: ['BracketRight'] },                                       // the next HOSTILE (the target, C.tgt), one direction: nearest the cruiser first, round at the end; after CAMP.target.restart ms with no press the next press starts again from the nearest (card space-game-keys4-onekey, Troy, 24 Nov 2026: one key each). Only ONE target is held: a hostile replaces the friendly and the other way round
-  friendlies: { k: 'E', codes: ['KeyE'] },                                        // the next FRIENDLY, one direction: the SHIPS you protect (the transport, a miner, a hauler: no planet or outpost is in this cycle; a click on one on the map holds it) (C.fsel), nearest the cruiser first, round at the end
+  friendlies: { k: 'E', codes: ['KeyE'] },                                        // the FRIENDS pick (card space-game-keys8-e-digit: E steps the ships you protect in their mission-long numbers and keeps the pick open, E then 1 to 9 jumps there and closes it; the list 'friends'); it was: the next FRIENDLY, one direction: the SHIPS you protect (the transport, a miner, a hauler: no planet or outpost is in this cycle; a click on one on the map holds it) (C.fsel), nearest the cruiser first, round at the end
   who: { k: 'W', codes: ['KeyW'] },                                                    // the FLEET pick (card space-game-keys5-qwe, Troy, 24 Nov 2026): W opens the pick (the list 'fleet', numbered), then a digit says WHO takes the order (C.sel): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots (the default). W alone only opens it: no cycling
   near: { k: '\\', codes: ['Backslash'] },                                           // the nearest threat (the tune kit's win moved off the backslash). X (clear the picks) is gone (card space-game-keys5-qwe); the two cycles, ] and E, go round with no empty stop
   order: { k: 'Enter', codes: ['Enter', 'NumpadEnter'] }, // (card space-game-keys6-enter: Enter is the one order, E is the friendlies' key; Enter gives it only when no card, briefing or list that takes Enter is open, and not in the CAMP.card.lock ms after a card closes)                                                 // the one order key (cards space-game-keys2-orders, space-game-keys4-onekey and space-game-keys5-qwe, Troy, 24 Nov 2026: E, then W, now E again: W is the fleet pick): WHO does the fitting thing for what is picked (src/camptarget.js campSelOrder 'engage'): an enemy picked, attack it; a friendly, guard it; nothing, form up on the cruiser. A right click on a ship does what E does (src/campclick.js). G and R are no order: there is no recall (the pilots stay out; a badly hurt one returns by itself: src/camprepair.js). An order to a pilot in the bay launches it.
@@ -147,9 +158,9 @@ const campKeyIs = (id, code) => campKeyCodes(id).indexOf(code) >= 0;
 const campPanelMost = id => { const p = CAMP_PANELS.panels.find(x => x.id === id); return p ? Math.min(9, p.rows.filter(r => !r.off).length) : 0; };
 // the rows the H page and Settings list for the lists: each list's key and what it is, then the keys every open list shares
 function campPanelKeyRows() {
-  const sub = 'THE ORDER LISTS', what = { cruiser: 'Cruiser: fly, mine, repair, shields', fleet: 'Fleet: pick who takes the orders', convoy: 'Convoy: tuck in, run, hold, carry on', yard: 'Dock, repair the hull and our ships' };
+  const sub = 'THE ORDER LISTS', what = { cruiser: 'Cruiser: fly, mine, repair, shields', fleet: 'Fleet: pick who takes the orders', friends: 'Friends: pick a ship you protect', convoy: 'Convoy: tuck in, run, hold, carry on', yard: 'Dock, repair the hull and our ships' };
   const on = CAMP_PANELS.panels.filter(p => p.key), numd = on.filter(p => p.numbers), plain = on.some(p => !p.numbers); // a numbered list (the Q list and the W pick, cards space-game-s-list-numbers and space-game-keys5-qwe) is driven by its digits and takes neither Up, Down, Left, Right nor Enter: the rows for those are only said while a list that takes them is on
-  return on.map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat(numd.map(p => ({ k: ['1-' + campPanelMost(p.id)], t: p.id === 'cruiser' ? 'Cruiser list: its digit does a row' : 'Fleet pick: its digit picks who', sub })), plain ? [
+  return on.map(p => ({ k: [p.key], t: what[p.id] || p.title, sub })).concat(numd.map(p => ({ k: ['1-' + campPanelMost(p.id)], t: p.id === 'cruiser' ? 'Cruiser list: its digit does a row' : p.id === 'friends' ? 'Friends pick: its digit holds that ship' : 'Fleet pick: its digit picks who', sub })), plain ? [
     { k: [CAMP_KEYS.up.k, CAMP_KEYS.down.k], t: 'In a list: move the highlight', sub }, { k: [CAMP_KEYS.pick.k], t: 'In a list: give the order', sub }, { k: ['Left', 'Right'], t: 'In a list: back, or into a part', sub }] : [], [{ k: [CAMP_KEYS.pause.k], t: 'Back a step, or close the list', sub }]);
 }
 
@@ -183,9 +194,9 @@ function campKeyVar(name) {
   if (name === 'panels') return CAMP_PANELS.panels.filter(p => !p.parent && p.key).map(p => p.key + ' opens ' + p.name).join(', ');
   let m = /^([a-z]+)key$/.exec(name);
   if (m) { const p = campKeyList(m[1]); return p ? campKeyOpens(p.id) : ''; }
-  m = /^row([a-z]+)$/.exec(name);
+  m = /^row([a-z][a-z0-9]*)$/.exec(name); // (a row id may end in a digit: fri1 to fri9, card space-game-keys8-e-digit)
   if (m) { const r = campKeyRow(m[1]); return r ? r.label : ''; }
-  m = /^via([a-z]+)$/.exec(name);
+  m = /^via([a-z][a-z0-9]*)$/.exec(name);
   if (m) { const p = campKeyVia(m[1]); return p ? campKeyPath(p.id) : ''; }
   m = /^key([a-z]+)$/.exec(name);
   if (m) { const k = CAMP_KEYS[m[1]]; return k ? k.k : ''; }
@@ -255,8 +266,8 @@ const CONTROLS = [
     { k: ['M'], t: 'Missile at the target', sub: 'FLY AND FIRE' },
     { k: ['R'], t: 'Queue a missile to build (20 ore each)', sub: 'FLY AND FIRE' }, // card space-game-missiles-cost-ore: also the Q list's row Reload missiles; each press queues one (card space-game-missile-queue); the ship builds one by itself only at 0
     { k: ['-', '='], t: 'Zoom; Q resets; drag pans', sub: 'FLY AND FIRE' }, // - and the wheel go out to the whole system on the map; = and the keypad's + and - too; S is the reset and brings the view back to the cruiser (src/campzoom.js: all three from CAMP_KEYS; it was Backspace) // drag: the left button held and moved pans the view and the Tab map (src/campdrag.js): it stays where it is put; the wheel zooms about the pointer; a RECENTRE mark, Backspace (this reset) or the arrows held bring it back (a row of its own did not fit the H page)
-    { k: ['W'], t: 'Fleet: W steps who, 1 to 4 jumps', sub: 'THE TARGET' }, // the fleet pick (card space-game-keys5-qwe): W opens it, a digit picks WHO (C.sel): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots (the default); W alone only opens it
-    { k: ['E'], t: 'Next friendly (one target)', sub: 'THE TARGET' }, // the friendly pick (C.fsel): a SHIP you protect ([ steps through the ships only, then holds nothing for one press (the empty stop: E is then form up); a click on an outpost or a planet on the Tab map holds that place as the friendly: card space-game-keys3-select); W sends the pilots to guard it. Only ONE target is held: it replaces the enemy (card space-game-keys2-select)
+    { k: ['W'], t: 'Fleet: W picks all, taps step, 1 to 3 jumps', sub: 'THE TARGET' }, // the fleet pick (card space-game-keys5-qwe): W opens it, a digit picks WHO (C.sel): 1 Red 1 Wedge, 2 Red 2 Kara, 3 Red 3 Apollo, 4 all pilots (the default); W alone only opens it
+    { k: ['E'], t: 'Friends: E steps, 1 to 9 jumps', sub: 'THE TARGET' }, // the friendly pick (C.fsel): a SHIP you protect ([ steps through the ships only, then holds nothing for one press (the empty stop: E is then form up); a click on an outpost or a planet on the Tab map holds that place as the friendly: card space-game-keys3-select); W sends the pilots to guard it. Only ONE target is held: it replaces the enemy (card space-game-keys2-select)
     { k: [']'], t: 'Next enemy (nearest first)', sub: 'THE TARGET' }, // the enemy pick (C.tgt): Fly to the target flies to it, Enter fires at it, E sends the pilots at it; one press past the last ship holds nothing (the empty stop); it replaces the friendly. A pause of CAMP.target.restart ms starts again from the nearest
     { k: ['\\'], t: 'The nearest threat', sub: 'THE TARGET' },
     { k: ['Enter'], t: 'Order: attack, guard or form up', sub: 'THE TARGET' }, // E does the fitting thing for the pick: who takes the order (the W pick) does it, and a pilot in the bay is launched by it (cards space-game-keys2-orders, space-game-keys5-qwe; it was W)

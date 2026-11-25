@@ -29,7 +29,16 @@ campCornerAdd({
   id: 'hostiles', at: 'tr', keys: ['hostiles'], title: C => campTcornerInfo(C, 'host').titleKey,
   selection: C => campTcornerInfo(C, 'host').name, rows: C => campTcornerRows(C, 'host'), hit: (C, mem) => campTcornerHit(C, mem, 'host')
 });
+// the friends pick (card space-game-keys8-e-digit; Troy, 25 Nov 2026): while it is open (E) the details of FRIENDLIES are its rows, as the fleet's are W's: a digit chip, the ship's name and a hull bar for each ship you protect, in the numbers fixed for the mission (campFriNumbered, src/camptarget.js); the one picked is lit, a ship that is lost keeps its number dark (grey chip, 'lost'). Closed, the details are the picture of the friendly held, as before
+function campFriRows(C) {
+  if (typeof campPanelDef !== 'function' || typeof campPanelRows !== 'function' || !campPanelDef('friends')) return [];
+  const view = campPanelRows(C, 'friends'), rows = campPanelList(C, 'friends'), list = campFriNumbered(C);
+  return view.map((r, i) => ({ r, row: rows[i] || {} })).filter(x => list.some(e => e.number === x.row.fri)).map(({ r, row }) => { // (only the numbers whose ship has been seen: a hauler that has not come has no line, yet its digit keeps its place)
+    const e = list.find(x => x.number === row.fri) || null, up = !!e && e.alive, h = up ? campTdispHull(e.unit) : null;
+    return { kind: 'bar', id: r.id, cap: String(row.fri), capOk: up, name: r.label, num: h ? h.now + ' / ' + h.max : uiText('camp.corner.lost'), share: h ? h.share : 0, color: h ? CAMP.charge.color[campChargeBand(h.share)] : 0x16293d, sel: !!r.marked, ok: up };
+  });
+}
 campCornerAdd({
-  id: 'friendlies', at: 'bl', keys: ['friendlies'], title: C => campTcornerInfo(C, 'fri').titleKey,
-  selection: C => campTcornerInfo(C, 'fri').name, rows: C => campTcornerRows(C, 'fri'), hit: (C, mem) => campTcornerHit(C, mem, 'fri')
+  id: 'friendlies', at: 'bl', keys: ['friendlies'], list: 'friends', title: C => campTcornerInfo(C, 'fri').titleKey,
+  selection: C => campTcornerInfo(C, 'fri').name, rows: C => campCornerPanelId() === 'friends' ? campFriRows(C) : campTcornerRows(C, 'fri'), hit: (C, mem) => campTcornerHit(C, mem, 'fri')
 });
