@@ -63,9 +63,9 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.w1 | 1 transport flies from the Lunar Base to Ceres. |
 | camp.bf.1.1.w2 | Pirates wait in the rocks ahead. Shoot the torpedo boats first. |
 | camp.bf.1.1.w3 | A pirate leader waits near Ceres. Kill it, or get her past. |
-| camp.bf.1.1.w4 | A miner is jumped on the way. Send a squad. |
+| camp.bf.1.1.w4 | A miner is jumped on the way. Send the pilots. |
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
-| camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: say or type "tuck in". |
+| camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: pick them ({keynear}), then {keyorder}. |
 | camp.bf.1.1.n3 | The arrows fly the cruiser. {keywho} picks who, {keyorder} gives the order. |
 | camp.bf.1.2.w1 | Mine the rock fields round Ceres: {viafmine}, then {rowfmine}. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
@@ -100,4 +100,4 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.at.cache | RESOURCE POD |
 | camp.bf.at.guards | GUARDS |
 | camp.bf.at.mother | MOTHERSHIP |
-| camp.bf.1.3.w4 | A torpedo boat hunts them: tuck in, or kill it first. |
+| camp.bf.1.3.w4 | A torpedo boat hunts them. Kill it before it fires. |

@@ -115,7 +115,7 @@ To translate, change the text column here, or copy this file to a name after ui 
 | camp.say.launch | Launching the wing. |
 | camp.say.attack | Fighters, attack. |
 | camp.say.attackmother | Fighters, attack the mothership. |
-| camp.say.escort | The squads are with the {name} convoy. |
+| camp.say.escort | The pilots are with the {name} convoy. |
 | camp.say.guard | The wing is guarding. |
 | camp.say.recall | Wing, return to the carrier. |
 | camp.say.missiles | Missile away. |

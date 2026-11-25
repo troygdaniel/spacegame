@@ -41,7 +41,7 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 | Maps and navigation (a burn tows the wing: `campTowSet` in `campaign.js`, the rule in `campnav.js`) | `campmap.js`, `campnav.js`, `campsol.js`, `campzoom.js` | `campmapdraw.js`, `campmapfire.js`, `campdrag.js` (the drag of the view and the map, the RECENTRE mark), `campfocus.js` (F: the camera glides to the selected ship and follows it; the rules are plain functions, the camera calls and the label are the scene's) |
 | The ready room, ranks, outposts, docking | `camphub.js`, `campranks.js`, `campoutpost.js`, `campdock.js` | `camphubscene.js` |
 | Briefing, hints, win and lose cards | `campbrief.js`, `campnudge.js`, `campwin.js`, `camplose.js`, `camphelp.js` (the walking map of a briefing: `data_briefwalk.js`, `campbriefwalk.js`) | `campbriefdraw.js`, `campbriefwalkdraw.js` |
-| The ship's voice and radio | `campchatter.js`, `src/voice.js`, `src/voicepack.js` | |
+| The ship's voice and radio (a kept radio line stays up `CAMP.sayhold.ms` and the lines that come in meanwhile wait: `campsayhold.js`, pure; the scene's `radioShow`) | `campchatter.js`, `campsayhold.js`, `src/voice.js`, `src/voicepack.js` | |
 | Command strip, typed and spoken orders | `src/cmdstrip.js`, `src/shipcomputer.js`, `src/listen.js` | |
 
 The command strip, the ship computer and voice reach the simulation through one closed list of actions (`SC_ACT` in `shipcomputer.js`), so a typed "launch", a spoken one and the row of a list do the same thing and are refused for the same reasons.

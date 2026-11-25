@@ -202,8 +202,8 @@ Troy on the first mission: "lots of flying, not much happens", "the waiting, and
 | 0 s | At Ceres, empty store, three rock fields, two other miners | Which squads mine and which stand guard | A squad on guard cuts no rock |
 | 40 s | A probe: 3 skiffs from the east, for the miners | Which squad stops mining to meet it | Ore not mined while it is away |
 | 100 s | A raid from the south-west: 3 skiffs, 1 cutter | Send the wing, or part of it | See the next row |
-| 112 s | A second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | Split the squads, or finish one side first | A side with no squad is a miner under fire |
-| 175 s | 2 torpedo boats and 2 skiffs, for the miners | Tuck the miners in under the shield, or send a squad at the boats, or both | Tucked: the torpedoes hit the cruiser's shield. A squad on the boats is not on the skiffs. Nothing: a miner or both are lost |
+| 112 s | A second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | A pilot to each side, or finish one side first | A side with no pilot is a miner under fire |
+| 175 s | 2 torpedo boats and 2 skiffs, for the miners | Send the pilots at the boats (the radio and the hint say so), or tuck the miners in under the shield (typed on the strip: no key), or both | Tucked: the torpedoes hit the cruiser's shield. Pilots on the boats are not on the skiffs. Nothing: a miner or both are lost |
 | 230 to 240 s | The heavy raid, once the others are dead: 3 skiffs, 3 cutters, 2 brutes | Hurt squads home to be mended first, or all in now | Mending takes a squad out of the fight for a while |
 | after it | The Works opens its doors | Dock and sell (the mission ends), or mine on for the 400-ore bonus | Time against the speed bonus |
 
@@ -212,7 +212,7 @@ Troy on the first mission: "lots of flying, not much happens", "the waiting, and
 | Time (plain bot) | Road | What happens | What the player decides | What it costs |
 |---|---|---|---|---|
 | 24 s | 8 % | A probe at the lead hauler: 3 skiffs | One squad forward, or keep the wing close | A squad forward is not at the back later |
-| 66 s | 24 % | 1 torpedo boat and 2 skiffs | Tuck the haulers in, run for it, or kill the boat first | Tucked haulers fly at the cruiser's side: slower. Left alone: two torpedo hits on a hauler |
+| 66 s | 24 % | 1 torpedo boat and 2 skiffs | Send the pilots at the boat (the radio says so), or tuck the haulers in or run for it (typed on the strip: no key) | Tucked haulers fly at the cruiser's side: slower. Left alone: two torpedo hits on a hauler |
 | 110 s | 40 % | A raid on the LAST hauler: 3 skiffs, 1 cutter | A squad sent back, the cruiser turned round, or the hauler left to it | The front is thinner while a squad is back there |
 | 150 s | 56 % | Pirates at the front again: 2 skiffs, 2 cutters | Which squad, and who needs mending | As above |
 | 195 s | 72 % | 3 skiffs at the last hauler again | The same question, with a tired wing | As above |

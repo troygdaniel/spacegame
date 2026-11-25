@@ -56,7 +56,7 @@ class Campaign extends Phaser.Scene {
     this.replay = !!d.replay && (!!(this.P.results && this.P.results[campResultKey(this.level, this.mi)]) || (typeof campHubFlyable === 'function' && campHubFlyable(this.P).some(r => r.level === this.level && r.i === this.mi))); // a mission flown AGAIN from the ready room (card space-game-campaign-replay): only one that has a result, or one SKIPPED (card space-game-replay-reselect-bug: before the next, no result: its first win is kept as its result); its story and progress do not move
     this.resume = !this.replay && this.via !== 'retry' && (this.P.levelDone | 0) === this.level && this.P.level === this.level && this.mi === campMissions(this.level).length - 1; // the level was won and the tab closed at the pick: the launch shows the level's story and the pick again, not a battle
     campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is called the outpost (SPOILER, src/campaign.js)
-    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {};
+    this.leaving = false; this.panel = false; this.mode = 'intro'; this.card = null; this.mp = null; this.shown = {}; this.sayR = campSayNew();
   }
   create() {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
@@ -391,6 +391,7 @@ class Campaign extends Phaser.Scene {
         }
       }
       inp.fire = k.SPACE.isDown;
+      if (this.sayR && this.sayR.wait.length) this.radioShow(campSayDue(this.sayR, this.time.now)); // the radio lines that waited for a kept line's hold are shown now (src/campsayhold.js)
       campStep(C, Math.min(dt, 100) / 1000);
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
@@ -427,11 +428,12 @@ class Campaign extends Phaser.Scene {
     if (this.keysBack && this.keysBack.setVisible) this.keysBack.setVisible(on);
     if (this.hudBack && this.hudBack.setVisible) this.hudBack.setVisible(on);
   }
+  radioShow(lines) { lines.forEach(l => { toast(this, l.text, '#9fe9ff', l.keep ? CAMP.sayhold.ms : 0); this.say([l.text]); }); } // the toast and the voice together; a kept line stays CAMP.sayhold.ms
   chatShow(line, now) { chatterPlay(line); const t = this.hud.chat; if (!t) return; t.setText(line.call + ': ' + line.text); this.chatUntil = now + CHATTER.show; } // said in the pilot's voice (prio 0), shown with his callsign
   onEvent(e) {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
-    if (e.type === 'say') { const text = uiText(e.key, e.vars); toast(this, text, '#9fe9ff'); this.say([text]); }
+    if (e.type === 'say') this.radioShow(campSayOffer(this.sayR || (this.sayR = campSayNew()), (this.time && this.time.now) || 0, { text: uiText(e.key, e.vars), keep: campSayKeep(e.key) })); // a radio line: shown at once, or after the kept line that is up (src/campsayhold.js)
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'rival') campRivalEvent(this, e); // a rival's phases: the warning, the broadside, the ram (src/camprivaldraw.js)
