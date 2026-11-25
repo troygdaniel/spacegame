@@ -266,6 +266,38 @@ check('4 the canvas friend details box (the ship\'s picture) is hidden while the
 g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = ''; CAMP.flags.pagedigit = true;`);
 check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 40000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
 
+console.log('J. a full card hides the panels (card space-game-page-hud-hide-on-cards)');
+g.run(`
+  window.__sceneH = () => { const h = {}; return Object.assign(__scene(), { events: { once() {}, on(n, f) { (h[n] = h[n] || []).push(f); }, emit(n) { (h[n] || []).forEach(f => f()); } } }); };
+  CAMP.flags.pagehud = true; CAMP.flags.pagedigit = true; __out(); window.SC = __sceneH(); window.__r0 = campPageHudSync(SC, 0); window.__r1 = campPageHudSync(SC, 200);
+`);
+check('J in the battle the panels are up and shown (nothing hidden)', J('__r0') === true && J('__r1') === true && J('SC.pageHud.root.style.display || ""') === '' && J('campPageHudCovered(SC)') === false);
+g.run(`SC.mode = 'pause'; window.__rp = campPageHudSync(SC, 400);`);
+check('J the pause card (the mode pause): the panels are hidden, not taken away (built once, kept)', J('__rp') === false && J('SC.pageHud.root.style.display') === 'none' && J('SC.pageHud !== null') === true);
+g.run(`SC.mode = 'play'; window.__rb = campPageHudSync(SC, 600);`);
+check('J the card closes: the panels come back as they were (same elements), shown', J('__rb') === true && J('SC.pageHud.root.style.display') === '');
+g.run(`SC.mode = 'play'; SC.ck = { open: true, objs: [] }; window.__rh = campPageHudSync(SC, 800);`);
+check('J the H page, open from the battle: hidden', J('__rh') === false && J('SC.pageHud.root.style.display') === 'none' && J('campPageHudCovered(SC)') === true);
+g.run(`SC.ck = null; campPageHudSync(SC, 1000);`);
+check('J the H page closes: shown again', J('SC.pageHud.root.style.display') === '' && J('campPageHudCovered(SC)') === false);
+g.run(`SC.events.emit('pause'); window.__held = SC.pageHudHeld;`);
+check('J Settings (or the ready room) pauses the whole scene, so no frame runs: the scene\'s pause event hides the panels at once', J('__held') === true && J('SC.pageHud.root.style.display') === 'none' && J('campPageHudCovered(SC)') === true);
+g.run(`window.__rs = campPageHudSync(SC, 1200);`);
+check('J a frame that still comes while it is held does not show them', J('__rs') === false && J('SC.pageHud.root.style.display') === 'none');
+g.run(`SC.events.emit('resume'); window.__rr = campPageHudSync(SC, 1400);`);
+check('J the scene resumes: the first frame after shows them again, same elements', J('__rr') === true && J('SC.pageHud.root.style.display') === '' && J('SC.pageHudHeld') === false);
+g.run(`SC.events.emit('pause'); campPageHudDrop(SC);`);
+check('J a drop (the scene ends while it is held) clears the hold: the next battle is not hidden by it', J('SC.pageHudHeld') === false && J('SC.pageHud') === null);
+g.run(`window.S7 = __sceneH(); campPageHudSync(S7, 0); S7.mode = 'end'; window.__re = campPageHudSync(S7, 200);`);
+check('J the end card (and every result card) takes the panels away, as it did: the mode is not the battle\'s', J('__re') === false && J('S7.pageHud') === null);
+g.run(`CAMP.flags.pagehud = false; window.S8 = __sceneH(); S8.mode = 'pause'; S8.events.emit('pause'); window.__rf = campPageHudSync(S8, 0);`);
+check('J the switch off: unchanged, nothing is made', J('__rf') === false && !J('S8.pageHud'));
+g.run(`CAMP.flags.pagehud = true; window.S9 = __sceneH(); campPageHudSync(S9, 0); S9.mode = 'pause'; campPageHudSync(S9, 200); S9.mode = 'play'; campPageHudSync(S9, 400); campPageHudDrop(S9); campPageHudSync(S9, 600); window.__ev = S9.pageHudEv;`);
+check('J the pause and resume listeners are put on once for a scene, however many times the panels are built and dropped', J('__ev') === true);
+g.run(`CAMP.flags.pagehud = false;`);
+const scene2 = src('src/campaignscene.js'), pj2 = src('src/camppagehud.js');
+check('J the scene is not touched: Phaser\'s own pause and resume events do it (a stand-in scene without events is hidden by the mode and the H page alone)', !/campPageHudCover/.test(scene2) && /s\.events\.on\('pause'/.test(pj2) && /s\.events\.on\('resume'/.test(pj2));
+
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');
 check('the typeface is the system one, no web font, and only the weights 400 and 600', /font-family: system-ui, -apple-system, "Segoe UI", sans-serif/.test(css) && !/@font-face|fonts\.googleapis|url\(/.test(css) && (css.match(/font-weight:\s*(\d+)/g) || []).every(w => /\b(400|600)\b/.test(w)));
