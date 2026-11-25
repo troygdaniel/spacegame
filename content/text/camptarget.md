@@ -11,4 +11,3 @@ The words of the Campaign's one target (card space-game-two-hands-keys): ] and \
 | camp.ui.tgt | TARGET  {name}  {km} km |
 | camp.ui.tgtnone | TARGET  none |
 | camp.ui.tgtkeys | {keyhostiles} {keynear} pick a target |
-| camp.ui.tgtclear | {keyclear} clear |

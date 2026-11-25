@@ -1,8 +1,8 @@
 // ---------- Campaign: missiles cost ore, and R queues them (cards space-game-missiles-cost-ore and space-game-missile-queue; Troy, 24 Nov 2026) ----------
-// "Building missiles takes ore. Automatic, but only when down to 0 missiles; and a key to build when not at 0 so he can reload in calm times: R, shown as a row on the S list." Then: "hitting R multiple times shows me how many are queued."
+// "Building missiles takes ore. Automatic, but only when down to 0 missiles; and a key to build when not at 0 so he can reload in calm times: R, shown as a row on the Q list." Then: "hitting R multiple times shows me how many are queued."
 // The magazine no longer fills itself. A missile is BUILT, and a build costs CAMP.missile.cost ore (20), paid when it starts, and takes CAMP.missile.reload ms (the old reload time, now the build time).
 //   AT ZERO the ship builds ONE missile by itself, if the ore allows, so the pilot is never stuck with an empty rack. It does not build while there is one left.
-//   R (the order 'reload': the key, the S list's row Reload missiles, and the words "reload missiles") QUEUES ONE missile; presses add up, at most to the empty slots of the rack (a press with every empty slot spoken for says so), and the queue is
+//   R (the order 'reload': the key, the Q list's row Reload missiles, and the words "reload missiles") QUEUES ONE missile; presses add up, at most to the empty slots of the rack (a press with every empty slot spoken for says so), and the queue is
 //   built one after another, each 20 ore taken when its build starts. A press the ore cannot pay for (the ore must cover every missile still waiting, with the new one) is refused in words; if the ore runs short LATER (it was spent elsewhere)
 //   the queue stops where it is and the radio says so (camp.say.rackdry). Loot (a wreck's missiles) still goes straight into the rack (campMissileAdd, src/campaign.js) and cuts the queue to the slots left.
 // The state is plain numbers on the battle: C.reloadAt (when the missile being built is done, ms of the battle's clock; 0: none is building) and C.queued (missiles waiting for their build to start, the one being built not counted).
@@ -34,7 +34,7 @@ function campMissileStep(C) {
   if (C.queued > 0) { C.queued = 0; campSay(C, 'camp.say.rackdry', { n: C.missiles }); } // the queue ran out of ore: it stops where it is, and says so
 }
 
-// what the status block and the S list's row say: building (with the seconds), no ore (the rack is at zero and nothing is building), ready, or full; queued and pending: the missiles waiting, and those with the one under way
+// what the status block and the Q list's row say: building (with the seconds), no ore (the rack is at zero and nothing is building), ready, or full; queued and pending: the missiles waiting, and those with the one under way
 function campMissileState(C) {
   const cost = campMissileCost(), queued = Math.max(0, C.queued || 0), pending = queued + (C.reloadAt > 0 ? 1 : 0), out = { state: 'ready', secs: 0, rack: pending > 0, cost, n: C.missiles, cap: C.magazine, queued, pending };
   if (C.reloadAt > 0) { out.state = 'building'; out.secs = Math.max(0, Math.ceil((C.reloadAt - C.t) / 1000)); return out; }
@@ -43,7 +43,7 @@ function campMissileState(C) {
   return out;
 }
 
-// the order 'reload' (R, the S list's row, "reload missiles"): the refusals in words, else one more missile is queued (and starts at once when nothing is building)
+// the order 'reload' (R, the Q list's row, "reload missiles"): the refusals in words, else one more missile is queued (and starts at once when nothing is building)
 function campReloadDo(C, dry) {
   const P = campReloadPlan(C);
   if (P.missing <= 0) return campNo('rackfull');

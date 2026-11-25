@@ -125,7 +125,7 @@ console.log('F. the words and the wiring');
 const mark = J('uiText("camp.hud.recentre")');
 check('the mark says RECENTRE and names the key from the table, not a letter written into the words', /recentre/i.test(mark) && mark.includes(J('CAMP_KEYS.zoomreset.k')) && !/\{/.test(mark), mark);
 const rows = J("(CONTROLS.find(c => c.id === 'campaign') || { rows: [] }).rows.map(r => r.k.join(' ') + ' ' + r.t)");
-check('the H page says that a drag pans, in the row of the zoom, where S is named (a row of its own did not fit the page)', rows.some(r => /drag/i.test(r) && /S resets/.test(r)), JSON.stringify(rows.filter(r => /drag|S resets/i.test(r))));
+check('the H page says that a drag pans, in the row of the zoom, where Q is named (a row of its own did not fit the page)', rows.some(r => /drag/i.test(r) && /Q resets/.test(r)), JSON.stringify(rows.filter(r => /drag|Q resets/i.test(r))));
 const html = read('index.html'), scene = read('src/campaignscene.js'), mapdraw = read('src/campmapdraw.js'), zoom = read('src/campzoom.js'), cz = read('src/camzoom.js');
 check('the script is in the page, after the map and the zoom it uses', /<script src="src\/campdrag\.js"><\/script>/.test(html) && html.indexOf('src/campdrag.js') > html.indexOf('src/campzoom.js'));
 check('the scene installs it once and ticks it every frame', /campDragInstall\(this\)/.test(scene) && /campDragFrame\(this/.test(scene));

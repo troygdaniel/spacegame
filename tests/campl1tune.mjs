@@ -16,11 +16,14 @@ setPace('normal');
 console.log('A. 1.2: the rocks and the goal');
 {
   const row = J(`(() => { const L = CAMP.levels[1].missions[1]; return { rocks: L.rocks.map(f => ({ n: f.n, hp: f.hp })), goal: L.objectives[0], cash: L.objectives[2] }; })()`);
-  check('three fields of ten rocks, each of 200 hit points (600 ore in all)', row.rocks.length === 3 && row.rocks.every(f => f.n === 10 && f.hp === 200), JSON.stringify(row.rocks));
+  check('four fields of ten rocks, each of 200 hit points (800 ore in all; it was three fields and 600 until card space-game-12-ore-enough, Troy, 24 Nov 2026: he could not finish)', row.rocks.length === 4 && row.rocks.every(f => f.n === 10 && f.hp === 200), JSON.stringify(row.rocks));
+  const M = J(`(() => { const L = CAMP.levels[1].missions[1], pl = campPlaces(1).ceres, d = f => Math.round(Math.hypot(f.at[0], f.at[1])); return { ore: L.rocks.reduce((a, f) => a + f.n, 0) * CAMP.ore.rock, goal: L.objectives[0].n, d: L.rocks.map(d), spend: 5 * CAMP.missile.cost + CAMP.emergency.ore + CAMP.mend.hullOre, start: CAMP.ore.start }; })()`);
+  check('ENOUGH ORE: the field holds at least 1.5 times the goal in the store (675 of 450), and a player who also pays for five missiles, one Emergency shield and one hull repair (210 ore) can still fill the bay to the goal with the rocks to spare', M.ore >= 1.5 * M.goal && M.ore >= M.goal + M.spend + 100, JSON.stringify(M));
+  check('the fourth field is a little further out than the three (the furthest, under 3,000 px from Ceres: a cruiser flies there in about 14 s), the other three are where they were', M.d.length === 4 && M.d[3] === Math.max(...M.d) && M.d[3] < 3000 && M.d[3] > Math.max(...M.d.slice(0, 3)) && M.d.slice(0, 3).join() === '1140,1170,1628', M.d.join());
   check('the goal is a store of 450 (of the 500 it holds), and the sale asked for is as it was, 160', row.goal.type === 'ore' && row.goal.n === 450 && row.cash.type === 'cashin' && row.cash.n === 160, JSON.stringify(row));
   const C = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1, ore: 176 }); campStep(C, 0.1); return { n: C.rocks.length, hp: C.rocks.map(r => r.hp + '/' + r.maxHp).filter((v, i, a) => a.indexOf(v) === i), ore: C.ore, goal: campObjectives(C)[0] }; })()`);
-  check('a battle makes 30 rocks of 200 hit points', C.n === 30 && C.hp.join() === '200/200', JSON.stringify(C));
-  check('with the 176 ore a good 1.1 carries in, the goal is not met at the start (190 was: 14 ore to go); 274 ore are to be mined of the 600 in the fields', C.ore === 176 && C.goal.done === false && C.goal.need === 450 && C.goal.got === 176, JSON.stringify(C.goal));
+  check('a battle makes 40 rocks of 200 hit points', C.n === 40 && C.hp.join() === '200/200', JSON.stringify(C));
+  check('with the 176 ore a good 1.1 carries in, the goal is not met at the start (190 was: 14 ore to go); 274 ore are to be mined of the 800 in the fields', C.ore === 176 && C.goal.done === false && C.goal.need === 450 && C.goal.got === 176, JSON.stringify(C.goal));
   const o = J(`(() => { const C = campNew(2, [], { seed: 1 }); return C.rocks.length ? C.rocks.map(r => r.hp + '/' + r.maxHp).filter((v, i, a) => a.indexOf(v) === i) : null; })()`);
   check('a field row that says no hp keeps the table\'s 100 (level 2\'s rocks)', o && o.join() === '100/100', JSON.stringify(o));
 }
@@ -47,6 +50,25 @@ console.log('C. 1.3: the first contact');
   check('the scales are 2.9 for hit points and 1.55 for damage (they were 2.2 and 2.1 until card l1-pacing: tougher hulls and lighter guns, so a fight lasts and a wrong answer costs less at once)', row.hp === 2.9 && row.dmg === 1.55, JSON.stringify(row));
   const lost = [1, 2, 3, 4].map(seed => botRun(1, seed, 'plains', 'steady', techsFor(1), 420, 2));
   check('the plain bot that helps (no pilot call asks for orders any more: card space-game-no-pilot-popups) wins first contact every time, and the wing loses 5 ships at the very most (it was up to 8)', lost.every(r => r.result === 'won' && r.shipsLost <= 5), JSON.stringify(lost.map(r => [r.result, r.shipsLost])));
+}
+
+console.log('D. 1.2: lost when both miners are destroyed, and the par is 300 s (card space-game-12-lose-no-miners, Troy, 24 Nov 2026)');
+{
+  const row = J(`(() => { const M = CAMP.levels[1].missions; return { lose: M[1].lose, par: M[1].par, swift: M[1].bonus.find(b => b.id === 'swift').secs, par13: M[2].par, swift11: M[0].bonus.find(b => b.id === 'swift').secs, none11: !M[0].lose && !M[2].lose }; })()`);
+  check('the 1.2 row carries the lose rule: when the last neutral miner ship is gone the mission is lost, the cause is miners (1.1 and 1.3 have none)', JSON.stringify(row.lose) === '[{"type":"nomore","kind":"miner","why":"miners"}]' && row.none11, JSON.stringify(row));
+  check('par and the swift bonus are 300 s, both places (they were 380); 1.3 keeps its par 380 and 1.1 its swift 400', row.par === 300 && row.swift === 300 && row.par13 === 380 && row.swift11 === 400, JSON.stringify(row));
+  const sim = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); campStep(C, 0.1); const ms = C.ships.filter(u => u.team === 'neutral' && u.kind === 'miner'), p = C.ships.find(u => u.pilot);
+    campKill(C, p); campStep(C, 0.1); const afterPilot = C.result ? C.why : null;
+    campKill(C, ms[0]); campStep(C, 0.1); const afterOne = C.result ? C.why : null;
+    campKill(C, ms[1]); campStep(C, 0.1); const lines = campLoseLines(C, C.why); return { n: ms.length, afterPilot, afterOne, result: C.result, why: C.why, lines }; })()`);
+  check('two miner ships at the start; a pilot lost or one miner lost does not end it; the second miner lost does: lost, because miners', sim.n === 2 && sim.afterPilot === null && sim.afterOne === null && sim.result === 'lost' && sim.why === 'miners', JSON.stringify(sim).slice(0, 300));
+  check('the lose card says why in plain words (Both mining ships are lost.), then how long it lasted, then one thing to try with the keys from the key table and no brace left', sim.lines[0] === 'Both mining ships are lost.' && /^You lasted /.test(sim.lines[1]) && /^Guard the miners: pick one \(/.test(sim.lines[2]) && !/[{}]/.test(sim.lines.join(' ')) && sim.lines[2].split(/\s+/).length <= 14, JSON.stringify(sim.lines));
+  check('1.1\'s one miner (the distress call) lost does not lose 1.1: the rule is 1.2\'s', J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 0.1); const m = C.ships.find(u => u.team === 'neutral' && u.kind === 'miner'); if (!m) return 'no miner'; campKill(C, m); campStep(C, 0.1); return C.result ? C.why : null; })()`) === null);
+  const bots = {};
+  for (const name of ['idle', 'plain']) bots[name] = (name === 'idle' ? [1, 2] : [1, 2, 3, 4, 5, 6]).map(seed => { const r = botRun(1, seed, name, 'steady', techsFor(1), 420, 1); return { res: r.result, why: J('window.C.why'), t: r.t, bonus: r.bonus }; });
+  check('the idle bot LOSES 1.2 (it used to sit there to the clock with no win and no loss): both seeds lost, because miners, well inside 420 s', bots.idle.every(r => r.res === 'lost' && r.why === 'miners' && r.t < 420), JSON.stringify(bots.idle));
+  const swift = bots.plain.filter(r => /swift/.test(r.bonus)).length;
+  check('the plain bot still WINS 1.2 on every seed, and the swift bonus at the new par (300 s) is within reach: earned on at least half of six seeds (measured 8 of 10 at Normal: the misses are 309 s and 333 s, a fight that pulls the pilots off the rocks; 380 s never was at risk)', bots.plain.every(r => r.res === 'won') && swift >= 3 && Math.min(...bots.plain.map(r => r.t)) < 290, JSON.stringify(bots.plain));
 }
 
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));
