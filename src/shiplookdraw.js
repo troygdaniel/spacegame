@@ -3,7 +3,7 @@
 // slookTexKey), shown as one sprite a ship as today. Only the picture changes: the scale is chosen so the hull is as long as it is drawn today (CAMP.size[kind].len, else SLOOKDRAW.len), so the hit circles, the ranges, the least
 // sizes on the screen (CAMPZOOM.view, src/campzoom.js) and every rule of the fight stay as they are. The Campaign gets its own keys, so the Long Haul keeps its pictures (src/ships.js).
 // Everything is behind the switch (slookOn(): CAMP.flags.shiplook, the N panel's row, ?shiplook=1 or 0): with it off nothing here runs and the sprites keep today's pictures.
-//   slookSync(scene, u, sp)    called by src/campaignscene.js sync() for each ship after it is placed: gives the sprite the texture of its unit's side (or back today's picture when the switch went off) and the scale of it
+//   slookFrame(scene)          once at the top of sync(): { on, prot } for that pass over the ships;  slookSync(scene, u, sp, F)    called by src/campaignscene.js sync() for each ship after it is placed: gives the sprite the texture of its unit's side (or back today's picture when the switch went off) and the scale of it
 //   slookTexture(scene, kind, side)   the texture key of a kind as a side, made on first use (a stand-in scene with no Phaser gets '' and nothing is made)
 //   slookPaint(g, kind, side, L, ox, oy)   the drawing itself, into any Phaser Graphics: the outline filled, the rim, the facet; L px is the hull's length, (ox, oy) where the middle of the hull is
 //   slookLen(kind), slookScale(kind)       the hull's drawn length in the world, and the sprite's base scale (that length over the baked one)
@@ -48,21 +48,20 @@ function slookProt(scene) { // the ids of the ships you protect (src/campconvoy.
   scene._slp = { c: C, t: C.t, n: C.ships.length, set };
   return set;
 }
-function slookIsOn(scene) { // the switch, asked once a frame (every ship of a frame has the same answer; a stand-in scene with no game loop is asked each time)
-  const f = scene.game && scene.game.loop && typeof scene.game.loop.frame === 'number' ? scene.game.loop.frame : -1;
-  if (f < 0) return slookOn();
-  if (scene._sloF !== f) { scene._sloF = f; scene._sloOn = slookOn(); }
-  return scene._sloOn;
+function slookFrame(scene) { // the new look's state for one pass over the ships (one sync() of the scene): is the switch on, and which ships are protected; asked once, not once a ship
+  const on = slookOn();
+  return { on, prot: on ? slookProt(scene) : null };
 }
-function slookSync(scene, u, sp) { // one ship's sprite, once a frame: the new picture of its side while the switch is on, today's when it is off (the N panel's row is felt at once)
-  if (!slookIsOn(scene)) {
+function slookSync(scene, u, sp, F) { // one ship's sprite, once a frame: the new picture of its side while the switch is on, today's when it is off (the N panel's row is felt at once)
+  F = F || slookFrame(scene);                                                  // (a pass of the scene gives its own; a call on its own asks)
+  if (!F.on) {
     if (sp._sl) { // it was on: back to today's picture, its tint and its scale
       const look = (typeof CAMP_LOOK === 'object' && (CAMP_LOOK[u.kind] || CAMP_LOOK.drone)) || { scale: 1 };
       sp._sl = ''; sp._ls = 0; sp.setTexture(scene.texOf(u.kind)); if (look.tint) sp.setTint(look.tint); else sp.clearTint(); sp.setScale(look.scale * (sp._k > 1 ? sp._k : 1));
     }
     return;
   }
-  const key = slookTexture(scene, u.kind, slookSide(u, slookProt(scene).has(u.id)));
+  const key = slookTexture(scene, u.kind, slookSide(u, F.prot.has(u.id)));
   if (!key || sp._sl === key) return;
   sp._sl = key; sp._ls = slookScale(u.kind); sp.setTexture(key); sp.clearTint(); sp.setScale(sp._ls * (sp._k > 1 ? sp._k : 1)); // (_k: how many times the far view draws it up, src/campzoom.js: the scene keeps it)
 }
