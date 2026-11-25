@@ -617,6 +617,7 @@ const UI_TEXT = {
   'camp.ui.tune.row.laser': 'Turret charge (the lasers run dry)',
   'camp.ui.tune.row.hints': 'The first-minute hints',
   'camp.ui.tune.row.pagedigit': 'Page HUD: digits in the rings',
+  'camp.ui.tune.row.shiplook': 'New ship look (flat cut)',
   'camp.ui.tune.row.strayfar': 'Transport warning: how far',
   'camp.ui.tune.row.straygrace': 'Transport warning: wait',
   'camp.ui.tune.row.strayagain': 'Transport warning: repeat',
