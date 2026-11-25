@@ -291,3 +291,14 @@ After the change no row is best at everything: ignoring loses the miner and his 
 
 One older pin changed meaning and was moved, not loosened: in `tests/campbeats.mjs` one pilot sent to **attack** the miner's pirates used to save him in 45 s; with the boats on the transport he is too slow, so that check now sends all three (the three answers are pinned in `tests/campminer.mjs`).
 
+
+## Mission 1.2: enough ore in the field (card `space-game-12-ore-enough`, 24 Nov 2026; base main 6c3a70a1)
+
+Troy played 1.2 and could not finish it: not enough ore. The count: the store goal is 450 held at once (`oreBest`, the 500 cap), the three rock fields held 30 rocks x `CAMP.ore.rock` 20 = **600 ore**, the store starts at 30 (`CAMP.ore.start`), a pirate wreck of a skiff, cutter or brute leaves none, and the miners only cut rocks (their chunks lie for the wing and the cruiser to take: nothing is lost with a miner). The ore the player pays for comes out of that: a missile 20 (`missile.cost`), Emergency shields 50 (`emergency.ore`), a hull repair 60 (`mend.hullOre`). Five missiles, one Emergency and one repair are 210 ore: 450 + 210 = 660 > 600, so a normal run could not fill the bay. The bots never spend, so they won (the plain bot sold 500).
+
+| What | Old | New |
+|---|---|---|
+| `CAMP.levels[1].missions[1].rocks` (the 1.2 row) | 3 fields of 10 rocks, 200 hit points: at `[900, 700]`, `[-1100, -400]`, `[300, -1600]` (offsets from Ceres, 1,140 / 1,170 / 1,628 px out) | the same three, plus a fourth: `{ at: [-2100, -1400], n: 10, spread: 330, hp: 200 }` (2,520 px out, north-west: no raid comes from that side) |
+| ore in the 1.2 fields | 600 (1.33 times the goal of 450) | 800 (1.78 times; with the 210 of spending, 140 to spare) |
+
+To undo it, delete the fourth field. Nothing else in 1.2 moved (the goal 450, the sale 160, par 380, the waves, the miners). Measured on the bots (Normal, `--level 1 --mission 2`): plain 100 percent, 272 s on main and 277 s with the fourth field over 10 seeds (the fourth field is only reached when the near rocks are cut, and the seeded draws after the rocks shift a little); plainm 100 percent, 278 s; idle neither wins nor loses (the sister card `space-game-12-lose-no-miners` changes that). For that card's 300 s par the plain bot's 277 s still has 23 s in hand. Pins: `tests/campl1tune.mjs` (four fields, 40 rocks, the 1.5 times margin and the 210 of spending, the fourth field furthest and under 3,000 px).
