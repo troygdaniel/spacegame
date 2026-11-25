@@ -302,3 +302,16 @@ Troy played 1.2 and could not finish it: not enough ore. The count: the store go
 | ore in the 1.2 fields | 600 (1.33 times the goal of 450) | 800 (1.78 times; with the 210 of spending, 140 to spare) |
 
 To undo it, delete the fourth field. Nothing else in 1.2 moved (the goal 450, the sale 160, par 380, the waves, the miners). Measured on the bots (Normal, `--level 1 --mission 2`): plain 100 percent, 272 s on main and 277 s with the fourth field over 10 seeds (the fourth field is only reached when the near rocks are cut, and the seeded draws after the rocks shift a little); plainm 100 percent, 278 s; idle neither wins nor loses (the sister card `space-game-12-lose-no-miners` changes that). For that card's 300 s par the plain bot's 277 s still has 23 s in hand. Pins: `tests/campl1tune.mjs` (four fields, 40 rocks, the 1.5 times margin and the 210 of spending, the fourth field furthest and under 3,000 px).
+
+## Mission 1.2: lost with no miners, and a 300 s par (card `space-game-12-lose-no-miners`, 24 Nov 2026; base main 0c990ee7, which has the fourth rock field)
+
+Troy said yes to both (from the cloud session's audit). Doing nothing never ended 1.2: the pirates killed both miners and the mission sat there with no win and no loss until the player quit.
+
+| What | Old | New |
+|---|---|---|
+| a lose rule in the 1.2 row (`CAMP.levels[1].missions[1].lose`) | none | `[{ type: 'nomore', kind: 'miner', why: 'miners' }]`: when the last neutral ship of that kind is gone (`campNeutralLost`, `src/camppirates.js`) the mission is lost, cause `miners`. Only the two miner ships count: the pilots mine too, and 1.1's one miner and 1.3 have no such rule |
+| the lose card | | `camp.lose.miners` "Both mining ships are lost." and the tip `camp.lose.tip.miners` "Guard the miners: pick one ({keyfriendlies}), then {keyorder}." (`content/text/campaign-missions.md`, the table and the voice rule `campaign.lose` in `src/voicepack.js`) |
+| 1.2 par (`missions[1].par`) | 380 s | 300 s |
+| 1.2 swift bonus (`bonus` `swift`, `secs`) | 380 s | 300 s |
+
+To undo it: delete the `lose` row, put both 380s back (1.3's par 380 and 1.1's swift 400 did not move). Bots (Normal, `--level 1 --mission 2`): idle now LOSES (6 of 6 seeds, cause miners; it used to run to the clock); plain and plainm win every seed. The 300 s swift bonus is within reach but not certain, as Troy wanted: the plain bot earns it on 8 of 10 seeds (times 277 309 284 333 272 267 211 289 269 272 s; the two misses are fights that pull the pilots off the rocks); with par 380 it was never at risk. Pins: `tests/campl1tune.mjs` section D (the rule, the par in both places, one miner or a pilot lost does not end it, the second miner does, the card's words, 1.1 untouched, idle loses, plain wins and earns the bonus on at least half of six seeds). The N panel row for the par is not added: the panel's tool needs to write a number inside the missions list, which card `space-game-stray-n-rows` (paused, b8a4d416) adds.
