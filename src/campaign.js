@@ -323,7 +323,8 @@ const CAMP = {
   convoy: {
     hp: 200,                               // hit points of a freighter
     speed: 120,                            // px/s: the same as the MULE of the escort call
-    speedScale: 1                          // times the speed of every convoy a mission row makes (the transport's 54, the haulers' 62): the tuning panel's one number for them
+    speedScale: 1,                         // times the speed of every convoy a mission row makes (the transport's 54, the haulers' 62): the tuning panel's one number for them
+    gap: 12                                // s between two ships of a convoy that leaves in a string (the haulers of 1.3: a row's `gaps` counts them; campConvoyAt): the one number for how strung out the haulers are (card space-game-13-all-haulers-savable)
   },
   convoyOrders: {                          // orders for the escorted ships (card space-game-convoy-orders; src/campconvoy.js; docs/CAMPAIGN.md "Convoy orders"): Tuck in, Hold here, Run for it, Carry on; the page CONVOY of the FLEET panel, the strip and the voice
     kinds: ['freighter', 'miner'],         // the ships that take them: the convoys (the transport, the haulers) and the neutral miners
@@ -632,7 +633,7 @@ const CAMP = {
             { at: 175, from: [-700, 4300], ships: { tboat: 2, skiff: 2 }, prey: 'miners', say: 'camp.say.l1p.boats' },  // 3 torpedo boats for the miners: tuck the miners in under the shield, or send a squad at the boats before they fire
             { at: 240, early: 55, needClear: true, from: [3000, -3300], ships: { skiff: 3, cutter: 3, brute: 2 }, prey: 'miners', say: 'camp.say.rim6' }] },  // 4 the heavy raid, when the others are dead: the whole wing, hurt squads home to be mended first; then the Works opens its doors and the ore is sold
         { id: 'haulers', kind: 'escort', par: 380, hpScale: 2.9, dmgScale: 1.55, place: 'ceres', dock: 'earth', start: 'ceres', startAt: [130, 30],  // 1.3 HAULERS HOME: three ore haulers fly from Ceres toward Earth; pirates raid and break off; then FIRST CONTACT: a small alien scout force
-          convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 4, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 16, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 28, from: 'ceres', to: 'earth', speed: 62 }],  // the haulers: when they leave (s after arrival), from and to which place. Twelve seconds apart, so the convoy is strung out along 1,500 px of road: the cruiser's shield cannot cover the first and the last at once, which is what the beats below are about
+          convoys: [{ id: 'h1', name: 'Hauler 1', say: 'camp.say.hauler', at: 4, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h2', name: 'Hauler 2', say: 'camp.say.hauler', at: 4, gaps: 1, from: 'ceres', to: 'earth', speed: 62 }, { id: 'h3', name: 'Hauler 3', say: 'camp.say.hauler', at: 4, gaps: 2, from: 'ceres', to: 'earth', speed: 62 }],  // the haulers: when they leave (s after arrival), from and to which place. `gaps` counts the departure gaps after `at`: a hauler leaves at + gaps * CAMP.convoy.gap s (src/campaign.js campConvoyAt), so the string's length is ONE number (the N panel's row 'Gap between haulers'; card space-game-13-all-haulers-savable). Apart by that gap the convoy is strung out along the road: the cruiser's shield cannot cover the first and the last at once, which is what the beats below are about
           objectives: [{ type: 'deliver', n: 1 }, { type: 'kill', what: 'wave:5' }],  // one hauler must get home (only all lost fails it; each lost hauler costs CAMP.score.hauler), and the aliens of first contact must be beaten
           bonus: [{ id: 'all', type: 'delivered' }, { id: 'hull', type: 'hull', pct: 60 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [  // SIX BEATS along the road, about 45 s apart (card l1-pacing): it was two raids and then a long quiet road. The pirates are about as many as they were; the aliens are the same eight
@@ -1160,11 +1161,12 @@ function campAhead(C, w) { // where a wave with `ahead` comes from: that far in 
   const dx = f.dest.x - f.x, dy = f.dest.y - f.y, d = Math.hypot(dx, dy) || 1, k = Math.min(w.ahead, Math.max(0, d - 400)) / d;
   return { x: f.x + dx * k, y: f.y + dy * k };
 }
+function campConvoyAt(cv) { return (cv.at || 0) + (cv.gaps || 0) * CAMP.convoy.gap; } // when a convoy ship leaves (s after arrival): its `at`, and `gaps` of CAMP.convoy.gap after it (the haulers of 1.3)
 function campSchedule(C) {
   if (C.arrivedAt == null) return; // nothing comes before the cruiser is at the mission's place
   const L = C.L, sec = campMissionClock(C);
   L.convoys.forEach((cv, i) => {
-    if (C.convoys[i].started || sec < cv.at) return;
+    if (C.convoys[i].started || sec < campConvoyAt(cv)) return;
     C.convoys[i].started = true;
     const pl = campPlaces(C.level), to = pl[cv.to], from = cv.from ? pl[cv.from] : null;
     const a = from ? Math.atan2(to.y - from.y, to.x - from.x) : Math.atan2(to.y, to.x), sx = from ? from.x + Math.cos(a) * ((from.r || 60) + 50) : Math.cos(a) * (C.earth.r + 50), sy = from ? from.y + Math.sin(a) * ((from.r || 60) + 50) : Math.sin(a) * (C.earth.r + 50);
