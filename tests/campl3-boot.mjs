@@ -61,17 +61,17 @@ try {
   };
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
   const listOrder = async row => {
-    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
     if (await j(`!!${S}.pn.pick`)) await key(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
   // the three pilots are out beside the cruiser when the mission begins (card space-game-keys-orders): there is no launch row and no launch key
-  const CK = await j(`({ near: campKeyCodes('near')[0] || '', order: campKeyCodes('order')[0] || '' })`); // the nearest threat (the backslash) and the one order key (W: card space-game-keys4-onekey; it was E), read from the key table
+  const CK = await j(`({ near: campKeyCodes('near')[0] || '', order: campKeyCodes('order')[0] || '' })`); // the nearest threat (the backslash) and the one order key (Enter: card space-game-keys6-enter; it was E), read from the key table
   const drive = async secs => { // fly to the goal, one leg at a time, re-pick each 5 s; log what the game says
     for (let s = 0; s < secs; s += 5) {
       await t.ev(`(() => { const C = ${S}.camp; if (C.result) return 0; const g = campNavGoal(C); if (g) { const row = campNavRows(C).find(r => r.id === 'goal') || g; if (!C.nav || !C.nav.on) campNavGo(C, row); } return 1; })()`);
-      if (s % 10 === 5 && CK.near && CK.order && (await j(`${S}.mode`)) === 'play') { for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); await key(CK.near); await key(CK.order); } // the backslash picks the nearest threat and the order key (W) sends all pilots at it (the all-squads list and its Attack row are switched off)
+      if (s % 10 === 5 && CK.near && CK.order && (await j(`${S}.mode`)) === 'play') { for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); await key(CK.near); await key(CK.order); } // the backslash picks the nearest threat and the order key (E) sends all pilots at it (the all-squads list and its Attack row are switched off)
       await t.run(5000);
       if (await j(`${S}.camp.result || ${S}.mode !== 'play'`)) break;
     }

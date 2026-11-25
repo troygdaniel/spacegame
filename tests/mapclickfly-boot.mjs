@@ -72,11 +72,11 @@ async function campaign() {
     check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-burn-with-wing-out (it was fast-board: Fast needed the wing aboard): the wing is out, and Fast on the map burns at once with the pilots towed
-    // the wing is sent out again by the launch order (the all-squads list and its Launch row are switched off: card space-game-keys-orders). A list's key over the map closes the map (S, the cruiser list: card space-game-keys2-cruiser), so Tab opens it again after
+    // the wing is sent out again by the launch order (the all-squads list and its Launch row are switched off: card space-game-keys-orders). A list's key over the map closes the map (Q, the cruiser list: card space-game-keys5-qwe), so Tab opens it again after
     const listOverMap = await j(`(() => { const S = ${SC}, k = code => S.onKey({ code, repeat: false }); campNavClear(S.camp, 'clear'); const cr = campKeyList('cruiser'); if (!cr || !cr.code) return 'the cruiser list has no key';
       k(cr.code); const overMap = !S.mp && campPanelOpen(S.pn) === 'cruiser'; k('Escape'); const closed = campPanelOpen(S.pn) === '' && S.mode === 'play';
       const went = campOrder(S.camp, 'launch', '', 'key'); return overMap && closed ? 'ok' : 'map closed and list opened: ' + overMap + ', Esc closed the list and did not pause: ' + closed + ', launch: ' + JSON.stringify(went); })()`);
-    check('S (the cruiser list\'s key) over the open map closes the map and opens the cruiser list; Esc closes the list; the pilots are sent out again by the launch order (the strip\'s word: no key and no row gives it now)', listOverMap === 'ok', String(listOverMap));
+    check('Q (the cruiser list\'s key, read from the table) over the open map closes the map and opens the cruiser list; Esc closes the list; the pilots are sent out again by the launch order (the strip\'s word: no key and no row gives it now)', listOverMap === 'ok', String(listOverMap));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(300);
     check('Tab opens the map again', (await j(`!!${SC}.mp`)) === true);
     await settle(t, `${SC}.camp.launchQ.length === 0 && campWing(${SC}.camp).length === 3`, 200); // every ship out (a ship still in the launch queue when the wing is recalled is not recalled: it comes out later; ships come out one per bay interval; the wing is the three pilots since card space-game-three-pilots, 23 Nov 2026)

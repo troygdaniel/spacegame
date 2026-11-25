@@ -13,11 +13,12 @@ import { beltSource } from './fixtures/campbelt.mjs';
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
+const VK = { KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
 
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), HUB = `game.scene.getScene('CampHub')`, CAMPS = `game.scene.getScene('Campaign')`;
+  const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
   const key = async code => { const k = { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: /^(Enter|Backspace|Arrow|Escape)/.test(code) ? code : code.replace(/^(Key|Digit)/, '').toLowerCase() }; await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, k)); await t.run(50); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, k)); await t.run(250); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'brief-' + name + '.png'), Buffer.from(r.data, 'base64')); await t.run(34); } console.log('  picture brief-' + name); };
   const settle = async (expr, tries = 40) => { for (let i = 0; i < tries; i++) { if (await j(`!!(${expr})`)) return true; await sleep(60); await t.run(100); } return false; };
@@ -34,10 +35,10 @@ try {
   check('Enter on the board, then on the mission: the briefing opens on its first screen on its first screen: Mission 3 (not 3 of 3), the three screens named, the map, the place, the route and the story line are on the glass', await j(`campBriefIsOpen(${HUB})`) && await j(`${HUB}.bf.screen === 0`) && a.some(x => /^MISSION 3\s+-\s+The mothership/.test(x)) && !a.some(x => /OF 3/.test(x)) && a.includes('WHERE') && a.includes('WHY') && a.some(x => /^Route /.test(x)) && a.includes('1  WHERE AND WHY') && a.includes('3  HOW'), a.join(' | ').slice(0, 400));
   await snap('1-briefing');
   await key('Equal'); await key('Equal'); await key('Equal'); await t.run(300);
-  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; S puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
+  check('+ zooms the map in (the zoom reads in its corner) and does not mute the sound; Q puts it back', await j(`${HUB}.bf.z > 1.6`) && (await j('G.muted')) === muted0 && (await bf()).some(x => /^ZOOM 17\d%/.test(x)));
   await snap('1b-zoomed-in');
-  await key('KeyS'); await key('KeyM'); await t.run(500); // S resets the zoom (no digit does)
-  check('S resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
+  await key(await zr()); await key('KeyM'); await t.run(500); // Q resets the zoom (no digit does; it was S until card space-game-keys5-qwe)
+  check('Q resets, M goes to the mission area (the zoom back to 100%), and does NOT mute the sound; the briefing is still up', await j(`${HUB}.bf.zoom === 1 && ${HUB}.bf.z === 1`) && (await j('G.muted')) === muted0);
   await snap('2-mission-area');
   await key('KeyM'); await t.run(400); await snap('2b-whole-system');
   check('M again is the whole system', await j(`${HUB}.bf.zoom === 2`)); await key('KeyM');

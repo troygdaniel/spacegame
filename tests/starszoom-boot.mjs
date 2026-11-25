@@ -15,10 +15,11 @@ const LEVEL = Number(arg('level', 1)), MISSION = Number(arg('mission', 1));
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyK: 75, KeyL: 76, Backspace: 8, KeyS: 83, Minus: 189, Equal: 187, Enter: 13, Escape: 27 };
+const VK = { KeyQ: 81, KeyK: 75, KeyL: 76, Backspace: 8, KeyS: 83, Minus: 189, Equal: 187, Enter: 13, Escape: 27 };
 const t = await launch('', ROOT);
 try {
   const j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`)), S = `game.scene.getScene('Campaign')`;
+  const zr = async () => (await j(`campKeyCodes('zoomreset')[0] || ''`)) || 'KeyQ'; // the key that puts the zoom and the view back and opens the cruiser list, read from the key table (Q since card space-game-keys5-qwe; it was S)
   const kd = code => ({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : code === 'Equal' ? '=' : code === 'Backspace' ? 'Backspace' : code.replace(/^(Key|Digit)/, '').toLowerCase() });
   const key = async (code, wait = 60) => { await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, kd(code))); await t.run(wait); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, kd(code))); await t.run(wait); };
   const snap = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, `stars-${LEVEL}${MISSION}-${name}.png`), Buffer.from(r.data, 'base64')); await t.run(60); } };
@@ -68,7 +69,7 @@ try {
   check('the farthest zoom of the mission (' + far.toFixed(4) + '): the near layer is still no faster than a fixed place', Math.abs(b.r.z - far) < 0.01 && b.ratios[2] <= 0.88 && b.ratios[2] > 0.5, b.ratios.map(v => v.toFixed(3)).join(' / '));
   check('the farthest zoom: the stars barely move on the screen for a flight (the near layer under 100 px for 3,600 px of flight)', Math.abs(b.r.layers[2]) < 100, b.r.layers.map(v => v.toFixed(1)).join(' / '));
   await snap('3-far-zoom');
-  const c = await at('zoomed in', async () => { await key('KeyS', 40); await shut(); for (let i = 0; i < 9; i++) await key('Equal', 40); });
+  const c = await at('zoomed in', async () => { await key(await zr(), 40); await shut(); for (let i = 0; i < 9; i++) await key('Equal', 40); });
   check('zoomed in (1 and over) the near layer keeps its old 0.85 of the scroll: against a place that moves at the zoom it is 0.85 / zoom', c.r.z >= 1 && Math.abs(c.ratios[2] - 0.85 / c.r.z) < 0.08, c.ratios.map(v => v.toFixed(3)).join(' / ') + ' at zoom ' + c.r.z.toFixed(2));
   const errs = await j(`window.__errors || []`); check('the game logged no error', !errs || errs.length === 0, JSON.stringify(errs).slice(0, 300));
 } catch (e) { console.log('  FAIL the walk stopped: ' + (e && e.stack ? e.stack.split('\n').slice(0, 3).join(' | ') : e)); bad++; }

@@ -1,6 +1,6 @@
 // not in the smoke: the Campaign's ship systems in a real fight, one picture, run by hand (one Chrome, muted, through the test lock; card space-game-campaign-systems)
 // The rules are in the plain Node suites (tests/campcruiser.mjs for the emergency shields). This boots level 1 and looks at what is left of the ship's systems in the game: the cruiser's status (SHIELD and HULL at the top left, ORE at the top right: cards space-game-layout-cruiser, space-game-ore-missiles-topright; the three round gauges are gone), no power list and no ship list (O and P are
-// free keys: card space-game-keys4-onekey), and Emergency shields as a row of the cruiser list (S, then the row's digit: cards space-game-keys2-cruiser, space-game-s-list-numbers): the shield fills at once for ore, the row cools down and refuses meanwhile.
+// free keys: card space-game-keys4-onekey), and Emergency shields as a row of the cruiser list (Q, then the row's digit: cards space-game-keys2-cruiser, space-game-s-list-numbers): the shield fills at once for ore, the row cools down and refuses meanwhile.
 // The power keys (J K L) are pressed only while the key table still has them (card space-game-power-removed takes them out). Pictures: the open cruiser list, the HUD after the emergency, the cooling row, the H page.
 //   node tests/campsystems-boot.mjs
 // The pictures go to the folder in SYSTEMS_SHOTS (default ~/dev/spacegame-night/shots/systems-*.png), never into the repository. Exit code 1 when a check fails or the game logged an error.
@@ -33,7 +33,7 @@ try {
   };
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
   const listOrder = async row => {
-    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+    if (!(await listGo(row))) return false; await key(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
     if (await j(`!!${SC}.pn.pick`)) await key(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
@@ -43,7 +43,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   for (let i = 0; i < 4 && (await j(`${SC}.mode`)) !== 'play'; i++) { await key('Enter'); await t.run(300); } // the intro card, and the missions' briefing after it
   check('the battle is on (the cards are out of the way)', (await j(`${SC}.mode`)) === 'play', await j(`${SC}.mode`));
   // What is left of the ship's systems in the game (cards space-game-keys2-select, space-game-keys2-cruiser, space-game-power-removed): no power list and no ship list (O and P are free keys), the cruiser's status (SHIELD and HULL bars at the top left, the ORE line at the top right, src/campcruiserhud.js: the round gauges went with card space-game-layout-hud),
-  // and Emergency shields as a row of the cruiser list (S): the shield is filled at once for ore, and the row cools down. The power keys (J K L) are pressed only while the key table still has them.
+  // and Emergency shields as a row of the cruiser list (Q): the shield is filled at once for ore, and the row cools down. The power keys (J K L) are pressed only while the key table still has them.
   await t.run(200); const CR = await j(`(() => { const H = ${SC}.hud; return H.crShieldL ? { l: [H.crShieldL.text, H.crHullL.text], n: [H.crShieldN.text, H.crHullN.text], ore: H.crOre.text, vis: H.crShieldL.visible && H.crOre.visible, want: [uiText('camp.cruiser.shield'), uiText('camp.cruiser.hull'), uiText('camp.cruiser.ore')], gauges: !!H.gauges } : null; })()`);
   check('the cruiser\'s status is on the HUD (SHIELD and HULL with their numbers at the top left, the ORE line at the top right) and the round gauges are gone', !!CR && CR.vis && CR.l.join() === CR.want.slice(0, 2).join() && CR.n.every(s => /^\d+$/.test(s)) && CR.ore.indexOf(CR.want[2]) === 0 && !CR.gauges, JSON.stringify(CR));
   await t.run(500);
@@ -58,7 +58,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   // the emergency: the shield is knocked down and there is ore to pay with
   const E = await j(`({ ore: CAMP.emergency.ore, cool: CAMP.emergency.cooldown, max: campShieldMax(${SC}.camp) })`);
   await t.ev(`(() => { const C = ${SC}.camp; C.god = true; C.shield = campShieldMax(C) * 0.25; C.ore = ${E.ore} + 30; return 1; })()`); await t.run(100);
-  const way = await listWay('emergency'), went = await listGo('emergency'), eNum = NUM, eRow = `${SC}.pnl.rows[${NUM - 1} - ${SC}.pn.top]`; await t.run(200); // the S list is numbered (card space-game-s-list-numbers): no highlight, the row is found by its place and given by its digit
+  const way = await listWay('emergency'), went = await listGo('emergency'), eNum = NUM, eRow = `${SC}.pnl.rows[${NUM - 1} - ${SC}.pn.top]`; await t.run(200); // the cruiser list is numbered (card space-game-s-list-numbers): no highlight, the row is found by its place and given by its digit
   check('the cruiser list\'s key: the list is open, numbered, and "Emergency shields" is a row of it with a digit, which says what it costs', went === true && way.list === 'cruiser' && eNum >= 1 && eNum <= 9 && await j(`campPanelOpen(${SC}.pn) === 'cruiser' && campPanelNumbered(${SC}.pn) && ${eRow}.name.text === campKeyRow('emergency').label`), JSON.stringify(way) + ' | digit ' + eNum + ' | ' + await j(`${eRow}.name.text + ' | ' + ${eRow}.suffix.text`));
   await shot('1-list');
   const ore0 = await j(`Math.floor(${SC}.camp.ore)`); await key('Digit' + eNum); await t.run(300);

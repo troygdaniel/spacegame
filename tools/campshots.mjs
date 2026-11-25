@@ -48,7 +48,7 @@ const goTo = async row => { // the list open with the highlight on the row (not 
 };
 // Three orders are no row of a list in the game (the key rounds of 23 and 24 Nov 2026; the fleet and all-squads lists are deleted: card space-game-delete-off-lists). While the table has no keyed row for them:
 //   launch: the pilots start the mission out, so nothing is pressed; after a recall they are sent out by the order the strip's word gives (no key gives it)
-//   attack: the backslash picks the nearest threat and the one order key (W since card space-game-keys4-onekey) sends all pilots at it (both read from the key table)
+//   attack: the backslash picks the nearest threat and the one order key (Enter since card space-game-keys6-enter) sends all pilots at it (both read from the key table)
 //   recall: no key and no row (a badly hurt pilot flies home by itself): the order the strip's word gives, for the pictures of the landing
 const noRow = async row => {
   if (row === 'launch') { await j(`(() => { const C = ${SC}.camp; return campWing(C).length + C.launchQ.length < 3 ? campOrder(C, 'launch', '', 'strip') : null; })()`); return true; }
@@ -62,7 +62,7 @@ const zreset = async map => { await keyOn(await j(`campKeyCodes('zoomreset')[0]`
 let NUM = 0; // the digit of the row the last list walk went to, when its list is a numbered one (0: a list with a highlight)
 const order = async row => {
   if ((await j(`${SC}.mode`)) === 'play' && !(await wayTo(row)) && (await noRow(row))) return true;
-  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the S list: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would fire a missile
+  if (!(await goTo(row))) return false; await keyOn(NUM ? 'Digit' + NUM : 'Enter'); // a NUMBERED list (the cruiser list, on Q: card space-game-s-list-numbers) has no highlight and takes neither the arrows nor Enter: it is opened, and the row's digit gives the order (NUM); Enter would give the one order (card space-game-keys6-enter)
   if (await j(`!!${SC}.pn.pick`)) await keyOn(NUM ? 'Digit1' : 'Enter'); // a row that needs a target (Attack, Escort, Mine ore) with several to choose from opens a target sub-list (src/camppick.js): Enter takes the highlighted one, the nearest; one candidate is taken at once, none: as it always was
   for (let n = 0; n < 6 && (await j(`campPanelOpen(${SC}.pn)`)); n++) await keyOn('Escape'); // an order that is refused leaves the list open: Esc until it is closed, the keys go back to the ship
   return true;
