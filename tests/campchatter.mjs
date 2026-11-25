@@ -154,7 +154,7 @@ try {
   const closed = spot();
   check('H  the line stands at the bottom left: its left edge the margin less the stroke (x 16, the glyph at 18), its bottom edge CAMP.corner.radio (70) px up from the screen\'s bottom', closed.x === Kc.edge - Kc.ink && closed.bottom === Hd - Kc.radio && Kc.radio === 70, JSON.stringify(closed));
   check('H  it grows upward from there: a line of one, two or three rows stays above the key line (the keep rectangle from y 656) and under the stacks at the top', [1, 2, 3].every(n => { const b = box(closed, n); return b.y + b.h <= 656 && b.y > Kc.at.bl.y + Kc.title.h; }));
-  const corners = () => ['tl', 'bl', 'tr', 'br'].map(c => J(`campCornerGeom('${c}', 0, 0).title`));
+  const corners = () => ['tl', 'bl', 'tr'].map(c => J(`campCornerGeom('${c}', 0, 0).title`));
   g.run(`campCornerOpen(__R, 'fleet')`);
   const G = J(`campCornerGeom('bl', campCornerItemsH(campCornerNow(__R, 'fleet').items), 0)`);
   check('H  the four corners are at the top now: no row, and not the FLEET details open under its row, reaches the radio line (any length up to three rows)', corners().every(t => [1, 2, 3].every(n => !hit(box(closed, n), t))) && [1, 2, 3].every(n => !hit(box(closed, n), G.det)) && G.det.y + G.det.h < box(closed, 3).y, JSON.stringify([G, closed]));
@@ -165,7 +165,7 @@ try {
   check('H  the scene text grows upward (origin 0, 1), starts at the margin, at the radio place, and is placed by chatterSpot', /this\.hud\.chat = this\.add\.text\(CAMP\.corner\.edge - CAMP\.corner\.ink, H - CAMP\.corner\.radio, [^;]*\.setOrigin\(0, 1\)/.test(sc) && /chatterSpot\(/.test(upd2) && /\.setPosition\(sp\.x, sp\.bottom\)/.test(upd2));
   // the top centre against the toasts (the toast box is 520 wide and 16 px more each side, centred; the HUD column's plate is CAMP.hud.plate.w wide, centred on CAMP.hud.text.x)
   const at = Kc.at, toastL = Wd / 2 - (J('TOAST.w') / 2 + J('TOAST.pad')), toastR = Wd / 2 + (J('TOAST.w') / 2 + J('TOAST.pad')), P = J('CAMP.hud.plate'), plateL = J('CAMP.hud.text.x') - P.w / 2, plateR = J('CAMP.hud.text.x') + P.w / 2;
-  check('H  the toast box and the HUD column\'s plate (top centre) clear the four corners sideways: the left stack ends left of both, the right stack starts right of both', at.tl.x + Kc.w < Math.min(toastL, plateL) && at.bl.x + Kc.w < Math.min(toastL, plateL) && at.tr.x > Math.max(toastR, plateR) && at.br.x > Math.max(toastR, plateR), [at.tl.x + Kc.w, toastL, plateL, at.tr.x, toastR, plateR].join(' '));
+  check('H  the toast box and the HUD column\'s plate (top centre) clear the four corners sideways: the left stack ends left of both, the right stack starts right of both', at.tl.x + Kc.w < Math.min(toastL, plateL) && at.bl.x + Kc.w < Math.min(toastL, plateL) && at.tr.x > Math.max(toastR, plateR), [at.tl.x + Kc.w, toastL, plateL, at.tr.x, toastR, plateR].join(' '));
   check('H  the radio line (330 wide from x 16) ends left of the toast box', closed.x + 330 < toastL, [closed.x + 330, toastL].join(' '));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 } catch (e) { check('a section of the test ran without an error (H)', false, e && e.message); }

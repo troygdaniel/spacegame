@@ -68,9 +68,9 @@ g.run('__new(); __scene(); campTcornerLook(P, 0); campCornerSync(S, 0);');
 {
   const K = J('CAMP.corner'), at = K.at, X = (id, what) => J(`S.hud.corner.${id}.${what}`), want = K.title.pad + K.title.chips * (K.title.chipW + K.title.chipGap) - K.title.chipGap + K.title.gap;
   check('CAMP.corner.title.chips is 1: one chip each', K.title.chips === 1);
-  const rows = [['cruiser', 'tl'], ['hostiles', 'tr'], ['friendlies', 'br']];
+  const rows = [['cruiser', 'tl'], ['hostiles', 'tr'], ['friendlies', 'bl']];
   check('the titles of S CRUISER, ] HOSTILES and [ FRIENDLIES start at the same distance from their frame\'s left edge (the chip column, ' + want + ' px)', rows.every(([id, pos]) => X(id, 'title.x') - at[pos].x === want), JSON.stringify(rows.map(([id, pos]) => [id, X(id, 'title.x') - at[pos].x])));
-  check('their chips are the same distance from the frame, and as high in their rows; the FLEET row (a line, card space-game-fleet-sentence) starts its chip at the same place', rows.concat([['fleet', 'bl']]).every(([id, pos]) => X(id, 'chips[0].x') - at[pos].x === K.title.pad + K.title.chipW / 2) && new Set(rows.concat([['fleet', 'bl']]).map(([id, pos]) => Math.round((X(id, 'chips[0].y') - (at[pos].dir > 0 ? at[pos].y : at[pos].y - K.title.h)) * 100))).size === 1);
+  check('their chips are the same distance from the frame, and as high in their rows; the FLEET half of the row at 78 (a line; it starts after CAMP.corner.split) has its chip at the same place in its half, and as high', rows.every(([id, pos]) => X(id, 'chips[0].x') - at[pos].x === K.title.pad + K.title.chipW / 2) && X('fleet', 'chips[0].x') - at.tl.x - K.split - K.splitGap === K.title.pad + K.title.chipW / 2 && new Set(rows.concat([['fleet', 'tl']]).map(([id, pos]) => Math.round((X(id, 'chips[0].y') - at[pos].y) * 100))).size === 1);
   check('the three titles read CRUISER, NO HOSTILES and FRIENDLIES as drawn; FLEET has no title word (its row is the line: tests/campfleetsentence.mjs)', ['cruiser', 'hostiles', 'friendlies'].map(id => X(id, 'title.text')).join() === 'CRUISER,NO HOSTILES,FRIENDLIES' && X('fleet', 'title.vis') === false, J('["cruiser","hostiles","friendlies"].map(id => S.hud.corner[id].title.text).join()'));
 }
 
