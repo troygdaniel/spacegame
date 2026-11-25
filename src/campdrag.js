@@ -53,7 +53,7 @@ function campViewPan(s, dx, dy) {
 }
 // the camera back on the cruiser (it eases there by its own lerp); false when the view was not off
 function campViewRecentre(s) {
-  if (typeof campPeekEnd === 'function' && campPeekEnd(s, true)) return true; // S also ends a peek (src/campselzoom.js): the camera follows the cruiser again, and the zoom is the reset's
+  if (typeof campPeekEnd === 'function' && campPeekEnd(s, true)) return true; // Q also ends a peek (src/campselzoom.js): the camera follows the cruiser again, and the zoom is the reset's
   if (typeof campFocusEnd === 'function' && campFocusEnd(s, 'back')) return true; // Backspace and the mark also end a focus (src/campfocus.js): the camera follows the cruiser again
   if (!s || !s.panned) return false;
   s.panned = false; s.dragFly = 0; if (s._cz) s._cz.anchor = null;
@@ -78,7 +78,7 @@ function campDragFlyTick(s, dt, flying) {
 // the arrows are the wheel: not while a list or a call has them, the map is open, or a word is being typed
 function campDragFlying(s) {
   const k = s && s.k; if (!k || s.mp || s.mode !== 'play') return false;
-  if (s.pn && typeof campPanelOpen === 'function' && campPanelOpen(s.pn)) return false;
+  if (s.pn && typeof campPanelOwnsArrows === 'function' && campPanelOwnsArrows(s.pn)) return false; // only a list that HAS the arrows (not the numbered Q list: the arrows fly with it open: card space-game-q-recentre-map)
   if (typeof document !== 'undefined' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return false;
   return [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown);
 }

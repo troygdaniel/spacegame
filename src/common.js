@@ -29,7 +29,7 @@ window.addEventListener('keydown', () => { if (AC && AC.state === 'suspended') A
 // A toast is the line that pops up top centre. They used to stack down from y 96, three deep, over whatever was under them: the autopilot
 // and cruise readout, the assist's line, the right half of the navigation panel's pinned destination (docs/FIRSTLOOK.md, 17 Nov 2026). An
 // order raises two or three at once, so the readout was hidden exactly when it started. Now there is one box and it never leaves its band:
-//   the band     TOAST.top (or, in the Campaign, below the HUD lines stacked at the top centre: the scene's toastTop(), card space-game-toast-over-topcentre) down the screen, TOAST.w + 2 * TOAST.pad wide at most, centred: clear of the HUD strip above it,
+//   the band     TOAST.top (or, in the Campaign, just below the HUD lines stacked at the top centre, wherever that is: the scene's toastTop(), cards space-game-toast-over-topcentre and space-game-toast-gap) down the screen, TOAST.w + 2 * TOAST.pad wide at most, centred: clear of the HUD strip above it,
 //                the mission box and the navigation panel to its left, the radar to its right, and the readouts, which sit under it
 //                (TOAST.readY for the autopilot and cruise line, ASSIST.readY in src/assist.js for the assist's)
 //   two lines    at most. A message is wrapped to the band's width; one that needs more than two lines is set smaller (TOAST.sizes), and
@@ -38,7 +38,7 @@ window.addEventListener('keydown', () => { if (AC && AC.state === 'suspended') A
 //                box shows both, the older on top, so a pair that belongs together (the reward, then "Docked.") is still read
 // s.toasts keeps its shape for the files that read it (src/assist.js, src/hud.js, the tests): [{ t, bg, tab, y, h }], now one entry at most.
 // toastFit and toastBox are pure (tests/toastband.mjs): the type is monospace, 0.6 of its size wide, and a line is its size + 3 px high.
-// A scene that has HUD lines at the top centre (the Campaign's column of wave, goal, Earth, repair and outpost lines, with the mothership's or the rival's bars under it) gives toastTop(): the y a toast starts at, at least TOAST.top. A toast already up
+// A scene that has HUD lines at the top centre (the Campaign's column of wave, goal, Earth, repair and outpost lines, with the mothership's or the rival's bars under it) gives toastTop(): the y a toast starts at (just under the column, CAMP.hud.toastGap px; not held to TOAST.top: card space-game-toast-gap). A toast already up
 // follows it (toastKeep, called by the scene every frame), so a line that comes after the toast does not end up under it. A scene with no toastTop (the Long Haul) keeps TOAST.top.
 const TOAST = {
   top: 86, bottom: 150,        // px down the screen: the band
@@ -93,7 +93,7 @@ function toast(s, msg, color = '#ffd37a', hold = 0) { // hold: ms this one stays
   const now = s.time && typeof s.time.now === 'number' ? s.time.now : 0;
   const old = (s.toasts || []).filter(o => o && o.t && o.t.active);
   const prev = old.length ? old[old.length - 1] : null;
-  const plan = toastPlan(prev && prev.at !== undefined ? prev : null, msg, now), box = toastBox(plan, typeof s.toastTop === 'function' ? Math.max(TOAST.top, s.toastTop()) : TOAST.top);
+  const plan = toastPlan(prev && prev.at !== undefined ? prev : null, msg, now), box = toastBox(plan, typeof s.toastTop === 'function' ? s.toastTop() : TOAST.top);
   old.forEach(o => { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); }); // one box: whatever was up goes
   const t = s.add.text(box.x, box.y, plan.lines.join('\n'), { fontFamily: 'monospace', fontSize: plan.size + 'px', color, align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(300);
   const edge = Phaser.Display.Color.HexStringToColor(color).color; // thin frame in the message colour, amber tab on the left

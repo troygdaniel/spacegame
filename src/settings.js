@@ -564,4 +564,5 @@ class Settings extends Phaser.Scene {
 function settingsOpen(scene, section, focus) {
   if (scene.scene.manager.isActive('Settings')) return;
   sfx('uiOpen'); scene.scene.pause(); scene.scene.launch('Settings', { from: scene.scene.key, section: section || 'sound', focus: focus || '' });
+  if (typeof scene.scene.bringToTop === 'function') scene.scene.bringToTop('Settings'); // Settings is listed before the Campaign (src/main.js), so it was drawn UNDER a paused Campaign: nothing showed and mute could not be reached from the pause card (card space-game-pause-settings-under)
 }
