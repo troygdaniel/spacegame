@@ -52,6 +52,25 @@ console.log('C. 1.3: the first contact');
   check('the plain bot that helps (no pilot call asks for orders any more: card space-game-no-pilot-popups) wins first contact every time, and the wing loses 5 ships at the very most (it was up to 8)', lost.every(r => r.result === 'won' && r.shipsLost <= 5), JSON.stringify(lost.map(r => [r.result, r.shipsLost])));
 }
 
+console.log('D. 1.2: lost when both miners are destroyed, and the par is 300 s (card space-game-12-lose-no-miners, Troy, 24 Nov 2026)');
+{
+  const row = J(`(() => { const M = CAMP.levels[1].missions; return { lose: M[1].lose, par: M[1].par, swift: M[1].bonus.find(b => b.id === 'swift').secs, par13: M[2].par, swift11: M[0].bonus.find(b => b.id === 'swift').secs, none11: !M[0].lose && !M[2].lose }; })()`);
+  check('the 1.2 row carries the lose rule: when the last neutral miner ship is gone the mission is lost, the cause is miners (1.1 and 1.3 have none)', JSON.stringify(row.lose) === '[{"type":"nomore","kind":"miner","why":"miners"}]' && row.none11, JSON.stringify(row));
+  check('par and the swift bonus are 300 s, both places (they were 380); 1.3 keeps its par 380 and 1.1 its swift 400', row.par === 300 && row.swift === 300 && row.par13 === 380 && row.swift11 === 400, JSON.stringify(row));
+  const sim = J(`(() => { const C = campNew(1, [], { seed: 1, mission: 1 }); campStep(C, 0.1); const ms = C.ships.filter(u => u.team === 'neutral' && u.kind === 'miner'), p = C.ships.find(u => u.pilot);
+    campKill(C, p); campStep(C, 0.1); const afterPilot = C.result ? C.why : null;
+    campKill(C, ms[0]); campStep(C, 0.1); const afterOne = C.result ? C.why : null;
+    campKill(C, ms[1]); campStep(C, 0.1); const lines = campLoseLines(C, C.why); return { n: ms.length, afterPilot, afterOne, result: C.result, why: C.why, lines }; })()`);
+  check('two miner ships at the start; a pilot lost or one miner lost does not end it; the second miner lost does: lost, because miners', sim.n === 2 && sim.afterPilot === null && sim.afterOne === null && sim.result === 'lost' && sim.why === 'miners', JSON.stringify(sim).slice(0, 300));
+  check('the lose card says why in plain words (Both mining ships are lost.), then how long it lasted, then one thing to try with the keys from the key table and no brace left', sim.lines[0] === 'Both mining ships are lost.' && /^You lasted /.test(sim.lines[1]) && /^Guard the miners: pick one \(/.test(sim.lines[2]) && !/[{}]/.test(sim.lines.join(' ')) && sim.lines[2].split(/\s+/).length <= 14, JSON.stringify(sim.lines));
+  check('1.1\'s one miner (the distress call) lost does not lose 1.1: the rule is 1.2\'s', J(`(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); campStep(C, 0.1); const m = C.ships.find(u => u.team === 'neutral' && u.kind === 'miner'); if (!m) return 'no miner'; campKill(C, m); campStep(C, 0.1); return C.result ? C.why : null; })()`) === null);
+  const bots = {};
+  for (const name of ['idle', 'plain']) bots[name] = (name === 'idle' ? [1, 2] : [1, 2, 3, 4, 5, 6]).map(seed => { const r = botRun(1, seed, name, 'steady', techsFor(1), 420, 1); return { res: r.result, why: J('window.C.why'), t: r.t, bonus: r.bonus }; });
+  check('the idle bot LOSES 1.2 (it used to sit there to the clock with no win and no loss): both seeds lost, because miners, well inside 420 s', bots.idle.every(r => r.res === 'lost' && r.why === 'miners' && r.t < 420), JSON.stringify(bots.idle));
+  const swift = bots.plain.filter(r => /swift/.test(r.bonus)).length;
+  check('the plain bot still WINS 1.2 on every seed, and the swift bonus at the new par (300 s) is within reach: earned on at least half of six seeds (measured 8 of 10 at Normal: the misses are 309 s and 333 s, a fight that pulls the pilots off the rocks; 380 s never was at risk)', bots.plain.every(r => r.res === 'won') && swift >= 3 && Math.min(...bots.plain.map(r => r.t)) < 290, JSON.stringify(bots.plain));
+}
+
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));
 check('the game made no error', g.errors.length === 0);
 console.log(failed ? `\nCAMPL1TUNE FAIL (${failed} of ${n})` : `\nCAMPL1TUNE PASS (${n} checks)`);
