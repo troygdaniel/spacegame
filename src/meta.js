@@ -164,7 +164,7 @@ function toggleMute(game) {
   G.muted = !G.muted;
   saveGame();
   if (game.scene.isActive('Pause')) return; // the menu shows it
-  const s = game.scene.getScenes(true).find(sc => SCREENS.includes(sc.scene.key));
+  const live = game.scene.getScenes(true), s = live.find(sc => SCREENS.includes(sc.scene.key)) || live.filter(sc => sc.add && sc.tweens && sc.time).pop(); // the flight screens, else the scene on top (the title, the ready room, Settings): M said nothing there and the sound stayed off, in the save too, with nothing to say why
   if (s) toast(s, G.muted ? 'Sound muted  (M)' : 'Sound on  (M)', '#9fe9ff');
   if (!G.muted) beep(660, 0.08, 'triangle', 0.05);
 }
