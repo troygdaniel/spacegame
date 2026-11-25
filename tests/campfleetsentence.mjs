@@ -15,12 +15,12 @@ g.run(`window.C = campNew(1, [], { seed: 5, mission: 0 }); C.t = 1000; window.LI
 
 console.log('A. the line');
 check('the first segment is the W chip (the table\'s who key) and the rest are words: four stops, "digit name"', J('LINE()[0].key') === 'who' && J('campCornerCap("who")') === 'W' && J('LINE().slice(1).map(s => s.text).join("|")') === '1 Wedge|2 Kara|3 Apollo|4 All', JSON.stringify(J('LINE()')));
-check('the default pick is All pilots: its digit (4) is lit white, the three pilots are dim', J('LINE()[4].ink') === '#ffffff' && [1, 2, 3].every(i => J(`LINE()[${i}].ink`) === '#8fa6b8'));
+check('the default pick is All pilots: all four digits (1 2 3 4) are lit white (card space-game-w4-all-lit)', [1, 2, 3, 4].every(i => J(`LINE()[${i}].ink`) === '#ffffff') && [1, 2, 3, 4].every(i => J(`LINE().alt[${i}].ink`) === '#ffffff'));
 g.run(`C.sel = 'pilot:green';`);
 check('Kara picked: 2 is lit and 4 is dim', J('LINE()[2].ink') === '#ffffff' && J('LINE()[4].ink') === '#8fa6b8' && J('LINE()[1].ink') === '#8fa6b8');
 check('.alt is the same stops as digits alone, with the chip, and the same lit one', J('LINE().alt.map(s => s.key || s.text).join("|")') === 'who|1|2|3|4' && J('LINE().alt[2].ink') === '#ffffff');
 g.run(`C.sel = 'all'; C.ships.filter(u => u.pilot === 'apollo').forEach(u => { u.hp = 0; u.gone = true; }); C.bay.fighters = 0;`);
-check('a pilot who is lost (nothing out, none in the bay) is still a stop, darker: 3 stays and is grey', J('LINE().slice(1).length') === 4 && (J('LINE()[3].ink') === '#4d5f70' || J('LINE()[3].ink') === '#8fa6b8'), JSON.stringify(J('LINE()[3]')));
+check('a pilot who is lost (nothing out, none in the bay) is still a stop and keeps his darker look with All pilots picked: 3 is dark, 1 2 4 are lit', J('LINE().slice(1).length') === 4 && J('LINE()[3].ink') === '#4d5f70' && [1, 2, 4].every(i => J(`LINE()[${i}].ink`) === '#ffffff'), JSON.stringify(J('LINE()')));
 check('the words are content: "All" is camp.corner.allshort, the rest are the pilots\' names; no order, no target, no second chip', J(`uiText('camp.corner.allshort')`) === 'All' && J('LINE().filter(s => s.key).length') === 1 && !J('LINE().some(s => s.key === "order")'));
 
 console.log('B. the layout');
