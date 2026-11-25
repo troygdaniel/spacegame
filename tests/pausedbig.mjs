@@ -67,7 +67,7 @@ const fits = (list, label) => {
 fits(objs, 'normal game');
 fits(withDebug, 'with the tune kit\'s debug line');
 check('the debug line is there only with the kit on, as before', withDebug.filter(o => o.kind === 'text').some(o => /DEBUG/.test(o.text)) && !objs.filter(o => o.kind === 'text').some(o => /DEBUG/.test(o.text)));
-check('a mission has the retry line (R restart the mission): it is in the help and the help still fits', objs.filter(o => o.kind === 'text').some(o => /R\s+restart/.test(o.text)) || J('!(__sc.camp.L && __sc.camp.L.objectives)'));
+check('a mission has the retry line (Backspace restart the mission; it was R: card space-game-pause-restart-key): it is in the help and the help still fits', objs.filter(o => o.kind === 'text').some(o => /Backspace\s+restart/.test(o.text)) || J('!(__sc.camp.L && __sc.camp.L.objectives)'));
 
 console.log('E. the screen');
 check('everything is fixed to the screen and above the gauges (depth 200; the gauges are 100 and 101)', objs.every(o => o.scroll === 0 && o.depth === 200), JSON.stringify(objs.filter(o => o.scroll !== 0 || o.depth !== 200)));
@@ -81,6 +81,8 @@ g.run(`window.__keys = (code) => { __scene(false, true); const sc = __sc; sc.mod
 check('Esc is the pause key still: it is in the table and the scene pauses on it', J(`campKeyCodes('pause')`).join() === 'Escape' || J(`campKeyCodes('pause')`).indexOf('Escape') >= 0);
 check('Esc on the band goes back to the battle and takes the band away', (() => { const r = J("__keys('Escape')"); return r.mode === 'play' && r.card === false; })());
 check('T goes to the title and H opens the page of every key, as on the old card', J("__keys('KeyT')").went === 'Title' && J("__keys('KeyH')").keys === true);
+g.run(`window.__keysP = (code) => { __scene(false, true); const sc = __sc; sc.mode = 'pause'; sc.leaving = false; sc.P = { techs: [] }; sc.level = 1; sc.mi = 0; window.__went = []; go = (s, key, d) => { __went.push(key + ':' + (d && d.via)); }; Campaign.prototype.onKey.call(sc, { code }); return { mode: sc.mode, card: !!sc.card, went: __went.join() }; };`);
+check('Backspace (the table\'s restart key) restarts the mission; R on the pause card does nothing: no restart, the card stays, mode stays pause (card space-game-pause-restart-key: R is the missile rack in play)', (() => { const b = J("__keysP('Backspace')"), r = J("__keysP('KeyR')"); return J("campKeyCodes('restart').join()") === 'Backspace' && b.went === 'Campaign:retry' && r.went === '' && r.mode === 'pause' && r.card === true; })(), JSON.stringify([J("__keysP('Backspace')"), J("__keysP('KeyR')")]));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `PAUSED BIG FAIL (${failed} of ${n})` : `PAUSED BIG PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
