@@ -1312,7 +1312,7 @@ const UI_TEXT = {
   'camp.map.take': 'TAKE   T   this lane',
   'camp.say.lanepanic': 'Under fire. Taking the {lane}.',
   'camp.say.patrolleave': 'Patrol turning back. You are on your own from here.',
-  'camp.say.distress': 'Miner under attack, west of our course! Pirates on him.',
+  'camp.say.distress': 'Pirates on me, west of you! Helping me leaves your transport open.',
   'camp.say.thanks': 'The miner is safe and sends {ore} ore. Thanks!',
   'camp.b.rival': 'Destroy the pirate leader',
   'camp.b.torpedoes': 'Torpedo hits: {n} or fewer',
