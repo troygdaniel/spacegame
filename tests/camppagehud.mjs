@@ -33,16 +33,14 @@ g.run(`CAMP.flags.pagehud = false;`);
 console.log('B. the model');
 g.run(`__out();`);
 const M = J('campPageModel(C)');
-check('the ship panel: the key chip, the label, a shield and a hull meter at full with no number', M.ship.label === 'CRUISER' && M.ship.shield.frac === 1 && M.ship.hull.frac === 1 && M.ship.shield.show === false && M.ship.hull.show === false, JSON.stringify(M.ship));
+check('the ship panel: the key chip and a shield and a hull meter at full, each with its word and no percentage (the CRUISER label is gone: option D of docs/hud-mock-2.html)', M.ship.label === undefined && M.ship.key !== '' && M.ship.shield.word === 'Shields' && M.ship.hull.word === 'Hull' && M.ship.shield.frac === 1 && M.ship.hull.frac === 1 && M.ship.shield.show === false && M.ship.hull.show === false, JSON.stringify(M.ship));
 g.run(`C.shield = campShieldMax(C) * 0.5; C.t = 2000;`);
 const hurt = J('campPageModel(C).ship.shield');
-check('below full the number shows (the shield at half), the hull still has none', hurt.frac > 0.49 && hurt.frac < 0.51 && hurt.show === true && hurt.n === J('Math.round(C.shield)') && J('campPageModel(C).ship.hull.show') === false, JSON.stringify(hurt));
+check('below full the percentage shows (the shield at half: 50), the hull still has none', hurt.frac > 0.49 && hurt.frac < 0.51 && hurt.show === true && hurt.pct === 50 && J('campPageModel(C).ship.hull.show') === false, JSON.stringify(hurt));
 g.run(`C.shield = campShieldMax(C); C.t = 2000 + 1000;`);
-check('full again: the number stays a few seconds after (CAMP_PAGEHUD.num)', J('campPageModel(C).ship.shield.show') === true);
-g.run(`C.t = 2000 + 5000;`);
-check('and then goes', J('campPageModel(C).ship.shield.show') === false);
+check('full again: the percentage goes at once (it shows ONLY below 100: card space-game-page-hud-3), and a hair under full is 99, never 100', J('campPageModel(C).ship.shield.show') === false && (g.run(`C.shield = campShieldMax(C) * 0.996;`), J('campPageModel(C).ship.shield.pct') === 99 && J('campPageModel(C).ship.shield.show') === true) && (g.run(`C.shield = campShieldMax(C);`), true));
 g.run(`C.carrier.hp = C.carrier.maxHp * 0.4; C.t = 9000;`);
-check('the hull: the same rule', J('campPageModel(C).ship.hull.show') === true && Math.abs(J('campPageModel(C).ship.hull.frac') - 0.4) < 1e-6);
+check('the hull: the same rule', J('campPageModel(C).ship.hull.show') === true && J('campPageModel(C).ship.hull.pct') === 40 && Math.abs(J('campPageModel(C).ship.hull.frac') - 0.4) < 1e-6);
 g.run(`C.carrier.hp = C.carrier.maxHp;`);
 const P = J('campPageModel(C).pilots');
 check('three pilots, in the fleet pick\'s order: their initials (the names are Wedge, Kara, Apollo) and digits 1 2 3', P.items.length === 3 && P.items.map(p => p.initial).join('') === 'WKA' && P.items.map(p => p.digit).join('') === '123' && P.items.map(p => p.name).join() === 'Wedge,Kara,Apollo', JSON.stringify(P.items));
@@ -53,10 +51,10 @@ check('a ring is the hull: half is the warning colour (under 60 percent), a fift
 g.run(`__pu[2].hp = 0; __pu[2].gone = true; campWingDocked(C, 'yellow').length;`);
 check('a pilot who is not out is dim (on false) and his ring is empty', J('campPageModel(C).pilots.items[2].on') === false && J('campPageModel(C).pilots.items[2].frac') === 0);
 g.run(`__out(); C.sel = 'all';`);
-check('All pilots picked lights every digit (card space-game-w4-all-lit), and the words say so', J('campPageModel(C).pilots.items.every(p => p.pick)') === true && J('campPageModel(C).pilots.who') === 'All pilots');
+check('All pilots picked outlines every ring and lights every digit (card space-game-w4-all-lit)', J('campPageModel(C).pilots.items.every(p => p.pick)') === true);
 g.run(`C.sel = 'pilot:green';`);
-check('one pilot picked: only his digit is lit, and the line names him', J('campPageModel(C).pilots.items.map(p => p.pick).join()') === 'false,true,false' && J('campPageModel(C).pilots.who') === 'Kara');
-check('what they are doing is ONE word, the verb of the same words the target display uses (capitalised: "Guarding", "Mining"), as the mock has it', /^[A-Z][a-z]+$/.test(J('campPageModel(C).pilots.doing')), J('campPageModel(C).pilots.doing'));
+check('one pilot picked: only his ring is outlined and his digit lit', J('campPageModel(C).pilots.items.map(p => p.pick).join()') === 'false,true,false');
+check('the pilots\' row has no words of what they do: option D is chips and rings (no Guarding, no name line)', J('campPageModel(C).pilots.doing') === null && J('campPageModel(C).pilots.who') === null);
 check('no cruiser: no model (the page HUD draws nothing)', J('campPageModel(null)') === null);
 
 console.log('C. the key chips are the table\'s');
@@ -81,16 +79,16 @@ g.run(`
 g.run(`__out(); CAMP.flags.pagehud = true; window.S = __scene(); window.__r1 = campPageHudSync(S, 0);`);
 check('on: the page HUD is made, once, and put on the page (a root with the ship panel in it)', J('__r1') === true && J('!!S.pageHud') && J('document.body.children.length') === 1 && J('document.body.children[0].children.some(c => c._cls.indexOf("ph-ship") >= 0)'));
 check('it sits over the canvas, the same size, and its font size is a share of the canvas width (1.12 percent of 1280)', J('S.pageHud.root.style.left') === '10px' && J('S.pageHud.root.style.top') === '20px' && J('S.pageHud.root.style.width') === '1280px' && J('S.pageHud.root.style.fontSize') === '14.34px');
-check('the panel shows the key chips, the label, three rings with their initials and digits, the doing and who lines', J('S.pageHud.ship.key._text') === J(`campCornerCap('zoomreset')`) && J('S.pageHud.ship.label._text') === 'CRUISER' && J('S.pageHud.ship.pilots.length') === 3 && J('S.pageHud.ship.pilots.map(p => p.letter._text).join("")') === 'WKA' && J('S.pageHud.ship.pilots.map(p => p.digit._text).join("")') === '123' && J('S.pageHud.ship.pkey._text') === J(`campCornerCap('who')`) && J('S.pageHud.ship.who._text') === 'All pilots');
-check('the meters: full widths and no numbers', J('S.pageHud.ship.shield.fill.style.width') === '100%' && J('S.pageHud.ship.hull.fill.style.width') === '100%' && J('S.pageHud.ship.shield.num._text') === '' && J('S.pageHud.ship.hull.num._text') === '');
+check('the left panel shows the three chips from the table (Q, W, E), three pilot rings with their digits inside, and no word of what they do (option D)', J('S.pageHud.ship.key._text') === J(`campCornerCap('zoomreset')`) && J('S.pageHud.fleet.pkey._text') === J(`campCornerCap('who')`) && J('S.pageHud.fleet.ekey._text') === J(`campCornerCap('friendlies')`) && J('S.pageHud.fleet.pilots.length') === 3 && J('S.pageHud.fleet.pilots.map(p => p.text._text).join("")') === '123' && J('S.pageHud.fleet.pilots.every(p => p.under._text === "")') === true);
+check('the meters: full widths, their words, and no percentage', J('S.pageHud.ship.shield.fill.style.width') === '100%' && J('S.pageHud.ship.hull.fill.style.width') === '100%' && J('S.pageHud.ship.shield.pct._text') === '' && J('S.pageHud.ship.hull.pct._text') === '' && J('S.pageHud.ship.shield.word._text') === 'Shields');
 g.run(`window.__w0 = __writes; window.__r2 = campPageHudSync(S, 50);`);
 check('10 a second at most: a call 50 ms later writes nothing at all', J('__writes') === J('__w0') && J('__r2') === true);
 g.run(`__w0 = __writes; campPageHudSync(S, 100);`);
 check('and a call a tenth of a second later writes nothing either when nothing changed (only an element whose value changed is written)', J('__writes') === J('__w0'), J('__writes - __w0'));
 g.run(`C.shield = campShieldMax(C) * 0.5; __w0 = __writes; campPageHudSync(S, 200);`);
-check('the shield falls to half: its bar and its number are written, and nothing else (two writes)', J('__writes - __w0') === 2 && J('S.pageHud.ship.shield.num._text') === String(J('Math.round(C.shield)')) && /^50/.test(J('S.pageHud.ship.shield.fill.style.width')), J('__writes - __w0'));
+check('the shield falls to half: its bar and its percentage are written, and nothing else (two writes)', J('__writes - __w0') === 2 && J('S.pageHud.ship.shield.pct._text') === '50%' && /^50/.test(J('S.pageHud.ship.shield.fill.style.width')), J('__writes - __w0'));
 g.run(`C.sel = 'pilot:red'; __w0 = __writes; campPageHudSync(S, 300);`);
-check('the pick moves to one pilot: the three digits\' classes and the who line are written, no ring', J('__writes - __w0') <= 4 && J('S.pageHud.ship.who._text') === 'Wedge', J('__writes - __w0'));
+check('the pick moves to one pilot: two classes are written (the others lose the outline), no ring', J('__writes - __w0') <= 4 && /pick/.test(J('S.pageHud.fleet.pilots[0].el._cls')) && !/pick/.test(J('S.pageHud.fleet.pilots[1].el._cls')), J('__writes - __w0'));
 check('the rows of the canvas move down under the panel: the Q CRUISER row\'s place and the FRIENDLIES row\'s (the panel\'s bottom is 150 on the page and the canvas starts 20 px down: 130 on the canvas)', J('CAMP_CORNER_SHIFT.tl') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tl.y') && J('CAMP_CORNER_SHIFT.bl') === J('130 + CAMP.corner.stack - CAMP.corner.at.bl.y') && J(`campCornerGeom('tl', 0, 0).title.y + campCornerGeom('tl', 0, 0).title.h`) === 130);
 g.run(`CAMP.flags.pagehud = false; window.__r3 = campPageHudSync(S, 400);`);
 check('off: the page HUD is taken away and the rows are where they were', J('__r3') === false && J('S.pageHud') === null && J('document.body.children.length') === 0 && J('CAMP_CORNER_SHIFT.tl') === 0 && J('CAMP_CORNER_SHIFT.bl') === 0);
@@ -136,7 +134,7 @@ g.run(`CAMP.flags.pagehud = true;`);
 check('on: the canvas also leaves out the rows of the HOSTILES and FRIENDLIES corners, the edge arrows of the hostiles, the labels of the places and the bottom key line', ['hostiles', 'friendlies', 'sight', 'places', 'keys'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true));
 g.run(`CAMP.flags.pagehud = false;`);
 g.run(`__out(); C.ships = C.ships.filter(u => u.team !== 'alien');`);
-check('no hostile seen: no hostiles panel (null), no edge pill; no friendly picked: no friendlies panel', J('campPageModel(C).foes') === null && J('campPageModel(C, { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }).edge') === null && (g.run(`C.fsel = '';`), J('campPageModel(C).friend') === null));
+check('no hostile seen: no hostiles panel (null), no edge pill; no friendly picked: no Enter hint in the fleet row', J('campPageModel(C).foes') === null && J('campPageModel(C, { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }).edge') === null && (g.run(`C.fsel = '';`), J('campPageModel(C).friends.enter') === null && J('campPageModel(C).friends.items.every(x => !x.pick)') === true));
 g.run(`window.RA = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); window.RB = campSpawn(C, 'raider', C.carrier.x + 950, C.carrier.y + 150);`);
 const foes = J('campPageModel(C).foes');
 check('a hostile seen: the panel has the hostiles key (the table\'s), the label, what it is (the sight\'s own words), a compass point and how far', foes && foes.key === J(`campCornerCap('hostiles')`) && foes.label === 'HOSTILES' && /Raider|hostile/i.test(foes.what) && /^(north|south|east|west)/.test(foes.dir) && /km$/.test(foes.km), JSON.stringify(foes));
@@ -144,22 +142,22 @@ g.run(`window.__view = { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1
 const edge = J('campPageModel(C, __view).edge');
 check('hostiles off the screen: one pill at the edge with the count and how far, and an arrow angle', edge && edge.n === 2 && /km$/.test(edge.km) && Math.abs(edge.angle) < 0.3 && edge.x > J('W') * 0.8, JSON.stringify(edge));
 g.run(`window.WD = campFriList(C).find(e => e.kind === 'ward'); C.fsel = WD.id;`);
-const fr = J('campPageModel(C).friend');
-check('a friendly picked: its name, its hull and how far (the E chip is on the pilots row now, always: card space-game-page-hud-2), and the Enter chip with Guard from the key table and the order model', fr && fr.key === undefined && fr.label === undefined && fr.enter.key === J(`campCornerCap('order')`) && fr.enter.word === 'Guard' && J('campPageModel(C).pilots.ekey') === J(`campCornerCap('friendlies')`) && fr.name === J('campTdispName(WD.unit)') && fr.frac > 0 && fr.frac <= 1 && /km$/.test(fr.km), JSON.stringify(fr));
+const fr = J('campPageModel(C).friends');
+check('a friendly picked: its ring is picked in the E group (the number, the name and the hull from 2-GEN\'s numbered list), the E chip is the table\'s, and the Enter chip with Guard comes from the key table and the order model (card space-game-page-hud-3)', fr && fr.items.length >= 1 && fr.items.filter(x => x.pick).length === 1 && fr.items.find(x => x.pick).id === J('WD.id') && fr.items.find(x => x.pick).name === J('campFriNumbered(C).find(e => e.picked).name') && fr.key === J(`campCornerCap('friendlies')`) && fr.enter.key === J(`campCornerCap('order')`) && fr.enter.word === 'Guard' && fr.items.find(x => x.pick).frac > 0, JSON.stringify(fr));
 g.run(`window.__pl = Object.values(campPlaces(C.level)).find(p => !p.hidden); window.__pv = { x: __pl.x - W / 2, y: __pl.y - (__pl.r || 60) - 36 - H / 2, zoom: 1 };`);
 const pls = J('campPageModel(C, __pv).places');
 check('a place in view gets ONE pill (its name, with its outpost after a dot), at the place\'s screen place', pls.length >= 1 && pls[0].name.indexOf(J('String(__pl.name)')) === 0 && Math.abs(pls[0].x - J('W') / 2) < 1 && Math.abs(pls[0].y - J('H') / 2) < 1, JSON.stringify(pls));
 check('far out (under the far marks\' zoom) the page draws no place pills: the canvas\'s marks have the names', J('campPageModel(C, { x: __pv.x, y: __pv.y, zoom: CAMPZOOM.view.markZ / 2 }).places.length') === 0 && J('campPageModel(C).places.length') === 0);
 g.run(`CAMP.flags.pagehud = true; window.S4 = __scene(); S4.hud = { keys: { visible: true, setVisible(v) { this.visible = v; } }, obj: { visible: true, setVisible(v) { this.visible = v; } }, wave: { visible: true, setVisible(v) { this.visible = v; } } }; S4.keysBack = { visible: true, setVisible(v) { this.visible = v; } }; S4.placeLabels = [{ visible: true, active: true, setVisible(v) { this.visible = v; } }]; S4.cameras = { main: { scrollX: __view.x, scrollY: __view.y, zoom: 1 } }; S4.cornerDy = { friendlies: 40 }; campPageHudSync(S4, 0);`);
-check('the panels are drawn: hostiles (display on), the friendlies, the edge pill, and the bottom key line, its strip and the world\'s place labels are hidden', J('S4.pageHud.foes.el.style.display') === '' && J('S4.pageHud.friend.el.style.display') === '' && J('S4.pageHud.edge.el.style.display') === '' && J('S4.hud.keys.visible') === false && J('S4.keysBack.visible') === false && J('S4.placeLabels[0].visible') === false && J('S4.hud.obj.visible') === false && J('S4.hud.wave.visible') === false);
-check('the hostiles panel says what, where and how far; the friend panel its name; the edge pill the count', J('S4.pageHud.foes.key._text') === J(`campCornerCap('hostiles')`) && /km$/.test(J('S4.pageHud.foes.sub._text')) && J('S4.pageHud.friend.name._text') === J('campTdispName(WD.unit)') && /^2 /.test(J('S4.pageHud.edge.text._text')));
-check('the friend\'s details are INSIDE the ship panel, under the pilots (no panel of their own); the edge pill is at the edge of the canvas', J('S4.pageHud.friend.el.parentNode === S4.pageHud.ship.el') === true && !J('S4.pageHud.friend.el.style.top') && parseInt(J('S4.pageHud.edge.el.style.left')) > 1000, J('[S4.pageHud.friend.el.style.top, S4.pageHud.edge.el.style.left]'));
-check('the canvas rows keep their place under the panels: the details of FRIENDLIES open under the ship panel (the friend\'s details are in it), those of HOSTILES under the hostiles panel (here the stand-in panels all end at 130)', J('CAMP_CORNER_SHIFT.bl') === J('130 + CAMP.corner.stack - CAMP.corner.at.bl.y') && J('CAMP_CORNER_SHIFT.tr') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tr.y'));
+check('the panels are drawn: hostiles (display on), the Enter hint of the picked friendly, the edge pill, and the bottom key line, its strip and the world\'s place labels are hidden', J('S4.pageHud.foes.el.style.display') === '' && J('S4.pageHud.fleet.ent.el._ph.display') === '' && J('S4.pageHud.edge.el.style.display') === '' && J('S4.hud.keys.visible') === false && J('S4.keysBack.visible') === false && J('S4.placeLabels[0].visible') === false && J('S4.hud.obj.visible') === false && J('S4.hud.wave.visible') === false);
+check('the hostiles panel says what, where and how far; the edge pill the count', J('S4.pageHud.foes.key._text') === J(`campCornerCap('hostiles')`) && /km$/.test(J('S4.pageHud.foes.sub._text')) && /^2 /.test(J('S4.pageHud.edge.text._text')));
+check('the ships you protect are small rings in the left panel (no panel of their own, no details box); the edge pill is at the edge of the canvas', J('S4.pageHud.fleet.ships.length') >= 1 && J('S4.pageHud.fleet.ships.some(g => /pick/.test(g.el._cls))') === true && J('S4.pageHud.fleet.ships[0].el.parentNode === S4.pageHud.fleet.sBox') === true && J('S4.pageHud.friend') === null && parseInt(J('S4.pageHud.edge.el.style.left')) > 1000);
+check('the canvas rows keep their place under the panels: the details of FRIENDLIES (the canvas draws none while the page HUD is on: the rings replace the box) would open under the ship panel, those of HOSTILES under the hostiles panel (here the stand-in panels all end at 130)', J('CAMP_CORNER_SHIFT.bl') === J('130 + CAMP.corner.stack - CAMP.corner.at.bl.y') && J('CAMP_CORNER_SHIFT.tr') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tr.y'));
 g.run(`C.fsel = ''; RA.hp = 0; RB.hp = 0; RA.gone = RB.gone = true; campPageHudSync(S4, 300);`);
-check('no hostile and no friendly: both panels and the edge pill are not drawn (display none)', J('S4.pageHud.foes.el.style.display') === 'none' && J('S4.pageHud.friend.el.style.display') === 'none' && J('S4.pageHud.edge.el.style.display') === 'none');
+check('no hostile and no friendly picked: the hostiles panel, the Enter hint and the edge pill are not drawn (display none)', J('S4.pageHud.foes.el.style.display') === 'none' && J('S4.pageHud.fleet.ent.el._ph.display') === 'none' && J('S4.pageHud.edge.el.style.display') === 'none');
 g.run(`CAMP.flags.pagehud = false; campPageHudSync(S4, 600);`);
 check('off: the key line, its strip and the place labels are back', J('S4.hud.keys.visible') === true && J('S4.keysBack.visible') === true && J('S4.placeLabels[0].visible') === true && J('S4.hud.obj.visible') === true && J('S4.hud.wave.visible') === true);
-check('the scene files: the hostile arrows are left out of the sight scene, the labels drawPlace makes are kept (placeLabels), and the corners\' slide is stored for the friend panel', /campPageHudHides\('sight'\) \? \[\]/.test(src('src/campsightscene.js')) && /placeLabels/.test(src('src/campaignscene.js')) && /s\.cornerDy\[d\.id\] = dy/.test(src('src/campcornerscene.js')));
+check('the scene files: the hostile arrows are left out of the sight scene, the labels drawPlace makes are kept (placeLabels), and the corners\' slide is stored', /campPageHudHides\('sight'\) \? \[\]/.test(src('src/campsightscene.js')) && /placeLabels/.test(src('src/campaignscene.js')) && /s\.cornerDy\[d\.id\] = dy/.test(src('src/campcornerscene.js')));
 
 console.log('H. round 2 (card space-game-page-hud-2, Troy, 25 Nov 2026)');
 g.run(`CAMP.flags.pagehud = false; __out();`);
@@ -167,8 +165,8 @@ const M2 = J('campPageModel(C)');
 check('1 the meters have words: Shields and Hull on the cruiser panel, Ore and Missiles on the stock panel (Troy\'s own ask: the only new words)', M2.ship.shield.word === 'Shields' && M2.ship.hull.word === 'Hull' && M2.stock.ore.word === 'Ore' && M2.stock.missiles.word === 'Missiles', JSON.stringify([M2.ship.shield.word, M2.ship.hull.word, M2.stock.ore.word, M2.stock.missiles.word]));
 check('1 the four words are text keys of the corner family (a voicepack rule covers them) and are in the table', ['shield', 'hull', 'ore', 'missiles'].every(k => J(`uiText('camp.corner.m.${k}')`) !== `camp.corner.m.${k}`) && J(`voicePackFamily('camp.corner.m.ore')`) !== undefined);
 g.run(`CAMP.flags.pagehud = true; window.S = __scene(); campPageHudSync(S, 5000);`);
-const R2 = J(`(() => { const R = S.pageHud; return { sh: R.ship.shield.lab._text, hu: R.ship.hull.lab._text, or: R.stock.oreLab._text, mi: R.stock.missLab._text, cls: R.ship.shield.lab._cls }; })()`);
-check('1 the view writes each word beside its icon, in the label style (small and muted: ph-lab)', R2.sh === 'Shields' && R2.hu === 'Hull' && R2.or === 'Ore' && R2.mi === 'Missiles' && /ph-lab/.test(R2.cls), JSON.stringify(R2));
+const R2 = J(`(() => { const R = S.pageHud; return { sh: R.ship.shield.word._text, hu: R.ship.hull.word._text, or: R.stock.oreLab._text, mi: R.stock.missLab._text, cls: R.ship.shield.word.parentNode._cls }; })()`);
+check('1 the view writes each word: Shields and Hull over their meters (the label style: small and muted), Ore and Missiles beside their icons', R2.sh === 'Shields' && R2.hu === 'Hull' && R2.or === 'Ore' && R2.mi === 'Missiles' && /ph-lab/.test(R2.cls), JSON.stringify(R2));
 // 2 the pick
 g.run(`C.sel = 'pilot:green';`);
 const PK1 = J('campPageModel(C).pilots.items.map(p => [p.pick, p.on])');
@@ -179,10 +177,11 @@ g.run(`C.sel = 'pilot:red'; window.__u = campSelList(C).find(e => e.id === 'pilo
 const PK2 = J('campPageModel(C).pilots.items.map(p => [p.pick, p.on])');
 check('2 DIM keeps its one meaning: a pilot at rest or hurt away (hull gone, in the bay) is dim whether picked or not', PK2[0][1] === false && PK2[1][1] === true && PK2[2][1] === true, JSON.stringify(PK2));
 g.run(`__u.hp = __u.maxhp || 100; C.sel = 'pilot:green'; campPageHudSync(S, 9000);`);
-const V2 = J(`S.pageHud.ship.pilots.map(p => [p.el._cls, p.halo._cls])`);
-check('2 the view marks the picked pilot (class pick: the bright outline and the lit digit) and no other', /pick/.test(V2[1][0]) && !/pick/.test(V2[0][0]) && !/pick/.test(V2[2][0]), JSON.stringify(V2));
+const V2 = J(`S.pageHud.fleet.pilots.map(p => p.el._cls)`);
+check('2 the view marks the picked pilot (class pick: the bright outline and the lit digit) and no other', /pick/.test(V2[1]) && !/pick/.test(V2[0]) && !/pick/.test(V2[2]) && V2.every(c => !/dim|dead/.test(c)), JSON.stringify(V2));
 const css2 = src('src/camppagehud.css');
-check('2 the style: the outline is a halo that shows with .pick and is never dimmed; only a pilot not .on is dim; no rule dims a pilot for being unpicked', /\.ph-pilot\.pick \.ph-halo\s*\{\s*display:\s*block/.test(css2) && /\.ph-pilot:not\(\.on\) \.ph-ring/.test(css2) && !/\.ph-pilot:not\(\.pick\)/.test(css2) && !/\.ph-pilot\s*\{[^}]*opacity/.test(css2) && /\.ph-pilot\.pick small\s*\{[^}]*opacity:\s*1/.test(css2));
+check('2 the style: the outline is on the ring\'s wrapper (.ph-rw, so a dim ring does not dim it) and shows with .pick; only .dim dims a ring; no rule dims a ring for being unpicked', /\.ph-g\.pick \.ph-rw\s*\{[^}]*box-shadow/.test(css2) && /\.ph-g\.dim \.ph-ring\s*\{\s*opacity/.test(css2) && !/\.ph-g:not\(\.pick\)/.test(css2) && /\.ph-g\.pick small\s*\{[^}]*color:\s*#fff/.test(css2));
+
 // 3 W then a digit
 g.run(`__new(); window.P = campPanelNew(); campCornerKey(C, 'KeyW'); window.__w1 = campPanelKey(P, C, 'KeyW', 100); window.__w2 = campPanelKey(P, C, 'KeyW', 150);`);
 check('3 W opens the menu and its details; tapping W again steps who and keeps both open', J('__w1.open') === 'fleet' && J('__w2.open') === 'fleet' && J('campCornerNow(C, "fleet").open') > 0 && J('C.sel') === 'pilot:red');
@@ -213,26 +212,59 @@ check('7 the hostiles panel keeps the game\'s own rule: hostiles far from a scou
 g.run(`CAMP.flags.pagehud = false;`);
 check('6 the contact sentence is a hide of the page HUD (contact) and nothing else changed in the list', J('CAMP_PAGEHUD.hides.includes("contact")') === true && J('campPageHudHides("contact")') === false);
 
-// 8, 9, 10 (the second note of the card, Troy, 25 Nov 2026)
-g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.S = __scene(); campPageHudSync(S, 20000);`);
-check('8 Shields and Hull sit side by side on ONE row: both meters are in the same row (ph-meters), each a half with its icon, its word and its meter', J(`(() => { const R = S.pageHud, row = x => x.fill.parentNode.parentNode.parentNode; return row(R.ship.shield) === row(R.ship.hull) && /ph-meters/.test(row(R.ship.shield)._cls) && R.ship.shield.fill.parentNode.parentNode !== R.ship.hull.fill.parentNode.parentNode && R.ship.shield.lab._text === 'Shields' && R.ship.hull.lab._text === 'Hull'; })()`) === true && /\.ph-meters\s*\{[^}]*display:\s*flex/.test(css2) && /\.ph-half\s*\{[^}]*flex:\s*1/.test(css2));
-const rest = J(`(() => { const R = S.pageHud; return { e: R.ship.ekey._text, eShown: R.ship.ekey.parentNode === R.ship.plBox, friendIn: R.friend.el.parentNode === R.ship.el, friendOn: R.friend.el._ph.display !== 'none', rows: R.ship.el.children.map(c => c._cls), foesOn: R.foes.el._ph.display !== 'none' }; })()`);
-check('9 at rest the left panel is two rows under its title: the meters, then the pilots with the W chip first and the E chip at the end, always shown; no friendlies panel (the friend\'s block is hidden)', rest.e === J(`campCornerCap('friendlies')`) && rest.e !== '' && rest.eShown && rest.friendIn && !rest.friendOn && rest.rows.map(c => c.split(' ')[0]).join() === 'ph-row,ph-meters,ph-pilots,ph-friend', JSON.stringify(rest));
-check('9 the E chip is the key table\'s: a key moved there moves the chip', (g.run(`window.__k = CAMP_KEYS.friendlies.k; CAMP_KEYS.friendlies.k = 'Y'; campPageHudSync(S, 20500);`), J('S.pageHud.ship.ekey._text')) === 'Y' && (g.run(`CAMP_KEYS.friendlies.k = __k; campPageHudSync(S, 21000);`), J('S.pageHud.ship.ekey._text')) === J(`campCornerCap('friendlies')`));
-check('10 nothing picked: no Enter hint on the hostiles panel or in the friend\'s block', J('campPageModel(C).foes') === null && J('campPageModel(C).friend') === null && J('campPageHudEnter(C, "attack")') === null && J('campPageHudEnter(C, "guard")') === null);
-g.run(`window.RA = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); campTgtNearest(C); campPageHudSync(S, 22000);`);
+// the card space-game-page-hud-3, option D of docs/hud-mock-2.html: the left panel in two thin rows, the rings of the pilots and of the ships you protect
+console.log('I. option D (card space-game-page-hud-3, Troy, 25 Nov 2026)');
+g.run(`CAMP.flags.pagehud = true; CAMP.flags.pagedigit = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.P = campPanelNew(); campTcornerLook(P, 0); window.S = __scene(); campPageHudSync(S, 20000);`);
+const D1 = J(`(() => { const R = S.pageHud, kids = x => x.children.map(c => c._cls.split(' ')[0]); return { top: kids(R.ship.el), row1: kids(R.ship.el.children[0]), row2: kids(R.fleet.el), cruiser: R.ship.el.children.length, label: R.ship.label }; })()`);
+check('8 option D: the left panel is two thin rows with a hairline between: row 1 the Q chip with the Shields and Hull meters side by side (each a word and a track); row 2 the W chip, the pilots\' rings, a divider, the E chip, the ships\' rings, and the Enter hint at its end', D1.top.join() === 'ph-row,ph-hr,ph-row' && D1.row1.join() === 'ph-k,ph-m,ph-m' && D1.row2.join() === 'ph-k,ph-grp,ph-sep,ph-k,ph-grp,ph-g' && D1.label === undefined, JSON.stringify(D1));
+check('8 the style: the rows and the rings are the mock\'s (the small ring 1.55em, the open one 2.4em; the digit and the name only while open; a divider between the groups)', /\.ph-g\s*\{[^}]*--s:\s*1\.55em/.test(css2) && /\.ph-g\.open\s*\{[^}]*--s:\s*2\.4em/.test(css2) && /\.ph-g:not\(\.open\) small\s*\{\s*display:\s*none/.test(css2) && /\.ph-sep\s*\{[^}]*width:\s*1px/.test(css2) && /\.ph-ship\s*\{[^}]*flex-direction:\s*column/.test(css2));
+const ring0 = J(`(() => { const R = S.pageHud; return { pil: R.fleet.pilots.map(g => [g.el._cls, g.text._text, g.under._text]), pbox: R.fleet.pBox._cls, ships: R.fleet.ships.length, sbox: R.fleet.sBox._cls, e: R.fleet.ekey._text, w: R.fleet.pkey._text }; })()`);
+check('9 at rest: three small pilot rings with their digits inside (Troy: the key is always on the screen) and nothing under them, the W and E chips from the table; the rings are not open', ring0.pil.map(x => x[1]).join('') === '123' && ring0.pil.every(x => x[2] === '' && !/open/.test(x[0])) && !/open/.test(ring0.pbox) && !/open/.test(ring0.sbox) && ring0.w === J(`campCornerCap('who')`) && ring0.e === J(`campCornerCap('friendlies')`) && ring0.e !== ring0.w);
+check('9 the chips follow the key table: a key moved there moves the chip', (g.run(`window.__k = CAMP_KEYS.friendlies.k; CAMP_KEYS.friendlies.k = 'Y'; campPageHudSync(S, 20500);`), J('S.pageHud.fleet.ekey._text')) === 'Y' && (g.run(`CAMP_KEYS.friendlies.k = __k; campPageHudSync(S, 21000);`), J('S.pageHud.fleet.ekey._text')) === J(`campCornerCap('friendlies')`));
+// W open
+g.run(`campTcornerLook(P, 22000); campPanelKey(P, C, 'KeyW', 22000); campPageHudSync(S, 22200);`);
+const wopen = J(`(() => { const R = S.pageHud; return { m: campPageModel(C).pilots.open, e: campPageModel(C).friends.open, pbox: R.fleet.pBox._cls, sbox: R.fleet.sBox._cls, under: R.fleet.pilots.map(g => g.under._text), cls: R.fleet.pilots.map(g => g.el._cls) }; })()`);
+check('9 W open: the pilots\' rings grow in place (the group is open) and each shows its name under it, the digit being inside; the first tap of W picks all, so all three are outlined; the ships\' rings stay small', wopen.m === true && wopen.e === false && /open/.test(wopen.pbox) && !/open/.test(wopen.sbox) && wopen.under.join() === 'Wedge,Kara,Apollo' && wopen.cls.every(c => /open/.test(c)), JSON.stringify(wopen));
+g.run(`campPanelKey(P, C, 'KeyW', 22300); campPageHudSync(S, 22500);`);
+check('9 tapping W again steps who and keeps it open: the pick moves (one outlined ring)', J('campPageModel(C).pilots.open') === true && J('S.pageHud.fleet.pilots.filter(g => /pick/.test(g.el._cls)).length') === 1);
+g.run(`window.__d = campPanelKey(P, C, 'Digit2', 22600); campPageHudSync(S, 22800);`);
+check('9 W then a digit picks and closes the menu: the rings are small again, the picked one outlined', J('campPageModel(C).pilots.open') === false && !/open/.test(J('S.pageHud.fleet.pBox._cls')) && J('S.pageHud.fleet.pilots.map(g => /pick/.test(g.el._cls)).join()') === 'false,true,false');
+// E open
+g.run(`campPanelClose(P); campPanelKey(P, C, 'KeyE', 23000); campPageHudSync(S, 23200);`);
+const eopen = J(`(() => { const R = S.pageHud, M = campPageModel(C); return { e: M.friends.open, w: M.pilots.open, n: M.friends.items.length, under: R.fleet.ships.map(g => g.under._text), sbox: R.fleet.sBox._cls, pbox: R.fleet.pBox._cls, ent: R.fleet.ent.el._ph.display, enter: M.friends.enter }; })()`);
+check('9 E open: the ships\' rings grow in place with their digit and name under them, the pilots stay small, and the Enter chip with Guard is at the end of the row (E picks the first ship at once)', eopen.e === true && eopen.w === false && eopen.n >= 1 && /open/.test(eopen.sbox) && !/open/.test(eopen.pbox) && eopen.under[0] === J('campFriNumbered(C)[0].name') && eopen.ent === '' && eopen.enter && eopen.enter.word === 'Guard', JSON.stringify(eopen));
+check('9 the ring\'s inside is ONE switch: the digit now (Troy, 25 Nov), the initial with the flag pagedigit off (then "1 Wedge" is under the ring while it is open)', J('S.pageHud.fleet.pilots.map(g => g.text._text).join("")') === '123' && (g.run(`CAMP.flags.pagedigit = false; campPageHudSync(S, 24500);`), J('S.pageHud.fleet.pilots.map(g => g.text._text).join("")')) === 'WKA' && J('campPageModel(C).pilots.items.map(p => p.under).join()') === '1 Wedge,2 Kara,3 Apollo' && (g.run(`CAMP.flags.pagedigit = true; campPageHudSync(S, 24800);`), J('S.pageHud.fleet.pilots.map(g => g.text._text).join("")')) === '123');
+check('9 a row of the N panel flips it (a flag with words)', J(`campTuneRow('pagedigit').kind`) === 'flag' && J(`campTuneRow('pagedigit').flag`) === 'pagedigit' && J(`uiText('camp.ui.tune.row.pagedigit')`) === 'Page HUD: digits in the rings' && J('CAMP.flags.pagedigit') === true);
+g.run(`campPanelClose(P);`);
+// the hull percentage
+g.run(`C.carrier.hp = C.carrier.maxHp * 0.82; campPageHudSync(S, 25000);`);
+check('8 the percentage shows beside the word ONLY below 100 (the hull at 82), and goes at once at full', J('S.pageHud.ship.hull.pct._text') === '82%' && J('S.pageHud.ship.shield.pct._text') === '' && (g.run(`C.carrier.hp = C.carrier.maxHp; campPageHudSync(S, 25500);`), J('S.pageHud.ship.hull.pct._text')) === '');
+// dark and dim
+g.run(`window.__sh = campFriNumbered(C)[0]; window.__shu = __sh.unit; __shu.hp = 0; window.__pu1 = campSelList(C).find(e => e.id === 'pilot:red').unit; __pu1.hp = 0; campPageHudSync(S, 26000);`);
+const dk = J(`(() => { const R = S.pageHud; return { ship: R.fleet.ships[0].el._cls, num: campFriNumbered(C)[0].number, alive: campFriNumbered(C)[0].alive, pil: R.fleet.pilots[0].el._cls }; })()`);
+check('9 a ship you protect that is lost is a dark ring and keeps its number; a pilot at rest is dim (never dark): the two meanings stay apart', /dead/.test(dk.ship) && dk.alive === false && dk.num === 1 && /dim/.test(dk.pil) && !/dead/.test(dk.pil), JSON.stringify(dk));
+g.run(`__pu1.hp = __pu1.maxHp; __shu.hp = __shu.maxHp || 100;`);
+// 10 the Enter hint
+g.run(`C.fsel = ''; C.tgt = ''; campPageHudSync(S, 27000);`);
+check('10 nothing picked: no Enter hint on the hostiles panel or at the end of the fleet row', J('campPageModel(C).foes') === null && J('campPageModel(C).friends.enter') === null && J('S.pageHud.fleet.ent.el._ph.display') === 'none' && J('campPageHudEnter(C, "attack")') === null && J('campPageHudEnter(C, "guard")') === null);
+g.run(`window.RA = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); campTgtNearest(C); campPageHudSync(S, 28000);`);
 const en1 = J('campPageModel(C).foes.enter');
-check('10 a hostile picked: the hostiles panel shows the Enter chip (the key table\'s) with the word Attack (the order model\'s verb)', en1 && en1.key === J(`campCornerCap('order')`) && en1.key !== '' && en1.word === 'Attack' && J('S.pageHud.foes.ent.key._text') === en1.key && J('S.pageHud.foes.ent.word._text') === 'Attack' && J('S.pageHud.foes.ent.el._ph.display') === '');
-g.run(`C.tgt = ''; campPageHudSync(S, 23000);`);
+check('10 a hostile picked: the hostiles panel shows the Enter chip (the key table\'s) with the word Attack (the order model\'s verb)', en1 && en1.key === J(`campCornerCap('order')`) && en1.key !== '' && en1.word === 'Attack' && J('S.pageHud.foes.ent.key._text') === en1.key && J('S.pageHud.foes.ent.word._text') === 'Attack' && J('S.pageHud.foes.ent.el._ph.display') === '' && J('S.pageHud.fleet.ent.el._ph.display') === 'none');
+g.run(`C.tgt = ''; campPageHudSync(S, 29000);`);
 check('10 the hostile let go (nothing picked): the hint is gone from the panel', J('campPageModel(C).foes.enter') === null && J('S.pageHud.foes.ent.el._ph.display') === 'none');
-g.run(`window.WD = campFriList(C).find(e => e.kind === 'ward'); C.fsel = WD.id; campPageHudSync(S, 24000);`);
-const en2 = J('campPageModel(C).friend.enter');
-check('10 a friendly picked: its details (under the pilots) show the Enter chip with the word Guard, and the hostiles panel has none', en2 && en2.word === 'Guard' && en2.key === J(`campCornerCap('order')`) && J('S.pageHud.friend.ent.word._text') === 'Guard' && J('S.pageHud.friend.el._ph.display') === '' && J('campPageModel(C).foes.enter') === null);
-check('10 the chip is the key table\'s: Enter moved there moves the chip', (g.run(`window.__k = CAMP_KEYS.order.k; CAMP_KEYS.order.k = 'Z';`), J('campPageModel(C).friend.enter.key')) === 'Z' && (g.run(`CAMP_KEYS.order.k = __k;`), J('campPageModel(C).friend.enter.key')) === J(`campCornerCap('order')`));
+g.run(`campFriJump(C, 1, 'key'); campPageHudSync(S, 30000);`);
+const en2 = J('campPageModel(C).friends.enter');
+check('10 a friendly picked (E then 1): its ring is outlined and the Enter chip with Guard sits at the end of the fleet row (it stays after the pick closes), and the hostiles panel has none', en2 && en2.word === 'Guard' && en2.key === J(`campCornerCap('order')`) && J('S.pageHud.fleet.ent.word._text') === 'Guard' && J('S.pageHud.fleet.ent.el._ph.display') === '' && J('S.pageHud.fleet.ships.filter(g => /pick/.test(g.el._cls)).length') === 1 && J('campPageModel(C).foes.enter') === null);
+check('10 the chip is the key table\'s: Enter moved there moves the chip', (g.run(`window.__k = CAMP_KEYS.order.k; CAMP_KEYS.order.k = 'Z';`), J('campPageModel(C).friends.enter.key')) === 'Z' && (g.run(`CAMP_KEYS.order.k = __k;`), J('campPageModel(C).friends.enter.key')) === J(`campCornerCap('order')`));
 const pj = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
 check('10 the word and the chip are not written in the HUD: the verb is what campSelOrder says (a dry run, no order is given), the words are text keys', /campSelOrder\(C, 'engage', 'key', true\)/.test(pj) && !/['"](Attack|Guard|Enter)['"]/.test(pj) && J(`uiText('camp.corner.enter.attack')`) === 'Attack' && J(`uiText('camp.corner.enter.guard')`) === 'Guard');
-g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = '';`);
-check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 30000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
+// the canvas box of the friendlies
+g.run(`CAMP.flags.pagehud = false; campCornerKey(C, 'KeyE'); window.__off = campCornerNow(C, 'friendlies');`);
+const offBox = J('__off.open'), offItems = J('__off.items.length');
+g.run(`CAMP.flags.pagehud = true; window.__on = campCornerNow(C, 'friendlies'); window.__ow = (campCornerKey(C, 'KeyW'), campCornerNow(C, 'fleet'));`);
+check('4 the canvas friend details box (the ship\'s picture) is hidden while the page HUD is on (the rings replace it), drawn as it was with the switch off; the other corners are not touched', offBox > 0 && offItems > 0 && J('__on.open') === 0 && J('__on.items.length') === 0 && J('__ow.open') > 0 && J('__ow.items.length') > 0 && J('campCornerBoxHidden(campCornerDef("friendlies"))') === true && J('campCornerBoxHidden(campCornerDef("hostiles"))') === false);
+g.run(`CAMP.flags.pagehud = false; C.fsel = ''; C.tgt = ''; CAMP.flags.pagedigit = true;`);
+check('the canvas HUD is as it was with the switch off: no page HUD element, the corners show their rows again', J('(() => { campPageHudSync(S, 40000); return !S.pageHud && campCornerNow(C, "fleet").rowHidden === false; })()') === true);
 
 console.log('E. the rules');
 const css = src('src/camppagehud.css'), html = src('index.html'), scene = src('src/campaignscene.js');

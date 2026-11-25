@@ -47,11 +47,12 @@ function campCornerStrength(C, id) { // 0..1: full for the time it was opened fo
   if (age < 0) return 0; return age < o.ms ? 1 : age < o.ms + K.fade ? 1 - (age - o.ms) / K.fade : 0;
 }
 // the strength the details have NOW: its own, unless the corner is shut (d.block) or another corner of the same side was opened later (one at a time on a side: the last one to open keeps the room)
+const campCornerBoxHidden = d => !!d && typeof campPageHudHides === 'function' && campPageHudHides('box:' + d.id); // the page HUD has a corner's details box (the friendlies' picture: card space-game-page-hud-3, its rings replace it): the canvas draws none
 function campCornerShown(C, d) {
-  const s0 = campCornerStrength(C, d.id); if (!(s0 > 0) || (d.block && d.block(C))) return 0;
+  const s0 = campCornerStrength(C, d.id); if (!(s0 > 0) || (d.block && d.block(C)) || campCornerBoxHidden(d)) return 0;
   const st = campCornerState(C), me = st.open[d.id], side = d.at.charAt(1);
   for (let i = 0; i < CAMP_CORNERS.length; i++) {
-    const o = CAMP_CORNERS[i]; if (o.id === d.id || o.at.charAt(1) !== side || !(campCornerStrength(C, o.id) > 0) || (o.block && o.block(C))) continue;
+    const o = CAMP_CORNERS[i]; if (o.id === d.id || o.at.charAt(1) !== side || !(campCornerStrength(C, o.id) > 0) || (o.block && o.block(C)) || campCornerBoxHidden(o)) continue;
     const w = st.open[o.id]; if (w.at > me.at || (w.at === me.at && i < CAMP_CORNERS.indexOf(d))) return 0;
   }
   return s0;
