@@ -609,7 +609,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, H = this.hud, ids = ['wave', 'obj', 'earth', 'repair', 'post'];
     if (typeof campHudFlow !== 'function') return;
     const top = this.pageHudStack > 0 ? this.pageHudStack + CAMP.hud.pageGap : 0, gh = top > 0; // a goal panel of the page HUD is up (pageHudStack, src/camppagehud.js): it has the wave and goal lines: they take no place in the column, and what is left of it starts under that panel (card space-game-goal-panel-hides-text)
-    const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
+    const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && H[id].visible !== false && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
     if (top > 0 && !items.some(i => i.show)) F.bottom = this.pageHudStack; // nothing left in the column: it ends where the panel does, as it did
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
@@ -621,12 +621,13 @@ class Campaign extends Phaser.Scene {
   // where everything stacked at the top centre ends: the column (col), the mothership's name and bar 2 and 20 px under it (the bar is 12 high), or the rival's bars and its phase line under it (src/camprivaldraw.js)
   hudStackBottom(col) {
     const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
-    if (H.mother && H.mother.text) b = Math.max(b, col + 20 + 12);
+    if (H.mother && H.mother.text && this.pageHudOn !== true) b = Math.max(b, col + 20 + 12); // (the mothership's bar is in the hostiles panel while the page HUD is up)
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
     return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
   toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
+  toastPanel(msg, color, hold) { return typeof campPageHudToast === 'function' && campPageHudToast(this, msg, color, hold); } // the page HUD's radio panel takes the message when it is up (src/common.js toast asks first; src/camppagehud.js; card space-game-b3-c-radio-panel)
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
@@ -635,7 +636,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campCruiserHudPaint === 'function') campCruiserHudPaint(g, this.hud, C); // the plate, the shield and hull bars and the ore line at the top left (src/campcruiserhud.js)
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
-    if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
+    if (m && this.pageHudOn !== true) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
     const waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
