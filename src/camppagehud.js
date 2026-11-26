@@ -66,10 +66,15 @@ function campPageHudBoost(C) {
   const b = typeof campBoostStatus === 'function' ? campBoostStatus(C) : { frac: 1, on: false, locked: false };
   return { frac: b.frac, pct: Math.max(0, Math.min(99, Math.floor(b.frac * 100))), show: b.frac < 1, word: uiText('camp.corner.m.boost'), on: !!b.on, locked: !!b.locked, full: b.frac >= 1, pctText: b.locked ? uiText('camp.corner.m.refilling') : undefined };
 }
+// the cruiser's speed, a small readout under the Boost row (card space-game-cruiser-all-long-haul-effects; the Long Haul's speed dial, hud.js: SPEED 472): a word and the number in px/s, shown while the cruiser moves, brighter above its plain top speed (boosting or on a burn)
+function campPageHudSpeed(C) {
+  const c = typeof campFeelShip === 'function' ? campFeelShip(C) : C && C.carrier, sp = c ? Math.hypot(c.vx || 0, c.vy || 0) : 0, top = c && c.kind !== 'carrier' && c.vmax > 0 ? c.vmax : typeof CAMP === 'object' && CAMP.carrier ? CAMP.carrier.speed : 0; // (the ship the player flies; its plain top speed: the cruiser's without the boost)
+  return { word: uiText('camp.corner.m.speed'), n: Math.round(sp), show: sp >= 1, over: top > 0 && sp > top * 1.02 };
+}
 function campPageModel(C, view) {
   if (!C || !C.carrier) return null;
   const S = campCruiserStatus(C);
-  const ship = { key: campCornerCap('zoomreset'), shield: campPageHudBar(S.shield, 'shield'), hull: campPageHudBar(S.hull, 'hull'), boost: campPageHudBoost(C) };
+  const ship = { key: campCornerCap('zoomreset'), shield: campPageHudBar(S.shield, 'shield'), hull: campPageHudBar(S.hull, 'hull'), boost: campPageHudBoost(C), speed: campPageHudSpeed(C) };
   const rows = typeof campPanelDef === 'function' && campPanelDef('fleet') ? campPanelList(C, 'fleet').filter(r => r.who && r.who !== 'all') : [], stops = typeof campSelList === 'function' ? campSelList(C) : [], now = typeof campSelNow === 'function' ? campSelNow(C) : null;
   const items = rows.map((r, i) => {
     const e = stops.find(x => x.id === r.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, name = e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), frac = up ? campTdispHull(u).share : 0;
@@ -293,6 +298,7 @@ function campPageHudBuild(doc) {
   ['shield', 'hull'].forEach(id => { R.ship[id] = campPageHudMeterEl(doc, top, id); });
   const br = campPageHudEl(doc, 'div', 'ph-row ph-boostrow', ship), bw = campPageHudEl(doc, 'span', 'ph-lab', br), bt = campPageHudEl(doc, 'div', 'ph-meter', br); // Boost: a word, a thin track, a percentage under 100
   R.ship.boost = { el: br, word: bw, pct: campPageHudEl(doc, 'b', 'ph-lab', br), fill: campPageHudEl(doc, 'i', 'ph-fill ph-boost', bt) };
+  const sr = campPageHudEl(doc, 'div', 'ph-row ph-speedrow', ship); R.ship.speed = { el: sr, word: campPageHudEl(doc, 'span', 'ph-lab', sr), n: campPageHudEl(doc, 'b', 'ph-lab ph-sp', sr) }; // Speed: the word and the number (the Long Haul's dial)
   campPageHudEl(doc, 'div', 'ph-hr', ship);
   const fl = campPageHudEl(doc, 'div', 'ph-row ph-fleet', ship); R.fleet = { el: fl, pilots: [], ships: [] };
   R.fleet.pkey = campPageHudEl(doc, 'span', 'ph-k', fl); R.fleet.pBox = campPageHudEl(doc, 'div', 'ph-grp', fl); campPageHudEl(doc, 'span', 'ph-sep', fl);
@@ -404,6 +410,7 @@ function campPageHudPaint(R, M, doc) {
   set(S.key, 'text', M.ship.key);
   ['shield', 'hull'].forEach(id => campPageHudPaintMeter(S[id], M.ship[id]));
   if (S.boost && M.ship.boost) { const b = M.ship.boost; campPageHudPaintMeter(S.boost, b); set(S.boost.fill, 'cls', 'ph-fill ph-boost' + (b.on ? ' on' : b.locked ? ' dry' : b.full ? ' full' : '')); set(S.boost.el, 'cls', 'ph-row ph-boostrow' + (b.locked ? ' dry' : '')); } // the boost store: its fill is bright white while it boosts and when it is full, and while it is locked the whole row is dim, the fill the player's pale blue at low strength and the word REFILLING where the percentage goes (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour)
+  if (S.speed && M.ship.speed) { const sp = M.ship.speed; set(S.speed.word, 'text', sp.word); set(S.speed.n, 'text', String(sp.n)); set(S.speed.el, 'display', sp.show ? '' : 'none'); set(S.speed.el, 'cls', 'ph-row ph-speedrow' + (sp.over ? ' on' : '')); }
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);
   campPageHudPaintRings(doc, F2.pBox, F2.pilots, M.pilots); campPageHudPaintRings(doc, F2.sBox, F2.ships, M.friends); campPageHudPaintEnter(F2.ent, M.friends.enter);
 }
