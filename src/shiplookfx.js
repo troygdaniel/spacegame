@@ -148,11 +148,13 @@ function slookFxFrame(scene) { // once a frame, after the ships' sprites are in 
   const on = typeof slookOn === 'function' && slookOn();
   for (let i = S.kills.length - 1; i >= 0; i--) { const k = S.kills[i]; if (!on || !slookKillPlace(k, C.t - k.born)) { if (!on) slookKillPlace(k, Infinity); S.kills.splice(i, 1); S.free.push(k); } }
   const trails = S.trails, alive = {};
-  if (!on) { Object.keys(trails).forEach(id => trails[id].setVisible(false)); (S.flames || []).forEach(f => f.setVisible(false)); return; }
+  if (!on) { Object.keys(trails).forEach(id => trails[id].setVisible(false)); (S.flames || []).forEach(f => f.setVisible(false)); if (typeof campFeelHide === 'function') campFeelHide(S); return; }
   slookFxTextures(scene); const prot = typeof campConvoyShips === 'function' ? campConvoyShips(C) : [], map = !!scene.mp;
   C.ships.forEach(u => {
     const sp = scene.sp && scene.sp[u.id]; if (!sp) return; alive[u.id] = true;
     if (u.kind === 'carrier') { // the cruiser has real flames, one for each engine, and no plain trail (card space-game-cruiser-boost-flames)
+      if (typeof campFeelDraw === 'function' && campFeelDraw(scene, S, u, sp, C)) { (S.flames || []).forEach(f => f.setVisible(false)); const t1 = trails[u.id]; if (t1) t1.setVisible(false); return; } // the flight feel (card space-game-cruiser-long-haul-feel, src/campfeel.js): ribbons from both engines and flickering layered flames in place of the steady streaks
+      if (typeof campFeelHide === 'function') campFeelHide(S);
       const fs = u.hp > 0 && sp.visible !== false && typeof campFlameState === 'function' ? slookFlameSpecs(u, sp.displayWidth, campFlameState(C)) : [], fl = S.flames || (S.flames = []);
       fs.forEach((e, k) => { let im = fl[k]; if (!im) im = fl[k] = scene.add.image(e.x, e.y, e.key).setOrigin(1, 0.5); im.setDepth(SLOOKFX.flame.depth).setPosition(e.x, e.y).setRotation(e.rot).setDisplaySize(e.len, e.wid).setAlpha(e.alpha).setVisible(!map); });
       for (let k = fs.length; k < fl.length; k++) fl[k].setVisible(false);
