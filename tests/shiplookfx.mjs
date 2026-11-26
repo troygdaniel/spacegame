@@ -56,7 +56,7 @@ console.log('A. shots');
   const amber = [0xffa83a, 0xf0a03c, 0xffa040, 0xffd37a, 0xffc857, 0xff4d6d];
   check('and no bolt has an amber or a red in it', ['slook-shot-own', 'slook-shot-foe', 'slook-shot-neutral'].every(k => bk[k].fills.every(f => amber.indexOf(f[0]) < 0)));
   const nb = J('Object.keys(S.baked).length'); g.run('slookFxTextures(S);');
-  check('baked once: asking again makes nothing', J('Object.keys(S.baked).length') === nb && nb === 13, nb);
+  check('baked once: asking again makes nothing', J('Object.keys(S.baked).length') === nb && nb === 14, nb); // (13 and the cruiser's engine flame, card space-game-cruiser-boost-flames)
   check('the textures: 3 bolts, the dart and its tail, 4 trails (friend, protect, foe, neutral), 2 rings, the core and the shard', ['slook-shot-own', 'slook-shot-foe', 'slook-shot-neutral', 'slook-missile', 'slook-missile-tail', 'slook-trail-friend', 'slook-trail-protect', 'slook-trail-foe', 'slook-trail-neutral', 'slook-ring-w', 'slook-ring-p', 'slook-core', 'slook-shard'].every(k => bk[k]), Object.keys(bk).join());
 }
 

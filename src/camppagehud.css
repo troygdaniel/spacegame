@@ -17,6 +17,13 @@
 .ph-meter { flex: 1; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); overflow: hidden; }
 .ph-fill { display: block; height: 100%; border-radius: 1em; }
 .ph-fill.ph-shield { background: var(--ph-shield); }
+.ph-boostrow { gap: .7em; }
+.ph-boostrow .ph-lab { width: 4.2em; flex: none; }
+.ph-boostrow .ph-meter { height: .26em; }
+.ph-boostrow b.ph-lab { width: 2.4em; text-align: right; }
+.ph-fill.ph-boost { background: #cfe6ff; opacity: .85; transition: opacity .12s; }
+.ph-fill.ph-boost.on { background: #ffffff; opacity: 1; box-shadow: 0 0 .55em var(--ph-shield); }
+.ph-fill.ph-boost.dry { background: var(--ph-warn); opacity: .9; }
 .ph-fill.ph-hull { background: var(--ph-good); }
 .ph-icw { display: inline-flex; flex: none; }
 .ph-ic { width: 1.05em; height: 1.05em; flex: none; }

@@ -46,6 +46,17 @@ const CAMP = {
     patrol: { len: 38, hit: 12 }, miner: { len: 36, hit: 14 },                         // the neutral ships
     tboat: { len: 44, hit: 16 }, lancer: { len: 44, hit: 16 }                          // the torpedo boats (card space-game-torpedo-boats): the pirates' and the aliens'
   },
+  boost: {                                 // THE CRUISER'S BOOST (card space-game-cruiser-boost-flames; Troy, 26 Nov 2026: he loves the Long Haul ship's bursts of thrust, "take the feel, not the numbers" for a heavy ship; modelled on the Long Haul's src/boost.js BOOST: drain, pause, back). Hold Shift WITH thrust: the top speed and the thrust go up while an energy store drains; empty locks the boost until a quarter is back; the store refills after a pause. Plain thrust, turn and top speed are untouched when it is not held (src/campboost.js)
+    on: true,                              // the boost exists (false: none, as before the card)
+    max: 100,                              // the energy store, in units
+    drain: 25,                             // units a second while boosting: four seconds from full (the Long Haul's own drain)
+    pause: 1000,                           // ms after boosting before the store starts to refill (as the Long Haul's)
+    regen: 14,                             // units a second refilling: about seven seconds from empty (the Long Haul's is quicker: a heavy ship takes longer)
+    back: 0.25,                            // empty locks the boost until this share of the store is back (as the Long Haul's)
+    speed: 1.57,                           // the top speed times this while boosting: 210 to about 330 px/s
+    accel: 2.4,                            // the thrust times this while boosting: from the cruise at 210 the top, 330, is reached in about half a second, from rest in about a second (a burst, as the Long Haul's, on a heavy ship)
+    fall: 150                              // px/s each second the top speed comes down after the boost (the Long Haul's is 900: a heavy ship takes about 0.8 s to settle), so letting go or running dry is a fade, not a wall
+  },
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
     speed: 210,                            // px/s, top speed: big, slow, heavy
@@ -854,7 +865,7 @@ function campNew(level, techs, opts) {
   const L = campMissionRow(level, opts.mission); if (!L) return null;
   const C = {
     level, mission: L.mission, L, flags: {}, arrivedAt: campHere(level, L) ? 0 : null, hpS: CAMP.alien.hpScale * (L.hpScale || 1), dmgS: CAMP.alien.damageScale * (L.dmgScale || 1), pace: campPaceMult(opts.pace), fightOn: campPaceIsMode(opts.pace), fightAt: 0, shot: Math.pow(campPaceMult(opts.pace), CAMP.pace.shots), via: opts.via || 'menu', t: 0, rng: campRng(opts.seed == null ? 1 : opts.seed), god: !!opts.god, nextId: 1, ships: [], by: {}, bullets: [], events: [],
-    input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false },
+    input: { turn: 0, thrust: 0, brake: false, fire: false, blink: false, boost: false },
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], mends: [],
@@ -1290,11 +1301,11 @@ function campCarrier(C, dt) {
   const c = C.carrier, k = CAMP.carrier, inp = C.input; if (c.hp <= 0) return;
   const fx = campPowerFx(C); // the engines' power: 1 at the default, so the numbers below are today's
   c.rot += (inp.turn || 0) * k.turn * fx.turn * dt;
-  const th = Math.max(0, Math.min(1, inp.thrust || 0));
+  const th = Math.max(0, Math.min(1, inp.thrust || 0)), bst = typeof campBoostStep === 'function' ? campBoostStep(C, th, dt) : { top: 1, acc: 1 }; // the boost (src/campboost.js): both are 1 unless Shift is held with thrust and the store has energy
   const f = (C.nav && C.nav.on && C.nav.fast ? (C.nav.burn || CAMP.nav.fast) : 1) * (campHas(C, 'overdrive') ? CAMP.tech.overdrive.speed : 1); // the map's Fast: a burn, while the autopilot flies (campNavGo: N.burn, from campNavBurn)
-  c.vx += Math.cos(c.rot) * k.accel * fx.accel * f * th * dt; c.vy += Math.sin(c.rot) * k.accel * fx.accel * f * th * dt;
+  c.vx += Math.cos(c.rot) * k.accel * fx.accel * f * bst.acc * th * dt; c.vy += Math.sin(c.rot) * k.accel * fx.accel * f * bst.acc * th * dt;
   const keep = Math.pow(inp.brake ? k.brakeDrag : k.drag, dt); c.vx *= keep; c.vy *= keep;
-  const top = k.speed * fx.speed * f, sp = Math.hypot(c.vx, c.vy); if (sp > top) { c.vx *= top / sp; c.vy *= top / sp; }
+  const top = k.speed * fx.speed * f * bst.top, sp = Math.hypot(c.vx, c.vy); if (sp > top) { c.vx *= top / sp; c.vy *= top / sp; }
   c.x += c.vx * dt; c.y += c.vy * dt;
   if (inp.blink && campHas(C, 'blink') && C.t - C.blinkAt >= campBlinkCooldown(C)) { C.blinkAt = C.t; c.x += Math.cos(c.rot) * CAMP.tech.blink.dist; c.y += Math.sin(c.rot) * CAMP.tech.blink.dist; C.events.push({ type: 'blink', x: c.x, y: c.y }); }
   inp.blink = false;

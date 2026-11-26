@@ -103,7 +103,7 @@ class Campaign extends Phaser.Scene {
     if (this.camp.relic) this.relicLabel = label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), typeof campWorldOn === 'function' && campWorldOn() ? '#e9b872' : '#7fe9ff', 14); // gold with the world look on: the relic is the goal
     this.sync();
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
-    this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE');
+    this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE,SHIFT'); // SHIFT: the cruiser's boost (src/campboost.js)
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.hudBack = this.add.rectangle(W / 2 - CAMP.hud.plate.w / 2, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the HUD column at the top centre (it was at the top left until card space-game-layout-hud): a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
     this.keysBack = this.add.rectangle(W / 2, H - 35, W, 26, 0x02060d, 0.75).setScrollFactor(0).setDepth(99); // a thin strip under the bottom key line: a ship or a rock drawn through 'Tab Map  H Keys' was hard to read (card space-game-campaign-panels-ui)
@@ -448,10 +448,11 @@ class Campaign extends Phaser.Scene {
       const wheel = !this.mp && !listed && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake)
       if (wheel && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip
       if (!(C.nav && C.nav.on)) {
-        if (this.mp || listed) { inp.turn = 0; inp.thrust = 0; inp.brake = false; }
+        if (this.mp || listed) { inp.turn = 0; inp.thrust = 0; inp.brake = false; inp.boost = false; }
         else {
           inp.turn = (k.RIGHT.isDown ? 1 : 0) - (k.LEFT.isDown ? 1 : 0);
           inp.thrust = k.UP.isDown ? 1 : 0; inp.brake = k.DOWN.isDown;
+          inp.boost = !typing && !!k.SHIFT && k.SHIFT.isDown; // Shift with thrust is the boost (the key table's `boost`)
         }
       }
       inp.fire = k.SPACE.isDown;
@@ -501,6 +502,7 @@ class Campaign extends Phaser.Scene {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
     if (e.type === 'say') this.radioShow(campSayOffer(this.sayR || (this.sayR = campSayNew()), (this.time && this.time.now) || 0, { text: uiText(e.key, e.vars), keep: campSayKeep(e.key) })); // a radio line: shown at once, or after the kept line that is up (src/campsayhold.js)
+    else if (e.type === 'boost') { if (e.stage === 'dry' && typeof sfx === 'function') sfx('empty'); } // the store ran dry: the boost is locked until a quarter is back (the Long Haul's own dry click)
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)
     else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'rival') campRivalEvent(this, e); // a rival's phases: the warning, the broadside, the ram (src/camprivaldraw.js)

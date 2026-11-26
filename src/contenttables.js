@@ -1243,6 +1243,7 @@ const UI_TEXT = {
   'camp.corner.friendlies': 'FRIENDLIES',
   'camp.corner.bay': 'in the bay',
   'camp.corner.m.shield': 'Shields',
+  'camp.corner.m.boost': 'Boost',
   'camp.corner.m.hull': 'Hull',
   'camp.corner.m.ore': 'Ore',
   'camp.corner.m.missiles': 'Missiles',

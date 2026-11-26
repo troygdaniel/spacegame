@@ -16,6 +16,7 @@ const SLOOKFX = {
   shot: { w: 38, h: 8, core: [14, 3.1, 10, 1.8], tail: [5, 14], tailA: 0.6, glow: [[12, 0.5, 14, 7, 3, 0.12], [13, 1.5, 12, 5, 2.5, 0.22]], key: { own: 'slook-shot-own', foe: 'slook-shot-foe', neutral: 'slook-shot-neutral' } }, // the bolt: its texture (centre at the middle: the bolt's core is 10 long and 1.8 thick, its tail 9 long behind it, the glow round it), the tail's alpha, and the keys
   missile: { len: 10, w: 14, h: 8, tail: 34, tailH: 3.2, tailA: 0.8, key: 'slook-missile', tailKey: 'slook-missile-tail', depth: 5 },     // the dart (the mock's outline at 10 px) and its tail (34 long, 1.6 each side at the head, white .8 fading to 0)
   trail: { min: 25, big: 40, short: 0.5, long: 0.9, head: 0.08, start: 0.44, alpha: 0.9, w: 64, h: 16, cols: 32, stop: 0.75, white: 0.75, mid: 0.45, key: 'slook-trail-', speedK: 0.4 }, // min: px/s under which a ship has no trail; a ship longer than `big` px has the short trail, the others the long one (the mock's tl); the head is `head` of the length each side, starting `start` behind the middle
+  flame: { key: 'slook-flame', w: 96, h: 24, cols: 48, stop: 0.6, white: 0.95, mid: 0.6, engines: [[-0.5, 0.06], [-0.5, -0.06]], min: 0.04, thrust: 0.55, boost: 0.9, flare: 0.35, wid: 0.1, boostWid: 0.05, flareWid: 0.04, alpha: 0.95, depth: 4.4 }, // THE CRUISER'S ENGINE FLAMES (card space-game-cruiser-boost-flames; Troy, 26 Nov 2026): one stretched sprite for each of its two engines (engines: where each nozzle sits, in lengths of the hull from its middle: x along the nose, y to the side), white at the nozzle fading through the friend's pale blue to nothing (no gold, no amber): `thrust` lengths of the hull long at full thrust, `boost` more while boosting, `flare` more for the brief flare when thrust starts, and wider with each; under `min` lengths it is not drawn (the engines are off)
   kill: { ms: 460, r1: 15, r2: 22, core: 3.5, ring1: 0.9, ring2: 0.55, big: 3, blast: 1.6, cap: 12, depth: 7, from: 0.4, grow: 0.9, // the effect lasts `ms`; the rings are 15 and 22 px (the mock's, on the screen at the start zoom), grow from 0.4 to 1.3 times; a big kill (the cruiser, the mothership) is 3 times, a missile's blast 1.6
          shards: [[12, -9, 0.6], [-10, -13, 2.1], [-16, 6, 3.4], [7, 15, 4.6], [19, 5, 5.2]], shardOut: [0.35, 1.4], keys: { ring1: 'slook-ring-w', ring2: 'slook-ring-p', core: 'slook-core', shard: 'slook-shard' } }, // the five shards: where they end (the mock's offsets and turn), and how far out they fly from
   gun: { gold: 0xffd37a, hot: 0xffe9a0, blue: 0x6fd6ff, blueHot: 0xcfeeff },                                                  // the HUD's gold of the reach ring and the mounts (and the lighter gold of a shot's barrel and the muzzle flash), and the blue and the lighter blue they take
@@ -41,6 +42,14 @@ function slookTrailSpec(u, dw, side) { // the one trail of a ship that moves, or
   const px = k && k.px > 0 ? k.px : T.big + 1, f = Math.min(1, T.speedK + (1 - T.speedK) * sp / Math.max(u.vmax || 0, sp)); // (a kind with no play size is a big ship)
   const len = dw * (px > T.big ? T.short : T.long) * f, c = Math.cos(u.rot || 0), s = Math.sin(u.rot || 0);
   return { key: T.key + slookTrailTone(side), x: u.x - c * dw * T.start, y: u.y - s * dw * T.start, rot: u.rot || 0, len, wid: dw * T.head * 2, alpha: T.alpha };
+}
+
+// the cruiser's two flames (pure): from the boost's own state (campFlameState: the thrust, the boost, the flare), or [] when the engines are off
+function slookFlameSpecs(u, dw, f) {
+  const F = SLOOKFX.flame; if (!u || !(u.hp > 0) || !(dw > 0) || !f) return [];
+  const cl = v => Math.max(0, Math.min(1, +v || 0)), th = cl(f.th), b = cl(f.boost), fl = cl(f.flare), len = dw * (th * F.thrust + b * F.boost + fl * F.flare); if (!(len >= dw * F.min)) return [];
+  const wid = dw * (F.wid + b * F.boostWid + fl * F.flareWid), c = Math.cos(u.rot || 0), s = Math.sin(u.rot || 0);
+  return F.engines.map(e => ({ key: F.key, x: u.x + c * e[0] * dw - s * e[1] * dw, y: u.y + s * e[0] * dw + c * e[1] * dw, rot: u.rot || 0, len, wid, alpha: F.alpha }));
 }
 
 // ---- the kill ----
@@ -86,6 +95,13 @@ function slookFxTextures(scene) { // made once, in code: the three bolts, the da
       g.fillStyle(c, a).fillRect(i * wide, y, wide, h);
     }
   }));
+  const fm = SLOOKFX.flame; mk(fm.key, fm.w, fm.h, g => { // the flame: white at the nozzle (the right end), the friend's pale blue along it, nothing at the tail
+    for (let i = 0; i < fm.cols; i++) {
+      const t = (i + 1) / fm.cols, wide = fm.w / fm.cols, h = fm.h * (0.25 + 0.75 * t), y = (fm.h - h) / 2;
+      let c = slookInt(SLOOK.C.friendHi), a; if (t >= fm.stop) { const k = (1 - t) / (1 - fm.stop); a = fm.white + (fm.mid - fm.white) * k; c = slookInt(slookMix('#ffffff', SLOOK.C.friendHi, k)); } else a = fm.mid * t / fm.stop;
+      g.fillStyle(c, a).fillRect(i * wide, y, wide, h);
+    }
+  });
   mk(kl.keys.ring1, 64, 64, g => g.lineStyle(3.2, 0xffffff, 1).strokeCircle(32, 32, 30));
   mk(kl.keys.ring2, 96, 96, g => g.lineStyle(2, foe, 1).strokeCircle(48, 48, 44));
   mk(kl.keys.core, 24, 24, g => { g.fillStyle(0xffffff, 0.12).fillCircle(12, 12, 11); g.fillStyle(0xffffff, 0.25).fillCircle(12, 12, 7.5); g.fillStyle(0xffffff, 1).fillCircle(12, 12, kl.core); });
@@ -132,10 +148,16 @@ function slookFxFrame(scene) { // once a frame, after the ships' sprites are in 
   const on = typeof slookOn === 'function' && slookOn();
   for (let i = S.kills.length - 1; i >= 0; i--) { const k = S.kills[i]; if (!on || !slookKillPlace(k, C.t - k.born)) { if (!on) slookKillPlace(k, Infinity); S.kills.splice(i, 1); S.free.push(k); } }
   const trails = S.trails, alive = {};
-  if (!on) { Object.keys(trails).forEach(id => trails[id].setVisible(false)); return; }
+  if (!on) { Object.keys(trails).forEach(id => trails[id].setVisible(false)); (S.flames || []).forEach(f => f.setVisible(false)); return; }
   slookFxTextures(scene); const prot = typeof campConvoyShips === 'function' ? campConvoyShips(C) : [], map = !!scene.mp;
   C.ships.forEach(u => {
     const sp = scene.sp && scene.sp[u.id]; if (!sp) return; alive[u.id] = true;
+    if (u.kind === 'carrier') { // the cruiser has real flames, one for each engine, and no plain trail (card space-game-cruiser-boost-flames)
+      const fs = u.hp > 0 && sp.visible !== false && typeof campFlameState === 'function' ? slookFlameSpecs(u, sp.displayWidth, campFlameState(C)) : [], fl = S.flames || (S.flames = []);
+      fs.forEach((e, k) => { let im = fl[k]; if (!im) im = fl[k] = scene.add.image(e.x, e.y, e.key).setOrigin(1, 0.5); im.setDepth(SLOOKFX.flame.depth).setPosition(e.x, e.y).setRotation(e.rot).setDisplaySize(e.len, e.wid).setAlpha(e.alpha).setVisible(!map); });
+      for (let k = fs.length; k < fl.length; k++) fl[k].setVisible(false);
+      const t0 = trails[u.id]; if (t0) t0.setVisible(false); return;
+    }
     const spec = u.hp > 0 && sp.visible !== false ? slookTrailSpec(u, sp.displayWidth, slookSide(u, prot.indexOf(u) >= 0)) : null;
     let t = trails[u.id];
     if (!spec) { if (t) t.setVisible(false); return; }
