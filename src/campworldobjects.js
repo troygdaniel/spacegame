@@ -81,7 +81,7 @@ function campWorldScanDraw(g, scans, zoom) { // a dashed gold ring and, for the 
 }
 function campWorldScanSync(scene) { // the scan rings of the level (3 mission 1): one Graphics made once, cleared each frame, drawn only when there is a point to scan
   const C = scene && scene.camp; if (!C || !C.scan || !C.scan.length || typeof campWorldOn !== 'function' || !campWorldOn()) { if (scene && scene.scanG) scene.scanG.clear(); return; }
-  if (!scene.scanG) scene.scanG = scene.add.graphics().setDepth(2);
+  if (!scene.scanG || (scene.scanG.active === false && !scene.scanG.scene)) scene.scanG = scene.add.graphics().setDepth(2); // (a scene that starts again destroys its layers: a retry, or the next mission, drew no ring from the dead one: card space-game-world-batch-fixes)
   scene.scanG.clear(); campWorldScanDraw(scene.scanG, campWorldScans(C), campWorldZoom(scene));
 }
 function campWorldAnomDraw(g, C, view, now, zoom) { // instead of campAnomDraw: an anomaly is a cloaked cache (a white dashed ring and an empty diamond), a found one is a cache (gold); the visit's arc fills in white
