@@ -146,7 +146,7 @@ function chatMakeInput(type, placeholder, maxLength, onEnter, onEsc) {
 }
 // place an input over the canvas at panel coordinates (x, y are the top-left corner relative to the screen centre)
 function chatPlaceInput(game, el, x, y, w, h) {
-  const r = game.canvas.getBoundingClientRect(), k = r.width / W;
+  const r = (typeof fillSafeRect === 'function' ? fillSafeRect(game.canvas) : game.canvas.getBoundingClientRect()), k = r.width / W;
   Object.assign(el.style, { left: (r.left + (W / 2 + x) * k) + 'px', top: (r.top + (H / 2 + y) * k) + 'px', width: w * k + 'px', height: h * k + 'px', fontSize: 17 * k + 'px' });
 }
 

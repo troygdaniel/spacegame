@@ -15,7 +15,7 @@ function campSightSync(scene) {
   const V = scene.hud.sight, g = V.g, z = cam.zoom > 0 ? cam.zoom : 1; g.clear();
   const pink = typeof slookOn === 'function' && slookOn(); // the new ship look: a hostile mark is pink, red is retired (card space-game-ship-look-d-glyphs)
   const on = scene.mode === 'play' && !scene.mp && !(typeof scene.hudHides === 'function' && scene.hudHides());
-  const arrows = on ? (typeof campPageHudHides === 'function' && campPageHudHides('sight') ? [] : campSightArrows(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, z)).concat(typeof campSightFriends === 'function' ? campSightFriends(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, z) : []) : [];
+  const arrows = on ? (typeof campPageHudHides === 'function' && campPageHudHides('sight') ? [] : fillAsk(campSightArrows, C, cam, z)).concat(typeof campSightFriends === 'function' ? fillAsk(campSightFriends, C, cam, z) : []) : [];
   const keep = typeof scene.arrowKeep === 'function' ? scene.arrowKeep() : CAMP.nav.arrow.keep; // the places the labels keep out of, as the goal's label does (the gauges, the corner panels, the message band, the key line)
   const its = arrows.map((a, n) => { // the label of each arrow: its words and its size first, so that all of them can be put together
     let t = V.t[n]; if (!t) { t = V.t[n] = scene.add.text(0, 0, '', uiFont(K.font, K.text, { stroke: '#02060d', strokeThickness: 3 })).setOrigin(0.5).setScrollFactor(0).setDepth(K.depth + 1); }
@@ -24,7 +24,7 @@ function campSightSync(scene) {
     return { x: a.x, y: a.y, angle: a.angle, tx: a.tx, ty: a.ty, w: t.width || 120, h: t.height || 16 };
   });
   // the hostile groups first (nearest first), then the ships you protect: each next arrow that would touch one put before it slides along the edge until it does not (src/campedgespread.js; card space-game-edge-labels-overlap)
-  const put = typeof campEdgeSpread === 'function' ? campEdgeSpread(its, { keep, W, H, m: CAMP.nav.arrow.margin, tri: K.tri, gap: K.gap }) : its.map((it, i) => { const ca = Math.cos(it.angle), sa = Math.sin(it.angle), back = K.tri * 0.8 + K.gap + Math.abs(ca) * it.w / 2 + Math.abs(sa) * it.h / 2; return { x: it.x, y: it.y, angle: it.angle, lx: Math.max(it.w / 2 + 6, Math.min(W - it.w / 2 - 6, it.x - ca * back)), ly: Math.max(it.h / 2 + 6, Math.min(H - it.h / 2 - 40, it.y - sa * back)), boxes: [] }; });
+  const put = typeof campEdgeSpread === 'function' ? fillSpread(its, { keep, W, H, m: CAMP.nav.arrow.margin, tri: K.tri, gap: K.gap }) : its.map((it, i) => { const ca = Math.cos(it.angle), sa = Math.sin(it.angle), back = K.tri * 0.8 + K.gap + Math.abs(ca) * it.w / 2 + Math.abs(sa) * it.h / 2; return { x: it.x, y: it.y, angle: it.angle, lx: Math.max(it.w / 2 + 6, Math.min(W - it.w / 2 - 6, it.x - ca * back)), ly: Math.max(it.h / 2 + 6, Math.min(H - it.h / 2 - 40, it.y - sa * back)), boxes: [] }; });
   V.boxes = []; // the rectangles the arrows and labels take: the goal's arrow (src/campaignscene.js paintHud) keeps out of them
   arrows.forEach((a, n) => {
     const p = put[n], blink = a.fresh && Math.floor(C.t / 250) % 2 === 1, al = blink ? 0.35 : 0.95;

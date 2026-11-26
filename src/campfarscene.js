@@ -28,7 +28,7 @@ function campFarSync(scene) {
   if (marks.length) Object.keys(scene.sp || {}).forEach(id => { const sp = scene.sp[id]; if (!sp || sp.visible === false || !(sp.displayWidth > 0)) return; obst.push({ x: (sp.x - camzoomSX(cam) - W / 2) * z + W / 2, y: (sp.y - camzoomSY(cam) - H / 2) * z + H / 2, r: Math.max(sp.displayWidth, sp.displayHeight || 0) * z * 0.55 }); }); // the ships' signs: a name keeps clear of them
   marks.forEach(m => {
     const sx = (m.x - camzoomSX(cam) - W / 2) * z + W / 2, sy = (m.y - camzoomSY(cam) - H / 2) * z + H / 2, kind = m.goal ? 'goal' : m.kind;
-    if (sx < K.edge || sx > W - K.edge || sy < K.edge || sy > H - K.keep) return;
+    if (sx < fillX0() + K.edge || sx > fillX1() - K.edge || sy < fillY0() + K.edge || sy > fillY1() - K.keep) return;
     const rr = m.kind === 'convoy' ? K.ring : least + 4; // a world is its own disc (drawn up to its least size): its name stands clear of it; the goal has a ring round it; a convoy ship its diamond
     if (m.kind === 'convoy') g.lineStyle(K.width, K.color.convoy, 0.95).strokePoints([{ x: sx, y: sy - K.ring }, { x: sx + K.ring, y: sy }, { x: sx, y: sy + K.ring }, { x: sx - K.ring, y: sy }], true);
     else if (kind === 'goal') g.lineStyle(K.width, K.color.goal, 0.95).strokeCircle(sx, sy, rr);

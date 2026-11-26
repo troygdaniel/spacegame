@@ -54,7 +54,7 @@ function slookArcsPaint(g, s, z) {
   C.ships.forEach(u => {
     if (!slookHurt(u)) return;
     const sx = (u.x - sx0 - W / 2) * z + W / 2, sy = (u.y - sy0 - H / 2) * z + H / 2, Rs = slookMarkR(slookMarkLen(s, u) * z), m = Rs + K.margin;
-    if (sx < -m || sx > W + m || sy < -m || sy > H + m) return; // off the screen: nothing is drawn for it
+    if (sx < fillX0() - m || sx > fillX1() + m || sy < fillY0() - m || sy > fillY1() + m) return; // off the screen: nothing is drawn for it
     list.push({ u, sx, sy, Rs });
   });
   list.sort((a, b) => slookHull(a.u) - slookHull(b.u)); // the most hurt first: when ships are too close for their rings, it is the one that needs a look that keeps its arc

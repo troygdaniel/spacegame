@@ -85,6 +85,7 @@ class CampHub extends Phaser.Scene {
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
     this.accent = css;
     this.cameras.main.fadeIn(300, 0, 0, 0);
+    if (typeof fillSync === 'function') fillSync(this); // Fill the window: from the first frame (src/fillwindow.js)
     interiorBuild(this); // the hall (src/interior.js): needs this.look and this.walls, makes this.in
     this.pad();
     this.player = this.add.image(CAMP_HUBS.stops.board[0], CAMP_HUBS.stops.board[1], 'in-pilot0').setDepth(5); // the pilot (interiorTick turns it, rings it and tags it YOU)
@@ -315,6 +316,7 @@ class CampHub extends Phaser.Scene {
   }
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
+    if (typeof fillSync === 'function') fillSync(this); // the ready room keeps its 1280 by 720 layout in the safe area while Fill the window is on (src/fillwindow.js)
     interiorTick(this, time);
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)

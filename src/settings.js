@@ -213,7 +213,7 @@ class Settings extends Phaser.Scene {
     this.button(bx, by + 38, 44, '-', () => this.adjustVolume(-1), { size: 20 });
     this.button(bx + 468, by + 38, 44, '+', () => this.adjustVolume(1), { size: 20 });
     const zone = this.add.rectangle(bx + 52 + 202, by + 38, 404, 30, 0x000000, 0.001).setInteractive({ useHandCursor: true });
-    zone.on('pointerdown', p => this.setVolume(Phaser.Math.Clamp((p.x - (W / 2 + bx + 52)) / 404, 0, 1))); // p.x is in game pixels, whatever the window size
+    zone.on('pointerdown', p => this.setVolume(Phaser.Math.Clamp(((typeof fillPX === 'function' ? fillPX(p) : p.x) - (W / 2 + bx + 52)) / 404, 0, 1))); // p.x is in game pixels, whatever the window size (in the 1280 by 720 safe area: fillPX)
     this.body.add(zone);
     this.label(bx, by + 92, 'SOUND');
     this.slots.mute = this.button(bx, by + 122, 150, '', () => this.toggleMute());
@@ -577,9 +577,10 @@ class Settings extends Phaser.Scene {
     this.scene.stop(); this.scene.resume(from);
   }
   update() {
+    if (typeof fillSync === 'function') fillSync(this, { keep: true }); // Settings keeps the window's shape while the scene under it had taken it (the title, the flight); over the Long Haul it is 1280 by 720 as it was
     if (!this.inputs) return;
     if (this.scr) return scrSetUpdate(this); // the new look: the inputs over their placeholders, the page when the state moved
-    const r = this.game.canvas.getBoundingClientRect(), k = r.width / W, cx = W / 2, cy = H / 2; // the boxes follow the canvas when the window is resized
+    const r = (typeof fillSafeRect === 'function' ? fillSafeRect(this.game.canvas) : this.game.canvas.getBoundingClientRect()), k = r.width / W, cx = W / 2, cy = H / 2; // the boxes follow the canvas when the window is resized (its 1280 by 720 safe area while a scene has taken the window's shape)
     const keys = this.section === 'keys';
     Object.keys(this.inputs).forEach(id => {
       const el = this.inputs[id], at = this.slots['at_' + id]; if (!el || !at) return;

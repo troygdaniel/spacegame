@@ -65,6 +65,7 @@ class CampWarp extends Phaser.Scene {
     const K = CAMP.warp, L = CAMP.levels[this.d.level] || {}, w = L.warp || {}, cam = this.cameras.main;
     this.vars = { dest: w.dest || '', ly: w.ly || '' };
     cam.setBackgroundColor('#03050c'); cam.fadeIn(300, 0, 0, 0); cam.shake(K.total * 1000, K.shake, true);
+    if (typeof fillSync === 'function') fillSync(this); // Fill the window: from the first frame (src/fillwindow.js)
     // what Long Haul's tunnel (Hyper.prototype.drawTunnel) reads: the streaks in three bins, the graphics, the gates, the ship and its lights
     this.cx = W * K.ship.x; this.cy = H * K.ship.y; this.tint = K.color.tunnel; this.dur = K.total; this.t = 0; this.gates = []; this.gateAcc = -0.3; this.arrived = false; this.coll = 0; this.pose = null; this.mix = 0;
     this.bins = [[], [], []];
@@ -102,6 +103,7 @@ class CampWarp extends Phaser.Scene {
     this.events.once('shutdown', () => { if (typeof hyperHumStop === 'function') hyperHumStop(this.hum); this.hum = null; });
   }
   update(time, delta) {
+    if (typeof fillSync === 'function') fillSync(this); // the warp keeps its 1280 by 720 picture in the safe area while Fill the window is on (src/fillwindow.js)
     if (this.went) return;
     const dt = Math.min(delta, 100) / 1000, f = campWarpStep(this.S, dt);
     this.frame(f, dt);
