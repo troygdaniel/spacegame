@@ -23,7 +23,7 @@ const CAMP_PAGEHUD = {
   pills: 6,                // the most place pills at once
   fedges: 4,               // the most pills at the edge for the ships you protect (card space-game-page-hud-friend-edge-pill): the nearest first
   kinds: 2,                // the most kinds of hostile the HOSTILES panel names (card space-game-b3-d-panel-cap-pill-goal; Troy's decision 7): the two most dangerous, then +N for the ships of the others
-  first: { level: 1, mission: 0, secs: 60, fade: 3, ids: ['fly', 'fire', 'missile'] }, // the first-minute chips (card space-game-page-hud-first-minute-chips): mission 1.1 only (level 1, mission index 0), the mission clock's first 60 s, faded out over the last 3; the ids are the key table's, in the order they sit
+  first: { ids: ['fly', 'fire', 'missile'] }, // the bottom key row (card space-game-page-hud-first-minute-chips made it a row of the first minute of mission 1.1; card space-game-bottom-row-enter-chip, Troy, 25 Nov 2026: it stays up all the time, in every mission, with a fourth chip, Enter and its verb): the ids of its first three chips are the key table's, in the order they sit
   hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet', 'box:hostiles'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels, except the friendlies' box and the W box of the pilots' pick, which the grown rings replace, and the hostiles' box, whose details are in the hostiles panel: box:friendlies, box:fleet, box:hostiles), the edge arrows of the hostiles and of the ships you protect (pills at the edge of the page: the hostiles' and a pill for each ship off the screen), the labels of the places in the world, the bottom key line)
 };
 
@@ -82,13 +82,13 @@ function campPageHudEnterNow(C) {
   const verb = r.formup ? 'formup' : r.verb, key = campCornerCap('order'); if (!key) return null;
   return { key, word: uiText(verb === 'formup' ? 'camp.corner.formup' : 'camp.corner.enter.' + verb), verb };
 }
-// the first minute of mission 1.1 (card space-game-page-hud-first-minute-chips; Troy, 25 Nov 2026): one dim row of three key chips, each with a word (the arrows: fly, Space: fire, M: missile), for the first CAMP_PAGEHUD.first.secs of the mission clock (it stands still while a card or the pause is up), then gone for the rest of the mission. Mission 1.1 only (not 1.2 or 1.3), and not when the hints are switched off (the tuning panel: it is a hint). The caps are the key table's (campCornerCap of its ids), the words are the text keys camp.corner.chip.<id>; a key with no cap is left out. a is the share of the dim that is left (it fades over the last seconds); null when it is not the time
+// the bottom key row (cards space-game-page-hud-first-minute-chips and space-game-bottom-row-enter-chip; Troy, 25 Nov 2026): one dim row of key chips, each with a word (the arrows: fly, Space: fire, M: missile, and Enter with the verb it gives now, campPageHudEnterNow), UP ALL THE TIME in every mission (it was the first minute of mission 1.1 only: Troy, playing, asked for it to stay, with the fourth chip). It hides as the other panels do: the page HUD is drawn only in play and pause with the map closed, so a card, the briefing or the map covers it; and not when the hints are switched off (the tuning panel: it is a hint) or once the battle has a result. The caps are the key table's (campCornerCap of its ids), the words are the text keys camp.corner.chip.<id>; a key with no cap is left out. a is its strength (1: it no longer fades out; the dim is the view's); null when it is not shown. (The model keeps its first-minute name: the card names, the tests and the view call it `first`.)
 function campPageHudFirst(C) {
-  const F = CAMP_PAGEHUD.first, left = C ? F.secs - C.t / 1000 : 0;
-  if (!C || C.result || C.level !== F.level || !C.L || C.L.mission !== F.mission || !(left > 0) || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
+  const F = CAMP_PAGEHUD.first;
+  if (!C || C.result || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
   const items = F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key), en = campPageHudEnterNow(C);
   if (en) items.push({ id: 'enter', key: en.key, word: en.word, verb: en.verb }); // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
-  return items.length ? { items, a: Math.round(Math.min(1, left / F.fade) * 100) / 100 } : null;
+  return items.length ? { items, a: 1 } : null;
 }
 
 // the goal (landing 2): the objective sentence of the level (campObjective: the first objective not done yet, so a second one shows only when it is the next thing to do) split at its colon into a label and a value ("Mine ore: 120 of 450." is "Mine ore" and
