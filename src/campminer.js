@@ -1,7 +1,7 @@
 // ---------- Campaign: the price of answering the miner's call in mission 1.1 (card l1-miner-choice; Troy, 24 Nov 2026: "what does the player decide, and what does it cost?") ----------
 // Pure rule, no Phaser. The call is one plain radio line (the wave row's `say`, src/campbeats.js) and the player answers with the ordinary keys: nobody goes, one pilot goes, or all go.
 // This file says the price, once: when pilots have left the cruiser for the miner while his pirates live, the radio says who is away (camp.say.miner.short: one or two pilots; camp.say.miner.all: all three).
-// It changes nothing but what the player is told. What makes the price real is mission data: the wave of the 1.1 row that goes for the transport just after the call (src/campaign.js).
+// What makes the price real is mission data: the wave of the 1.1 row that goes for the transport just after the call (src/campaign.js), and its `perAway`: the scheduler asks campMinerAway how many pilots are away when that wave spawns and sends half a torpedo boat more for each (rounded), so more pilots away means more risk to the transport (card space-game-11-miner-real-price, 26 Nov 2026). Beyond that this file only changes what the player is told.
 //   CAMPMINER                 the numbers
 //   campMinerAway(C)          the pilots that are away at the miner now: [] when the call is not live (not begun, the miner lost or saved)
 //   campMinerTick(C)          once a tick (from campBeats): the price line, CAMPMINER.wait s after the first pilot is seen away, counted then. State: C.beats.away = { since, said }
