@@ -1,7 +1,7 @@
 // smoke: the cruiser's boost and engine flames (plain Node, no Chrome): the energy store, the surge above the top speed, the lock at empty, the refill after a pause, plain thrust and turn untouched, the flames, the page HUD's meter, the key
 // Card space-game-cruiser-boost-flames (Troy, 26 Nov 2026: "he loves how the Long Haul ship flies, above all its bursts of thrust; the cruiser is heavier, so take the feel, not the numbers"; yes to a Shift boost and to engine flames, NO dodge dash; do not change turn or plain thrust).
 //   A. the table and the key: CAMP.boost (the heavy ship's numbers), Shift in the key table and on the Campaign's keys page, the scene reads it only when not typing and no list has the arrows
-//   B. plain flight is untouched: top speed 210, accel 170, turn 1.1: a run without Shift is identical to a run with the boost switched off, to the last digit
+//   B. plain flight is untouched by the boost: the top speed 210 and the table's accel and turn: a run without Shift is identical to a run with the boost switched off, to the last digit
 //   C. the boost: Shift with thrust takes the top speed from 210 to about 330 within a second, drains the store 25 a second (four seconds from full), locks at empty with one dry click, and the speed settles back at 150 px/s each second
 //   D. the refill: after a pause of a second, 14 a second; the lock lifts when a quarter is back; nothing drains without thrust; the autopilot's burn is not the boost
 //   E. the flames: two, one for each engine, none with the engines off, longer with thrust, longest while boosting, a brief flare when thrust starts, pale blue and white (no gold or amber), one stretched sprite each
@@ -35,11 +35,11 @@ console.log('B. plain flight is untouched');
 {
   g.run(`__mk(); __run(12);`);
   const plain = J('[C.carrier.x, C.carrier.y, C.carrier.vx, C.carrier.vy, C.carrier.rot]');
-  check('plain thrust: the cruiser reaches its top speed, 210, and no more (about 2 seconds to 190 from rest: the numbers it always had)', Math.abs(J('__sp()') - 210) < 0.01);
+  check('plain thrust: the cruiser reaches its top speed, 210, and no more', Math.abs(J('__sp()') - 210) < 0.01);
   g.run(`__mk(); CAMP.boost.on = false; __run(12); window.__off = [C.carrier.x, C.carrier.y, C.carrier.vx, C.carrier.vy, C.carrier.rot]; CAMP.boost.on = true;`);
   check('a run without Shift is IDENTICAL to a run with the boost switched off: x, y, the velocity and the heading, to the last digit (the boost multiplies by 1)', JSON.stringify(plain) === JSON.stringify(J('__off')), JSON.stringify([plain, J('__off')]));
   g.run(`__mk(); C.input.thrust = 0; C.input.turn = 1; __run(1);`);
-  check('turn is the same 1.1 rad a second (it was not touched)', Math.abs(J('C.carrier.rot - campNew(1, [], { seed: 5, mission: 0 }).carrier.rot') - 1.1) < 0.001);
+  check('turn is the table\'s, CAMP.carrier.turn rad a second: the boost does not touch it', Math.abs(J('C.carrier.rot - campNew(1, [], { seed: 5, mission: 0 }).carrier.rot') - J('CAMP.carrier.turn')) < 0.001);
   g.run(`__mk(); C.input.boost = true; C.input.thrust = 0; __run(2);`);
   check('Shift without thrust does nothing: the store stays full and the cruiser does not move', J('C.boost.en') === 100 && J('__sp()') === 0 && J('C.boost.on') === false);
 }

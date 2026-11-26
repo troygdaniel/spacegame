@@ -51,7 +51,7 @@ console.log('A. the Campaign: Fast is a burn while the autopilot flies');
   check('manual flight is untouched: full thrust for 12 s reaches the old top speed and no more', J('Math.hypot(C2.carrier.vx, C2.carrier.vy)') <= 210.01 && J('Math.hypot(C2.carrier.vx, C2.carrier.vy)') > 150);
   check('the time on the map: fast is about half of regular, and both are within 35 percent of what the sim takes', J('campNavEta(C0, 4100, true)') < J('campNavEta(C0, 4100)') * 0.6 && Math.abs(J('campNavEta(C0, 4100, true)') - fast.t) / fast.t < 0.35 && Math.abs(J('campNavEta(C0, 4100)') - reg.t) / reg.t < 0.35, [J('campNavEta(C0, 4100, true)'), fast.t, J('campNavEta(C0, 4100)'), reg.t].join(' '));
   g.run(`var C3 = __quiet(campNew(1, [], { seed: 3 })); campNavGo(C3, campNavRows(C3).find(r => r.id === 'place:mars'), true); campNavClear(C3, 'clear');`);
-  check('the table of the carrier did not change: speed 210, accel 170', J('CAMP.carrier.speed') === 210 && J('CAMP.carrier.accel') === 170);
+  check('the table of the carrier: the top speed 210 did not change (the quicker handling, card space-game-cruiser-quicker-handling, is in its accel, 170 to 340, and turn)', J('CAMP.carrier.speed') === 210 && J('CAMP.carrier.accel') === 340);
 }
 
 // ---------- B. the Campaign map ----------

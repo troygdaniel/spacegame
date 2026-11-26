@@ -427,6 +427,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
 
+## The cruiser turns and pushes about twice as quickly (card `space-game-cruiser-quicker-handling`; Troy, 26 Nov 2026: "yes"; base main `922b7a92`, which has the Shift boost)
+Troy felt the Long Haul's Wren (turn about 3.6 rad/s, accel 720) and the cruiser as heavy as a barge. After the boost landed alone, so he could feel it first, the cruiser's own handling is about twice as responsive and still clearly heavier than the Wren.
+
+| `CAMP.carrier` | old | new | the Wren, for comparison |
+|---|---|---|---|
+| `turn` (rad/s) | 1.1 | **2.2** | about 3.6 |
+| `accel` (px/s per s) | 170 | **340** | 720 |
+| `speed` (top, px/s) | 210 | 210 (unchanged: the boost is the surge) | |
+| drag, brakeDrag | 0.55, 0.12 | as today (nothing felt loose in the Node sim: the cruise is still 210, the stop is the same braking) | |
+
+What it does, from the 32-seed bot tables (`node tools/campaign-bot.mjs --level 1 --seeds 32 --json`, 26 bots a mission, the old and the new on the SAME seeds, old = a second worktree of `922b7a92`):
+- **Level 1 (the three missions): mean win rate** 1.1 88.0 to 88.5, 1.2 80.7 to 80.7, 1.3 88.5 to 88.5 percent; **median win time** 1.1 306 to 306 s, 1.2 270 to 266, 1.3 292 to 292. Only the 1.1 `thinks` bots moved 10 s or more (356 to 312 s) and the carrier and guard bots go from 94 to 100 percent: faster turning only ever helped. Nobody wins less. That is inside noise.
+- **Levels 2 and 3 (plain bot, 12 seeds, the bot's default pace):** 2.1 48 to 41 s, 2.2 76 to 73, 2.3 99 to 89, 3.1 72 to 70, 3.2 45 to 44, 3.3 61 to 55 (hull 786 to 673); the carrier bot on 2.2 wins 33 to 92 percent. Every mission is still won on every seed.
+- **Mission 2.3 (the relic) is the one real move.** It needs 14 s of holding within 240 px of the relic with no alien within 650 px, and its waves start at 3, 24 and 42 s. At the pace a player gets (Normal) the plain bot takes 102 s with 19 kills before and 72 s with 14 kills now; at Calm (the tests only) 104 s before and 16 s with no fight now: the cruiser reaches the relic and starts the hold before the first wave is close. A player can do the same by flying straight at it.
+- **The autopilot** (trips to places in 1.1; a still alien): to a place it lets go within 2 s of the old time, turned 2.7, 1.0 and 0.8 rad in all, and arrives at 43 to 60 px/s (under the 70 px/s drop speed), so no overshoot or circling that was not there. To a still alien it hunts about the 400 px stand-off both before (211 to 467 px) and now (185 to 425): the same hunt, a step quicker, not worse.
+- **Perf:** none (two numbers).
+
+**The pins this moved** (all re-pinned here, none loosened): `tests/campaign.mjs` (turns at 2.2), `tests/camptune.mjs` (the tuned battle's cruiser turn), `tests/mapclickfly.mjs` (accel 340), `tests/campboost.mjs` (turn is the table's); the rest are listed under the landing's commit.
+
 ## The far zoom, clean (card `space-game-far-zoom-ugly`, 25 Nov 2026; base: main at the landing before it)
 - `CAMPZOOM.view.worldLeast: 7` (new): a world is drawn up so its radius is at least 7 px on the screen (Luna at zoom 0.124 is about 4 px: it is drawn at 7); the far marks' ring is the least plus 4.
 - `SLGLYPH.halo: 0.16 -> 0` (no disc round a sign), `SLGLYPH.rim { color 0x050810, alpha .9, k .05, least 1 }` (new), `SLGLYPH.buckets` (the lengths a sign is baked at: 10 to 640 px) and `SLGLYPH.keep { under 1.15, over 0.6 }` (a sign keeps its bucket between them).
