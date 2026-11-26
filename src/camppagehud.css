@@ -143,3 +143,18 @@
 .ph-tpic .ph-pic { width: 100%; height: 100%; overflow: visible; }
 .ph-foes.pic .ph-big, .ph-foes.pic .ph-sub { box-sizing: border-box; max-width: calc(100% - 4.1em); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ph-act { font-size: .82em; color: #f3bcd2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the live strip of the cruiser's feel (card space-game-cruiser-feel-sliders; src/camptunedraw.js campTuneLiveOpen): five real sliders over the running battle, at the right of the screen. Not inside .ph-root (it takes the pointer); plain pale blue and white, never amber (amber is for the ships you protect); every size in em */
+.ct-live { position: fixed; right: 1.1em; top: 9.8em; width: 23em; box-sizing: border-box; padding: .9em 1.1em; z-index: 6; pointer-events: auto; background: rgba(8, 14, 26, .9); border: 1px solid rgba(207, 230, 255, .28); border-radius: 1.1em; color: #dbe7f5; font: .8em/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.ct-live .ct-h { font-size: .85em; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #8794ab; margin-bottom: .6em; }
+.ct-live .ct-r { margin: 0 0 .7em; }
+.ct-live .ct-t { display: flex; justify-content: space-between; align-items: baseline; }
+.ct-live .ct-n { font-weight: 600; }
+.ct-live .ct-v { font-variant-numeric: tabular-nums; color: #ffffff; }
+.ct-live .ct-r.chg .ct-v { color: #cfe6ff; text-decoration: underline; }
+.ct-live .ct-s { display: block; width: 100%; margin: .25em 0 0; accent-color: #cfe6ff; }
+.ct-live .ct-d { display: block; font-style: normal; font-size: .85em; color: #8794ab; }
+.ct-live .ct-l { margin: .15em 0 .8em; padding-top: .6em; border-top: 1px solid rgba(207, 230, 255, .16); font-size: .95em; line-height: 1.45; color: #cfe6ff; user-select: text; }
+.ct-live .ct-f { display: flex; gap: .6em; }
+.ct-live .ct-b { flex: 1; padding: .45em .6em; border-radius: .6em; border: 1px solid rgba(207, 230, 255, .35); background: transparent; color: #dbe7f5; font: inherit; cursor: pointer; }
+.ct-live .ct-b:hover { background: rgba(207, 230, 255, .12); }

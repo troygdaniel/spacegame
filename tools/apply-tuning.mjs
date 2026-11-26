@@ -71,6 +71,11 @@ export function plan(g, block) { // what the block means: [{ id, label, ref, was
     const was = JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${JSON.stringify(r.id)})); return s.obj[s.key]; })())`));
     let now;
     if (isFlag) now = r.value;
+    else if (row.derive) { // a derived row (card space-game-cruiser-feel-sliders): what is baked in is the table's own number: the boost's multiple of the top speed (worked out against the block's own top speed when it has one), or the start zoom
+      const sp = P.rows.find(x => x.id === 'cruiserspeed'), id = JSON.stringify(r.id);
+      g.run(`campTuneResetAll(); ${sp ? `campTuneSet('cruiserspeed', ${JSON.stringify(sp.value)});` : ''} campTuneSet(${id}, ${JSON.stringify(r.value)})`);
+      now = Math.round(JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${id})); return s.obj[s.key]; })())`)) * 10000) / 10000; g.run('campTuneResetAll()');
+    }
     else if (row.of != null) { g.run(`campTuneRestore(); campTuneResetAll(); campTuneSet(${JSON.stringify(r.id)}, ${JSON.stringify(r.value)})`); now = JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${JSON.stringify(r.id)})); return s.obj[s.key]; })())`)); g.run('campTuneResetAll()'); }
     else { g.run(`campTuneResetAll(); campTuneSet(${JSON.stringify(r.id)}, ${JSON.stringify(r.value)})`); now = JSON.parse(g.run(`campTuneValue(${JSON.stringify(r.id)})`)); g.run('campTuneResetAll()'); }
     out.push({ id: r.id, label: g.run(`campTuneLabel(campTuneRow(${JSON.stringify(r.id)}))`), name, path, ref: name + '.' + path, was, now });
