@@ -1,0 +1,8 @@
+/* The ready room and its screens in the new look (piece c of the new screens; card space-game-screens-c-hub): what src/scrhubdraw.js draws beyond the pieces of src/screens.css and src/scrcards.css. Inside the .sc-root only; no image, no font, no request. */
+.sc-root .sc-scr{position:absolute;left:0;top:0;right:0;bottom:0}
+.sc-root .sc-rule{height:1px;background:var(--sc-line);flex:none}
+.sc-root .sc-tile.sc-dash{border-style:dashed}
+.sc-root .sc-tile.sc-flat{border-color:transparent;background:none;padding:.4em .7em}
+.sc-root .sc-tile.sc-flat.on{border-color:var(--sc-ink);background:rgba(255,255,255,.08)}
+.sc-root .sc-tile.act:hover{border-color:rgba(230,237,247,.55);background:rgba(255,255,255,.07)}
+.sc-root .sc-tile.sc-flat .sc-r>span{white-space:nowrap}
