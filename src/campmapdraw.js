@@ -41,54 +41,60 @@ function campMapClose(s) {
   if (!s || !s.mp) return;
   if (s.mp.onWheel && s.input && s.input.off) { try { s.input.off('wheel', s.mp.onWheel); } catch (e) { /* gone */ } }
   s.mp.objs.forEach(o => { try { o.destroy(); } catch (e) { /* already gone with the scene */ } });
+  if (s.mp.dom && typeof campMapPanelClose === 'function') campMapPanelClose(s); // the page elements of the card go with it
   s.mp = null;
 }
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
   if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open list closes
-  const C = s.camp, F = CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]);
+  const C = s.camp, dom = typeof campMapPanelsOn === 'function' && campMapPanelsOn(s), F = dom ? CAMPMAPPANEL.frame : CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]); // dom: the page HUD is up, so the map is drawn in its card and its lists are page panels (src/campmappanel.js, card space-game-b3-f-tab-map-build); else the glass panel as it was
   const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
-  const mp = s.mp = { objs: [], whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), box: campMapBounds(C.level, true, C.L), panned: false, dragging: false, z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
+  const mp = s.mp = { objs: [], dom, F, whole: false, wholeBase, zMin: campMapZMin(base, wholeBase, CAMPZOOM.map.min), nameObjs: [], base, fit: Object.assign({}, base), box: campMapBounds(C.level, true, C.L), panned: false, dragging: false, z: 1, zWant: 1, namesZ: 1, tAt: null, userSel: false, leg: [] }; // F: the frame this map is drawn in; base: the level fitted to the frame; fit: what is drawn and clicked through, the base at zoom z (src/campzoom.js, campMapView)
   mp.fire = campFireNew(); // the fight on the map (src/campmapfire.js): a pool of marks made once, per open map; the scene feeds it while the map is open
-  const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; };
+  const own = o => { o.setScrollFactor(0); mp.objs.push(o); return o; }, font = (size, color, o) => uiFont(size, color, dom ? Object.assign({ fontFamily: CAMPMAPPANEL.face }, o || {}) : o); // the page's own typeface on the card
   own(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.84)).setDepth(150);
-  hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
+  if (!dom) hudPanel(own(s.add.graphics()).setDepth(151), P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
   mp.g = own(s.add.graphics()).setDepth(152);
-  own(s.add.text(F.x, 46, uiText('camp.map.title', { n: C.level, name: L.name }), uiFont(24, '#38e1ff', { letterSpacing: 2 }))).setDepth(154);
-  own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
-  mp.zoomText = own(s.add.text(F.x + F.w, 46, '', uiFont(14, '#7fe9ff'))).setOrigin(1, 0).setDepth(154); // the zoom level and its keys, in the corner (card space-game-campaign-zoom)
-  mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154); // the area or the whole system, how wide, and Z (the footer is on the left: 410 px, this 260)
-  mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 246 }, lineSpacing: 4 }))).setDepth(154);
-  // pick and fly (card space-game-campaign-navigate): the list is the Long Haul nav panel's idea (src/navpanel.js: W S choose, Enter flies there, X clears) on the one list the map and the keys share
-  mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
-  mp.list = []; for (let i = 0; i < CAMP.nav.list; i++) mp.list.push(own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.listY + i * CAMPMAP_SIDE.listStep, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
-  own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
-  mp.recentre = own(s.add.text(F.x + 10, F.y + F.h - 30, uiText('camp.hud.recentre'), uiFont(13, CAMPDRAG.mark.ink, { backgroundColor: CAMPDRAG.mark.back, padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the mark of a dragged map: a click on it, or Backspace, puts the map back (src/campdrag.js)
-  mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
-  mp.routeText = own(s.add.text(0, 0, '', uiFont(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
+  if (dom) { mp.list = []; campMapPanelOpen(s); campMapPanelTakeToasts(s); } // the header, the footer and the column are page elements; the card is drawn by campMapPaint under the marks; a box that was up when the map opened moves into the radio panel
+  else {
+    own(s.add.text(F.x, 46, uiText('camp.map.title', { n: C.level, name: L.name }), uiFont(24, '#38e1ff', { letterSpacing: 2 }))).setDepth(154);
+    own(s.add.text(F.x, 640, uiText('camp.map.footer'), uiFont(14, '#5b7a92'))).setDepth(154);
+    mp.zoomText = own(s.add.text(F.x + F.w, 46, '', uiFont(14, '#7fe9ff'))).setOrigin(1, 0).setDepth(154); // the zoom level and its keys, in the corner (card space-game-campaign-zoom)
+    mp.across = own(s.add.text(F.x + F.w, 640, '', uiFont(14, '#5b7a92'))).setOrigin(1, 0).setDepth(154); // the area or the whole system, how wide, and Z (the footer is on the left: 410 px, this 260)
+    mp.obj = own(s.add.text(CAMPMAP_SIDE.x, F.y, '', uiFont(15, '#ffffff', { wordWrap: { width: 246 }, lineSpacing: 4 }))).setDepth(154);
+    // pick and fly (card space-game-campaign-navigate): the list is the Long Haul nav panel's idea (src/navpanel.js: W S choose, Enter flies there, X clears) on the one list the map and the keys share
+    mp.dest = own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.destY, '', uiFont(14, '#7fe9ff', { wordWrap: { width: 250 } }))).setDepth(154);
+    mp.list = []; for (let i = 0; i < CAMP.nav.list; i++) mp.list.push(own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.listY + i * CAMPMAP_SIDE.listStep, '', uiFont(14, '#9fe9ff'))).setOrigin(0, 0.5).setDepth(154));
+    own(s.add.text(CAMPMAP_SIDE.x, CAMPMAP_SIDE.hintY, uiText('camp.map.keys'), uiFont(13, '#5b7a92'))).setDepth(154);
+  }
+  mp.recentre = own(s.add.text(F.x + 10, F.y + F.h - 30, uiText('camp.hud.recentre'), font(13, CAMPDRAG.mark.ink, { backgroundColor: CAMPDRAG.mark.back, padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the mark of a dragged map: a click on it, or Backspace, puts the map back (src/campdrag.js)
+  mp.goalText = own(s.add.text(0, 0, uiText('camp.map.goalmark'), font(12, dom ? '#e9b872' : '#ffd37a', dom ? { fontStyle: 'bold' } : undefined))).setOrigin(0.5).setDepth(154);
+  mp.routeText = own(s.add.text(0, 0, '', font(12, '#ffd37a'))).setOrigin(0.5).setDepth(154);
   mp.rows = []; mp.rowsAt = -1e9; mp.selId = ''; mp.setId = ''; mp.flewId = '';
   if (C.nav && C.nav.on) { mp.setId = mp.flewId = C.nav.of || C.nav.id; mp.selId = mp.setId; } // a trip is on when the map is opened: its place is set again, with the buttons (Fly or Fast marked ON), and chosen in the list
-  mp.btnFly = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the two small buttons by a place you have set (card space-game-map-click-fly)
-  mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
-  mp.btnTake = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the fourth button, on a lane of a fork in the road only (card space-game-scout-route): Take, key T
+  if (!dom) { // the two small buttons by a place you have set (card space-game-map-click-fly), as boxes of text; the page HUD's card has them as pills (src/campmappanel.js)
+    mp.btnFly = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
+    mp.btnFast = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false);
+    mp.btnTake = own(s.add.text(0, 0, '', uiFont(13, '#ffffff', { backgroundColor: '#0a3a4a', padding: { x: 7, y: 3 } }))).setDepth(156).setVisible(false); // the fourth button, on a lane of a fork in the road only (card space-game-scout-route): Take, key T
+  }
   // the pointer is src/campdrag.js's (card space-game-drag-view): a press on the frame waits for the release, so a drag pans the map and a click is campMapClick as it always was
   mp.onWheel = (p, over, dx, dy) => campZoomMapWheel(mp, dy); // the wheel zooms the map while it is open (the scene holds the wheel back from the camera then: camzoomHold)
   if (s.input && s.input.on) s.input.on('wheel', mp.onWheel);
-  for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
+  if (!dom) for (let i = 0; i < CAMPMAP_SIDE.rows; i++) mp.leg.push(own(s.add.text(CAMPMAP_SIDE.x + 22, CAMPMAP_SIDE.y + i * CAMPMAP_SIDE.step, '', uiFont(14, '#9fe9ff', { wordWrap: { width: 235 } }))).setOrigin(0, 0.5).setDepth(154)); // a row is one line (27 letters at most, tests/campmap.mjs); the wrap is only a net
   campMapNames(s);
   campMapPaint(s, 0);
 }
 
 // the names of the places (and of the belts), put once for a view: they do not move, each on a free side of its mark. The area has the level's own places; Z adds the far ones (the whole system)
 function campMapNames(s) {
-  const mp = s.mp, C = s.camp, F = CAMPMAP.frame;
+  const mp = s.mp, C = s.camp, F = campMapFrameOf(mp);
   mp.nameObjs.forEach(o => { try { o.destroy(); } catch (e) { /* gone */ } }); mp.nameObjs = [];
   const own = o => { o.setScrollFactor(0); mp.objs.push(o); mp.nameObjs.push(o); return o; };
   const inF = p => p.x >= F.x - 8 && p.x <= F.x + F.w + 8 && p.y >= F.y - 8 && p.y <= F.y + F.h + 8;
   const places = campMapMarks(C, mp.whole).filter(m => m.type === 'place' && (mp.z <= 1.01 || inF(campMapPoint(mp.fit, F, m.x, m.y)))), names = [], pts = [];
   const items = places.map(m => {
-    const t = own(s.add.text(0, 0, m.name.toUpperCase(), uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y);
+    const t = own(s.add.text(0, 0, m.name.toUpperCase(), mp.dom ? uiFont(12, m.color === CAMPMAP.color.star ? '#ffe29a' : CAMPMAPPANEL.names, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(13, m.color === CAMPMAP.color.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(154), p = campMapPoint(mp.fit, F, m.x, m.y); // on the page HUD's card the names are pale (amber is for a ship you protect) and in the page's typeface
     names.push(t); pts.push(p); t.world = { x: m.x, y: m.y }; return { x: p.x, y: p.y, r: Math.max(5, m.r * mp.fit.s) + 4, w: t.width, h: t.height, side: 'below' };
   });
   const crowd = mp.z < CAMPMAP.crowdZ, L = C.L || CAMP.levels[C.level], keep = places.map(m => !!m.outpost || m.id === L.place); // far out, the inner system is a few pixels across: a name that cannot be put clear of the others is left out (the mission's place and the outposts keep theirs, and are placed first; zoom in and the rest are there)
@@ -98,12 +104,12 @@ function campMapNames(s) {
   if (wd) wd.bands.forEach(b => {
     const mid = (b.r0 + b.r1) / 2, c = { x: F.x + F.w / 2, y: F.y + F.h / 2 }, st = campMapPoint(mp.fit, F, wd.star.x, wd.star.y), a = Math.atan2(c.y - st.y, c.x - st.x);
     const x = st.x + Math.cos(a) * mid * mp.fit.s, y = st.y + Math.sin(a) * mid * mp.fit.s;
-    if (x > F.x + 30 && x < F.x + F.w - 30 && y > F.y + 10 && y < F.y + F.h - 10) own(s.add.text(x, y - 12, String(b.name.split(/,| \+/)[0]).toUpperCase(), uiFont(11, '#b9a37a'))).setOrigin(0.5).setDepth(154).band = true;
+    if (x > F.x + 30 && x < F.x + F.w - 30 && y > F.y + 10 && y < F.y + F.h - 10) own(s.add.text(x, y - 12, String(b.name.split(/,| \+/)[0]).toUpperCase(), mp.dom ? uiFont(11, CAMPMAPPANEL.belt, { fontFamily: CAMPMAPPANEL.face, fontStyle: '600', letterSpacing: 1 }) : uiFont(11, '#b9a37a'))).setOrigin(0.5).setDepth(154).band = true;
   });
 }
 // the names of the places follow their marks while the zoom eases (each keeps its place from its mark); the belts' names wait for it to arrive, and a place that has gone out of the frame is hidden
 function campMapNamesMove(s) {
-  const mp = s.mp, F = CAMPMAP.frame; if (!mp) return;
+  const mp = s.mp, F = campMapFrameOf(mp); if (!mp) return;
   mp.nameObjs.forEach(t => {
     if (!t.world) { t.setVisible(!t.band); return; }
     const p = campMapPoint(mp.fit, F, t.world.x, t.world.y), x = p.x + t.off.x, y = p.y + t.off.y;
@@ -119,30 +125,36 @@ function campMapFar(s) {
 
 function campMapPaint(s, time) {
   const mp = s.mp; if (!mp) return;
-  const F = CAMPMAP.frame, dt = mp.tAt == null ? 0 : Math.max(0, Math.min(100, time - mp.tAt)); mp.tAt = time;
+  const F = campMapFrameOf(mp), dt = mp.tAt == null ? 0 : Math.max(0, Math.min(100, time - mp.tAt)); mp.tAt = time;
   const moving = campMapZoomStep(mp, F, dt); // the zoom eases to where + - 0 or the wheel put it, and mp.fit is the view at that zoom: everything below and every click reads it
   campMapFar(s); // the far bodies and their names come in when the zoom goes under 1 and go when it is back
   if (moving || mp.dragging) campMapNamesMove(s); else if (mp.z === mp.zWant && mp.namesZ !== mp.z) { campMapNames(s); mp.namesZ = mp.z; } // the names move with the marks while it eases, and are placed afresh (clear of one another) when it has arrived
-  mp.zoomText.setText(uiText('camp.map.zoom', { pct: Math.round(mp.zWant * 100) }));
+  if (!mp.dom) mp.zoomText.setText(uiText('camp.map.zoom', { pct: Math.round(mp.zWant * 100) }));
   mp.recentre.setVisible(!!mp.panned); // a dragged map shows its way back
   const C = s.camp, f = mp.fit, g = mp.g, col = CAMPMAP.color;
   const X = x => F.x + F.w / 2 + (x - f.cx) * f.s, Y = y => F.y + F.h / 2 + (y - f.cy) * f.s;
   const pin = (x, y) => ({ x: Math.max(F.x + 5, Math.min(F.x + F.w - 5, x)), y: Math.max(F.y + 5, Math.min(F.y + F.h - 5, y)) }); // a ship past the edge sits on the edge
   g.clear();
-  g.fillStyle(0x03070f, 1); g.fillRect(F.x, F.y, F.w, F.h);
-  // the grid, from the sector map's own step; the frame glows and has the amber brackets of the sector map
+  if (mp.dom) { // the card of the page HUD's look: a rounded panel, and the map in a darker rounded box in it (the header, the footer and the column are page elements over it: src/campmappanel.js)
+    const Cd = CAMPMAPPANEL.card;
+    g.fillStyle(0x0e1624, 0.94).fillRoundedRect(Cd.x, Cd.y, Cd.w, Cd.h, Cd.r); g.lineStyle(1, 0x8caad2, 0.22).strokeRoundedRect(Cd.x, Cd.y, Cd.w, Cd.h, Cd.r);
+    g.fillStyle(0x03070f, 1).fillRoundedRect(F.x, F.y, F.w, F.h, CAMPMAPPANEL.box.r); g.lineStyle(1, 0x8caad2, 0.22).strokeRoundedRect(F.x, F.y, F.w, F.h, CAMPMAPPANEL.box.r);
+  } else { g.fillStyle(0x03070f, 1); g.fillRect(F.x, F.y, F.w, F.h); }
+  // the grid, from the sector map's own step; the glass frame glows and has the amber brackets of the sector map (the card has neither)
   const w0 = f.cx - F.w / 2 / f.s, w1 = f.cx + F.w / 2 / f.s, h0 = f.cy - F.h / 2 / f.s, h1 = f.cy + F.h / 2 / f.s, gs = mapGridStep(F.w / f.s, 1e12);
-  g.lineStyle(1, CYAN, 0.12);
+  g.lineStyle(1, mp.dom ? 0x8caad2 : CYAN, mp.dom ? 0.1 : 0.12);
   for (let w = Math.ceil(w0 / gs) * gs; w < w1; w += gs) g.lineBetween(X(w), F.y, X(w), F.y + F.h);
   for (let w = Math.ceil(h0 / gs) * gs; w < h1; w += gs) g.lineBetween(F.x, Y(w), F.x + F.w, Y(w));
-  hudGlowPath(g, [[F.x, F.y], [F.x + F.w, F.y], [F.x + F.w, F.y + F.h], [F.x, F.y + F.h]], CYAN, 0.85, true, 1.25);
-  g.lineStyle(3, AMBER, 1);
-  [[0, 0, 1, 1], [F.w, 0, -1, 1], [0, F.h, 1, -1], [F.w, F.h, -1, -1]].forEach(([ox, oy, sx, sy]) => {
-    const x = F.x + ox - sx * 6, y = F.y + oy - sy * 6;
-    g.beginPath(); g.moveTo(x, y + sy * 20); g.lineTo(x, y); g.lineTo(x + sx * 20, y); g.strokePath();
-  });
-  mp.across.setText(uiText(mp.whole ? 'camp.map.whole' : 'camp.map.local', { km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10) }));
-  mp.obj.setText(typeof campObjective === 'function' ? campObjective(C) : '');
+  if (!mp.dom) {
+    hudGlowPath(g, [[F.x, F.y], [F.x + F.w, F.y], [F.x + F.w, F.y + F.h], [F.x, F.y + F.h]], CYAN, 0.85, true, 1.25);
+    g.lineStyle(3, AMBER, 1);
+    [[0, 0, 1, 1], [F.w, 0, -1, 1], [0, F.h, 1, -1], [F.w, F.h, -1, -1]].forEach(([ox, oy, sx, sy]) => {
+      const x = F.x + ox - sx * 6, y = F.y + oy - sy * 6;
+      g.beginPath(); g.moveTo(x, y + sy * 20); g.lineTo(x, y); g.lineTo(x + sx * 20, y); g.strokePath();
+    });
+    mp.across.setText(uiText(mp.whole ? 'camp.map.whole' : 'camp.map.local', { km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10) }));
+    mp.obj.setText(typeof campObjective === 'function' ? campObjective(C) : '');
+  }
   // the rings round the star and the belts as rings of rocks (src/campsol.js; card space-game-campaign-sol), under everything else, clipped to the frame
   const wd = typeof campWorldOf === 'function' ? campWorldOf(C.level) : null;
   if (wd) {
@@ -212,11 +224,12 @@ function campMapPaint(s, time) {
     const q = route(goal, gc.goal, 0.55), d = cp ? Math.hypot(goal.x - C.carrier.x, goal.y - C.carrier.y) : 0;
     g.lineStyle(2, gc.goal, 0.5 + 0.5 * pulse).strokeCircle(q.x, q.y, 11 + 4 * pulse);
     mp.goalText.setVisible(true).setPosition(q.x, q.y - 22);
+    if (mp.dom) { const gw = mp.goalText.width + 14, gh = mp.goalText.height + 3; g.fillStyle(0xe9b872, 0.16).fillRoundedRect(q.x - gw / 2, q.y - 22 - gh / 2, gw, gh, gh / 2); g.lineStyle(1, 0xe9b872, 0.5).strokeRoundedRect(q.x - gw / 2, q.y - 22 - gh / 2, gw, gh, gh / 2); } // the word is a gold pill on the card
     mp.routeText.setVisible(!!cp).setText(uiText('camp.map.route', { km: campNavKm(d), s: campNavEta(C, campNavFlight(C, goal, d)) }));
     mp.routeAt = cp ? { cp, q } : null; // where the label goes is decided below, once the Fly and Fast buttons are placed (card space-game-l1-mine-goal: it sat under them when the goal was near)
     if (!cp) mp.routeText.setPosition(0, 0);
   } else { mp.goalText.setVisible(false); mp.routeText.setVisible(false); mp.routeAt = null; }
-  if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); campMapFitOne(mp.dest, uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else mp.dest.setText('');
+  if (N) { route({ x: N.x, y: N.y }, gc.select, 0.85); if (!mp.dom) campMapFitOne(mp.dest, uiText('camp.map.dest', { name: N.name }) + '  ' + campNavKm(Math.hypot(N.x - C.carrier.x, N.y - C.carrier.y)) + ' km'); } else if (!mp.dom) mp.dest.setText('');
   const chosen = mp.rows[sel]; if (chosen) { const q = pin(X(chosen.x), Y(chosen.y)); g.lineStyle(2, gc.select, 1).strokeRect(q.x - 9, q.y - 9, 18, 18); }
   // ---- set by a click (card space-game-map-click-fly): the place has a ring and a line from the carrier, its distance, and two small buttons beside it: Fly (regular speed) and Fast (a burn) ----
   if (mp.flewId && mp.setId === mp.flewId && !(N && N.on)) { mp.setId = ''; mp.flewId = ''; } // the trip is over (arrived, cleared, a steering key): the place is no longer set
@@ -225,16 +238,22 @@ function campMapPaint(s, time) {
     const q = route(setRow, gc.select, 0.7), d = Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y), eta = n => typeof cruiseEtaText === 'function' ? cruiseEtaText(n) : n + ' s';
     g.lineStyle(2, 0xffffff, 0.9).strokeCircle(q.x, q.y, 13 + 2 * pulse);
     const here = N && N.on && N.id === (setRow.of || setRow.id), on = uiText('camp.map.on'), flyOn = here && !N.fast, fastOn = here && N.fast; // which one is going
-    mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, campNavFlight(C, setRow, d))) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
-    mp.btnFast.setText(uiText('camp.map.fast', { t: eta(campNavEta(C, campNavFlight(C, setRow, d), true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(1).setVisible(true);
     const take = setRow.kind === 'lane' && !!C.route && !C.route.passed; // a lane of a fork: the fourth button, Take (the pick); the lane's own line says it when it is the chosen one
-    mp.btnTake.setText(uiText('camp.map.take') + (setRow.chosen ? '  ' + on : '')).setBackgroundColor(setRow.chosen ? '#1f7f95' : '#0a3a4a').setVisible(take);
-    const w = Math.max(mp.btnFly.width, mp.btnFast.width, take ? mp.btnTake.width : 0), h = mp.btnFly.height, right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - (take ? 3 : 2) * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
-    mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnTake.setPosition(bx, by + 2 * (h + 4));
-    if (!N) campMapFitOne(mp.dest, uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
-  } else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnTake.setVisible(false); }
+    let w, h;
+    if (mp.dom) { // the pills of the page HUD's card (src/campmappanel.js): Fly and Fast with their key chips, and Take on a lane
+      const B = campMapPanelButtons(s, { fly: { t: eta(campNavEta(C, campNavFlight(C, setRow, d))), on: flyOn }, fast: { t: eta(campNavEta(C, campNavFlight(C, setRow, d), true)), on: fastOn }, take: take ? { text: uiText('camp.map.take') + (setRow.chosen ? '  ' + on : ''), on: !!setRow.chosen } : null }); w = B.w; h = B.h;
+    } else {
+      mp.btnFly.setText(uiText('camp.map.fly', { t: eta(campNavEta(C, campNavFlight(C, setRow, d))) }) + (flyOn ? '  ' + on : '')).setBackgroundColor(flyOn ? '#1f7f95' : '#0a3a4a').setVisible(true);
+      mp.btnFast.setText(uiText('camp.map.fast', { t: eta(campNavEta(C, campNavFlight(C, setRow, d), true)) }) + (fastOn ? '  ' + on : '')).setBackgroundColor(fastOn ? '#1f7f95' : '#0a3a4a').setAlpha(1).setVisible(true);
+      mp.btnTake.setText(uiText('camp.map.take') + (setRow.chosen ? '  ' + on : '')).setBackgroundColor(setRow.chosen ? '#1f7f95' : '#0a3a4a').setVisible(take);
+      w = Math.max(mp.btnFly.width, mp.btnFast.width, take ? mp.btnTake.width : 0); h = mp.btnFly.height;
+    }
+    const right = q.x + 22 + w <= F.x + F.w - 4, bx = right ? q.x + 22 : Math.max(F.x + 4, q.x - 22 - w), by = Math.max(F.y + 4, Math.min(F.y + F.h - (take ? 3 : 2) * h - 12, q.y - h - 2)); // beside the mark, on the side with room, inside the frame
+    if (mp.dom) campMapPanelPlace(s, bx, by, h); else { mp.btnFly.setPosition(bx, by); mp.btnFast.setPosition(bx, by + h + 4); mp.btnTake.setPosition(bx, by + 2 * (h + 4)); }
+    if (!N && !mp.dom) campMapFitOne(mp.dest, uiText('camp.map.set', { name: setRow.name }) + '  ' + campNavKm(d) + ' km');
+  } else if (mp.dom) campMapPanelButtons(s, null); else { mp.btnFly.setVisible(false); mp.btnFast.setVisible(false); mp.btnTake.setVisible(false); }
   if (mp.routeAt) { // the route label, beside the line, where it is on no name and under no button: the whole-system map has the belts' names on the route; the buttons are boxes like the names
-    const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = [mp.btnFly, mp.btnFast, mp.btnTake].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
+    const names = (mp.nameObjs || []).filter(t => t && t.visible !== false && !t.gone).map(t => ({ x: t.x - t.width / 2, y: t.y - t.height / 2, w: t.width, h: t.height })), btns = mp.dom ? campMapPanelBoxes(s) : [mp.btnFly, mp.btnFast, mp.btnTake].filter(b => b && b.visible && b.width).map(b => ({ x: b.x, y: b.y, w: b.width, h: b.height }));
     const { cp, q } = mp.routeAt, rw = mp.routeText.width || 120, rh = mp.routeText.height || 16, gt = mp.goalText, goalBox = gt && gt.visible && gt.width ? [{ x: gt.x - gt.width / 2, y: gt.y - gt.height / 2, w: gt.width, h: gt.height }] : [];
     // a line too short to hold the label (the cruiser at the goal's own place) puts it beside the two marks, not on them (card space-game-map-title-and-labels); the word GOAL is a box it keeps out of too
     const short = Math.hypot(q.x - cp.x, q.y - cp.y) < rw + 2 * CAMPMAP.routeR, spots = (short ? campMapRouteBeside(cp, q, rw, rh, F) : []).concat(campMapRouteSpots(cp, q));
@@ -242,6 +261,12 @@ function campMapPaint(s, time) {
     mp.routeText.setPosition(spot.x, spot.y); mp.routeAt = null;
   }
   const win = navpanelLines(mp.rows, sel, CAMP.nav.list, CAMPNAV.groups); // the Long Haul nav panel's own windowing: headings, and the chosen row kept in view
+  if (mp.dom) { // the column of the card (src/campmappanel.js): page panels written from a pure model, ten a second (the radio panel fades every frame)
+    const M = campMapPanelDue(s, time) ? campMapPanelModel(C, mp, { rows: mp.rows, sel, win, setRow, setDist: setRow ? Math.hypot(setRow.x - C.carrier.x, setRow.y - C.carrier.y) : 0, legend: campMapLegend(C, marks), km: hudFmt(Math.round(F.w / f.s / CAMPMAP.km / 10) * 10), flat }) : null;
+    if (typeof campPageHudHideLines === 'function') campPageHudHideLines(s, true); // the canvas lines the page HUD replaces (the goal line at the top centre, the key line at the bottom) stay hidden while the card is up: it does not cover the screen's edge as the glass did
+    campMapPanelPaint(s, M, time);
+    return;
+  }
   mp.list.forEach((t, k) => {
     const ln = win.lines[k]; t.rowId = '';
     if (!ln) { t.setVisible(false); return; }
@@ -297,7 +322,7 @@ function campMapClick(s, px, py) {
   const onBtn = t => !!t && t.visible && px >= t.x && px <= t.x + t.width && py >= t.y && py <= t.y + t.height;
   if (onBtn(mp.btnTake)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapTake(s, set); return true; }
   if (onBtn(mp.btnFly) || onBtn(mp.btnFast)) { const set = mp.rows.find(r => r.id === mp.setId); if (set) campMapFly(s, set, onBtn(mp.btnFast)); return true; }
-  const F = CAMPMAP.frame, hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
+  const F = campMapFrameOf(mp), hit = mp.list.find(t => t.rowId && px >= t.x && px <= t.x + 260 && Math.abs(py - t.y) <= 11);
   let row = hit ? mp.rows.find(r => r.id === hit.rowId) : null;
   const inF = r => { const q = campMapPoint(mp.fit, F, r.x, r.y); return q.x >= F.x && q.x <= F.x + F.w && q.y >= F.y && q.y <= F.y + F.h; };
   let cycled = false;
@@ -306,9 +331,14 @@ function campMapClick(s, px, py) {
     if (stack.length > 1 && at >= 0 && same) { row = stack[(at + 1) % stack.length]; cycled = true; } else row = stack[0] || null;
   }
   mp.lastClick = row && !hit ? { x: px, y: py } : null;
-  if (!row) return false;
+  return campMapPickRow(s, row, cycled);
+}
+// a row picked, by a click on the map, on a line of the list, or (the page HUD's card) on a row of its list panel (campMapRowClick): the first pick sets the place, a second on it flies
+function campMapPickRow(s, row, cycled) {
+  const mp = s.mp; if (!mp || !row) return false;
   mp.selId = row.id; mp.userSel = true;
   if (row.kind === 'place' && s.camp && typeof campFriHold === 'function') campFriHold(s.camp, row.id); // an outpost or a planet clicked on the map is the held target (card space-game-keys3-select): Fly to the target goes there, E guards it, the target box shows it
   if (mp.setId === row.id && !cycled) campMapFly(s, row, false); else { mp.setId = row.id; mp.dirty = true; } // a second click on the same lone mark: regular speed; on a stack it takes the next one
   return true;
 }
+function campMapRowClick(s, id) { const mp = s && s.mp; if (!mp) return false; mp.lastClick = null; return campMapPickRow(s, mp.rows.find(r => r.id === id), false); }

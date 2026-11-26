@@ -241,3 +241,6 @@ How to read a profile here: `(program)` is Chrome and the software rasteriser, n
 JavaScript. To compare two versions, run both in turn (a second worktree of the older commit works) or, better, swap the function
 under test inside one page, so both see the same load. `tests/perfart.mjs` and `tests/perfleak.mjs` are in `tests/smoke.sh`
 (steps 4zo and 4zp); if a texture is changed on purpose, `node tests/perfart.mjs --write` records the new pixels.
+
+## The Tab map in the panel look (card `space-game-b3-f-tab-map-build`, 25 Nov 2026)
+`PERF_ADDR='&pagehud=1&shiplook=1' node tools/perfcampaign.mjs map busy1` (the new address part: the boot asks for the canvas HUD and today's ships unless the address says otherwise), three runs each on a busy Mac (load 10 to 12), the old glass map on main `9c7d68d2` against the card and its page panels: frame median 1.7, 2.8, 1.7 ms before and 2.3, 1.7, 1.5 ms after (p95 2.9, 4.5, 2.9 before and 3.7, 2.9, 2.6 after), sim 0.3 ms either way, render 0.5 to 0.8 before and 0.4 to 0.6 after, heap 10.85 MB before and 10.83 after. The Mac's load moves a run by more than the change does: the map open costs the same. The panels are written by a diff-writer ten times a second (the radio line's fade every frame) and the model is worked out only then.
