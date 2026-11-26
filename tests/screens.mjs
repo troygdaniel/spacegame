@@ -1,12 +1,12 @@
 // smoke: the new screens' foundation (landing F): the switch (off by default, ?screens=, Settings row), the screens group of the key table, key chips read from the table, the word budget, the panel host (plain Node, no Chrome)
 // Card space-game-screens-f-foundation (Troy, 25 Nov 2026; the mock is docs/screens-mock.html). Landing F builds what every new screen shares and changes NO screen:
-//   A. the switch: CAMP.flags.screens is false in the table; ?screens=1 turns it on, ?screens=0 off whatever the flag says; scrSet keeps the choice in the browser and scrLoad reads it back
+//   A. the switch: CAMP.flags.screens is TRUE in the table (card space-game-screens-fill-default-on, Troy, 26 Nov 2026: on for every player); ?screens=0 turns it off whatever the flag says (the tests' way); no Settings row, nothing is remembered (an older version's saved value is not read)
 //   B. the key table's screens group (CAMP_SCREEN_KEYS in src/data_controls.js): well formed, every code is in the code of one of its files, and nothing reads it to decide what a key does
 //   C. the chips are the table's: a role's cap is the table's cap, a key moved in the table moves the chip, an unknown role has no chip, and every chip every screen's keys make is an entry of the table
 //   D. the word budget: the counter, the mock's counts, the most a screen's words may be
 //   E. the host: one root over the canvas rectangle at the menus' em, pointer-events none, auto on a tile with a handler only, nothing focusable, the diff-writer writes only what changed
 //   F. the style: only .sc- selectors, the mock's tokens, no image, font or request
-//   G. the Settings row, the new words and their voicepack rule, and: nothing draws from any of it yet (no screen changes)
+//   G. no Settings row and no words of one (they went with card space-game-screens-fill-default-on), and the voicepack rule of the screens' words
 // Run: node tests/screens.mjs   (exit code 1 on a failed check)
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,8 +20,8 @@ const src = f => readFileSync(join(ROOT, f), 'utf8');
 const code = f => src(f).split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\s\/\/ .*$/gm, '');
 
 console.log('A. the switch');
-check('the table\'s flag is false: the new screens are off for every player', J('CAMP.flags.screens') === false);
-check('scrOn is false with no address and the flag off', J('scrOn()') === false);
+check('the table\'s flag is TRUE: the new screens are on for every player (the node harness makes this game with it off, the twin of ?screens=0, so a test of today\'s screens stays today\'s)', J('CAMP.flags.screens') === false && nodeGame({ screens: 'table' }).run('CAMP.flags.screens') === true);
+check('scrOn is false in this game with no address and the flag off, and true in a game made with the table\'s flag', J('scrOn()') === false && nodeGame({ screens: 'table' }).run('scrOn()') === true);
 check('the address ?screens=1 turns it on, a bare ?screens, =on and =true too', ['?screens=1', '?x=1&screens', '?screens=on', '?SCREENS=TRUE'].every(a => J(`scrAddrOn(${JSON.stringify(a)})`) === true));
 check('?screens=0, =off and =false are off; no word of it is neither', ['?screens=0', '?screens=off', '?a=b&screens=false'].every(a => J(`scrAddrOff(${JSON.stringify(a)})`) === true) && J(`scrAddrOn('?pagehud=1')`) === false && J(`scrAddrOff('')`) === false && J(`scrAddrVal('?screens=maybe')`) === 'maybe');
 check('another switch\'s name is not mine (?screensx, ?myscreens)', J(`scrAddrVal('?screensx=1&myscreens=1')`) === null);
@@ -33,17 +33,16 @@ g.run(`CAMP.flags.screens = false; window.location = { search: '?screens=1' }; S
 check('?screens=1 in the page\'s address turns it on with the flag off', J('scrOn()') === true);
 g.run(`window.location = { search: '' }; SCR.memo.s = null; CAMP.flags.screens = false;`);
 check('the address is read again when it changes (and only then)', J('scrOn()') === false && J('SCR.memo.s') === '');
-check('scrSet(true) puts the flag on and the browser remembers it', J('scrSet(true)') === true && J('CAMP.flags.screens') === true && J(`localStorage.getItem(SCR.store)`) === '1');
-g.run(`CAMP.flags.screens = false;`);
-check('scrLoad reads it back at the start of the page', J('scrLoad()') === true && J('CAMP.flags.screens') === true);
-check('scrSet(false) puts it off and remembers that', J('scrSet(false)') === false && J('CAMP.flags.screens') === false && J(`localStorage.getItem(SCR.store)`) === '0' && J('scrLoad()') === false);
+check('nothing is remembered and nothing is set from a row: no scrSet, no scrLoad, no store name', ['scrSet', 'scrLoad'].every(f => J(`typeof ${f}`) === 'undefined') && J('SCR.store === undefined') === true);
 {
   const h = nodeGame({ screens: 'table' });
-  check('nodeGame({ screens: \'table\' }) keeps the table\'s own value (the test harness forces it off otherwise, as for ?shiplook=0)', h.run('CAMP.flags.screens') === false);
+  check('nodeGame({ screens: \'table\' }) keeps the table\'s own value (the test harness forces it off otherwise, as for ?shiplook=0)', h.run('CAMP.flags.screens') === true);
   const k = nodeGame({ store: new Map([['longhaul.screens', '1']]) });
   check('a stored "1" does not leak into a test: the harness makes the game with the flag off', k.run('CAMP.flags.screens') === false);
   const k2 = nodeGame({ store: new Map([['longhaul.screens', '1']]), screens: 'table' });
   check('and a page whose memory says 1 starts with it on', k2.run('CAMP.flags.screens') === true);
+  const k3 = nodeGame({ store: new Map([['longhaul.screens', '0']]), screens: 'table' });
+  check('a "0" an older version kept in this browser is not read: the screens are on', k3.run('scrOn()') === true);
 }
 
 console.log('B. the key table\'s screens group');
@@ -143,21 +142,10 @@ console.log('F. the style');
   check('index.html loads the style once and the two scripts once, after the page HUD\'s and the data they use (data_controls.js, campaign.js, camppagehud.js)', (src('index.html').match(/screens\.css/g) || []).length === 1 && (src('index.html').match(/src\/screens\.js/g) || []).length === 1 && (src('index.html').match(/src\/scrhost\.js/g) || []).length === 1 && ['src/data_controls.js', 'src/campaign.js', 'src/camppagehud.js'].every(f => src('index.html').indexOf(f) < src('index.html').indexOf('src/screens.js')) && src('index.html').indexOf('src/screens.js') < src('index.html').indexOf('src/scrhost.js'));
 }
 
-console.log('G. the Settings row, the words and the rule; no screen changes');
-check('the new words are in the table and the file the same, six keys of scr.set', (() => { const md = src('content/text/screens.md'), keys = [...md.matchAll(/^\| (scr\.[\w.]+) \| (.*) \|$/gm)].map(m => m[1]); return keys.length === 6 && keys.every(k => J(`uiText('${k}')`) !== k); })());
-check('the voicepack says scr. is shown, never said', J(`VOICEPACK_FAMILIES.some(r => r.re.test('scr.set.row') && r.why && !r.spoken)`) === true);
-check('the Settings row is in CONTENT: a button that flips the switch, Enter does it too, and the row reads the switch', /scrOn\(\)/.test(src('src/settings.js')) && /screensToggle\(\)/.test(src('src/settings.js')) && /this\.section === 'content'\) this\.screensToggle/.test(src('src/settings.js')));
-{
-  g.run(`
-    window.__btn = () => { const b = { text: '', on: false, edge: 0, set(s) { b.text = s; return b; }, color() { return b; }, mark(o) { b.on = !!o; return b; }, draw() {} }; return b; };
-    window.__said = []; window.__row = { slots: { scrOn: __btn() }, say(m) { __said.push(m); } };
-    CAMP.flags.screens = false; localStorage.removeItem(SCR.store);
-    Settings.prototype.screensToggle.call(__row);
-  `);
-  check('the first press turns them ON: the flag, the memory, the button and the line say so', J('CAMP.flags.screens') === true && J('localStorage.getItem(SCR.store)') === '1' && J('__row.slots.scrOn.text') === 'New screens: ON' && J('__row.slots.scrOn.on') === true && J('__said[0]') === 'New screens ON.');
-  g.run(`Settings.prototype.screensToggle.call(__row);`);
-  check('the second turns them OFF again', J('CAMP.flags.screens') === false && J('localStorage.getItem(SCR.store)') === '0' && J('__row.slots.scrOn.text') === 'New screens: OFF' && J('__said[1]') === 'New screens OFF: the screens are as they were.');
-}
+console.log('G. no Settings row, no words of one, and the voicepack rule');
+check('the six words of the row (scr.set.*) are gone with content/text/screens.md: no key of that family is in the table', !existsSync(join(ROOT, 'content/text/screens.md')) && J('Object.keys(UI_TEXT).filter(k => /^scr\\.set\\./.test(k)).length') === 0);
+check('the voicepack says scr. is shown, never said', J(`VOICEPACK_FAMILIES.some(r => r.re.test('scr.sett.s.volume') && r.why && !r.spoken)`) === true);
+check('Settings has no switch for the screens: no screensToggle, no scrOn button, Enter in CONTENT does nothing', !/screensToggle|slots\.scrOn/.test(code('src/settings.js')) && !/this\.section === 'content'\) this\./.test(code('src/settings.js')));
 // the pieces of the new screens that have landed, each behind the switch (one name a piece: the first piece's files are the Campaign scene's cards, card space-game-screens-a-cards; the ready room's are card space-game-screens-c-hub; a later piece adds its own names here)
 // ONE FILE A LINE, so two pieces that each add a file do not touch the same line (8-GEN, 25 Nov 2026): add yours on a line of its own
 const PIECES = [
