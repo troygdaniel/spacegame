@@ -25,8 +25,8 @@ const CAMP_PAGEHUD = {
   placeSlide: 160,         // px: the most a place's pill is slid to get off a page panel; farther and it is not drawn (the world under the panel is hidden too)
   fedges: 4,               // the most pills at the edge for the ships you protect (card space-game-page-hud-friend-edge-pill): the nearest first
   kinds: 2,                // the most kinds of hostile the HOSTILES panel names (card space-game-b3-d-panel-cap-pill-goal; Troy's decision 7): the two most dangerous, then +N for the ships of the others
-  first: { ids: ['fly', 'fire', 'missile'] }, // the bottom key row (card space-game-page-hud-first-minute-chips made it a row of the first minute of mission 1.1; card space-game-bottom-row-enter-chip, Troy, 25 Nov 2026: it stays up all the time, in every mission, with a fourth chip, Enter and its verb): the ids of its first three chips are the key table's, in the order they sit
-  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet', 'box:hostiles', 'mother', 'post', 'chat'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels, except the friendlies' box and the W box of the pilots' pick, which the grown rings replace, and the hostiles' box, whose details are in the hostiles panel: box:friendlies, box:fleet, box:hostiles), the edge arrows of the hostiles and of the ships you protect (pills at the edge of the page: the hostiles' and a pill for each ship off the screen), the labels of the places in the world, the bottom key line)
+  first: { ids: ['fly', 'fire', 'boost', 'missile'] }, // the bottom key row (card space-game-page-hud-first-minute-chips made it a row of the first minute of mission 1.1; card space-game-bottom-row-enter-chip, Troy, 25 Nov 2026: it stays up all the time, in every mission, with a fourth chip, Enter and its verb): the ids of its first three chips are the key table's, in the order they sit
+  hides: ['status', 'cruiser', 'fleet', 'goal', 'stock', 'hostiles', 'friendlies', 'sight', 'contact', 'places', 'keys', 'box:friendlies', 'box:fleet', 'box:hostiles', 'mother', 'post', 'chat', 'list'] // what the canvas leaves out while the page HUD is on: landing 1 (the cruiser panel and the pilots), 2 (the goal line and the wave line; the ore and missiles block), 3 (the rows of the HOSTILES and FRIENDLIES corners (their details stay, under the panels, except the friendlies' box and the W box of the pilots' pick, which the grown rings replace, and the hostiles' box, whose details are in the hostiles panel: box:friendlies, box:fleet, box:hostiles), the edge arrows of the hostiles and of the ships you protect (pills at the edge of the page: the hostiles' and a pill for each ship off the screen), the labels of the places in the world, the bottom key line)
 };
 
 // ---- the switch ----
@@ -306,11 +306,45 @@ function campPageHudBuild(doc) {
   R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = []; R.fedges = []; // the pills of the ships you protect: made when they are first needed
+  const lst = campPageHudEl(doc, 'div', 'ph-p ph-list', root); R.list = { el: lst, head: campPageHudEl(doc, 'div', 'ph-lh', lst), rows: [], foot1: null, foot2: null }; // the open Q list as a panel under the left panel (card space-game-lists-panel-look): its rows are made here, shown as the list needs them
+  for (let i = 0, n = Math.max(1, CAMP_PANELS.show | 0); i < n; i++) { const el = campPageHudEl(doc, 'div', 'ph-lr', lst), num = campPageHudEl(doc, 'b', 'ph-k ph-ln', el), label = campPageHudEl(doc, 'span', 'ph-ll', el), key2 = campPageHudEl(doc, 'b', 'ph-k ph-ln2', el), bar = campPageHudEl(doc, 'i', 'ph-lbar', el), fill = campPageHudEl(doc, 'i', 'ph-fill', bar), suffix = campPageHudEl(doc, 'span', 'ph-ls', el); R.list.rows.push({ el, num, label, key2, bar, fill, suffix }); }
+  R.list.foot1 = campPageHudEl(doc, 'div', 'ph-lf1', lst); R.list.foot2 = campPageHudEl(doc, 'div', 'ph-lf2', lst);
   const radio = campPageHudEl(doc, 'div', 'ph-p ph-radio', root); R.radio = { el: radio, line: campPageHudEl(doc, 'div', 'ph-rad', radio), chat: campPageHudEl(doc, 'div', 'ph-chat', radio) }; // the radio panel: the toast box of the Campaign (the last radio line) and the wing's chatter, under the goal panel
   R.stock = { el: stock, oreLab: olab, missLab: mlab, oreFill: campPageHudEl(doc, 'i', 'ph-fill ph-ore', ometer), pipsBox: campPageHudEl(doc, 'div', 'ph-pips', m1), queue: campPageHudEl(doc, 'span', 'ph-q', m1), key: campPageHudEl(doc, 'span', 'ph-k', m1), pips: [] };
   return R;
 }
 // the element's property is written only when its value is not the one it has (a repainted label every frame was a large cost): the last value is kept on the element
+// the open Q list as a page panel (card space-game-lists-panel-look; the browser batch on main 922b7a92, item 1): the cruiser's order list was the last thing in the old canvas look (a cyan frame, the typewriter font) beside the page's panels, and a place pill stood on its foot.
+// It is drawn here, in the page HUD's look, under the left panel and its chips: the same rows in the same order (src/camppanel.js campPanelView: what the list holds, what a row says now), each with its digit in a chip (or its key, in a list that is not numbered),
+// its words and at the right what it does or why it cannot, a key of its own in a small chip after the words (Reload missiles: R), a mark for the order in force, the row just given bright, a small hull bar for a ship you protect in a target sub-list; the
+// foot says the row's state (or how many rows are below) and, from the model, the list's keys ("1-7  does a row    Esc close"). The panel fades as the canvas list did (campPanelFade). With the page HUD off the canvas draws the list as it always did.
+// The mouse still works: the page publishes where the panel and its rows are (s.pageListGeo, in the safe area's numbers) and the click on a row is found against that (src/campanelsdraw.js campPanelsGeo). A list a corner draws (the fleet pick W, the friends pick E: rings that grow in place) is not this panel's.
+function campPageHudListModel(P, C, now) {
+  if (!P || typeof P !== 'object' || !C || typeof campPanelOpen !== 'function') return null;
+  const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(id))) return null;
+  const V = campPanelView(P, C); if (!V) return null;
+  const cur = V.rows[V.at], flash = typeof CAMP_PANELS === 'object' ? CAMP_PANELS.anim.flash : 160;
+  return { id, key: def.key, pick: !!V.pick, title: V.pick ? String(V.title || '') : '', below: V.below | 0,
+    rows: V.rows.map((st, i) => ({ id: st.id, num: V.numbers ? (st.num ? String(st.num) : '') : String(st.key || ''), key2: V.numbers && st.key ? String(st.key) : '', label: String(st.label || '') + (st.more ? '  >' : ''), short: String(st.short || ''), ok: !!st.ok, marked: !!st.marked, at: V.at >= 0 && i === V.at, lit: !!(P.lit && P.lit[st.id] != null && now - P.lit[st.id] >= 0 && now - P.lit[st.id] < flash), hull: st.hull >= 0 ? st.hull : -1, band: st.band || '' })),
+    foot: cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : ''), why: !!cur && !cur.ok, keys: uiText(V.keys, { key: def.key, last: V.last }) };
+}
+function campPageHudListPaint(R, LM, fa) {
+  const set = campPageHudSet, L = R.list; set(L.el, 'display', LM ? '' : 'none'); if (!LM) return;
+  set(L.el, 'opacity', String(Math.round(Math.max(0, Math.min(1, fa)) * 100) / 100)); set(L.head, 'display', LM.title ? '' : 'none'); set(L.head, 'text', LM.title);
+  L.rows.forEach((o, i) => {
+    const st = LM.rows[i]; set(o.el, 'display', st ? '' : 'none'); if (!st) return;
+    set(o.el, 'cls', 'ph-lr' + (st.at ? ' at' : '') + (st.lit ? ' lit' : '') + (st.ok ? '' : ' no') + (st.marked ? ' mark' : ''));
+    set(o.num, 'text', st.num); set(o.num, 'display', st.num ? '' : 'none'); set(o.label, 'text', st.label); set(o.key2, 'text', st.key2); set(o.key2, 'display', st.key2 ? '' : 'none');
+    set(o.bar, 'display', st.hull >= 0 ? '' : 'none'); if (st.hull >= 0) { set(o.fill, 'width', Math.round(st.hull * 100) + '%'); set(o.fill, 'cls', 'ph-fill ph-' + (st.band === 'red' ? 'foe' : st.band === 'amber' ? 'warn' : 'good')); }
+    set(o.suffix, 'text', st.short);
+  });
+  set(L.foot1, 'text', LM.foot); set(L.foot1, 'display', LM.foot ? '' : 'none'); set(L.foot1, 'cls', 'ph-lf1' + (LM.why ? ' why' : '')); set(L.foot2, 'text', LM.keys);
+}
+// where the panel and its rows are, in the safe area's numbers, for the click (campPanelsGeo): null when it is not up
+function campPageHudListGeo(s, G0) {
+  const g = s && s.pageListGeo; if (!g || !campPageHudHides('list') || !g.rows || !g.rows.length) return G0;
+  return { x: g.x, y: g.y, w: g.w, h: g.h, n: g.rows.length, rowH: g.rows[0].y1 - g.rows[0].y0, rowY: i => (g.rows[i] ? g.rows[i].y0 : -1e9) };
+}
 // the radio panel (card space-game-b3-c-radio-panel; the cloud brief 3, Troy: item 1): the Campaign's toast box (the bordered box under the top centre: the radio lines and the other notices of the game) as a panel in the page HUD's look, the same words, the same pairing of two lines that come together, the same time up and the same fade
 // (TOAST.hold, a kept radio line's hold, TOAST.fade: src/common.js) on the scene's own clock; common.js toast() asks the scene first (s.toastPanel) and the Campaign gives the message to campPageHudToast, which keeps it in s.radioToast; campPageHudRadioPaint (10 a second) shows it. The wing's chatter (s.hud.chat: "ROOK: Ore aboard.", which stood at the
 // bottom left) is the panel's second, dimmer row, on the scene's clock for it (s.chatUntil), fading over its last 500 ms as it did. A map over the view takes the page HUD away, so a message that comes while it is open is the old box, over the map.
@@ -377,7 +411,7 @@ function campPageHudPaint(R, M, doc) {
 // ---- the scene's call ----
 function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and lists are where they were
   const R = s && s.pageHud; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
-  if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; }
+  if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; s.pageListGeo = null; }
   if (typeof CAMP_CORNER_SHIFT === 'object') { CAMP_CORNER_SHIFT.tl = 0; CAMP_CORNER_SHIFT.bl = 0; CAMP_CORNER_SHIFT.tr = 0; }
   if (typeof CAMP_CORNER_SHIFTX === 'object') { CAMP_CORNER_SHIFTX.tl = 0; CAMP_CORNER_SHIFTX.bl = 0; CAMP_CORNER_SHIFTX.tr = 0; }
   if (s) { s.pageHudStack = 0; campPageHudHideLines(s, false); if (R && R.backAlpha !== undefined && s.hudBack && s.hudBack.setAlpha) s.hudBack.setAlpha(R.backAlpha); }
@@ -411,10 +445,17 @@ function campPageHudSync(s, now) {
   set(R.root, 'left', Math.round(r.left) + 'px'); set(R.root, 'top', Math.round(r.top) + 'px'); set(R.root, 'width', Math.round(r.width) + 'px'); set(R.root, 'height', Math.round(r.height) + 'px'); set(R.root, 'fontSize', Math.round(fs * 100) / 100 + 'px');
   const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom, was: R.was || {} } : null; // was: which edge pills showed at the last look (a pill stays until its ship is well inside the screen)
   campPageHudPaint(R, campPageModel(C, view), document);
+  const Pn = s.pn, fa = Pn && typeof campPanelFade === 'function' && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPanelFade(Pn, t) : 1, LM = Pn && fa >= 0 && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPageHudListModel(Pn, C, t) : null; // the open Q list (the fade first: a list that nothing touches closes)
+  campPageHudListPaint(R, LM, fa);
   campPageHudHideLines(s, true);
   if (R.ship.el.getBoundingClientRect && r.width > 0 && typeof CAMP_CORNER_SHIFT === 'object') {
     const k = gk, A = CAMP.corner.at, th = CAMP.corner.title.h, gap = CAMP.corner.stack, bot = el => (el.getBoundingClientRect().bottom - r.top) / k, shown = el => el.style.display !== 'none';
     const shipB = bot(R.ship.el), dyF = (s.cornerDy && s.cornerDy.friendlies) || 0;
+    if (LM) { // the open Q list stands under the left panel (its chips), and the page says where its rows are, in the safe area's numbers, for a click
+      set(R.list.el, 'top', Math.round((shipB + gap) * k * 10) / 10 + 'px');
+      const lc = R.list.el.getBoundingClientRect(), sox = typeof fillOx === 'function' ? fillOx() : 0;
+      s.pageListGeo = { x: (lc.left - r.left) / k - sox, y: (lc.top - r.top) / k - soy, w: lc.width / k, h: lc.height / k, rows: LM.rows.map((_, i) => { const b = R.list.rows[i].el.getBoundingClientRect(); return { y0: (b.top - r.top) / k - soy, y1: (b.bottom - r.top) / k - soy }; }) };
+    } else s.pageListGeo = null;
     // the rows of the canvas that the panels replace keep their PLACE (the lists and the details open under it): the Q CRUISER row's under the ship panel; the FRIENDLIES row's under the friend panel (which slides down with the Q list); the HOSTILES row's under the lowest of the stock and hostiles panels
     CAMP_CORNER_SHIFT.tl = Math.round(shipB - soy - th - A.tl.y); // (the canvas rows are in the safe area: its top is soy below the canvas's)
     if (typeof CAMP_CORNER_SHIFTX === 'object') { const sox = typeof fillOx === 'function' ? fillOx() : 0; CAMP_CORNER_SHIFTX.tl = -sox; CAMP_CORNER_SHIFTX.bl = -sox; CAMP_CORNER_SHIFTX.tr = sox; } // and its left edge sox right of the canvas's: the rows go out to the panels at the window's corners

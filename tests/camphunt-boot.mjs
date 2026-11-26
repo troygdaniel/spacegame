@@ -16,7 +16,7 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { launch, sleep } = await import('./cdp.mjs');
+const { launch, sleep } = await import('./cdp.mjs'); const { canvasListExpr } = await import('./canvashud.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
 const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS = Number(arg('secs', 90)), FIGHT = process.argv.includes('--fight'), QUICK = process.argv.includes('--quickwin'), LOSE = process.argv.includes('--lose'), DOCK = process.argv.includes('--dock'), RETREAT = process.argv.includes('--retreat'), PANELS = process.argv.includes('--panels'), REPLAY = process.argv.includes('--replay');
@@ -72,7 +72,8 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
     for (let n = 0; n < 6 && (await j(`campPanelOpen(${S}.pn)`)); n++) await key('Escape'); // an order that is refused leaves the list open, and so does a power row: Esc until it is closed, the keys go back to the ship
     return true;
   };
-  const listRows = () => j(`${S}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + (r.suffix.text ? ' [' + r.suffix.text + ']' : ''))`); // the rows of the open list as they are drawn (src/campanelsdraw.js)
+  const listDrawn = () => j(canvasListExpr(S)); // the open list as drawn: with the page HUD (the default) a panel of the page, else the canvas's (card space-game-boots-fill-screens, after space-game-lists-panel-look)
+  const listRows = async () => (await listDrawn()).rows.map(r => r.name + (r.suffix ? ' [' + r.suffix + ']' : '')); // the rows of the open list as they are drawn (src/campanelsdraw.js)
   await t.waitFor(`!!(window.game && game.scene.isActive('Title'))`, 30000, 'the title'); await t.clock(); await t.run(900);
   const res = { score: 2000, bonuses: ['swift'], t: 100, hull: 800, lost: 0, tries: 1 }, results = {};
   for (let l = 1; l <= LEVEL; l++) for (let m = 1; m <= 3; m++) if (l < LEVEL || m < MISSION) results[l + '.' + m] = res;
@@ -104,12 +105,14 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   await hold('ArrowRight', 600); check('Right turns it', Math.abs((await j(`${S}.camp.carrier.rot`)) - r0) > 0.05);
   await hold('ArrowLeft', 600);
   await key('Tab'); await t.run(500); await snap('6-map'); note('map open: ' + await j(`!!(${S}.map && ${S}.map.open) || !!${S}.mapOpen`)); await key('Tab'); await t.run(300);
-  check('no list is on the screen until its key is pressed (nothing at all: no target is picked, so the corner is empty)', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await j(`!${S}.pnl.title.visible && ${S}.pnl.rows.every(r => !r.name.visible)`)) === true); await snap('7-no-list');
+  check('no list is on the screen until its key is pressed (nothing at all: no target is picked, so the corner is empty)', (await j(`campPanelOpen(${S}.pn)`)) === '' && (await listDrawn()).head === '' && (await listDrawn()).rows.length === 0); await snap('7-no-list');
   const keyed = await j(`CAMP_PANELS.panels.filter(p => p.code && !p.off && p.id !== 'friends').map(p => [p.code, p.id, p.key + '   ' + p.title, p.parent || '', !!p.numbers])`); // the lists that have a key of their own in the game now: the cruiser's (Q) and the fleet pick (W: card space-game-keys5-qwe); the friends pick (E: card space-game-keys8-e-digit) opens only with a ship you protect in the level, so this walk of the home level leaves it out; the old lists are deleted
   check('the key table has the cruiser list on a key of its own, and every list key is one this walk can press', keyed.some(x => x[1] === 'cruiser') && keyed.every(x => VK[x[0]]), keyed.map(x => x[0] + ':' + x[1]).join());
   for (const [k, id, title, parent, numbered] of keyed) { // each list: its key opens it directly at the first row (from no list), Up goes round to the last row (a long list scrolls), its key closes it; a numbered list has no heading and no highlight (its digits do its rows and the arrows fly: card space-game-s-list-numbers)
-    await key(k); await t.run(500); await snap('7-list-' + id); const head = await j(`${S}.pnl.title.text`), n = await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).length`); note(id + ' list: ' + head + ' / ' + (await listRows()).join(' | '));
-    check(k.slice(3) + ' opens the ' + id + (numbered ? ' list under its corner\'s title (no heading, no counter; its foot says the digits do a row)' : ' list at its first row, headed ' + title), (await j(`campPanelOpen(${S}.pn)`)) === id && (await j(`${S}.pn.at`)) === 0 && (numbered ? head === '' && /1.\d\s+does a row/.test(await j(`${S}.pnl.keys.text`)) : head === title), head + ' / ' + (await j(`${S}.pnl.keys.text`)));
+    await key(k); await t.run(500); await snap('7-list-' + id); const head = (await listDrawn()).head, n = await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).length`); note(id + ' list: ' + head + ' / ' + (await listRows()).join(' | '));
+    const L = await listDrawn(), pickLabels = await j(`campPanelList(${S}.camp, ${JSON.stringify(id)}).slice(0, 3).map(r => r.label)`), shipLines = await j(`(document.querySelector('.ph-ship') ? document.querySelector('.ph-ship').innerText : '').split('\\n').map(x => x.trim()).filter(Boolean)`); // a numbered list the page draws in its list panel (the Q list) has its foot; the fleet pick is drawn by its corner, in the ship panel: the number and the name, row by row, with no heading
+    const inShip = pickLabels.length > 0 && pickLabels.every((lb, n) => { const at = shipLines.indexOf(String(n + 1)); return at >= 0 && shipLines[at + 1] === lb; });
+    check(k.slice(3) + ' opens the ' + id + (numbered ? ' list under its corner\'s title (no heading, no counter; its foot says the digits do a row, or the page\'s ship panel numbers its rows)' : ' list at its first row, headed ' + title), (await j(`campPanelOpen(${S}.pn)`)) === id && (await j(`${S}.pn.at`)) === 0 && (numbered ? L.head === '' && (/1.\d\s+does a row/.test(L.keys) || (!L.page && inShip)) : L.head === title), L.head + ' / ' + L.keys + ' ' + JSON.stringify(shipLines).slice(0, 200));
     await key('ArrowUp'); await t.run(500); await snap('7-list-' + id + '-end'); note(id + ' list, the end: ' + (await listRows()).join(' | '));
     if (numbered) check('Up leaves the ' + id + ' list alone: the arrows fly, the list has no highlight to move', (await j(`campPanelOpen(${S}.pn)`)) === id && (await j(`${S}.pn.at`)) === 0);
     else check('Up from the first row goes round to the last (' + n + ' rows)', (await j(`${S}.pn.at`)) === n - 1 && (await j(`${S}.pn.top`)) === Math.max(0, n - (await j('CAMP_PANELS.show'))));

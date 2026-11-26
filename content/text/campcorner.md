@@ -20,6 +20,7 @@ The words of the four corner panels (card space-game-layout-fleet; Troy, 24 Nov 
 | camp.corner.enter.guard | Guard |
 | camp.corner.chip.fly | Fly |
 | camp.corner.chip.fire | Fire |
+| camp.corner.chip.boost | Boost |
 | camp.corner.chip.missile | Missile |
 | camp.corner.lost | lost |
 | camp.corner.allshort | All |
