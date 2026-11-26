@@ -49,6 +49,7 @@ function campPanelsPaint(s, now) {
   if (!on) { if (campPanelOpen(P) && s.mode !== 'play') campPanelClose(P); L.live = -1e9; return; }
   const fa = campPanelFade(P, now); // a list that fades (the cruiser's) dims, then closes, when nothing touches it (card space-game-keys2-cruiser)
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(id))) { L.live = -1e9; L.key = ''; return; } // (the fleet pick is drawn by its corner: src/campcorner.js, card space-game-keys5-corners)
+  if (typeof campPageHudHides === 'function' && campPageHudHides('list')) { L.live = -1e9; L.key = ''; return; } // the page HUD draws the open list as a panel (src/camppagehud.js, card space-game-lists-panel-look); the fade above still closes it
   const col = K.color[def.side], key = id + ':' + P.at + ':' + P.top + ':' + (P.pick ? 'p' + P.pick.sel + ':' + P.pick.at + ':' + P.pick.top : '') + ':' + (P.trail || []).join() + ':' + Object.keys(P.lit || {}).map(k => P.lit[k]).join(); // (an order just given is in the key too; so is the target sub-list's highlight)
   if (L.live < 0 || now - L.live >= K.every || L.key !== key) { L.live = now; L.key = key; L.view = campPanelView(P, C); } // the words are live: made when the list opens or the highlight moves, and four times a second
   const V = L.view; if (!V) return;
@@ -79,19 +80,21 @@ function campPanelsPaint(s, now) {
   L.objs.forEach(o => { if (o && o.setAlpha) o.setAlpha(fa); }); // the fade: the whole list, its words and its bars, at one opacity
 }
 
+// where the open list is for a click: its own, or (the page HUD draws it as a panel: src/camppagehud.js) where the page says its rows are
+const campPanelsGeo = (s, def, V) => { const G0 = campPanelsGeometry(def, V.total, V.pick); return typeof campPageHudListGeo === 'function' ? campPageHudListGeo(s, G0) : G0; };
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
 // the pointer is on the open list's box: a press there is the list's click (campPanelsClick), never the start of a drag of the view (src/campdrag.js)
 function campPanelsOver(s, px, py) {
   const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(def.id))) return false;
   const V = campPanelView(P, s.camp); if (!V) return false;
-  const G = campPanelsGeometry(def, V.total, V.pick); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
+  const G = campPanelsGeo(s, def, V); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
 }
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(def.id))) return false; // (a list a corner draws has no rows here to click)
   const V = campPanelView(P, s.camp); if (!V) return false; // the rows on the screen: the list's, or the candidates of a target sub-list
-  const G = campPanelsGeometry(def, V.total, V.pick), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
+  const G = campPanelsGeo(s, def, V), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
   P.touch = now; // a click on the list is a touch: it does not fade while it is used (campPanelFade)
   let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
   if (P.pick) { // a candidate: highlighted and chosen, the order is given at it
