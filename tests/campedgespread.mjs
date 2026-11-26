@@ -122,13 +122,13 @@ console.log('C. the scene');
   check('one group alone has its label where it always had it: behind its arrow, level with it (no slide for nothing)', L1.length === 1 && Math.abs(L1[0][1] - 360) < 1 && L1[0][0] > M + 12, JSON.stringify(L1));
   // the goal's arrow keeps out of the sight arrows' rectangles (paintHud: Campaign.prototype with a stand-in)
   const paint = src('src/campaignscene.js');
-  check('the goal\'s arrow in paintHud asks the spread, with the sight arrows\' rectangles taken (scene.hud.sight.boxes) and the same keep rectangles', /campEdgeSpread\(\[\{ x: ar\.x, y: ar\.y, angle: ar\.angle, w: aw, h: ah, want \}\], \{ keep: this\.arrowKeep\(\), W, H, m: CAMP\.nav\.arrow\.margin, tri: 13, boxes: this\.hud\.sight && this\.hud\.sight\.boxes/.test(paint));
+  check('the goal\'s arrow in paintHud asks the spread, with the sight arrows\' rectangles taken (scene.hud.sight.boxes) and the same keep rectangles', /fillSpread\(\[\{ x: ar\.x, y: ar\.y, angle: ar\.angle, w: aw, h: ah, want \}\], \{ keep: this\.arrowKeep\(\), W, H, m: CAMP\.nav\.arrow\.margin, tri: 13, boxes: this\.hud\.sight && this\.hud\.sight\.boxes/.test(paint));
 }
 
 console.log('D. the calls');
 {
   check('the script is in index.html before the scene half that uses it', (() => { const h = src('index.html'), a = h.indexOf('src/campedgespread.js'), b = h.indexOf('src/campsightscene.js'); return a > 0 && b > a; })());
-  check('the sight scene puts its arrows through the spread and keeps the rectangles', /campEdgeSpread\(its, \{ keep, W, H, m: CAMP\.nav\.arrow\.margin, tri: K\.tri, gap: K\.gap \}\)/.test(src('src/campsightscene.js')) && /V\.boxes = \[\]/.test(src('src/campsightscene.js')));
+  check('the sight scene puts its arrows through the spread and keeps the rectangles', /fillSpread\(its, \{ keep, W, H, m: CAMP\.nav\.arrow\.margin, tri: K\.tri, gap: K\.gap \}\)/.test(src('src/campsightscene.js')) && /V\.boxes = \[\]/.test(src('src/campsightscene.js')));
   check('the arrows carry where their ship is on the screen (tx, ty), for the turn', /tx: sx, ty: sy, n: g\.n/.test(src('src/campsight.js')) && /tx: sx, ty: sy, dist: campDist\(b, C\.carrier\)/.test(src('src/campsight.js')));
   check('the keep table is not changed by it (it is the corner panels\' own: cards space-game-keys5-corners and space-game-keys6-layout): the spread reads CAMP.nav.arrow.keep as it is', /K = o\.keep \|\| \[\]/.test(src('src/campedgespread.js')));
   check('PROJECT_STATUS.md says it', /edge labels/i.test(src('PROJECT_STATUS.md')) && /space-game-edge-labels-overlap/.test(src('PROJECT_STATUS.md')));
