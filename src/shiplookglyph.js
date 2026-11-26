@@ -31,6 +31,7 @@ function slookGlyphBucket(kind, k, z, prev) { // the length (px) to bake a sign 
   if (prev > 0 && Ls <= prev * SLGLYPH.keep.under && Ls >= prev * SLGLYPH.keep.over) return prev;
   return B.find(b => b >= Ls) || B[B.length - 1];
 }
+const slookGlyphKeep = u => !!u && u.kind === 'carrier'; // a ship that keeps its own picture at the far zoom, with no sign: the player's cruiser (Troy, 26 Nov 2026: "do not use the replacement icon for the cruiser; it is gross"); every other ship is its sign
 const slookGlyphWant = (z, was) => !(z > 0) ? !!was : was ? z < SLOOK.glyph.over : z < SLOOK.glyph.under;
 const slookMapLen = kind => Math.max(SLGLYPH.map.min, Math.min(SLGLYPH.map.max, SLGLYPH.map.base + SLGLYPH.map.k * (typeof slookLen === 'function' ? slookLen(kind) : 30)));
 const slookMapType = type => SLGLYPH.types[type] || 'neutral';
