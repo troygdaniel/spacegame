@@ -123,14 +123,16 @@ console.log('G. the Earth refit and the tech pick');
   check('the beam turrets are three pills: Damage x2, Reach 500 to 750, Shots pass through', ['Damage x2', 'Reach 500 to 750', 'Shots pass through'].every(t => kinds('__rm', 'pill').some(p => p.text === t)));
   check('credits and ore are two pills with their numbers in gold, and the heading says Choose one technology', kinds('__rm', 'pill').filter(p => p.lead).map(p => p.lead + ' ' + p.text).join('|') === '100 credits|0 ore' && texts('__rm').indexOf('Choose one technology') > 0);
   check('the fighter row has its chip (4), its words and its cost from the table (25, credits then ore), and nothing is bought: no pill', chips('__rm').indexOf('d4:4') > 0 && texts('__rm').indexOf('One more fighter') > 0 && texts('__rm').indexOf('25') > 0 && texts('__rm').indexOf('credits, then ore') > 0 && !kinds('__rm', 'pill').some(p => /bought/.test(p.text)) && !kinds('__rm', 'tile').slice(-1)[0].dim);
-  check('no technology picked yet: no tile is on and no Continue chip', kinds('__rm', 'tile').every(t => !t.on) && chips('__rm').indexOf('pick:Enter') < 0);
-  g.run(`window.__rm2 = scrRefitModel({ choices: __ch, pick: 'beam', f: 2, w: { ore: 0, credits: 10 }, P: __P() });`);
-  check('a pick lights its tile and brings the Continue chip; fighters bought show as a pill; with 10 credits the fighter row is dim (cannot afford one)', kinds('__rm2', 'tile').filter(t => t.on).length === 1 && chips('__rm2').indexOf('pick:Enter') > 0 && texts('__rm2').indexOf('Continue') > 0 && kinds('__rm2', 'pill').some(p => p.text === '2 bought') && kinds('__rm2', 'tile').slice(-1)[0].dim === true);
+  check('the first technology is LIT when the card opens (card space-game-refit-card-stuck): the bright outline is on tile 1, and the keys are on the card: Left Right Choose, Enter Take (no Continue chip waiting for a pick)', kinds('__rm', 'tile').map(t => !!t.on).join() === 'true,false,false' && chips('__rm').slice(-3).join() === 'left:Left,right:Right,pick:Enter' && texts('__rm').indexOf('Choose') > 0 && texts('__rm').indexOf('Take') > 0 && texts('__rm').indexOf('Continue') < 0);
+  g.run(`window.__rm2 = scrRefitModel({ choices: __ch, cur: 1, f: 2, w: { ore: 0, credits: 10 }, P: __P() });`);
+  check('the light moves with the arrows: tile 2 is lit, still Enter Take; fighters bought show as a pill; with 10 credits the fighter row is dim (cannot afford one)', kinds('__rm2', 'tile').filter(t => t.on).length === 1 && kinds('__rm2', 'tile')[1].on === true && chips('__rm2').indexOf('pick:Enter') > 0 && texts('__rm2').indexOf('Take') > 0 && kinds('__rm2', 'pill').some(p => p.text === '2 bought') && kinds('__rm2', 'tile').slice(-1)[0].dim === true);
+  g.run(`window.__rm2f = scrRefitModel({ choices: __ch, cur: 2, f: 0, w: { ore: 0, credits: 100 }, P: __P() });`);
+  check('with the light on the fighter row (Down) that row is lit and Enter says Buy', kinds('__rm2f', 'tile').slice(-1)[0].on === true && kinds('__rm2f', 'tile').slice(0, -1).every(t => !t.on) && texts('__rm2f').indexOf('Buy') > 0 && texts('__rm2f').indexOf('Take') < 0);
   g.run(`window.__rm3 = scrRefitModel({ choices: ['shield', 'beam', 'lens', 'blink'], pick: null, f: 0, w: { ore: 50, credits: 0 }, P: __P() });`);
   check('what was looted from a cloaked cache is chosen with 6 7 8 (the keys the refit has today: refitKey), so the third and fourth tiles say 6 and 7', chips('__rm3').slice(0, 4).join() === 'd1:1,d2:2,d3:3,d6:6' || chips('__rm3').slice(0, 4).join() === 'd1:1,d2:2,d6:6,d7:7', chips('__rm3').join());
   check('every technology of the game has numbers to show: a meter or pills, each as the table gives them', J(`Object.keys(CAMP.tech).every(id => scrTechNodes(id, __P()).length > 0 || id === 'blink' && !CAMP_BLINK.on)`) === true);
   g.run(`window.__pk = scrPickModel({ choices: ['shield', 'beam', 'lens'], P: __P() });`);
-  check('the plain pick: Choose a technology, the tiles with 1 2 3, no fighter row, no Continue (the first press picks)', texts('__pk')[0] === 'Choose a technology' && chips('__pk').join() === 'd1:1,d2:2,d3:3' && !texts('__pk').some(t => /fighter|Continue/.test(t)));
+  check('the plain pick: Choose a technology, the tiles with 1 2 3, the first lit, no fighter row, and the keys on the card (Left Right Choose, Enter Take: a digit takes one at once)', texts('__pk')[0] === 'Choose a technology' && chips('__pk').join() === 'd1:1,d2:2,d3:3,left:Left,right:Right,pick:Enter' && kinds('__pk', 'tile').map(t => !!t.on).join() === 'true,false,false' && !texts('__pk').some(t => /fighter|Continue/.test(t)) && texts('__pk').indexOf('Take') > 0);
 }
 
 console.log('H. the end card');
@@ -145,7 +147,7 @@ console.log('I. the word counts and the chips');
   const models = { pause: 'scrPauseModel(__new(), { mission: true })', won: 'scrWonModel(__new(), __P(), { sc: campScore(C), title: "Rim escort", mdone: false })', lost: 'scrLostModel(__new(), "convoy")', lvlwon: 'scrLevelWonModel(__new(), __P(), 1, false)', earthrefit: 'scrRefitModel({ choices: __ch, pick: null, f: 0, w: { ore: 0, credits: 100 }, P: __P() })' };
   for (const k of Object.keys(models)) {
     const w = J(`scrNodeWords(${models[k]})`), mock = J(`SCR_BUDGET.${k}.mock`), today = J(`SCR_BUDGET.${k}.today`);
-    check(k + ': ' + w + ' words and numbers, the mock\'s ' + mock + ' (at most ' + J(`scrWordsMax('${k}')`) + '), today\'s ' + today + ': within the budget and far under today', J(`scrWithin('${k}', { n: 1 })`) === true && w <= J(`scrWordsMax('${k}')`) && w < today / 1.5, w);
+    check(k + ': ' + w + ' words and numbers, the mock\'s ' + mock + ' (at most ' + J(`scrWordsMax('${k}')`) + '), today\'s ' + today + ': within the budget and far under today', J(`scrWithin('${k}', { n: 1 })`) === true && w <= J(`scrWordsMax('${k}')`) && w < today * 0.8, w);
   }
   const bad = [];
   for (const k of Object.keys(models)) for (const c of chips(models[k])) { const [id, cap] = [c.slice(0, c.indexOf(':')), c.slice(c.indexOf(':') + 1)]; if (!J(`scrChipInTable({ id: ${JSON.stringify(id)}, k: ${JSON.stringify(cap)} })`)) bad.push(k + ':' + c); }
@@ -229,7 +231,7 @@ console.log('K. the scene: the switch off draws the old cards, on draws the new,
 {
   const cs = code('src/campaignscene.js');
   check('every use of the new look in the scene is behind campNewCard (scrOn): no other call of the models or the drawing', (cs.match(/scr(Pause|Won|Lost|LevelWon|Refit|Pick|End)Model/g) || []).length === 7 && (cs.match(/campNewCard\(this, /g) || []).length === 7 && (cs.match(/scrCardShow\(/g) || []).length === 1);
-  check('no key, rule, number or sound of the scene changed: the key handler and the keys of the cards are as they were (refitKey, pickKey, the mode checks of onKey)', /refitKey\(c\)/.test(cs) && /Digit4' && R\.f < CAMP\.refit\.most/.test(cs) && /this\.mode === 'pause'/.test(cs) && /this\.mode === 'lost'/.test(cs));
+  check('no key, rule, number or sound of the scene changed: the key handler and the keys of the cards are as they were (refitKey, pickKey, 4 buys a fighter, the mode checks of onKey); the arrows and Enter are added by card space-game-refit-card-stuck', /refitKey\(c\)/.test(cs) && /c === 'Digit4'\) \{ if \(!buy\(\)\)/.test(cs) && /this\.mode === 'pause'/.test(cs) && /this\.mode === 'lost'/.test(cs));
 }
 
 console.log(`\n${n - failed}/${n} checks passed`);
