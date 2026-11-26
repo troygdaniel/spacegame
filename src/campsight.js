@@ -29,7 +29,7 @@ function campSeen(C, u) {
 // the groups of the hostiles that are seen (seenOnly) or of all of them that can come and go: greedy, nearest the carrier first, a ship joins the first group whose first ship is within CAMP.sensor.group
 function campSightGroups(C, seenOnly) {
   if (!C || !C.carrier) return [];
-  const K = CAMP.sensor, c = C.carrier, S = C.sight, list = campAliens(C).filter(u => !campSightAlways(u) && (!seenOnly || campSeen(C, u)))
+  const K = CAMP.sensor, c = campEye(C), S = C.sight, list = campAliens(C).filter(u => !campSightAlways(u) && (!seenOnly || campSeen(C, u)))
     .sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y) || (a.id < b.id ? -1 : 1)), gs = [];
   list.forEach(u => {
     let g = gs.find(q => Math.hypot(q.first.x - u.x, q.first.y - u.y) <= K.group);
@@ -58,7 +58,7 @@ function campSightWhat(kinds, named) {
   return ks.map(k => uiText('camp.sight.kind.' + (kinds[k] === 1 ? 'one' : 'many'), { n: kinds[k], kind: campSightKindName(k) })).join(', ');
 }
 function campSightLine(C, ids) {
-  const c = C.carrier, us = ids.map(id => C.by[id]).filter(u => u && u.hp > 0 && u.team === 'alien');
+  const c = campEye(C), us = ids.map(id => C.by[id]).filter(u => u && u.hp > 0 && u.team === 'alien');
   if (!us.length || !c) return null;
   const n = us.length, x = us.reduce((a, u) => a + u.x, 0) / n, y = us.reduce((a, u) => a + u.y, 0) / n, kinds = {};
   us.forEach(u => { kinds[u.kind] = (kinds[u.kind] || 0) + 1; });
@@ -108,11 +108,11 @@ function campSightFriends(C, scroll, W_, H_, zoom, all, page) {
   if (!C || !C.carrier || typeof campChargeBars !== 'function') return [];
   const K = CAMP.sensor, A = CAMP.nav.arrow, z = zoom > 0 ? zoom : 1, out = [], ring = typeof campPageHudHides === 'function' && campPageHudHides('friendlies'); // ring: the page HUD is on and has the ships you protect as rings in its left panel and pills at the edge
   if (ring && !all) return [];
-  campChargeBars(C).filter(b => all || b.loud > 0 || b.band === 'red').sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier)).forEach(b => {
+  campChargeBars(C).filter(b => all || b.loud > 0 || b.band === 'red').sort((a, b) => campDist(a, campEye(C)) - campDist(b, campEye(C))).forEach(b => {
     const sx = (b.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (b.y - scroll.y - H_ / 2) * z + H_ / 2;
     if (page ? !campEdgeOffscreen(sx, sy, W_, H_, !!(page.was && page.was[b.id])) : sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is (page: the pill's rule, no HUD rectangles)
     const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, page ? null : A.keep) : null; if (!e) return;
-    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, C.carrier), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0, id: b.id, kind: b.kind, hot: b.loud > 0 || b.band === 'red' });
+    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, dist: campDist(b, campEye(C)), what: campTdispName(C.by[b.id]), pct: b.pct, friend: true, fresh: b.hit > 0, id: b.id, kind: b.kind, hot: b.loud > 0 || b.band === 'red' });
   });
   return all ? out : out.slice(0, K.friends);
 }

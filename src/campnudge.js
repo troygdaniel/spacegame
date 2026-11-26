@@ -4,7 +4,8 @@
 // (The launch hint went with the Launch key: the pilots start out beside the cruiser, card space-game-keys-orders.)
 //   campNudge(C, shown) -> the text of a hint that is due and not yet shown (and marks it in `shown`), or null        the scene calls it each frame of the battle (src/campaignscene.js update)
 const CAMPNUDGE = [ // plain data: id, the level, the second it may first show, what must still be true, and the words (camp.nudge.* in content/text/ui.md)
-  { id: 'attack', level: 1, at: 26, key: 'camp.nudge.attack', when: C => C.orders.attack === 0 && campWing(C, 'fighter').length > 0 && campAliens(C).length > 0 }
+  { id: 'attack', level: 1, at: 26, key: 'camp.nudge.attack', when: C => C.orders.attack === 0 && campWing(C, 'fighter').length > 0 && campAliens(C).length > 0 },
+  { id: 'cockpit', level: 1, at: 45, key: 'camp.nudge.cockpit', when: C => typeof campCockpitOn === 'function' && campCockpitOn() && !C.cockpit && !C.cockpitTaken && campWing(C, 'fighter').length > 0 } // the C key (card space-game-fly-fighter-l4): only while the switch is on, a pilot is out and the stick was never taken
 ];
 function campNudge(C, shown) {
   try {
