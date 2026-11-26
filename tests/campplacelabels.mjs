@@ -82,7 +82,7 @@ console.log('E. the files');
 {
   const sc = src('src/campaignscene.js'), html = src('index.html'), ps = html.indexOf('src/campplacelabels.js'), cs = html.indexOf('src/campaignscene.js');
   check('the file is in index.html before the Campaign scene', ps > 0 && cs > ps);
-  check('drawPlace keeps each pair (placeSets) and still registers both labels for the page HUD to hide (placeLabels)', /placeSets = this\.placeSets \|\| \[\]\)\.push\(\{ p, nm, pb \}\)/.test(sc) && /this\.placeLabels\.push\(pb\)/.test(sc) && /\(this\.placeLabels = this\.placeLabels \|\| \[\]\)\.push\(nm\)/.test(sc));
+  check('drawPlace keeps each pair (placeSets: with the picture, radius and own scale the far zoom draws up, card space-game-far-zoom-ugly) and still registers both labels for the page HUD to hide (placeLabels)', /placeSets = this\.placeSets \|\| \[\]\)\.push\(\{ p, nm, pb(, im, r, base: im\.scaleX)? \}\)/.test(sc) && /this\.placeLabels\.push\(pb\)/.test(sc) && /\(this\.placeLabels = this\.placeLabels \|\| \[\]\)\.push\(nm\)/.test(sc));
   check('create installs the fit AFTER the camera zoom is set up (it runs on the same event, after the zoom scaled the labels)', sc.indexOf('camzoomSetup(this)') > 0 && sc.indexOf('campPlaceLabelsInstall(this)') > sc.indexOf('camzoomSetup(this)'));
   check('the page HUD is as it was: it hides the labels by visibility and has no word of the places\' positions', /placeLabels \|\| \[\]\)\.forEach/.test(src('src/camppagehud.js')) && !/placeSets|campPlaceLabel/.test(src('src/camppagehud.js')));
   check('the labels of the Long Haul and every other scene are not touched: the rule is only called from the Campaign scene', !/campPlaceLabel/.test(src('src/camzoom.js')) && !/campPlaceLabel/.test(src('src/common.js')));

@@ -231,7 +231,8 @@ function campPageHudPlaces(C, view) {
   const pl = campPlaces(C.level), out = [];
   Object.keys(pl).forEach(id => {
     const p = pl[id]; if (!p || p.hidden) return;
-    const sx = (p.x - view.x - W / 2) * z + W / 2, sy = (p.y - (p.r || 60) - 36 - view.y - H / 2) * z + H / 2;
+    const r = p.r || 60, up = Math.max((r + 36) * z, Math.max(r * z, CAMPZOOM.view.worldLeast || 0) + 16); // above the world: 36 world px clear of its edge, and never nearer than the pill's half height clear of the disc as it is drawn on the screen (a moon drawn up to its least size, src/campzoom.js: the pill sat on it when the view was out)
+    const sx = (p.x - view.x - W / 2) * z + W / 2, sy = (p.y - view.y - H / 2) * z + H / 2 - up;
     if (sx > 40 && sx < W - 40 && sy > 40 && sy < H - 40) out.push({ name: p.base ? p.name + ' \u00b7 ' + p.base : String(p.name), x: sx, y: sy });
   });
   return out.slice(0, CAMP_PAGEHUD.pills);

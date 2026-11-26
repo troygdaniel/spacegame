@@ -20,10 +20,11 @@ const slookLen = kind => { const t = typeof CAMP === 'object' && CAMP.size ? CAM
 const slookPadW = kind => SLOOKDRAW.pad[kind] !== undefined ? SLOOKDRAW.pad[kind] : SLOOKDRAW.padSized;
 function slookBakeL(kind) { const w = slookLen(kind), r = SLOOKDRAW.bake.find(b => w <= b[0]); return Math.round(w * (r ? r[1] : 1)); } // the hull's length in the baked picture, px
 const slookScale = kind => slookLen(kind) / slookBakeL(kind);                                                                     // the sprite's base scale: the hull is then as long as CAMP.size says
-function slookSize(kind) { // the baked picture's size, px: the hull and its margin all round; the middle of the hull is the middle of the picture, so a sprite turns about the ship's own place
-  const L = slookBakeL(kind), k = SLOOK.K[kind], pad = slookPadW(kind) * L / slookLen(kind), hy = Math.max(...k.p.map(q => Math.abs(q[1])));
+function slookSizeL(kind, L) { // the picture's size, px, for a hull L px long in it: the hull and its margin all round; the middle of the hull is the middle of the picture, so a sprite turns about the ship's own place
+  const k = SLOOK.K[kind], pad = slookPadW(kind) * L / slookLen(kind), hy = Math.max(...k.p.map(q => Math.abs(q[1])));
   return [Math.ceil(L + 2 * pad), Math.ceil(2 * (hy * L + pad))];
 }
+const slookSize = kind => slookSizeL(kind, slookBakeL(kind)); // the baked picture's size at the baked length
 function slookPath(g, flat, ox, oy) { g.beginPath(); for (let i = 0; i < flat.length; i += 2) { if (i) g.lineTo(ox + flat[i], oy + flat[i + 1]); else g.moveTo(ox + flat[i], oy + flat[i + 1]); } g.closePath(); }
 function slookPaint(g, kind, side, L, ox, oy) { // the mock's direction 1 for one ship: the outline in the side's colour, the thin dark rim, the facet (the side's colour mixed toward the dark, white for a warhead), and the kind's other facets if it has any (its `e` list)
   const k = SLOOK.K[kind]; if (!k) return;
@@ -62,9 +63,10 @@ function slookSync(scene, u, sp, F) { // one ship's sprite, once a frame: the ne
     }
     return;
   }
-  const side = slookSide(u, F.prot.has(u.id)), far = slookGlyphWant(F.z, sp._sg), key = far ? slookGlyphTexture(scene, u.kind, side) : slookTexture(scene, u.kind, side); // far out a ship is its signal shape (src/shiplookglyph.js)
-  sp._sg = far;
+  const side = slookSide(u, F.prot.has(u.id)), far = slookGlyphWant(F.z, sp._sg), gb = far ? slookGlyphBucket(u.kind, sp._k > 1 ? sp._k : 1, F.z, sp._gb) : 0; // far out a ship is its signal shape (src/shiplookglyph.js), baked near the size it is shown at (gb: its length on the screen, px), so it is neither blown up nor boiled down
+  const key = far ? slookGlyphTexture(scene, u.kind, side, gb) : slookTexture(scene, u.kind, side);
+  sp._sg = far; sp._gb = gb;
   if (!key || sp._sl === key) return;
-  sp._sl = key; sp._ls = slookScale(u.kind); sp.setTexture(key); sp.clearTint(); sp.setScale(sp._ls * (sp._k > 1 ? sp._k : 1)); // (_k: how many times the far view draws it up, src/campzoom.js: the scene keeps it)
+  sp._sl = key; sp._ls = far && gb ? slookLen(u.kind) / gb : slookScale(u.kind); sp.setTexture(key); sp.clearTint(); sp.setScale(sp._ls * (sp._k > 1 ? sp._k : 1)); // (_k: how many times the far view draws it up, src/campzoom.js: the scene keeps it)
 }
 function slookBays() { const b = SLOOKDRAW.bays; return { launch: [[b.launch[0], -b.launch[1]], [b.launch[0], b.launch[1]]], land: [[b.land[0], -b.land[1]], [b.land[0], b.land[1]]], half: b.half }; }

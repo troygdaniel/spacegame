@@ -15,7 +15,7 @@
 //   slookPickMark(g, v, col, z, al, drawn, s)   the bright ring of a picked ship (and its arc, when nothing drew that yet this frame): what campTgtCorners drew; al is the strength the fade and the pulse give
 //   slookArcsPaint(g, s, z)         the arcs of every hurt ship on the screen that has none yet this frame
 //   slookHullColor(frac)            the arc's colour as a number (the percentage beside it has the same)
-const SLOOKMARK = { pool: [], out: [], margin: 24 }; // the corner points used again, and how far off the screen a ship's mark is still drawn (px)
+const SLOOKMARK = { pool: [], out: [], margin: 24, apart: 0.9 }; // the corner points used again, how far off the screen a ship's mark is still drawn (px), and how close two ships' arcs may be drawn: their centres at least this share of the larger radius apart (ships that fly together, seen from far, would stack into a tangle of rings: only the most hurt of them has its arc, card space-game-far-zoom-ugly)
 const slookHullColor = frac => slookInt(slookArcColor(frac));
 function slookMarkLen(s, u) {
   const sp = s && s.sp && u ? s.sp[u.id] : null, k = u && typeof SLOOK === 'object' ? SLOOK.K[u.kind] : null;
@@ -30,11 +30,12 @@ function slookArcPoints(x, y, r, frac) { // a closed turn is the same corners as
   for (let i = 0; i <= m; i++) { const p = K.pool[i] || (K.pool[i] = { x: 0, y: 0 }), a = -Math.PI / 2 + Math.PI * 2 * Math.max(0, Math.min(1, frac)) * i / m; p.x = x + Math.cos(a) * r; p.y = y + Math.sin(a) * r; out[i] = p; }
   return out;
 }
-function slookMarksBegin(s) { if (s) s.slookGen = (s.slookGen || 0) + 1; }
+function slookMarksBegin(s) { if (s) { s.slookGen = (s.slookGen || 0) + 1; s.slookRings = []; } } // (slookRings: where the arcs of this frame are on the screen: { x, y, R })
 function slookArcDraw(g, s, u, z) {
   if (!g || !u) return false;
   const gen = s && s.slookGen || 0, seen = s && (s.slookArcs || (s.slookArcs = {})); if (seen && gen && seen[u.id] === gen) return false; if (seen) seen[u.id] = gen; // (once a frame: the ring of a picked ship and the hurt pass both name it)
-  const A = SLOOK.arc, f = slookHull(u), R = slookMarkR(slookMarkLen(s, u) * z) / z, w = A.w / z;
+  const A = SLOOK.arc, f = slookHull(u), Rs = slookMarkR(slookMarkLen(s, u) * z), R = Rs / z, w = A.w / z, cam = s && s.cameras && s.cameras.main;
+  if (cam && s.slookRings) s.slookRings.push({ x: (u.x - (cam.scrollX || 0) - W / 2) * z + W / 2, y: (u.y - (cam.scrollY || 0) - H / 2) * z + H / 2, R: Rs }); // where it is on the screen: the next ship's arc keeps clear of it (slookArcsPaint)
   g.lineStyle(w, 0xffffff, 0.13); campRing(g, u.x, u.y, R); // the faint full ring behind the arc
   g.lineStyle(w, slookHullColor(f), 1);
   if (f >= 1) campRing(g, u.x, u.y, R); else if (f > 0) g.strokePoints(slookArcPoints(u.x, u.y, R, f), false, false);
@@ -49,12 +50,18 @@ function slookPickMark(g, v, col, z, al, drawn, s) {
 }
 function slookArcsPaint(g, s, z) {
   const C = s && s.camp, cam = s && s.cameras && s.cameras.main; if (!g || !C || !C.ships || !cam) return 0;
-  const K = SLOOKMARK, sx0 = cam.scrollX || 0, sy0 = cam.scrollY || 0; let n = 0;
+  const K = SLOOKMARK, sx0 = cam.scrollX || 0, sy0 = cam.scrollY || 0, list = []; let n = 0;
   C.ships.forEach(u => {
     if (!slookHurt(u)) return;
-    const sx = (u.x - sx0 - W / 2) * z + W / 2, sy = (u.y - sy0 - H / 2) * z + H / 2, m = slookMarkR(slookMarkLen(s, u) * z) + K.margin;
+    const sx = (u.x - sx0 - W / 2) * z + W / 2, sy = (u.y - sy0 - H / 2) * z + H / 2, Rs = slookMarkR(slookMarkLen(s, u) * z), m = Rs + K.margin;
     if (sx < -m || sx > W + m || sy < -m || sy > H + m) return; // off the screen: nothing is drawn for it
-    if (slookArcDraw(g, s, u, z)) n++;
+    list.push({ u, sx, sy, Rs });
+  });
+  list.sort((a, b) => slookHull(a.u) - slookHull(b.u)); // the most hurt first: when ships are too close for their rings, it is the one that needs a look that keeps its arc
+  const rings = s.slookRings || (s.slookRings = []); if (rings.length > 64) rings.length = 0;
+  list.forEach(h => {
+    if (rings.some(q => Math.hypot(q.x - h.sx, q.y - h.sy) < K.apart * Math.max(q.R, h.Rs))) return; // a ring is there already (a picked ship's, or a more hurt one's): no second ring on top of it
+    if (slookArcDraw(g, s, h.u, z)) n++;
   });
   return n;
 }
