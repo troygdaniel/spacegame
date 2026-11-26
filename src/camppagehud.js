@@ -75,11 +75,19 @@ function campPageModel(C, view) {
     friends: { key: campCornerCap('friendlies'), items: ships, open: open === 'friends', enter: ships.some(x => x.pick) ? campPageHudEnter(C, 'guard') : null } }; // enter: the Enter chip and Guard, while a ship you protect is picked
 }
 
+// the order Enter gives now, for the bottom row's fourth chip (card space-game-bottom-row-enter-chip; Troy, 25 Nov 2026): the SAME dry run the left panel's Enter chip asks (campPageHudEnter), here for all three verbs: Attack (a hostile picked), Guard (a friendly picked) and Form up (nothing picked); null while no order can be given (no pilot out and none to launch, nothing in sight to attack ...). The word is the left panel's (camp.corner.enter.attack and .guard) and the form-up row's (camp.corner.formup); the chip is the key table's order key
+function campPageHudEnterNow(C) {
+  if (typeof campSelOrder !== 'function' || !C) return null;
+  const r = campSelOrder(C, 'engage', 'key', true); if (!r || !r.ok) return null;
+  const verb = r.formup ? 'formup' : r.verb, key = campCornerCap('order'); if (!key) return null;
+  return { key, word: uiText(verb === 'formup' ? 'camp.corner.formup' : 'camp.corner.enter.' + verb), verb };
+}
 // the first minute of mission 1.1 (card space-game-page-hud-first-minute-chips; Troy, 25 Nov 2026): one dim row of three key chips, each with a word (the arrows: fly, Space: fire, M: missile), for the first CAMP_PAGEHUD.first.secs of the mission clock (it stands still while a card or the pause is up), then gone for the rest of the mission. Mission 1.1 only (not 1.2 or 1.3), and not when the hints are switched off (the tuning panel: it is a hint). The caps are the key table's (campCornerCap of its ids), the words are the text keys camp.corner.chip.<id>; a key with no cap is left out. a is the share of the dim that is left (it fades over the last seconds); null when it is not the time
 function campPageHudFirst(C) {
   const F = CAMP_PAGEHUD.first, left = C ? F.secs - C.t / 1000 : 0;
   if (!C || C.result || C.level !== F.level || !C.L || C.L.mission !== F.mission || !(left > 0) || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
-  const items = F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key);
+  const items = F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key), en = campPageHudEnterNow(C);
+  if (en) items.push({ id: 'enter', key: en.key, word: en.word, verb: en.verb }); // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
   return items.length ? { items, a: Math.round(Math.min(1, left / F.fade) * 100) / 100 } : null;
 }
 
@@ -277,7 +285,7 @@ function campPageHudPaint(R, M, doc) {
   while (R.fedges.length < M.fedges.length) { const el = campPageHudEl(doc, 'div', 'ph-p ph-edge ph-fedge', R.root), ic = campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', el); ic.innerHTML = CAMP_PAGEHUD_ICON.arrowF; const num = campPageHudEl(doc, 'span', 'ph-fnum', el); R.fedges.push({ el, ic, num, text: campPageHudEl(doc, 'span', '', el) }); }
   R.fedges.forEach((p, i) => { const f = M.fedges[i]; set(p.el, 'display', f ? '' : 'none'); if (f) { set(p.el, 'cls', 'ph-p ph-edge ph-fedge' + (f.hot ? ' hot' : '')); set(p.num, 'text', String(f.n)); set(p.text, 'text', f.label); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
   const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
-  if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); fm.items.forEach((x, i) => { set(FI.items[i].key, 'text', x.key); set(FI.items[i].word, 'text', x.word); }); }
+  if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ el: grp, key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); FI.items.forEach((it, i) => { const x = fm.items[i]; set(it.el, 'display', x ? '' : 'none'); if (x) { set(it.key, 'text', x.key); set(it.word, 'text', x.word); } }); } // (a pair with no chip now, the Enter one when no order can be given, is hidden, not left with the old words)
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) set(p, 'text', pl.name); });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
