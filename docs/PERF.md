@@ -305,3 +305,14 @@ What it adds each frame, with the feel on (`CAMP.flags.feel`, src/campfeel.js): 
 | feel on | 0.59 and 0.60 ms | 0.5 and 0.5 ms | 1.2 and 1.2 ms | 0.39 and 0.39 ms | 0.10 and 0.16 ms |
 
 About 0.05 ms more a frame (a third of a percent of a 60 fps frame), all of it in the update (the ribbons' history and the Graphics' commands). The stepped frames time the game's own work; the drawing itself is a few dozen thin lines and eight small shapes. Pictures and a frame series (before and after, at the start zoom and at 0.9) are in `~/dev/spacegame-night/cruiserfeel/`.
+
+## The cruiser's other Long Haul flight effects (card `space-game-cruiser-all-long-haul-effects`, 26 Nov 2026)
+What it adds each frame with the feel on, for the ship the player flies only (`src/campfeelfx.js`): two Graphics cleared and drawn again (the light in ADD blend, the soft puffs), a third in screen space for the 46 star streaks while boosting; the dots (at most 70 live, 30 to 48 a second for each engine), the puffs (at most 60), the engine glow, and the line ahead. No object is made after the first frame (pooled lists, an LCG for the random numbers), no particle emitter, no tween.
+Same measure as the card before: `PERF_ADDR='&pagehud=1&shiplook=1'` with `PERF_PATCH` holding the boost (full store, the thrust at least 0.5) and the new effects off (`window.campFxDraw = () => {}`: the ribbons, flames and camera of the card before remain) or on, `node tools/perfcampaign.mjs frames busy1` (600 stepped frames, 30 to 35 ships), two runs each:
+
+| | frame mean | frame median | frame p95 | update mean | render mean |
+|---|---|---|---|---|---|
+| effects off | 0.64 and 0.65 ms | 0.5 and 0.5 ms | 1.3 and 1.4 ms | 0.37 and 0.39 ms | 0.21 and 0.20 ms |
+| effects on | 0.63 and 0.66 ms | 0.5 and 0.5 ms | 1.2 and 1.4 ms | 0.37 and 0.39 ms | 0.20 and 0.20 ms |
+
+No difference outside the noise of a shared Mac: the busiest fight stays smooth. (The first version of this file did not clear its light layer every frame and the drawing grew with every frame: tests/campfeelfx.mjs now pins that it is cleared.)
