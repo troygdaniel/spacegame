@@ -87,10 +87,8 @@ function scrSetFlight() {
   return rows;
 }
 function scrSetContent() {
-  const errs = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS : [], n = errs.length, modded = typeof CONTENT_STATE !== 'undefined' && !!CONTENT_STATE.modded, on = typeof scrOn === 'function' && scrOn();
+  const errs = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS : [], n = errs.length, modded = typeof CONTENT_STATE !== 'undefined' && !!CONTENT_STATE.modded;
   const rows = [
-    { label: uiText('scr.sett.c.screens'), hint: uiText('scr.sett.c.screenshint'), items: [scrSP(uiText(on ? 'scr.sett.c.on' : 'scr.sett.c.off'), { on, act: 'screens', arg: !on })] },   // kept here until the default-on card takes the switch out
-    typeof fillOn === 'function' ? { label: uiText('scr.sett.c.fill'), hint: uiText('scr.sett.c.fillhint'), items: [scrSP(uiText(fillOn() ? 'scr.sett.c.on' : 'scr.sett.c.off'), { on: !!fillOn(), act: 'fill', arg: !fillOn() })] } : null, // beside the New screens row, as the old Settings has it (card space-game-fill-window-a-flight; src/fillwindow.js; card space-game-batch-922-small-fixes)
     { label: uiText('scr.sett.c.pack'), items: [scrSP(uiText(modded ? 'scr.sett.c.modded' : 'scr.sett.c.core'), { on: true }), n ? scrST(uiText(n === 1 ? 'scr.sett.c.one' : 'scr.sett.c.many', { n }), { cls: 'sm', amber: true }) : { t: 'ok', text: uiText('scr.sett.c.ok') }] }
   ];
   errs.slice(0, SCRSET.problems).forEach(e => rows.push({ items: [scrST(typeof contentLine === 'function' ? contentLine(e) : String(e && e.message || e), { cls: 'sm', dim: true })] }));
@@ -155,8 +153,6 @@ function scrSetAct(s, act, arg, frac) {
     case 'mictest': s.testMic(); break;
     case 'ctab': s.ctab = arg; s.show('controls'); break;
     case 'feel': s.setFeel(arg); break;
-    case 'screens': if (scrOn() !== !!arg) s.screensToggle(); break;
-    case 'fill': if (typeof fillOn === 'function' && fillOn() !== !!arg) s.fillToggle(); break;
     case 'press': s.press(arg); break;
     case 'plon': s.playlogToggle(); break;
     case 'plget': s.playlogGet(); break;

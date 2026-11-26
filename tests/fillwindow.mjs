@@ -1,6 +1,6 @@
 // smoke: fill the window, landing A: the sizing rule (a window's shape in, the game's size out, the cap, 16:9 is exactly today's), the safe area, the switch, the flight's cameras, and the 1280 by 720 maths kept true (plain Node, no Chrome)
 // Card space-game-fill-window-a-flight (Troy, 25 Nov 2026; the plan is the report on card space-game-fill-window-scope). src/fillwindow.js is the one new file:
-//   A. the switch: CAMP.flags.fill is false in the table; ?fill=1 turns it on, ?fill=0 off whatever the flag says; fillSet keeps the choice in the browser and fillLoad reads it back
+//   A. the switch: CAMP.flags.fill is TRUE in the table (card space-game-screens-fill-default-on, Troy, 26 Nov 2026: on for every player); ?fill=0 turns it off whatever the flag says (the tests' way); there is no Settings row and nothing is remembered in the browser (an older version's saved value is not read)
 //   B. the sizing rule (Troy: "extra room because i open up the window.. not scale"): a FIXED scale, 1.23 screen px a game px, so a bigger window is more game px; a window too small for 1280 by 720 at it scales down to fit;
 //      NO cap (it was 1.5 for a day and Troy felt the scale change past it: card space-game-fill-window-scale-bug), so above the least window, 1575 by 886 px, nothing ever scales; the tests' 1280 by 720 window is exactly 1280 by 720
 //   C. the safe area and the helpers: the offsets, the scroll and the pointer as the old maths want them; all of them give back what they got while the game is 1280 by 720
@@ -8,9 +8,9 @@
 //      given back by the watch when no scene asks any more
 //   G. landing B (card space-game-fill-window-b-screens): the title, the ready room, the warp and Settings keep their 1280 by 720 layout in the safe area at the same fixed scale; a backdrop on the whole window; the page laid over the safe area
 //   E. the old maths stay true: a world point's place worked out the 1280 by 720 way, through the helpers, is where the larger camera really draws it (minus the safe area's offset), at any zoom
-//   F. the files that read the camera or the pointer by hand go through the helpers; the page HUD and the screens host take their font size from the scale, not from the canvas's width; the Settings button; the words
+//   F. the files that read the camera or the pointer by hand go through the helpers; the page HUD and the screens host take their font size from the scale, not from the canvas's width; no Settings button and no words of one
 // Run: node tests/fillwindow.mjs   (exit code 1 on a failed check)
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { nodeGame, ROOT } from './nodegame.mjs';
 
@@ -22,14 +22,14 @@ const src = f => readFileSync(join(ROOT, f), 'utf8');
 const code = f => src(f).split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\s\/\/ .*$/gm, '');
 
 console.log('A. the switch');
-check('the table\'s flag is false: the game is as it was for every player', J('CAMP.flags.fill') === false && J('fillOn()') === false);
+check('the table\'s flag is TRUE: the flight takes the window for every player (the node harness makes this game with it off, the twin of ?fill=0, so the rest of the file is about the maths)', J('CAMP.flags.fill') === false && J('fillOn()') === false && (() => { const t = nodeGame({ fill: 'table' }); return JSON.parse(t.run('JSON.stringify([CAMP.flags.fill, fillOn()])')).join() === 'true,true'; })());
 check('?fill=1, a bare ?fill, =on and =true turn it on; ?fill=0, =off and =false are off; another name is not mine', ['?fill=1', '?x=1&fill', '?fill=on', '?FILL=TRUE'].every(a => J(`fillAddrOn(${JSON.stringify(a)})`) === true) && ['?fill=0', '?fill=off', '?a=b&fill=false'].every(a => J(`fillAddrOff(${JSON.stringify(a)})`) === true) && J(`fillAddrVal('?fillx=1&refill=1')`) === null);
 g.run(`CAMP.flags.fill = true; window.location = { search: '?fill=0' }; FILL.memo.s = null;`);
 check('?fill=0 in the page\'s address wins over the flag (the tests\' way back)', J('fillOn()') === false);
 g.run(`CAMP.flags.fill = false; window.location = { search: '?fill=1' }; FILL.memo.s = null;`);
 check('?fill=1 turns it on with the flag off', J('fillOn()') === true);
 g.run(`window.location = { search: '' }; FILL.memo.s = null;`);
-check('fillSet keeps the choice in the browser and fillLoad reads it back', J('fillSet(true)') === true && J('CAMP.flags.fill') === true && J(`localStorage.getItem(FILL.store)`) === '1' && (g.run('CAMP.flags.fill = false'), J('fillLoad()')) === true && J('CAMP.flags.fill') === true && J('fillSet(false)') === false && J(`localStorage.getItem(FILL.store)`) === '0' && J('fillLoad()') === false);
+check('nothing is remembered and nothing is set from a row: no fillSet, no fillLoad, no store name; a \'0\' an older version kept in this browser is not read (the flight still fills the window)', ['fillSet', 'fillLoad'].every(f => J(`typeof ${f}`) === 'undefined') && J('FILL.store === undefined') === true && (() => { const t = nodeGame({ fill: 'table', store: new Map([['longhaul.fill', '0']]) }); return JSON.parse(t.run('JSON.stringify(fillOn())')) === true; })());
 
 console.log('B. the sizing rule');
 const size = (w, h) => J(`fillSize(${w}, ${h})`);
@@ -155,17 +155,7 @@ console.log('F. the files');
   check('the canvas R chip is hidden with the rest of the stock block while the page HUD has it (it showed beside the panel once the safe area moved)', /\['crOre', 'crCash', 'crMis', 'crMisWhy', 'crMisKey', 'crChipG'\]/.test(code('src/campcruiserhud.js')));
 }
 {
-  const md = src('content/text/fillwindow.md'), keys = [...md.matchAll(/^\| (fill\.[\w.]+) \| (.*) \|$/gm)].map(m => [m[1], m[2]]);
-  check('four words of fill.set, in content/text/fillwindow.md and the table the same; the voice pack\'s rule keeps them unspoken', keys.length === 4 && keys.every(([k, t]) => J(`UI_TEXT[${JSON.stringify(k)}]`) === t) && /\/\^fill\\\.\//.test(src('src/voicepack.js')));
-  g.run(`
-    const __btn = () => ({ text: '', on: null, edge: null, set(t) { this.text = t; return this; }, mark(v) { this.on = v; return this; }, draw() {} });
-    window.__said = []; window.__row = { slots: { fillOn: __btn() }, say(m) { __said.push(m); } }; CAMP.flags.fill = false; localStorage.removeItem(FILL.store);
-    Settings.prototype.fillToggle.call(__row);
-  `);
-  check('the Settings button: the first press turns it ON (the flag, the memory, the button, the line)', J('CAMP.flags.fill') === true && J('localStorage.getItem(FILL.store)') === '1' && J('__row.slots.fillOn.text') === 'Fill the window: ON' && J('__row.slots.fillOn.on') === true && /^Fill the window ON/.test(J('__said[0]')));
-  g.run(`Settings.prototype.fillToggle.call(__row);`);
-  check('the second turns it OFF again', J('CAMP.flags.fill') === false && J('localStorage.getItem(FILL.store)') === '0' && J('__row.slots.fillOn.text') === 'Fill the window: OFF' && /^Fill the window OFF/.test(J('__said[1]')));
-  check('the button is in Settings > CONTENT beside the New screens row', /this\.slots\.fillOn = this\.button\(bx \+ this\.bw - 240, by \+ 42, 220, uiText\(fill \? 'fill\.set\.on' : 'fill\.set\.off'\), \(\) => this\.fillToggle\(\)/.test(code('src/settings.js')));
+  check('no Settings row and no words of one: content/text/fillwindow.md is gone, no key of the fill.set family is in the table, the voice pack has no rule for it, Settings has no fillToggle and no fillOn button, and the new Settings\' Content tab has no fill row', !existsSync(join(ROOT, 'content/text/fillwindow.md')) && J('Object.keys(UI_TEXT).filter(k => /^fill\\./.test(k)).length') === 0 && !/\^fill\\\./.test(src('src/voicepack.js')) && !/fillToggle|slots\.fillOn/.test(code('src/settings.js')) && !/'fill'|fillOn|scr\.sett\.c\.fill/.test(code('src/scrsettings.js')));
 }
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(`\n${n - failed}/${n} checks passed`);
