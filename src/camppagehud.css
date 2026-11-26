@@ -80,6 +80,7 @@
 @media (prefers-reduced-motion: no-preference) { .ph-foes { animation: ph-pulse 2.4s ease-in-out infinite; } @keyframes ph-pulse { 50% { box-shadow: 0 0 0 .35em rgba(255, 111, 168, .12), 0 .6em 2em rgba(0, 0, 0, .35); } } }
 .ph-enter { margin-top: .15em; } /* the hostiles panel's Enter chip with Attack */
 /* in space: a pill for a place, a pill at the screen edge for the hostiles off the screen (they move 10 times a second; the transition smooths the steps) */
+.ph-place.goal { color: #e9b872; border-color: rgba(233, 184, 114, .5); } /* the relic's mark: the goal's gold (card space-game-world-batch-fixes) */
 .ph-place { transform: translate(-50%, -50%); padding: .45em 1em; white-space: nowrap; border-radius: 2em; font-size: .82em; background: rgba(10, 16, 28, .96); color: #cfe3ff; transition: left .1s linear, top .1s linear; }
 .ph-edge { transform: translate(-50%, -50%); padding: .45em .8em; border-radius: 2em; display: flex; align-items: center; gap: .5em; font-size: .86em; background: rgba(58, 18, 40, .7); border-color: rgba(255, 111, 168, .45); font-variant-numeric: tabular-nums; white-space: nowrap; transition: left .1s linear, top .1s linear; }
 .ph-edgeic { --a: 0deg; transform: rotate(var(--a)); }
