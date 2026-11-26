@@ -21,6 +21,7 @@ const campBriefProj = (fit, F) => (x, y) => campMapPoint(fit, F, x, y);
 const campBriefGone = list => { list.forEach(o => { try { o.destroy(); } catch (e) { /* gone with the scene */ } }); list.length = 0; };
 
 function campBriefOpen(s) {
+  if (typeof scrOn === 'function' && scrOn() && !(s && s.d && s.d.dock) && typeof scrBriefOpen === 'function') { const r = scrBriefOpen(s); if (r !== null) return r; } // the new look (src/scrbrief.js, src/scrbriefdraw.js): one page; null when there is no page to draw it on, and the three screens below open as ever
   if (!s || !s.add || campBriefIsOpen(s)) return false;
   const t = campHubTarget(s.P, s.hub), Y = campBriefLayers(t.level, t.i); if (!Y) return false;
   const K = CAMPBRIEF, P = K.panel, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(130 + (d || 0)); objs.push(o); return o; }, v = campBriefView(Y, 0, 1);
@@ -38,6 +39,7 @@ function campBriefOpen(s) {
 }
 function campBriefClose(s) {
   if (!campBriefIsOpen(s)) return false;
+  if (s.bf.one === true && typeof scrBriefDrop === 'function') scrBriefDrop(s); // the new look's panels
   if (s.bf.onWheel && s.input && typeof s.input.off === 'function') { try { s.input.off('wheel', s.bf.onWheel); } catch (e) { /* gone */ } }
   campBriefGone(s.bf.objs); campBriefGone(s.bf.map); campBriefGone(s.bf.text); campBriefGone(s.bf.pics);
   s.bf = null; return true;
@@ -103,7 +105,7 @@ function campBriefMapSpace(g, fit, F, level) {
 }
 // the map, once and again at a zoom: the grid, the rings and the belts, the places, the objective points, the route, you
 function campBriefPaintMap(s) {
-  const bf = s.bf, Y = bf.Y, F = CAMPBRIEF.frame, g = bf.mg; g.clear(); campBriefGone(bf.map);
+  const bf = s.bf, Y = bf.Y, F = bf.frame || CAMPBRIEF.frame, g = bf.mg; g.clear(); campBriefGone(bf.map);
   const fit = bf.fit, X = (x, y) => campBriefProj(fit, F)(x, y), inF = p => p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h;
   const own = o => { o.setScrollFactor(0).setDepth(133); bf.map.push(o); return o; };
   // nothing is drawn outside the glass (card space-game-night-hunt-l2-l3: zoomed in, the route's dashes ran over the keys line and the YOU label hung under the panel): a circle is stroked as the arcs that are inside the frame, a line is cut to it, a point is drawn only inside it
@@ -144,17 +146,18 @@ function campBriefPaintMap(s) {
   }
   if (inF(a)) { g.fillStyle(0xffffff, 1).fillCircle(a.x, a.y, 4); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(a.x, a.y, 8); } // you: the dot and ring (the label YOU is placed with the others, above)
   g.lineStyle(3, AMBER, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = b.x + sx * 14, y = b.y + sy * 14; g.beginPath(); g.moveTo(x, y - sy * 9); g.lineTo(x, y); g.lineTo(x - sx * 9, y); g.strokePath(); }); // the mission's place: the amber brackets of the sector map
+  if (bf.one === true && typeof scrBriefMapExtras === 'function') scrBriefMapExtras(s, X, F, own); // the new look: the four numbered moments on the map
   own(s.add.text(F.x + F.w - 8, F.y + 8, uiText('camp.map.zoom', { pct: Math.round(bf.z * 100) }), uiFont(12, '#7fe9ff'))).setOrigin(1, 0).setDepth(137); // the zoom and its keys, in the corner, as the Tab map says them
 }
 // the zoom moves: the map is drawn again at the new view (about the mission's place); the key line and the other screens are not touched
 function campBriefZoomTo(s, z) {
   const bf = s.bf; if (!campBriefIsOpen(s) || bf.screen !== 0) return false;
-  const v = campBriefView(bf.Y, bf.zoom, z, bf.fit, bf.z); if (v.z === bf.z) return false;
+  const v = campBriefView(bf.Y, bf.zoom, z, bf.fit, bf.z, bf.frame); if (v.z === bf.z) return false;
   bf.z = v.z; bf.fit = v.fit; campBriefPaintMap(s); return true;
 }
 // M: the next of the three views (the route, the mission's area, the whole system); the zoom goes back to 1
 function campBriefZoomView(s) {
-  const bf = s.bf; bf.zoom = campBriefZoomNext(bf.Y, bf.zoom); const v = campBriefView(bf.Y, bf.zoom, 1); bf.base = v.base; bf.fit = v.fit; bf.z = 1;
+  const bf = s.bf; bf.zoom = campBriefZoomNext(bf.Y, bf.zoom); const v = campBriefView(bf.Y, bf.zoom, 1, undefined, undefined, bf.frame); bf.base = v.base; bf.fit = v.fit; bf.z = 1;
   campBriefPaintMap(s); campBriefPaintKeys(s);
 }
 
@@ -227,6 +230,7 @@ function campBriefPaintHow(s) {
 function campBriefKey(s, code, repeat) {
   if (!campBriefIsOpen(s)) return false;
   const bf = s.bf, K = CAMPBRIEF, zk = typeof campZoomKey === 'function' ? campZoomKey(code) : null;
+  if (bf.one === true && typeof scrBriefKey === 'function') return scrBriefKey(s, code, repeat); // the new look's one page
   if (bf.plan) return campWalkKey(s, code, repeat); // the walking map has its own stops (campbriefwalkdraw.js): the same keys, on stops
   if (zk) { if (bf.screen === 0) campBriefZoomTo(s, zk.reset ? 1 : camzoomKey(bf.z, zk.dir, !!repeat, K.zoom.min, K.zoom.max)); return true; } // + - 0: the map's zoom (the same keys as the Tab map's, src/campzoom.js)
   if (repeat) return true; // a held key repeats only for the zoom

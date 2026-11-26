@@ -27,6 +27,14 @@ const CAMPWALKS = {
       { page: 1, key: 's4', at: { road: 0.52 }, zoom: { on: { road: 0.56 }, span: 6200 }, marks: [{ kind: 'threat', at: { road: 0.56 }, r: 1500, label: 'camp.bw.m.threat' }] }, // pirates ambush somewhere along the middle of the road
       { page: 2, key: 's5', at: { road: 0.75 }, zoom: { fit: [{ road: 0.75 }, { rival: 'leader' }, { place: 'ceres' }], margin: 900 }, marks: [{ kind: 'threat', at: { rival: 'leader' }, r: 1000, label: 'camp.bw.m.leader' }] }, // the pirate leader waits near Ceres
       { page: 2, key: 's6', at: { place: 'ceres' }, zoom: { fit: [{ place: 'ceres' }], margin: 1700 }, marks: [{ kind: 'goal', at: { place: 'ceres' }, r: 260, label: 'camp.bw.m.goal' }] } // arrive
+    ],
+    // THE FOUR MOMENTS of the one-page briefing (card space-game-screens-b-briefing; src/scrbrief.js campBriefMoments): where on the road each happens and what colour its marker is (mute: news, help: a call, threat: a danger), in the order they come.
+    // The words are scr.bf.<level>.<mission>.<key>, two or three words each. A mission with moments and no steps has no walk (campWalkData answers null): the other eight missions' rows are piece f's.
+    moments: [
+      { key: 'm1', kind: 'mute', at: { road: 0.12 } },       // the patrol leaves (it peels off at 12 percent of the road)
+      { key: 'm2', kind: 'help', at: { spot: 'dm' } },       // a miner may call for help, off the road
+      { key: 'm3', kind: 'threat', at: { road: 0.56 } },     // pirates ambush somewhere along the middle of the road
+      { key: 'm4', kind: 'threat', at: { rival: 'leader' } } // the pirate leader waits near Ceres
     ]
   }
 };
