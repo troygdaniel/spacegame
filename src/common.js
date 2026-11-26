@@ -91,6 +91,7 @@ function toastKeep(s, top) { // the box that is up moves to the scene's toastTop
 }
 function toast(s, msg, color = '#ffd37a', hold = 0) { // hold: ms this one stays up when longer than TOAST.hold (a radio line the player must read: src/campsayhold.js)
   if (s.mp && typeof campMapToast === 'function' && campMapToast(s, msg, color, hold) === true) return; // the Tab map open in the panel look: the line is the map's radio panel's, in its column (src/campmappanel.js; card space-game-b3-f-tab-map-build)
+  if (typeof s.toastPanel === 'function' && s.toastPanel(msg, color, hold) === true) return; // a scene whose page HUD has a panel for it (the Campaign's radio panel, src/camppagehud.js; card space-game-b3-c-radio-panel) shows the message there, and no box is made
   const now = s.time && typeof s.time.now === 'number' ? s.time.now : 0;
   const old = (s.toasts || []).filter(o => o && o.t && o.t.active);
   const prev = old.length ? old[old.length - 1] : null;
