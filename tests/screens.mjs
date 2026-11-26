@@ -57,7 +57,7 @@ check('every screen of the list has at least one key (a screen with none has no 
   for (const i of ids) {
     const e = T[i], text = e.src.map(f => src(f)).join('\n'), codes = e.same ? J('CAMP_KEYS')[e.same].codes : e.codes;
     if (i === 'digit') { if (!/Digit\|Numpad|\(\?:Digit\|Numpad\)|Digit\$\{|'Digit'|Digit\d/.test(text)) miss.push('digit:pattern'); continue; }
-    for (const c of codes) if (text.indexOf("'" + c + "'") < 0 && text.indexOf('"' + c + '"') < 0 && !new RegExp('[{,]\\s*' + c + '\\s*:').test(text) && !(e.same && new RegExp("campKey(Is|Codes)\\(\\s*'" + e.same + "'|CAMP_KEYS\\." + e.same + "\\b|CAMP_KEYS\\['" + e.same + "'\\]|campKeyIs\\('" + e.same + "'").test(text))) miss.push(i + ':' + c);
+    for (const c of codes) if (text.indexOf("'" + c + "'") < 0 && text.indexOf('"' + c + '"') < 0 && !new RegExp('[{,]\\s*' + c + '\\s*:').test(text) && !(e.same && new RegExp("campKey(Is|Codes)\\(\\s*'" + e.same + "'|CAMP_KEYS\\." + e.same + "\\b|CAMP_KEYS\\['" + e.same + "'\\]|campKeyIs\\('" + e.same + "'|keys: \\[[^\\]]*'" + e.same + "'").test(text))) miss.push(i + ':' + c);
   }
   check('every code of a role is in the code of one of its files, or the file asks the key table for the role', miss.length === 0, miss.join(' '));
 }
@@ -158,13 +158,15 @@ check('the Settings row is in CONTENT: a button that flips the switch, Enter doe
   g.run(`Settings.prototype.screensToggle.call(__row);`);
   check('the second turns them OFF again', J('CAMP.flags.screens') === false && J('localStorage.getItem(SCR.store)') === '0' && J('__row.slots.scrOn.text') === 'New screens: OFF' && J('__said[1]') === 'New screens OFF: the screens are as they were.');
 }
-{ // nothing draws from the new pieces: no other file calls them (the pieces after landing F will, one screen each, and then this check moves with them)
-  const own = ['screens.js', 'scrhost.js', 'settings.js'], used = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && own.indexOf(f) < 0 && /\b(scr(On|Set|Load|Key|Chip|Chips|Words|Ring|Meter|Pill|Host\w*)|SCR_BUDGET|SCRHOST)\b/.test(code('src/' + f)));
-  check('no screen changes: no file but the helpers, the host and the Settings row names any of them', used.length === 0, used.join());
-  const st = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && ['scrhost.js'].indexOf(f) < 0 && /scrHostMount\(/.test(code('src/' + f)));
-  check('and nothing mounts the host', st.length === 0, st.join());
+// the pieces of the new screens that have landed, each behind the switch (one name a piece: the first piece's files are the Campaign scene's cards, card space-game-screens-a-cards; a later piece adds its own names here)
+const PIECES = ['campaignscene.js', 'scrcards.js', 'scrcardsdraw.js'];
+{ // nothing but the helpers, the host, the Settings row and the pieces names the new pieces' functions (each piece's own suite holds it to the switch: tests/scrcards.mjs)
+  const own = ['screens.js', 'scrhost.js', 'settings.js'].concat(PIECES), used = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && own.indexOf(f) < 0 && /\b(scr(On|Set|Load|Key|Chip|Chips|Words|Ring|Meter|Pill|Host\w*)|SCR_BUDGET|SCRHOST)\b/.test(code('src/' + f)));
+  check('no unlisted file names any of them: only the helpers, the host, the Settings row and the pieces', used.length === 0, used.join());
+  const st = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && ['scrhost.js'].concat(PIECES).indexOf(f) < 0 && /scrHostMount\(/.test(code('src/' + f)));
+  check('and nothing but a piece mounts the host', st.length === 0, st.join());
 }
-check('the Settings row\'s use of the switch is the only one in the game: scrOn is called from settings.js alone', readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && /\bscrOn\(/.test(code('src/' + f))).sort().join() === 'settings.js');
+check('scrOn is called from the Settings row and the pieces alone', (() => { const c = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && /\bscrOn\(/.test(code('src/' + f))); return c.indexOf('settings.js') >= 0 && c.every(f => f === 'settings.js' || PIECES.indexOf(f) >= 0); })());
 
 console.log(`\n${n - failed}/${n} checks passed`);
 process.exit(failed ? 1 : 0);
