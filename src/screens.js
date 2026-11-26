@@ -2,8 +2,7 @@
 // Troy approved a new look for the screens around the flight (25 Nov 2026; the mock is docs/screens-mock.html, the plan is the scope report on card space-game-screens-scope): panels in the page HUD's look with far fewer words,
 // for the title, the ready room, the refit, the rank, the mission pick, the briefing, the won, lost and pause cards, the keys page and Settings. This file is what every one of them shares, with no Phaser and no page (tests/screens.mjs
 // runs it in plain Node); src/scrhost.js is the DOM half (the root over the canvas, the elements) and src/screens.css its style. Landing F changes no screen: nothing draws from them until the pieces after it land.
-//   scrOn()                  is the new look of the screens on: the flag CAMP.flags.screens (off by default; Settings > CONTENT flips it from any scene, scrSet) or ?screens=1 in the address, unless ?screens=0 (the tests' way)
-//   scrSet(on)               the Settings row's: the flag and the browser's memory of it (localStorage longhaul.screens);  scrLoad(): the memory read back at the start (it runs when this file loads)
+//   scrOn()                  is the new look of the screens on: always, for a player (the flag CAMP.flags.screens is true in the table since card space-game-screens-fill-default-on; no row of Settings, nothing is remembered, a value an older version kept in this browser is not read); off only by ?screens=0 (the tests' way)
 //   scrKey(id)               a ROLE of the table of src/data_controls.js (CAMP_SCREEN_KEYS) as { id, k, codes, on }, resolved to CAMP_KEYS where it is one of those keys; null for a role the table does not have
 //   scrChipInTable(chip)     is a chip one the table has (its role is an entry and its cap is the table's: what the test of each screen asks of every chip it shows)
 //   scrChip(id)              what a key chip shows for a role: { id, k } (null for an unknown role: a screen never draws a chip the table does not have);  scrChips(ids): the list;  scrKeysOf(screen): the roles a screen takes
@@ -11,7 +10,6 @@
 //   scrRing(frac, o)         a ring's model: { v (0 to 100), tone, text };  scrMeter(frac, o): { pct, tone };  scrPill(text, ok): { text, ok }; the tones are the HUD's: good above 60 percent, warn to 30, foe under
 const SCR = {
   addr: 'screens',                                       // the address's name for the switch: ?screens=1 is on whatever the flag says, ?screens=0 is off
-  store: 'longhaul.screens',                             // the browser's memory of the Settings row ('1' or '0'; kept apart from the save, like the volume)
   memo: { s: null, v: null },                            // the page's address, read again only when it changed (the switch is asked many times)
   screens: ['title', 'ready', 'refit', 'earthrefit', 'rank', 'pick', 'brief', 'story', 'won', 'lvlwon', 'lost', 'pause', 'keys', 'settings', 'setkeys', 'setlisten', 'setcontrols', 'setflight', 'setcontent', 'setreset', 'tech', 'end'], // the screens the key table names: the mock's sections (round two added the level-won card, the Earth refit and the six other Settings tabs; 'settings' is its Sound tab); story is removed by the new look, kept so its keys can be tested till then
   tones: { low: 0.6, crit: 0.3 },                        // a ring or meter: good above low, warn down to crit, foe under (the page HUD's: CAMP_PAGEHUD.low and .crit)
@@ -37,15 +35,6 @@ function scrAddrVal(search) { // the value of ?screens in the address, lower cas
 const scrAddrOn = search => ['', '1', 'on', 'true', 'yes'].indexOf(scrAddrVal(search)) >= 0;   // ?screens, =1, =on, =true, =yes: on whatever the flag says
 const scrAddrOff = search => ['0', 'off', 'false', 'no'].indexOf(scrAddrVal(search)) >= 0;      // ?screens=0, =off, =false, =no: off whatever the flag says (the tests' way back to the screens of today)
 const scrOn = () => !scrAddrOff() && ((typeof campFlag === 'function' && campFlag('screens')) || scrAddrOn());
-function scrSet(on) { // Settings > CONTENT's row: the flag, and the browser remembers it (every try/catch: the page may have no storage)
-  if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.screens = !!on;
-  try { if (typeof localStorage !== 'undefined' && localStorage) localStorage.setItem(SCR.store, on ? '1' : '0'); } catch (e) { /* no storage: the flag still moved */ }
-  return !!on;
-}
-function scrLoad() { // the memory read back: '1' turns the flag on, '0' leaves it off; nothing stored leaves the table's value
-  try { const v = typeof localStorage !== 'undefined' && localStorage ? localStorage.getItem(SCR.store) : null; if (v === '1' || v === '0') { if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.screens = v === '1'; return v === '1'; } } catch (e) { /* no storage */ }
-  return typeof CAMP === 'object' && CAMP && CAMP.flags ? !!CAMP.flags.screens : false;
-}
 
 // ---- the key chips: read from the key table, never written in a screen ----
 function scrKey(id) {
@@ -77,4 +66,3 @@ const scrRing = (frac, o) => { const f = scrClamp(frac); o = o || {}; return { v
 const scrMeter = (frac, o) => { const f = scrClamp(frac); o = o || {}; return { pct: Math.round(f * 1000) / 10, tone: o.tone || scrTone(f) }; };
 const scrPill = (text, ok) => ({ text: String(text == null ? '' : text), ok: ok === undefined || ok === null ? null : !!ok }); // ok: true a tick, false a dash, null none
 
-scrLoad(); // the Settings row's memory, read when the page starts
