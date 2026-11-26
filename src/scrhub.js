@@ -38,7 +38,7 @@ function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text,
 function scrHubRefitModel(P, H, o) {
   o = o || {}; const r = campHubRefit(P), it = r.items[0], B = CAMP.refit, wing = r.wing.fighters, bought = r.extra.fighters, full = bought >= B.most, funds = typeof campWealth === 'function' ? campWealth(P) : r.ore + r.credits;
   const status = it.ok ? uiText('scr.hub.can') : full ? uiText('scr.hub.most') : uiText('scr.hub.need', { n: Math.max(0, it.cost - funds) });
-  const techs = r.techs.map(t => scrTileN([scrTextN('t3', t.name)].concat(scrTechNodes(t.id, P)), { flat: true, grow: 1 })), chips = scrRowN([scrKeyWordN('pick', uiText('scr.hub.buy')), scrKeyWordN('giveback', uiText('scr.hub.undo')), scrKeyWordN('left', uiText('scr.hub.back'))]);
+  const techs = r.techs.map(t => scrTileN([scrTextN('t3', t.name)].concat(scrTechNodes(t.id, P)), { flat: true, grow: 1 })), chips = scrRowN([scrKeyWordN('pick', uiText('scr.hub.buy')), scrKeyWordN('giveback', uiText('scr.hub.undo')), scrKeyWordN('close', uiText('scr.hub.back'))]);
   return scrScreenN('refit', [scrCardN('refit', { w: 34, top: 22, gap: 1 }, [
     scrRowN([scrTextN('t2', uiText('scr.hub.refit')), scrRowN([scrPillN(uiText('scr.card.credits'), null, { lead: scrNum(r.credits), leadTone: 'gold' }), scrPillN(uiText('scr.card.ore'), null, { lead: scrNum(r.ore), leadTone: 'gold' }), bought > 0 ? scrPillN(uiText('scr.card.bought', { n: bought }), null) : null])], { just: 'sp' }),
     scrTileN([scrRowN([scrColN([scrTextN('t3', uiText('scr.hub.fighter')), scrRowN([scrTextN('lab', uiText('scr.hub.wing', { n: wing })), scrMeterN(Math.min(1, wing / Math.max(1, scrWingCap())), 'blue'), scrTextN('lab', wing + 1)], { width: 16 })], { gap: 0.3 }), scrRowN([scrTextN('t3', it.cost, 'gold'), scrTextN('sm', status)])], { just: 'sp' })], { on: true }),
@@ -52,7 +52,7 @@ function scrHubRankModel(P) {
   const head = r.ranked ? scrRowN([scrRingN(frac, 'gold', r.n, '4.6em'), scrColN([scrTextN('lab', uiText('scr.hub.rankof', { n: r.n, of: r.of }), 'gold'), scrTextN('t1', r.name), scrTextN('sm', r.next != null ? uiText('scr.hub.togo', { n: scrNum(Math.max(0, r.next - r.points)), name: r.nextName }) : uiText('scr.hub.top'))], { gap: 0.2 })], { gap: 1.2 }) : scrTextN('t2', uiText('scr.hub.points', { n: scrNum(r.points) }));
   return scrScreenN('rank', [scrCardN('rank', { w: 44, top: 20, gap: 1.1 }, [head,
     r.ladder.length ? scrRowN(r.ladder.map(l => scrTileN([scrTextN('sm', l.name), scrTextN('t3', uiText('scr.hub.plus', { n: l.fighters }))], { on: l.here, ctr: true, grow: 1 })), { gap: 0.5 }) : null,
-    scrRowN([scrTextN('sm', uiText('scr.hub.wingnote'), 'dim'), scrKeyWordN('left', uiText('scr.hub.back'))], { just: 'sp' })])]);
+    scrRowN([scrTextN('sm', uiText('scr.hub.wingnote'), 'dim'), scrKeyWordN('close', uiText('scr.hub.back'))], { just: 'sp' })])]);
 }
 
 // ---- the mission pick ----
