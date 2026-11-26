@@ -41,10 +41,11 @@ function campStationTexture(sc, p) {
   return { key, R: CAMPSTATION.R };
 }
 
-// the rings wanted now: the first objective not done is a cashin, round the station of each market outpost the scene has drawn
+// the rings wanted now: docking there is the goal: the mission has a sale (a cashin) not done yet and it is the first goal not done, or the store holds ore (the HUD says "Q dock at ..." then, campDockHint, and a sale counts toward it: the ore sold so far is C.sold
+// from any dock), round the station of each market outpost the scene has drawn (card space-game-world-batch-fixes: the ring was only for the sale as the first goal, so mining 1.2's ore with the dock hint up showed none)
 function campDockMarks(C) {
   if (!C || C.result || C.docked || !C.L || !C.L.objectives || !C.carrier || typeof campObjectives !== 'function' || typeof campOutposts !== 'function') return [];
-  const o = campObjectives(C).find(x => !x.done); if (!o || o.type !== 'cashin') return [];
+  const objs = campObjectives(C), o = objs.find(x => !x.done); if (!o || !objs.some(x => x.type === 'cashin' && !x.done) || !(o.type === 'cashin' || C.ore >= 1)) return [];
   const K = CAMPSTATION, pl = campPlaces(C.level), out = [];
   campOutposts(C.level).forEach(op => {
     const p = pl[op.id]; if (!op.market || !p || !p.base) return;
@@ -63,6 +64,6 @@ function campDockMarkDraw(g, marks, zoom) {
 function campDockMarkSync(s) {
   const marks = typeof campWorldOn === 'function' && campWorldOn() && s && s.camp ? campDockMarks(s.camp) : [];
   if (!marks.length) { if (s && s.dockG) s.dockG.clear(); return; }
-  if (!s.dockG) s.dockG = s.add.graphics().setDepth(2.2);
+  if (!s.dockG || (s.dockG.active === false && !s.dockG.scene)) s.dockG = s.add.graphics().setDepth(2.2); // (a scene that starts again (a retry, the next mission) destroys its layers: the old one is a dead object, a new one is made; card space-game-world-batch-fixes)
   campDockMarkDraw(s.dockG, marks, s.cameras && s.cameras.main ? s.cameras.main.zoom : 1);
 }

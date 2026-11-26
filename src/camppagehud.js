@@ -21,6 +21,8 @@ const CAMP_PAGEHUD = {
   addr: 'pagehud',         // the address flag: index.html?campaign=1&pagehud=0 draws the canvas HUD (tests and comparison only); =1 is on whatever the flag says
   memo: { s: null, v: null }, // the address as last read and its value (campPageHudAddrVal)
   pills: 6,                // the most place pills at once
+  placeGap: 8,             // px: the clear space between a place's pill and the disc under it (card space-game-world-batch-fixes: the Sun's pill rested on its rim)
+  placeSlide: 160,         // px: the most a place's pill is slid to get off a page panel; farther and it is not drawn (the world under the panel is hidden too)
   fedges: 4,               // the most pills at the edge for the ships you protect (card space-game-page-hud-friend-edge-pill): the nearest first
   kinds: 2,                // the most kinds of hostile the HOSTILES panel names (card space-game-b3-d-panel-cap-pill-goal; Troy's decision 7): the two most dangerous, then +N for the ships of the others
   first: { ids: ['fly', 'fire', 'missile'] }, // the bottom key row (card space-game-page-hud-first-minute-chips made it a row of the first minute of mission 1.1; card space-game-bottom-row-enter-chip, Troy, 25 Nov 2026: it stays up all the time, in every mission, with a fourth chip, Enter and its verb): the ids of its first three chips are the key table's, in the order they sit
@@ -233,11 +235,28 @@ function campPageHudPlaces(C, view) {
   const pl = campPlaces(C.level), out = [];
   Object.keys(pl).forEach(id => {
     const p = pl[id]; if (!p || p.hidden) return;
-    const r = p.r || 60, up = Math.max((r + 36) * z, Math.max(r * z, CAMPZOOM.view.worldLeast || 0) + 16); // above the world: 36 world px clear of its edge, and never nearer than the pill's half height clear of the disc as it is drawn on the screen (a moon drawn up to its least size, src/campzoom.js: the pill sat on it when the view was out)
+    const r = p.r || 60, half = campPageHudPillSize('x').h / 2, up = Math.max((r + 36) * z, Math.max(r * z, CAMPZOOM.view.worldLeast || 0) + half + CAMP_PAGEHUD.placeGap); // above the world: 36 world px clear of its edge, and never nearer than the pill's half height PLUS a small gap (CAMP_PAGEHUD.placeGap) clear of the disc as it is drawn on the screen (a moon drawn up to its least size, src/campzoom.js: the pill sat on it when the view was out; with no gap at all the Sun's pill rested on its rim: card space-game-world-batch-fixes)
     const sx = (p.x - view.x - campPageW() / 2) * z + campPageW() / 2, sy = (p.y - view.y - campPageH() / 2) * z + campPageH() / 2 - up;
     if (sx > 40 && sx < campPageW() - 40 && sy > 40 && sy < campPageH() - 40) out.push({ name: p.base ? p.name + ' \u00b7 ' + p.base : String(p.name), x: sx, y: sy });
   });
+  const R = C.relic, rl = C.L && C.L.relic; // the relic's mark (card space-game-world-batch-fixes: its word was a canvas label in the old typewriter font): a pill like the places' names, in goal gold, where the label stood, 24 world px over the ring
+  if (R && rl && typeof uiText === 'function') { const sx = (R.x - view.x - campPageW() / 2) * z + campPageW() / 2, sy = (R.y - rl.radius - 24 - view.y - campPageH() / 2) * z + campPageH() / 2; if (sx > 40 && sx < campPageW() - 40 && sy > 40 && sy < campPageH() - 40) out.unshift({ name: uiText('camp.nav.relicmark'), x: sx, y: sy, goal: true }); }
   return out.slice(0, CAMP_PAGEHUD.pills);
+}
+// the place pills keep clear of the page's panels (card space-game-world-batch-fixes: Kolga's pill stood on the ORE panel in 3.1), as the edge pills do: a pill that would touch a panel (panels: [{ x, y, w, h }] centres, game px) is slid the shortest way that clears every panel
+// and the pills before it, at most CAMP_PAGEHUD.placeSlide px (up, down, left or right of the panel); where there is no such place it is dropped (null: the world under a panel is hidden too). Returns [{ x, y } | null] in the order of the places.
+function campPageHudPlacesClear(places, panels) {
+  const pad = 4, W0 = campPageW(), H0 = campPageH(), P = panels || [], taken = [], box = (x, y, z) => [x - z.w / 2, y - z.h / 2, x + z.w / 2, y + z.h / 2], meets = (a, b) => a[0] < b[2] + pad && a[2] > b[0] - pad && a[1] < b[3] + pad && a[3] > b[1] - pad;
+  const rects = P.map(q => [q.x - q.w / 2, q.y - q.h / 2, q.x + q.w / 2, q.y + q.h / 2]);
+  return (places || []).map(pl => {
+    const z = campPageHudPillSize(pl.name), ok = (x, y) => x - z.w / 2 >= 4 && x + z.w / 2 <= W0 - 4 && y - z.h / 2 >= 4 && y + z.h / 2 <= H0 - 4 && !rects.some(r => meets(box(x, y, z), r)) && !taken.some(r => meets(box(x, y, z), r));
+    let pick = null; if (ok(pl.x, pl.y)) pick = { x: pl.x, y: pl.y };
+    else {
+      const c = []; rects.forEach(r => { c.push({ x: pl.x, y: r[3] + pad + z.h / 2 + 2 }, { x: pl.x, y: r[1] - pad - z.h / 2 - 2 }, { x: r[0] - pad - z.w / 2 - 2, y: pl.y }, { x: r[2] + pad + z.w / 2 + 2, y: pl.y }); });
+      c.map(p => Object.assign(p, { d: Math.hypot(p.x - pl.x, p.y - pl.y) })).filter(p => p.d <= CAMP_PAGEHUD.placeSlide).sort((a, b) => a.d - b.d).some(p => { if (ok(p.x, p.y)) { pick = { x: p.x, y: p.y }; return true; } return false; });
+    }
+    if (pick) taken.push(box(pick.x, pick.y, z)); return pick;
+  });
 }
 
 // ---- the elements ----
@@ -331,7 +350,7 @@ function campPageHudPaint(R, M, doc) {
   const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
   if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ el: grp, key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); FI.items.forEach((it, i) => { const x = fm.items[i]; set(it.el, 'display', x ? '' : 'none'); if (x) { set(it.key, 'text', x.key); set(it.word, 'text', x.word); } }); } // (a pair with no chip now, the Enter one when no order can be given, is hidden, not left with the old words)
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
-  R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) set(p, 'text', pl.name); });
+  R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) { set(p, 'text', pl.name); set(p, 'cls', 'ph-p ph-place' + (pl.goal ? ' goal' : '')); } });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
   T.pips.forEach((p, i) => { const b = i === k.missiles.n && k.missiles.building; set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (b ? ' build' : '')); set(p, '--p', (b ? Math.round(k.missiles.progress * 100) : 0) + '%'); }); set(T.queue, 'text', k.missiles.queued > 0 ? '+' + k.missiles.queued : ''); set(T.queue, 'display', k.missiles.queued > 0 ? '' : 'none'); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
   set(S.key, 'text', M.ship.key);
@@ -352,7 +371,7 @@ function campPageHudHideLines(s, on) { // the canvas lines the page HUD replaces
   if (s.hud && s.hudOn !== false) put(s.hud.keys, !off); put(s.keysBack, !off);
   const offG = on && campPageHudHides('goal'); if (s.hud) { put(s.hud.obj, !offG); put(s.hud.wave, !offG); } // the goal line and the wave line of the canvas (their words are still set: the column's flow is as it was)
   const offM = on && campPageHudHides('mother'), offH = on && campPageHudHides('post'), offC = on && campPageHudHides('chat'); if (s.hud) { put(s.hud.mother, !offM); put(s.hud.post, !offH); put(s.hud.chat, !offC); } // the mothership's label, the dock and retreat line, the wing's chatter: in the hostiles panel, the goal panel and the radio panel now (card space-game-b3-c-radio-panel)
-  const offP = on && campPageHudHides('places'); (s.placeLabels || []).forEach(o => { if (o && o.active !== false) put(o, !offP); });
+  const offP = on && campPageHudHides('places'); (s.placeLabels || []).forEach(o => { if (o && o.active !== false) put(o, !offP); }); if (s.relicLabel && s.relicLabel.active !== false) put(s.relicLabel, !offP); // the relic's word is a pill now (campPageHudPlaces), not a canvas label
 }
 // a full card is up over the battle: the pause card (the H page and the N panel are the pause card's own mode), the H page, and a scene that holds the battle still (Settings, the ready room: Phaser pauses the Campaign, so its frame, and this sync, do not run). The panels are hidden while it is, and come back as they were; the result cards (won, lost, debrief, refit, pick, the ending) take the HUD away already (the mode is not play or pause). With the switch off nothing here runs (card space-game-page-hud-hide-on-cards)
 const campPageHudCovered = s => !!s && (s.mode === 'pause' || s.pageHudHeld === true || (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)));
@@ -394,10 +413,10 @@ function campPageHudSync(s, now) {
     if (s.hudBack && s.hudBack.setAlpha) { if (R.backAlpha === undefined) R.backAlpha = s.hudBack.alpha; s.hudBack.setAlpha(0); }
     // in space: the pill at the edge for the hostiles off the screen, and a pill for each place in view (world px to the canvas's px)
     const M = R.last = campPageModel(C, view); R.was = M.was; // (the same view as the paint above: both looks gave the same pills)
-    const PC = campPageHudEdgesClear(M, campPageHudPanelRects(R, r, k)); // the pills are put clear of the panels (and of each other) now that the panels are in place
+    const PR = campPageHudPanelRects(R, r, k), PC = campPageHudEdgesClear(M, PR), PP = campPageHudPlacesClear(M.places, PR); // the pills are put clear of the panels (and of each other) now that the panels are in place
     if (PC.edge) { set(R.edge.el, 'left', Math.round(PC.edge.x * k) + 'px'); set(R.edge.el, 'top', Math.round(PC.edge.y * k) + 'px'); set(R.edge.ic, '--a', String(Math.round(PC.edge.angle * 180 / Math.PI)) + 'deg'); }
     R.fedges.forEach((p, i) => { const f = PC.fedges[i]; if (f) { set(p.el, 'left', Math.round(f.x * k) + 'px'); set(p.el, 'top', Math.round(f.y * k) + 'px'); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
-    R.pills.forEach((p, i) => { const pl = M.places[i]; if (pl) { set(p, 'left', Math.round(pl.x * k) + 'px'); set(p, 'top', Math.round(pl.y * k) + 'px'); } });
+    R.pills.forEach((p, i) => { const pl = M.places[i], q = PP[i]; if (pl && q) { set(p, 'display', ''); set(p, 'left', Math.round(q.x * k) + 'px'); set(p, 'top', Math.round(q.y * k) + 'px'); } else if (pl) set(p, 'display', 'none'); });
   }
   return true;
 }
