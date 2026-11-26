@@ -134,7 +134,7 @@ const CAMP_SCREEN_KEYS = {
   pick: { same: 'pick', on: ['title', 'ready', 'refit', 'earthrefit', 'pick', 'brief', 'story', 'won', 'lvlwon', 'lost', 'tech', 'end'], src: ['src/title.js', 'src/camphub.js', 'src/campaignscene.js', 'src/campbrief.js'] },      // Enter: begin, open, buy, next, launch, retry, go on
   up: { k: 'Up', codes: ['ArrowUp', 'KeyW'], on: ['ready', 'refit', 'pick', 'settings', 'setkeys', 'setlisten', 'setcontrols', 'setflight', 'setcontent', 'setreset'], src: ['src/camphub.js', 'src/settings.js'] },                                                                                     // the ready room's rows and lists
   down: { k: 'Down', codes: ['ArrowDown', 'KeyS'], on: ['ready', 'refit', 'pick', 'settings', 'setkeys', 'setlisten', 'setcontrols', 'setflight', 'setcontent', 'setreset'], src: ['src/camphub.js', 'src/settings.js'] },
-  left: { k: 'Left', codes: ['ArrowLeft', 'KeyA'], on: ['ready', 'refit', 'rank', 'brief', 'settings', 'setcontrols', 'setflight'], src: ['src/camphub.js', 'src/campbrief.js', 'src/settings.js'] },                                                          // back: closes a row's overlay; the briefing's previous stop
+  left: { k: 'Left', codes: ['ArrowLeft', 'KeyA'], on: ['ready', 'refit', 'rank', 'pick', 'brief', 'settings', 'setcontrols', 'setflight'], src: ['src/camphub.js', 'src/campbrief.js', 'src/scrbriefdraw.js', 'src/settings.js'] },                                                          // back: closes a row's overlay; the briefing's previous stop
   right: { k: 'Right', codes: ['ArrowRight', 'KeyD'], on: ['ready', 'refit', 'brief', 'settings', 'setcontrols', 'setflight'], src: ['src/camphub.js', 'src/campbrief.js', 'src/settings.js'] },                                                         // does the thing (opens a row, buys); the briefing's next stop
   digit: { k: '1 to 9', codes: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9'], on: ['ready', 'refit', 'earthrefit', 'tech'], src: ['src/camphub.js', 'src/campaignscene.js'] }, // a row of the ready room, a choice of the refit card, a tech
   close: { same: 'pause', on: ['ready', 'refit', 'rank', 'brief', 'keys', 'settings', 'setkeys', 'setlisten', 'setcontrols', 'setflight', 'setcontent', 'setreset', 'pause'], src: ['src/camphub.js', 'src/campbrief.js', 'src/campkeys.js', 'src/campaignscene.js', 'src/settings.js'] },  // Esc: closes the overlay, the briefing, the page; resumes
@@ -150,9 +150,9 @@ const CAMP_SCREEN_KEYS = {
   giveback: { k: 'Backspace', codes: ['Backspace'], on: ['refit'], src: ['src/camphub.js'] },                                                                                                 // the refit: give the last thing back
   zoomin: { same: 'zoomin', on: ['brief'], src: ['src/campzoom.js'] }, zoomout: { same: 'zoomout', on: ['brief'], src: ['src/campzoom.js'] }, zoomreset: { same: 'zoomreset', on: ['brief'], src: ['src/campzoom.js'] }, // the briefing map's zoom
   // piece a (cards in the Campaign scene, card space-game-screens-a-cards): the digit of a technology's tile and of the fighter on the Earth refit (1 2 3, 4 buys a fighter, 6 7 8 the looted techs) and the tech pick (1 to 6), and the keys the lost card's tip names
-  d1: { k: '1', codes: ['Digit1'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
-  d2: { k: '2', codes: ['Digit2'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
-  d3: { k: '3', codes: ['Digit3'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d1: { k: '1', codes: ['Digit1'], on: ['ready', 'earthrefit', 'tech'], src: ['src/campaignscene.js', 'src/camphub.js'] },
+  d2: { k: '2', codes: ['Digit2'], on: ['ready', 'earthrefit', 'tech'], src: ['src/campaignscene.js', 'src/camphub.js'] },
+  d3: { k: '3', codes: ['Digit3'], on: ['ready', 'earthrefit', 'tech'], src: ['src/campaignscene.js', 'src/camphub.js'] },
   d4: { k: '4', codes: ['Digit4'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
   d5: { k: '5', codes: ['Digit5'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
   d6: { k: '6', codes: ['Digit6'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },

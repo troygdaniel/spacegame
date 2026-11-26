@@ -158,8 +158,21 @@ check('the Settings row is in CONTENT: a button that flips the switch, Enter doe
   g.run(`Settings.prototype.screensToggle.call(__row);`);
   check('the second turns them OFF again', J('CAMP.flags.screens') === false && J('localStorage.getItem(SCR.store)') === '0' && J('__row.slots.scrOn.text') === 'New screens: OFF' && J('__said[1]') === 'New screens OFF: the screens are as they were.');
 }
-// the pieces of the new screens that have landed, each behind the switch (one name a piece: the first piece's files are the Campaign scene's cards, card space-game-screens-a-cards; a later piece adds its own names here)
-const PIECES = ['campaignscene.js', 'scrcards.js', 'scrcardsdraw.js', 'title.js']; // (title.js: landing d, the title, card space-game-screens-d-title, tests/scrtitle.mjs)
+// the pieces of the new screens that have landed, each behind the switch (one name a piece: the first piece's files are the Campaign scene's cards, card space-game-screens-a-cards; the ready room's are card space-game-screens-c-hub; a later piece adds its own names here)
+// ONE FILE A LINE, so two pieces that each add a file do not touch the same line (8-GEN, 25 Nov 2026): add yours on a line of its own
+const PIECES = [
+  'campaignscene.js', // a: the Campaign scene's cards
+  'scrcards.js',
+  'scrcardsdraw.js',
+  'camphub.js', // c: the ready room
+  'camphubscene.js',
+  'scrhub.js',
+  'scrhubdraw.js',
+  'campbriefdraw.js', // b: the briefing
+  'scrbrief.js',
+  'scrbriefdraw.js',
+  'title.js' // d: the title (card space-game-screens-d-title, tests/scrtitle.mjs)
+];
 { // nothing but the helpers, the host, the Settings row and the pieces names the new pieces' functions (each piece's own suite holds it to the switch: tests/scrcards.mjs)
   const own = ['screens.js', 'scrhost.js', 'settings.js'].concat(PIECES), used = readdirSync(join(ROOT, 'src')).filter(f => f.endsWith('.js') && own.indexOf(f) < 0 && /\b(scr(On|Set|Load|Key|Chip|Chips|Words|Ring|Meter|Pill|Host\w*)|SCR_BUDGET|SCRHOST)\b/.test(code('src/' + f)));
   check('no unlisted file names any of them: only the helpers, the host, the Settings row and the pieces', used.length === 0, used.join());
