@@ -5,7 +5,7 @@
 //   C. the cruiser's order: the arrows in a fighter do not give up the autopilot's trip (out of a fighter they do, as always)
 //   D. the camera: on the fighter after a take, on the cruiser after a hand-back and after the fighter is lost
 //   E. the ship he flies: the feel's one hook (campFeelShip), the boost store and the flame state, the top speed, the ship look's branch
-//   F. the page HUD: see tests/camppagehud.mjs section W (the bars, the cruiser line, the chip)
+//   F. the keys page (the new one and the old) lists C only while the switch is on; the page HUD's bars, the cruiser line and the chip are tests/camppagehud.mjs section W
 // Run: node tests/campcockpitscene.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { nodeGame, ROOT } from './nodegame.mjs';
@@ -58,10 +58,10 @@ console.log('B. the keys');
 
 console.log('C. the cruiser\'s order');
 {
-  g.run(`CAMP.flags.cockpit = true; window.F = __fake(1); campStep(F.camp, 2); campNavGo(F.camp, campNavRows(F.camp).find(r => r.id === 'place:earth'), false); F.onKey({ code: 'KeyC' }); __keys({ UP: 1, LEFT: 1 }); __tick(1); window.__d0 = Math.hypot(F.camp.carrier.vx, F.camp.carrier.vy);`);
+  g.run(`CAMP.flags.cockpit = true; window.F = __fake(1); campStep(F.camp, 2); campNavGo(F.camp, campNavRows(F.camp).find(r => r.id === 'place:earth'), false); F.onKey({ code: 'KeyC' }); __keys({ UP: 1, LEFT: 1 }); __tick(4); window.__d0 = Math.hypot(F.camp.carrier.vx, F.camp.carrier.vy);`);
   check('in a fighter the arrows do not give up the cruiser\'s trip: the autopilot is on and the cruiser is under way', J('F.camp.nav && F.camp.nav.on') === true && J('__d0') > 5, J('[F.camp.nav, __d0]'));
-  g.run(`F.onKey({ code: 'KeyC' }); __tick(0.1);`);
-  check('the trip is still its order when the stick is handed back', J('F.camp.nav && F.camp.nav.on') === true);
+  g.run(`__keys({}); F.onKey({ code: 'KeyC' }); __tick(0.1);`);
+  check('the trip is still its order when the stick is handed back (the arrows let go)', J('F.camp.nav && F.camp.nav.on') === true);
   g.run(`__keys({ LEFT: 1 }); __tick(0.1);`);
   check('out of a fighter a steering key gives the trip up, as always', J('F.camp.nav') === null || J('F.camp.nav.on') === false);
 }
@@ -89,6 +89,14 @@ console.log('E. the ship he flies');
   check('handed back: all of it is the cruiser\'s again', J('campFeelShip(C) === C.carrier') && J('campBoostStatus(C).frac') === 0.77);
   check('the ship look draws the feel for the ship he flies and not for the cruiser he left (one branch, one condition: the cruiser when no hook exists)', /typeof campFeelShip === 'function' \? u === campFeelShip\(C\) : u\.kind === 'carrier'/.test(src('src/shiplookfx.js')));
   check('the scene reads the cockpit\'s stick only while the switch is on, and keeps the nav on in a fighter', /cp = C\.cockpit && typeof campCockpitOn === 'function' && campCockpitOn\(\) \? C\.cockpit : null/.test(src('src/campaignscene.js')) && /if \(wheel && !cp && C\.nav/.test(src('src/campaignscene.js')));
+}
+console.log('F. the keys page');
+{
+  g.run(`CAMP.flags.cockpit = false;`);
+  const row = () => J(`(() => { const fly = scrKeysModel().groups.find(gr => gr.id === 'fly'); return !!fly && fly.rows.some(r => r.chips.some(c => c.k === 'C')); })()`);
+  const off = row(); g.run(`CAMP.flags.cockpit = true;`); const on = row();
+  check('the new keys page lists C (Take a pilot\'s stick; again hands it back) under FLY AND FIRE only while the switch is on; the old page too', off === false && on === true && J(`scrKeysModel().groups.find(gr => gr.id === 'fly').rows.find(r => r.chips[0].k === 'C').t`) === "Take a pilot's stick; again hands it back" && J(`campKeysPage().some(gr => gr.rows.some(r => r.caps.join() === 'C'))`) === true);
+  g.run(`CAMP.flags.cockpit = false;`);
 }
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 
