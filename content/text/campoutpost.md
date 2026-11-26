@@ -21,6 +21,7 @@ The words of the Campaign's friendly outposts (card space-game-campaign-outposts
 | camp.hud.retreathot | {name} is covered by enemies: no safe dock. |
 | camp.say.retreathot | Hull low, no ships. {name} is covered by enemies: no safe dock. |
 | camp.hud.dockhint | {yardkey}  dock at {name} |
+| camp.hud.aboard | {n} ore aboard · dock to sell |
 | camp.hub.row.repair | REPAIR |
 | camp.hub.row.undock | UNDOCK |
 | camp.hub.dockfoot.repair | Enter  the mission board |

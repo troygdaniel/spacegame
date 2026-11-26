@@ -132,6 +132,10 @@ function campPageHudFoesAlone(C) {
 function campPageHudHint(C) {
   if (!C) return null;
   const rt = typeof campRetreat === 'function' ? campRetreat(C) : null; if (rt && rt.line) return { text: rt.line, tone: 'foe' };
+  // the sell-ore goal (card space-game-sell-goal-aboard-line; Troy, 26 Nov 2026: 0 / 160 beside a full faint bar reads like a bug): while the goal on the panel is the sale and ore is aboard, the one second line says how much and what to do, wherever the cruiser is (the old
+  // "Q  dock at the Works" showed only within CAMP.outpost.range (280 px) of the outpost: far off, with the ore aboard, the panel said nothing); the dock's key is a chip (the key table's: campKeyVar('yardkey'))
+  const sale = C.L && C.L.objectives && !C.result && !C.docked && typeof campObjectives === 'function' ? campObjectives(C).find(x => !x.done) : null;
+  if (sale && sale.type === 'cashin' && sale.aboard >= 1) { const k = typeof campKeyVar === 'function' ? String(campKeyVar('yardkey') || '') : ''; return { text: uiText('camp.hud.aboard', { n: sale.aboard }), tone: 'warn', key: k.length <= 6 ? k : '' }; }
   const nr = typeof campDockHint === 'function' ? campDockHint(C) : ''; return nr ? { text: nr, tone: 'warn' } : null;
 }
 function campPageHudFoes(C) {
@@ -286,7 +290,7 @@ function campPageHudBuild(doc) {
   R.fleet.pkey = campPageHudEl(doc, 'span', 'ph-k', fl); R.fleet.pBox = campPageHudEl(doc, 'div', 'ph-grp', fl); campPageHudEl(doc, 'span', 'ph-sep', fl);
   R.fleet.ekey = campPageHudEl(doc, 'span', 'ph-k', fl); R.fleet.sBox = campPageHudEl(doc, 'div', 'ph-grp', fl); R.fleet.ent = campPageHudEnterRow(doc, fl, 'ph-g ph-ent');
   const goal = campPageHudEl(doc, 'div', 'ph-p ph-goal', root), g1 = campPageHudEl(doc, 'div', 'ph-row ph-between', goal); R.goal = { el: goal, label: campPageHudEl(doc, 'span', 'ph-lab', g1), value: campPageHudEl(doc, 'b', '', g1) };
-  R.goal.meter = campPageHudEl(doc, 'div', 'ph-meter ph-fixed', goal); R.goal.ghost = campPageHudEl(doc, 'i', 'ph-fill ph-ghost', R.goal.meter); R.goal.fill = campPageHudEl(doc, 'i', 'ph-fill', R.goal.meter); R.goal.row = g1; R.goal.hint = campPageHudEl(doc, 'div', 'ph-hint', goal); // the hint: the second line (the dock hint, the retreat line)
+  R.goal.meter = campPageHudEl(doc, 'div', 'ph-meter ph-fixed', goal); R.goal.ghost = campPageHudEl(doc, 'i', 'ph-fill ph-ghost', R.goal.meter); R.goal.fill = campPageHudEl(doc, 'i', 'ph-fill', R.goal.meter); R.goal.row = g1; R.goal.hint = campPageHudEl(doc, 'div', 'ph-hint', goal); R.goal.hintKey = campPageHudEl(doc, 'span', 'ph-k', R.goal.hint); R.goal.hintText = campPageHudEl(doc, 'span', '', R.goal.hint); // the hint: the second line (the dock hint, the retreat line)
   const stock = campPageHudEl(doc, 'div', 'ph-p ph-stock', root), o1 = campPageHudEl(doc, 'div', 'ph-row', stock), oic = campPageHudEl(doc, 'span', 'ph-icw', o1), olab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', o1), ometer = campPageHudEl(doc, 'div', 'ph-meter', o1); oic.innerHTML = CAMP_PAGEHUD_ICON.ore;
   const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1), mlab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
   const foes = campPageHudEl(doc, 'div', 'ph-p ph-foes', root), f1 = campPageHudEl(doc, 'div', 'ph-row', foes);
@@ -338,7 +342,7 @@ function campPageHudPaintEnter(E, e) { const set = campPageHudSet; set(E.el, 'di
 function campPageHudPaint(R, M, doc) {
   if (!R || !M) return;
   const S = R.ship, set = campPageHudSet;
-  const G = R.goal; set(G.el, 'display', M.goal || M.hint ? '' : 'none'); set(G.row, 'display', M.goal ? '' : 'none'); if (!M.goal) set(G.meter, 'display', 'none'); set(G.hint, 'display', M.hint ? '' : 'none'); if (M.hint) { set(G.hint, 'text', M.hint.text); set(G.hint, 'cls', 'ph-hint ph-' + M.hint.tone); }
+  const G = R.goal; set(G.el, 'display', M.goal || M.hint ? '' : 'none'); set(G.row, 'display', M.goal ? '' : 'none'); if (!M.goal) set(G.meter, 'display', 'none'); set(G.hint, 'display', M.hint ? '' : 'none'); if (M.hint) { set(G.hintText, 'text', M.hint.text); set(G.hintKey, 'text', M.hint.key || ''); set(G.hintKey, 'display', M.hint.key ? '' : 'none'); set(G.hint, 'cls', 'ph-hint ph-' + M.hint.tone + (M.hint.key ? ' ph-withkey' : '')); }
   if (M.goal) { set(G.label, 'text', M.goal.label); set(G.value, 'text', M.goal.value); set(G.meter, 'display', M.goal.frac === null ? 'none' : ''); set(G.fill, 'width', M.goal.frac === null ? '0%' : Math.round(M.goal.frac * 1000) / 10 + '%'); set(G.fill, 'cls', 'ph-fill ph-' + M.goal.tone); set(G.ghost, 'display', M.goal.ghost == null ? 'none' : ''); set(G.ghost, 'width', M.goal.ghost == null ? '0%' : Math.round(M.goal.ghost * 1000) / 10 + '%'); }
   const F = R.foes; set(F.el, 'display', M.foes ? '' : 'none');
   if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); const tm = M.foes.target, T = F.tg; set(T.el, 'display', tm ? '' : 'none'); if (tm) { campPageHudPaintMeter(T.hull, tm.hull); set(T.shield.el, 'display', tm.shield ? '' : 'none'); if (tm.shield) campPageHudPaintMeter(T.shield, tm.shield); set(T.none, 'display', tm.shield ? 'none' : ''); set(T.none, 'text', tm.noshield); set(T.act, 'text', tm.doing); }

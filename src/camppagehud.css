@@ -51,6 +51,7 @@
 .ph-between { justify-content: space-between; font-size: .9em; }
 /* the goal panel's second line (card space-game-b3-c-radio-panel): the dock hint, or the retreat line, where the canvas wrote it in amber under the panel */
 .ph-hint { font-size: .82em; line-height: 1.3; }
+.ph-hint.ph-withkey { display: flex; align-items: center; gap: .55em; } /* the dock's key as a chip before the words (card space-game-sell-goal-aboard-line) */
 .ph-hint.ph-warn { color: var(--ph-warn); }
 .ph-hint.ph-foe { color: var(--ph-foe); }
 .ph-goal b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; } /* the number never breaks across lines ("60 /" over "160" with a long label): the label wraps instead (card space-game-12-goal-sold-aboard) */
