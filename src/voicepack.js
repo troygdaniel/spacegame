@@ -119,6 +119,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.l\d+\.(before|after)\.(r\.)?\d+$/, spoken: 'campaign.story', voice: 'ship' },    // the story before and after each level (r.: level 3 once the reveal has been seen, campStory)
   { re: /^camp\.bf\.\d+\.\d+\.w1$/, spoken: 'campaign.walk', voice: 'ship' },                     // the first step of a mission's walkthrough: the ship reads it once when the big briefing opens (src/campbriefdraw.js, card space-game-campaign-briefing)
   { re: /^camp\.m\.\d+\.\d+\.b[12]$/, spoken: 'campaign.brief', voice: 'ship' },                  // a mission's briefing
+  { re: /^scr\.m\.\d+\.\d+\.goal$/, spoken: 'campaign.brief', voice: 'ship' },                  // the goal line of a mission, in the new briefing: the ship says it once when the briefing opens (one voiced sentence a mission; Troy records scr.m.1.1.goal and scr.m.1.2.goal)
   { re: /^camp\.warp\./, spoken: 'campaign.warp', voice: 'ship' },                                  // the warp cinematic's lines
   { re: /^camp\.chat\./, spoken: 'campaign.chatter', voice: 'pilots' },                             // the wing's radio: any pilot may say any line
   { re: /^camp\.end\./, spoken: 'campaign.end', voice: 'ship' },                                    // the reveal's ending (card space-game-campaign-reveal)
