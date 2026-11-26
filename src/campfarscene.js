@@ -16,7 +16,7 @@ function campFarSync(scene) {
   const marks = z < CAMPZOOM.view.markZ && scene.mode === 'play' && !scene.mp ? campZoomMarks(C) : [];
   let n = 0;
   marks.forEach(m => {
-    const sx = (m.x - cam.scrollX - W / 2) * z + W / 2, sy = (m.y - cam.scrollY - H / 2) * z + H / 2, kind = m.goal ? 'goal' : m.kind;
+    const sx = (m.x - camzoomSX(cam) - W / 2) * z + W / 2, sy = (m.y - camzoomSY(cam) - H / 2) * z + H / 2, kind = m.goal ? 'goal' : m.kind;
     if (sx < K.edge || sx > W - K.edge || sy < K.edge || sy > H - K.keep) return;
     if (m.kind === 'convoy') g.lineStyle(K.width, K.color.convoy, 0.95).strokePoints([{ x: sx, y: sy - K.ring }, { x: sx + K.ring, y: sy }, { x: sx, y: sy + K.ring }, { x: sx - K.ring, y: sy }], true);
     else g.lineStyle(K.width, K.color[kind], 0.95).strokeCircle(sx, sy, K.ring);

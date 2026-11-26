@@ -55,7 +55,7 @@ function campFocusGlideZoom(cx, cy, tx, ty, z) {
   return typeof camzoomClamp === 'function' ? camzoomClamp(want) : want;
 }
 // the middle of the view in the world: the camera's scroll is its top left at zoom 1, and the zoom is about the middle (src/campdrag.js reads it the same way)
-const campFocusMid = cam => ({ x: cam.scrollX + W / 2, y: cam.scrollY + H / 2 });
+const campFocusMid = cam => ({ x: camzoomSX(cam) + W / 2, y: camzoomSY(cam) + H / 2 });
 // the zoom a glide took is given back, unless the player zoomed by hand meanwhile (what he set stays) or a target sub-list has the zoom (src/camppickdraw.js campPickZoom gives it back itself)
 function campFocusZoomBack(s) {
   const f = campFocusOf(s), Z = f && f.zoom; if (!Z) return;
@@ -111,7 +111,7 @@ function campFocusFrame(s, dt) {
   f.pt.x = u.x; f.pt.y = u.y;
   if (f.gliding) {
     f.t += Math.max(0, Math.min(dt || 0, 100)); const p = Math.min(1, f.t / CAMPFOCUS.glide), e = p * p * (3 - 2 * p); // eased in and out
-    cam.scrollX = f.from.x + (u.x - f.from.x) * e - W / 2; cam.scrollY = f.from.y + (u.y - f.from.y) * e - H / 2;
+    cam.scrollX = camzoomPutX(f.from.x + (u.x - f.from.x) * e - W / 2); cam.scrollY = camzoomPutY(f.from.y + (u.y - f.from.y) * e - H / 2);
     if (p >= 1) { f.gliding = false; cam.startFollow(f.pt, true, CAMPDRAG.follow, CAMPDRAG.follow); campFocusZoomBack(s); } // there: it follows, and the zoom comes back
   }
   campFocusPaint(s);

@@ -49,7 +49,7 @@ function slookPickMark(g, v, col, z, al, drawn, s) {
 }
 function slookArcsPaint(g, s, z) {
   const C = s && s.camp, cam = s && s.cameras && s.cameras.main; if (!g || !C || !C.ships || !cam) return 0;
-  const K = SLOOKMARK, sx0 = cam.scrollX || 0, sy0 = cam.scrollY || 0; let n = 0;
+  const K = SLOOKMARK, sx0 = camzoomSX(cam) || 0, sy0 = camzoomSY(cam) || 0; let n = 0;
   C.ships.forEach(u => {
     if (!slookHurt(u)) return;
     const sx = (u.x - sx0 - W / 2) * z + W / 2, sy = (u.y - sy0 - H / 2) * z + H / 2, m = slookMarkR(slookMarkLen(s, u) * z) + K.margin;

@@ -62,10 +62,12 @@ function campViewRecentre(s) {
   return true;
 }
 // the wheel at (px, py) while the view is off: the zoom keeps the world point under the pointer where it is (camzoomFrame puts the scroll back as the zoom eases)
+// a pointer's place in the 1280 by 720 view (the same numbers unless the flight has taken the window's shape: src/fillwindow.js); every hand-made hit test of the flight and of the Tab map is written for that view
+const campPX = p => typeof fillPX === 'function' ? fillPX(p) : p.x, campPY = p => typeof fillPY === 'function' ? fillPY(p) : p.y;
 function campViewAnchor(s, px, py) {
   if (!s || !s.panned || !s._cz) return false;
   const cam = s.cameras.main, z = cam.zoom > 0 ? cam.zoom : 1;
-  s._cz.anchor = { wx: cam.scrollX + W / 2 + (px - W / 2) / z, wy: cam.scrollY + H / 2 + (py - H / 2) / z, sx: px, sy: py };
+  s._cz.anchor = { wx: camzoomSX(cam) + W / 2 + (px - W / 2) / z, wy: camzoomSY(cam) + H / 2 + (py - H / 2) / z, sx: px, sy: py };
   return true;
 }
 // a flying key held: after CAMPDRAG.fly ms the view comes back. true when it did. Not held, or not off: the count starts again
@@ -100,7 +102,7 @@ function campDragMarkPaint(s) {
   if (M.shown !== text) { M.t.setText(text); M.shown = text; }
   M.t.setPosition(W / 2 + K.arrow * 2, H - K.y);
   if (!c) return;
-  const vx = cam.scrollX + W / 2, vy = cam.scrollY + H / 2, a = Math.atan2(c.y - vy, c.x - vx), r = K.arrow, ax = M.t.x - M.t.width / 2 - r * 2, ay = M.t.y;
+  const vx = camzoomSX(cam) + W / 2, vy = camzoomSY(cam) + H / 2, a = Math.atan2(c.y - vy, c.x - vx), r = K.arrow, ax = M.t.x - M.t.width / 2 - r * 2, ay = M.t.y;
   const p = (da, m) => ({ x: ax + Math.cos(a + da) * r * m, y: ay + Math.sin(a + da) * r * m });
   M.g.fillStyle(0x7fe9ff, 0.95); M.g.fillTriangle(p(0, 1.3).x, p(0, 1.3).y, p(2.5, 1).x, p(2.5, 1).y, p(-2.5, 1).x, p(-2.5, 1).y);
 }
@@ -118,20 +120,20 @@ function campDragInstall(s) {
   if (s.input && s.input.mouse && typeof s.input.mouse.disableContextMenu === 'function') s.input.mouse.disableContextMenu(); // the browser's menu on a right click is off on the canvas: the right click is the order
   const down = p => {
     if (typeof p.downTime === 'number' && s.pnTook === p.downTime) return; // an open list took this press (campPanelsClick sets pnTook): it is the list's click, not the start of a drag or a click on the ship under it (card space-game-drag-on-list-pans)
-    if (!ok(p)) { if (typeof p.rightButtonDown === 'function' && p.rightButtonDown() && !s.mp && campDragCanStart(s, p.x, p.y)) shipClick(p.x, p.y, 'right'); return; } // a right press is a click at once (it has no drag); a wheel press is nothing
+    if (!ok(p)) { if (typeof p.rightButtonDown === 'function' && p.rightButtonDown() && !s.mp && campDragCanStart(s, campPX(p), campPY(p))) shipClick(campPX(p), campPY(p), 'right'); return; } // a right press is a click at once (it has no drag); a wheel press is nothing
     if (s.mp) { campDragMapDown(s, p); return; }
-    if (campDragMarkHit(s.dragMark, p.x, p.y)) { campViewRecentre(s); return; }
-    if (campDragCanStart(s, p.x, p.y)) campDragDown(s.dragIn, p.x, p.y);
+    if (campDragMarkHit(s.dragMark, campPX(p), campPY(p))) { campViewRecentre(s); return; }
+    if (campDragCanStart(s, campPX(p), campPY(p))) campDragDown(s.dragIn, campPX(p), campPY(p));
   };
   const move = p => {
-    const r = campDragMove(s.dragIn, p.x, p.y); if (!r) return;
+    const r = campDragMove(s.dragIn, campPX(p), campPY(p)); if (!r) return;
     if (s.mp) campDragMapMove(s, r); else campViewPan(s, r.dx, r.dy);
   };
   const up = () => {
     const u = campDragUp(s.dragIn); if (!u) return;
     if (s.mp) campDragMapUp(s, u); else if (!u.drag) shipClick(u.x, u.y, 'left'); // a press that did not move is a click on a ship (or on space: nothing)
   };
-  const wheel = p => { if (s.panned && !s.mp && typeof camzoomCanWheel === 'function' && camzoomCanWheel(s)) campViewAnchor(s, p.x, p.y); };
+  const wheel = p => { if (s.panned && !s.mp && typeof camzoomCanWheel === 'function' && camzoomCanWheel(s)) campViewAnchor(s, campPX(p), campPY(p)); };
   s.input.on('pointerdown', down); s.input.on('pointermove', move); s.input.on('pointerup', up); s.input.on('pointerupoutside', up); s.input.on('wheel', wheel);
   const off = () => { try { ['pointerdown', 'pointermove', 'pointerup', 'pointerupoutside', 'wheel'].forEach((n, i) => s.input.off(n, [down, move, up, up, wheel][i])); } catch (e) { /* gone */ } };
   if (s.events && s.events.once) { s.events.once('shutdown', off); s.events.once('destroy', off); }
@@ -139,8 +141,8 @@ function campDragInstall(s) {
 // the map: a press on the frame waits for the release (a click then, as it was; a drag pans); a press anywhere else (the list at the side, the buttons) is a click at once, as before
 function campDragMapDown(s, p) {
   const mp = s.mp, F = campMapFrameOf(mp);
-  if (mp.recentre && mp.recentre.visible && p.x >= mp.recentre.x && p.x <= mp.recentre.x + mp.recentre.width && p.y >= mp.recentre.y && p.y <= mp.recentre.y + mp.recentre.height) { campMapRecentre(mp, F); mp.namesZ = -1; return; }
-  if (p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + F.h) campDragDown(s.dragIn, p.x, p.y); else campMapClick(s, p.x, p.y);
+  if (mp.recentre && mp.recentre.visible && campPX(p) >= mp.recentre.x && campPX(p) <= mp.recentre.x + mp.recentre.width && campPY(p) >= mp.recentre.y && campPY(p) <= mp.recentre.y + mp.recentre.height) { campMapRecentre(mp, F); mp.namesZ = -1; return; }
+  if (campPX(p) >= F.x && campPX(p) <= F.x + F.w && campPY(p) >= F.y && campPY(p) <= F.y + F.h) campDragDown(s.dragIn, campPX(p), campPY(p)); else campMapClick(s, campPX(p), campPY(p));
 }
 function campDragMapMove(s, r) {
   const mp = s.mp; if (!mp) return;

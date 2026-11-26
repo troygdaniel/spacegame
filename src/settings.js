@@ -454,9 +454,16 @@ class Settings extends Phaser.Scene {
     // the new screens (card space-game-screens-f-foundation): the switch is here so Troy can flip it from any scene (the N panel is flight-only); Enter does it too
     this.label(bx, by + 4, uiText('scr.set.row').toUpperCase());
     this.slots.scrOn = this.button(bx, by + 42, 220, uiText(on ? 'scr.set.on' : 'scr.set.off'), () => this.screensToggle(), { on, edge: on ? GREEN : CYAN, size: 13 });
-    this.txt(bx + 236, by + 32, uiText('scr.set.hint'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: this.bw - 270 }, lineSpacing: 3 } });
+    const fill = typeof fillOn === 'function' ? fillOn() : null, fw = fill === null ? 0 : 236; // fill the window (card space-game-fill-window-a-flight; src/fillwindow.js): its switch is here too, at the right end of the row, for the same reason (any scene can open Settings)
+    this.txt(bx + 236, by + 32, uiText('scr.set.hint'), 12, '#5b7a92', { oy: 0, style: { wordWrap: { width: this.bw - 270 - fw }, lineSpacing: 3 } });
+    if (fill !== null) this.slots.fillOn = this.button(bx + this.bw - 240, by + 42, 220, uiText(fill ? 'fill.set.on' : 'fill.set.off'), () => this.fillToggle(), { on: fill, edge: fill ? GREEN : CYAN, size: 13 });
     this.slots.status = this.txt(bx, by + 64, '', 13, '#9fe9ff', { oy: 0, style: { wordWrap: { width: this.bw } } });
     this.slots.contentEnd = contentBody(this, this.body, this.bx, by + 84, this.bw - 20);
+  }
+  fillToggle() { // the flight takes the window's shape, or the game is 1280 by 720 with its bands: kept in this browser; the flight follows at its next frame (fillSync)
+    const on = fillSet(!fillOn());
+    this.slots.fillOn.set(uiText(on ? 'fill.set.on' : 'fill.set.off')).mark(on); this.slots.fillOn.edge = on ? GREEN : CYAN; this.slots.fillOn.draw(false);
+    this.say(uiText(on ? 'fill.set.said.on' : 'fill.set.said.off'), on ? '#6dff9c' : '#ffd37a');
   }
   screensToggle() {
     const on = scrSet(!scrOn());

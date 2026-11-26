@@ -13,7 +13,7 @@
 // tests/campclicktarget.mjs (Node).
 function campClickWorld(cam, px, py) {
   const z = cam && cam.zoom > 0 ? cam.zoom : 1;
-  return { x: ((cam && cam.scrollX) || 0) + W / 2 + (px - W / 2) / z, y: ((cam && cam.scrollY) || 0) + H / 2 + (py - H / 2) / z };
+  return { x: (cam ? camzoomSX(cam) : 0) + W / 2 + (px - W / 2) / z, y: (cam ? camzoomSY(cam) : 0) + H / 2 + (py - H / 2) / z }; // (px, py: in the 1280 by 720 view, as the scroll is read: src/fillwindow.js)
 }
 function campClickHit(C, wx, wy, zoom) {
   if (!C || !C.carrier || !isFinite(wx) || !isFinite(wy)) return null;
