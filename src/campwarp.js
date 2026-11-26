@@ -74,10 +74,13 @@ class CampWarp extends Phaser.Scene {
     // the places: Earth and the Sun behind, the new star ahead with its companions, drawn with the same planet art the levels use
     const E = w.behind || CAMP.places.earth, star = (w.star && typeof w.star === 'object') ? w.star : (L.places && L.places[w.star]) || {}; // a level's warp may name the pictures of what is behind and ahead (level 3: Alpha Centauri behind, Epsilon Eridani ahead), else Earth and the level's own star
     this.l1 = w.l1 || ''; this.compData = Array.isArray(w.companions) ? w.companions : K.companions;
-    this.earth = this.add.image(0, 0, planetTexture(this, E.kind || 'ice', E.seed || 7)).setDepth(1);
+    // the world look (card space-game-world-w2-planets): with it on the two pictures are flat discs in the worlds' own tones (src/campworlddisc.js; `look` names a tone: the place's key, 'star' the ahead star's flat disc), sized as the old picture was (k: a 304 px disc in 800)
+    const flat = typeof campWorldOn === 'function' && campWorldOn() && typeof campDiscTexture === 'function', pic = (d, kind, seed, look) => { if (!flat) return { key: planetTexture(this, kind, seed), k: 1 }; const fk = look === 'star' ? 'star' : kind, D = campDiscTexture(this, { kind: fk, seed, id: look }, look); return { key: D.key, k: 304 / D.R }; };
+    const eP = pic(E, E.kind || 'ice', E.seed || 7, E.look || (E === CAMP.places.earth ? 'earth' : '')), sP = pic(star, star.kind || 'lava', star.seed || 4371, star.look || ''); this.earthK = eP.k; this.starK = sP.k;
+    this.earth = this.add.image(0, 0, eP.key).setDepth(1);
     this.sun = glow(K.color.sun, 1);
     this.starGlow = glow(K.color.star, 0).setAlpha(0);
-    this.star = this.add.image(0, 0, planetTexture(this, star.kind || 'lava', star.seed || 4371)).setDepth(1).setAlpha(0);
+    this.star = this.add.image(0, 0, sP.key).setDepth(1).setAlpha(0);
     this.core = glow(0xfff4d0, 2).setAlpha(0); // the star is a sun: a white-hot core over the level's own picture of it (its cracked surface shows round the edge)
     this.comp = this.compData.map(c => glow(c.color, 1).setAlpha(0));
     this.g = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
@@ -112,9 +115,9 @@ class CampWarp extends Phaser.Scene {
     this.mix = f.tunnel; this.ribbonK = f.tunnel; this.gateK = f.tunnel; // the nose bloom, the flare, the glow ahead, the ribbons and the gates come in with the tunnel (drawTunnel multiplies by them); the streaks are the stars and run from the start
     Hyper.prototype.drawTunnel.call(this, f.t, dt, f.speed, 0.12 + 0.88 * f.speed); // Long Haul's tunnel: the streaks, the ribbons, the gates, the ship's flames and lights
     const px = r => Math.max(0.001, r * 2 / 800);
-    this.earth.setPosition(W * f.earth.x, H * f.earth.y).setScale(px(E.radius) * f.earth.scale).setAlpha(f.earth.alpha);
+    this.earth.setPosition(W * f.earth.x, H * f.earth.y).setScale(px(E.radius) * f.earth.scale * this.earthK).setAlpha(f.earth.alpha);
     this.sun.setPosition(W * f.sun.x, H * f.sun.y).setScale(S.size / 128 * f.sun.scale).setAlpha(f.sun.alpha);
-    this.star.setPosition(W * f.star.x, H * f.star.y).setScale(px(T.radius) * f.star.scale).setAlpha(0.5 * f.star.alpha);
+    this.star.setPosition(W * f.star.x, H * f.star.y).setScale(px(T.radius) * f.star.scale * this.starK).setAlpha(0.5 * f.star.alpha);
     this.core.setPosition(W * f.star.x, H * f.star.y).setScale(T.radius * 4.4 / 128 * f.star.scale).setAlpha(f.star.alpha);
     this.starGlow.setPosition(W * f.star.x, H * f.star.y).setScale(T.glow / 128 * f.star.glow).setAlpha(0.8 * f.star.alpha);
     this.compData.forEach((c, i) => this.comp[i].setPosition(W * (f.star.x + c.dx), H * (f.star.y + c.dy)).setScale(c.size / 128 * f.star.glow).setAlpha(f.star.alpha));

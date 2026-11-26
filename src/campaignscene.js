@@ -83,7 +83,7 @@ class Campaign extends Phaser.Scene {
   create() {
     if (typeof campWarpDue === 'function' && campWarpDue(this)) return; // a level that warps in starts with the warp cinematic, which comes back here with warped: true (src/campwarp.js)
     const dark = this.warped ? 255 : 0; this.cameras.main.fadeIn(300, dark, dark, dark); // out of the warp's white flash, else out of black
-    spaceBackdrop(this, true);
+    if (typeof campWorldOn === 'function' && campWorldOn() && typeof campWorldBackdrop === 'function') campWorldBackdrop(this); else spaceBackdrop(this, true); // the new world look's backdrop (near black, white stars, two faint slate clouds: card space-game-world-w1-backdrop) or today's
     campShotTextures(this); // the pirates', the neutrals' and the Earth side's shots
     this.boom = fxBoom(this);
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js) go into the CAMP table before the battle is made: a page reads them once; a bot or a test never does
@@ -92,7 +92,7 @@ class Campaign extends Phaser.Scene {
     this.tuned = false; // a mission flown with any override on is a tuned run: its score and rank are not kept (update sets it)
     this.camp = this.makeCamp();
     this.sp = {}; this.bsp = []; this.bayAt = { launch: -1e9, land: -1e9 }; // the battle clock of the last launch and the last landing: the bays of the cruiser stay lit a moment after each (campBayLight)
-    const pl = campPlaces(this.level); this.farObjs = {}; this.farAt = 0; Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) this.drawPlace(pl[id]); }); // the far bodies of the system (Sol's planets) are made when the carrier comes near (syncFar)
+    const pl = campPlaces(this.level); this.farObjs = {}; this.farAt = 0; Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) this.drawPlace(pl[id], id); }); // the far bodies of the system (Sol's planets) are made when the carrier comes near (syncFar)
     this.osp = {}; this.rsp = {}; this.beams = []; // the ore lying about (chunks and wrecks), one sprite each; the rocks of the belt, one each; the beams on this frame
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
     this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
@@ -141,11 +141,11 @@ class Campaign extends Phaser.Scene {
     this.P.promo = null; // the promotion of the last debrief is told once
     return campNew(this.level, this.P.techs, Object.assign({}, this.opts, { found: this.P.found, rank: typeof campRank === 'function' ? campRank(this.P).i : 0, power: campPowerLoad(), pace: CAMP.pace.start, credits: this.P.credits }, carried ? { ore: this.P.ore, bonus: this.P.bonus } : {})); // (the credits are the pilot's, like the rank: they come with every battle, so a win never writes them over with less) // the rank (src/campranks.js) fills the bay and lifts the wing limit; found: the cloaked caches looted so far (their weapons stay with the pilot); the wing's stance is the pilot's: it comes with every battle
   }
-  drawPlace(p) { // returns what it made, so a far place can be taken down again (syncFar)
-    const r = p.r || 60, made = [];
-    const im = p.kind === 'star' && typeof starTexture === 'function'
+  drawPlace(p, id) { // returns what it made, so a far place can be taken down again (syncFar); id: the place's key in campPlaces
+    const r = p.r || 60, made = [], D = typeof campWorldOn === 'function' && campWorldOn() && typeof campDiscTexture === 'function' ? campDiscTexture(this, p, id) : null; // the world look (card space-game-world-w2-planets): a flat disc in the world's own tones, no tint, no glow (src/campworlddisc.js); Long Haul's planet and star painters are not used
+    const im = D ? this.add.image(p.x, p.y, D.key).setScale(r / D.R).setDepth(1) : p.kind === 'star' && typeof starTexture === 'function'
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
-      : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
+      : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint && !D) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
     (this.placeSets = this.placeSets || []).push({ p, nm, pb }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js)
     if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
@@ -158,7 +158,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(pl).forEach(id => {
       const p = pl[id]; if (!p.far || p.hidden) return;
       const d = Math.hypot(p.x - c.x, p.y - c.y) - (p.r || 60) * (p.kind === 'star' ? 3 : 1), on = this.farObjs[id];
-      if (d < near && !on) this.farObjs[id] = this.drawPlace(p);
+      if (d < near && !on) this.farObjs[id] = this.drawPlace(p, id);
       else if (d > near * 1.4 && on) { on.forEach(o => { try { o.destroy(); } catch (e) { /* gone */ } }); delete this.farObjs[id]; }
     });
   }
@@ -636,7 +636,7 @@ class Campaign extends Phaser.Scene {
     return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
-  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? CAMPMAP.frame.y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
+  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
