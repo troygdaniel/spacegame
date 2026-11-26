@@ -172,7 +172,7 @@ console.log('F. Space and F: the turrets and the missiles do not share a key');
   g.run('__m(1); window.__far = __foe("gunship", 1500, 0, 90000); window.__a = __foe("gunship", 300, 0, 9000); __run(0.1); C.input.fire = false; var __before = C.missiles; ');
   check('F is the only key for missiles: the order launches one (and Space held at the same time does not make a second)', (g.run('C.input.fire = true; __fire("")'), J('C.missiles') === 5 && J('C.orders.missiles') === 1 && (g.run('__run(0.5)'), J('C.missiles') === 5)));
   check('the reach is about three and a half carrier lengths: the carrier is drawn 90 px long at 1.56 (140 px), and a turret reaches 500 px, more than two lengths', J('CAMP.carrier.pdRange') === 500 && J('CAMP.carrier.pdRange') >= 2 * 90 * J('CAMP_LOOK.carrier.scale'));
-  check('the turrets take no ammunition: nothing of theirs is counted in the magazine, and there is no second gun input', !('gun' in J('CAMP.carrier')) && J('Object.keys(C.input).sort().join()') === 'blink,brake,fire,thrust,turn');
+  check('the turrets take no ammunition: nothing of theirs is counted in the magazine, and there is no second gun input', !('gun' in J('CAMP.carrier')) && J('Object.keys(C.input).sort().join()') === 'blink,boost,brake,fire,thrust,turn');
 }
 
 // ---------- G. the scene ----------
