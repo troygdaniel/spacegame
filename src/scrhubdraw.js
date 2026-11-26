@@ -11,12 +11,14 @@ function scrHubPaint(s, model) {
   if (s.scrHub && s.scrHub.el && s.scrHub.el.parentNode) s.scrHub.el.parentNode.removeChild(s.scrHub.el);
   const el = scrView(R, R.root, model, { click: id => { if (typeof id === 'string' && id.indexOf('row:') === 0) { if (typeof s.click === 'function') s.click(+id.slice(4)); } else if (typeof s.clickMission === 'function') s.clickMission(id); } });
   s.scrHub = { el, on: true, id: model.id };
+  if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(s)) scrHostSet(el, 'display', 'none'); // painted again under the briefing: it waits
   return !!el;
 }
-function scrHubSync(s, covered) {
+function scrHubSync(s, covered, under) { // covered: a page of the canvas is over the whole host (the H page, the tuning panel): the host is hidden; under: the one-page briefing is up (src/scrbriefdraw.js): only this screen waits, the briefing's panels are in the same host
   const R = s && s.scrHost; if (!R || !s.scrHub || s.scrHub.on !== true) return false; // (a stand-in scene of a test answers any property with a function: only a screen this file made counts)
   if (covered) { scrHostSet(R.root, 'display', 'none'); return false; }
   const canvas = s.game && s.game.canvas; if (canvas) scrHostFit(R, canvas);
+  scrHostSet(s.scrHub.el, 'display', under ? 'none' : '');
   return true;
 }
 function scrHubDrop(s) {

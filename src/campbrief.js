@@ -136,8 +136,8 @@ function campBriefNav(screen, code) {
 
 // ---- the map's zoom: + - 0 and the wheel, about the mission's place ----
 // the view of the preset (0 route, 1 area, 2 whole system) at zoom z, from the last view (view, at zoom z0): the Tab map's own rule (src/campmap.js campMapView): what is zoomed about (the mission's place) stays where it is on the screen, zoomed in the view is held inside the area, zoomed out it is the area's centre
-function campBriefView(Y, zoom, z, view, z0) {
-  const F = CAMPBRIEF.frame, zz = zoom === true ? 2 : zoom | 0, base = campMapFit(campBriefBounds(Y, zz), F, zz === 2 ? 0.06 : CAMPBRIEF.pad), zn = Math.max(CAMPBRIEF.zoom.min, Math.min(CAMPBRIEF.zoom.max, +z || 1));
+function campBriefView(Y, zoom, z, view, z0, frame) { // frame (optional): the map's frame on the page (the one page's: src/scrbrief.js SCRBRIEF.frame); the three screens' when none
+  const F = frame || CAMPBRIEF.frame, zz = zoom === true ? 2 : zoom | 0, base = campMapFit(campBriefBounds(Y, zz), F, zz === 2 ? 0.06 : CAMPBRIEF.pad), zn = Math.max(CAMPBRIEF.zoom.min, Math.min(CAMPBRIEF.zoom.max, +z || 1));
   return { base, z: zn, fit: campMapView(base, F, zn, view || base, z0 > 0 ? z0 : 1, Y.focus) };
 }
 

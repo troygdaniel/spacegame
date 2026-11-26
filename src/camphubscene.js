@@ -311,7 +311,7 @@ class CampHub extends Phaser.Scene {
     interiorTick(this, time);
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)
-    if (this.scrHubOn === true && typeof scrHubSync === 'function') scrHubSync(this, this.modalUp()); // the new look's panels follow the canvas and wait while a page of the room's own is in front
+    if (this.scrHubOn === true && typeof scrHubSync === 'function') scrHubSync(this, (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)), typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)); // the new look's panels follow the canvas and wait while a page of the room's own is in front (the briefing's one page lives in the same host: only the room's screen waits for it)
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }

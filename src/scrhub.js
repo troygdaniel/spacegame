@@ -23,7 +23,7 @@ function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text,
   const tag = uiText(t.skipped ? 'scr.hub.skippedmission' : t.replay ? 'scr.hub.replay' : 'scr.hub.next', { n: no, all }), rk = campHubRank(P);
   const note = { board: uiText('scr.hub.notemissions', { done: campHubFlown(P), all }), refit: uiText('scr.hub.notecredits', { credits: Math.max(0, Math.floor(P.credits || 0)) }), rank: rk.ranked ? rk.name : uiText('scr.hub.points', { n: rk.points }) };
   const items = ['board', 'refit', 'rank'].filter(k => scrHubRowIds(H).indexOf(k) >= 0).map(k => scrTileN([scrRowN([scrChipN(scrHubDigit(H, k)), scrTextN('t3', uiText('scr.hub.' + { board: 'missions', refit: 'refit', rank: 'rank' }[k])), scrTextN('sm', note[k])])], { flat: true, on: id === k, click: 'row:' + scrHubRowIds(H).indexOf(k) }));
-  const lines = b ? b.lines : [];
+  const lines = [scrGoalLine(t.level, t.i)];
   const bar = scrCardN('ready.bar', { bare: true, at: { left: '1.4em', right: '1.4em', top: '1.2em' }, gap: 0 }, [scrRowN([scrRowN([scrTextN('lab', o.station || ''), scrTextN('dim', '·'), scrTextN('lab', uiText('scr.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }))]), scrKeyWordN('close', uiText('scr.card.title'))], { just: 'sp', full: true })]);
   const card = scrCardN('ready', { w: 40, top: 20, gap: 1 }, [
     scrRowN([scrColN([scrTextN('lab', tag, 'gold'), scrTextN('t1', b ? b.title : ''), lines[0] ? scrTextN('sm', lines[0]) : null], { gap: 0.2 }), scrColN([scrKeyWordN('launch', uiText('scr.hub.briefing')), id === 'launch' ? scrKeyWordN('pick', uiText('scr.hub.launch')) : null], { gap: 0.3, ctr: true })], { just: 'sp' }),
@@ -70,7 +70,7 @@ function scrHubPickModel(P, H, o) { // o: { msg }
   const count = !b ? null : cur.state === 'done' ? scrTextN('lab', uiText(n === 1 ? 'scr.hub.bonusesdone.one' : 'scr.hub.bonusesdone', { got: (cur.bonus | 0), n })) : scrTextN('lab', uiText(n === 1 ? 'scr.hub.bonuses.one' : 'scr.hub.bonuses', { n }));
   const top = scrCardN('pick.top', { bare: true, at: { left: '6%', right: '6%', top: '5%' }, gap: 0 }, [scrRowN([scrTextN('t2', uiText('scr.hub.missions')), scrRowN([scrChipN('up'), scrChipN('down'), scrTextN('lab', uiText('scr.hub.choose')), scrKeyWordN('pick', uiText('scr.hub.briefing')), scrKeyWordN('left', uiText('scr.hub.back'))])], { just: 'sp', full: true })]);
   const grid = scrCardN('pick.grid', { bare: true, at: { left: '6%', right: '6%', top: '15%' }, gap: 0.9 }, levels);
-  const bar = scrCardN('pick.bar', { row: true, at: { left: '6%', right: '6%', bottom: '6%' }, gap: 1 }, [scrRowN([scrColN([scrTextN('t3', b ? b.title : ''), b && b.lines[0] ? scrTextN('sm', b.lines[0]) : null, scrHubMsg(o)], { gap: 0.25 }), scrRowN([count, scrPillN(uiText('scr.hub.each', { pts }), null), scrTextN('lab', uiText('scr.hub.par', { time: scrClock(b ? b.par : 0) }))])], { just: 'sp', full: true })]);
+  const bar = scrCardN('pick.bar', { row: true, at: { left: '6%', right: '6%', bottom: '6%' }, gap: 1 }, [scrRowN([scrColN([scrTextN('t3', b ? b.title : ''), cur && scrGoalLine(cur.level, cur.i) ? scrTextN('sm', scrGoalLine(cur.level, cur.i)) : null, scrHubMsg(o)], { gap: 0.25 }), scrRowN([count, scrPillN(uiText('scr.hub.each', { pts }), null), scrTextN('lab', uiText('scr.hub.par', { time: scrClock(b ? b.par : 0) }))])], { just: 'sp', full: true })]);
   return scrScreenN('pick', [top, grid, bar]);
 }
 
