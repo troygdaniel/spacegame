@@ -283,3 +283,14 @@ under test inside one page, so both see the same load. `tests/perfart.mjs` and `
 
 ## The Tab map in the panel look (card `space-game-b3-f-tab-map-build`, 25 Nov 2026)
 `PERF_ADDR='&pagehud=1&shiplook=1' node tools/perfcampaign.mjs map busy1` (the new address part: the boot asks for the canvas HUD and today's ships unless the address says otherwise), three runs each on a busy Mac (load 10 to 12), the old glass map on main `9c7d68d2` against the card and its page panels: frame median 1.7, 2.8, 1.7 ms before and 2.3, 1.7, 1.5 ms after (p95 2.9, 4.5, 2.9 before and 3.7, 2.9, 2.6 after), sim 0.3 ms either way, render 0.5 to 0.8 before and 0.4 to 0.6 after, heap 10.85 MB before and 10.83 after. The Mac's load moves a run by more than the change does: the map open costs the same. The panels are written by a diff-writer ten times a second (the radio line's fade every frame) and the model is worked out only then.
+
+## The cruiser's boost and engine flames (card `space-game-cruiser-boost-flames`, 26 Nov 2026)
+What it adds each frame: `campBoostStep` (a handful of additions and one object `{ top, acc }` back to `campCarrier`) in the sim; in the drawing two sprites (the cruiser's flames, `slookFlameSpecs`, no particles, no new objects after the first frame) in place of the one plain trail; one more HUD row (the Boost meter, three writes only when its value changed).
+Measured in Node, NO Chrome, two runs each on the same Mac, the old commit (a second worktree of main 32dc1fcd) against the new: `node --expose-gc --max-semi-space-size=128 tools/perfcampaign.mjs sim busy1` (1800 steps, 30 to 35 ships).
+
+| | step median | step p95 | allocated a step |
+|---|---|---|---|
+| before | 0.42 and 0.44 ms | 0.51 and 0.54 ms | 5.7 and 5.4 KB |
+| after | 0.43 and 0.42 ms | 0.53 and 0.52 ms | 5.9 and 5.9 KB |
+
+The step is the same within noise (2.5 to 2.6 percent of a 60 fps frame); it allocates about 0.3 KB more a step (the small answer object). The bots, which never press Shift, give the same tables on 32 seeds of 1.1, 1.2 and 1.3 (26 bots each: identical in every figure). The drawing and the HUD row were NOT measured (Chrome was not free): two extra sprites and a row of three writes are expected to be below the noise of `node tools/perfcampaign.mjs frames busy1`; run it with the new address before the default is relied on.
