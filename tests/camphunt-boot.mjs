@@ -1,7 +1,7 @@
 // not in the smoke: one mission of the Campaign flown by hand as a player, in the real game (one Chrome, muted, through the test lock; card space-game-night-hunt-l2-l3)
 // It boots the game with a save that stands at the mission, opens the ready room with K, reads the briefing (three screens), launches, and flies with the keys a player uses
 // (the key rounds of 23 Nov 2026, cards space-game-keys-orders to space-game-keys3-select, then space-game-keys5-qwe: Q opens the cruiser list and a digit gives its row; W opens the fleet pick and a digit says who; the backslash and ] pick an enemy, E a friendly; Enter is the one order key;
-// nothing clears (X is gone; form up is a row of a list); M a missile, Enter the one order, the arrows to fly, the map on Tab, Space held; every code is read from the key table), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
+// nothing clears (X is gone; form up is a row of a list); Z a missile (it was M until card space-game-missile-key-z), Enter the one order, the arrows to fly, the map on Tab, Space held; every code is read from the key table), then lets the autopilot carry the rest and writes down what the game says: the HUD line, the goal, the toasts.
 //   node tests/camphunt-boot.mjs --level 2 --mission 1 [--secs 90] [--fight | --quickwin | --lose | --dock | --retreat | --panels | --replay]      the mission number is the one on the board (1 to 3)
 // --replay: the mission before the next one is picked in the ready room as a REPLAY (Enter, Up, then R), briefed, flown (use --quickwin with it) and its debrief and the saved progress are read: the progress must not move
 // --panels: every row of the lists the game has now given once in the flight (the key of the list the row is in, Down to the row, Enter), the target keys, who, the friendlies, E after each kind of pick, X, the power keys while the table has them, the missile, the map zoomed out to the whole system: what each one says (the toasts are written down at the end)
@@ -23,7 +23,7 @@ const LEVEL = Number(arg('level', 2)), MISSION = Number(arg('mission', 1)), SECS
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
 const note = s => console.log('  note ' + s);
-const VK = { KeyQ: 81, KeyE: 69, KeyR: 82, KeyT: 84, KeyP: 80, KeyW: 87, KeyO: 79, KeyF: 70, KeyG: 71, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyI: 73, KeyU: 85, KeyJ: 74, KeyK: 75, KeyL: 76, KeyM: 77, Comma: 188, Period: 190, Backslash: 220, BracketLeft: 219, BracketRight: 221, Backspace: 8, Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, Digit7: 55, Digit8: 56, Digit9: 57, Enter: 13, Escape: 27, Tab: 9, Space: 32, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, ShiftLeft: 16, Equal: 187, Minus: 189 };
+const VK = { KeyQ: 81, KeyE: 69, KeyR: 82, KeyT: 84, KeyP: 80, KeyW: 87, KeyO: 79, KeyF: 70, KeyG: 71, KeyA: 65, KeyD: 68, KeyS: 83, KeyX: 88, KeyI: 73, KeyU: 85, KeyJ: 74, KeyK: 75, KeyL: 76, KeyM: 77, KeyZ: 90, Comma: 188, Period: 190, Backslash: 220, BracketLeft: 219, BracketRight: 221, Backspace: 8, Digit0: 48, Digit1: 49, Digit2: 50, Digit3: 51, Digit4: 52, Digit5: 53, Digit6: 54, Digit7: 55, Digit8: 56, Digit9: 57, Enter: 13, Escape: 27, Tab: 9, Space: 32, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, ShiftLeft: 16, Equal: 187, Minus: 189 };
 
 const t = await launch('', ROOT);
 try {

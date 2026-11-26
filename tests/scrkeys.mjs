@@ -22,7 +22,7 @@ const M = J('scrKeysModel()');
 check('three groups, in the mock\'s order: Fly and fire, Fleet, Cruiser', M.groups.map(x => x.title).join('|') === 'Fly and fire|Fleet|Cruiser' && M.groups.map(x => x.id).join() === 'fly,fleet,cruiser');
 check('five, six and four rows', M.groups.map(x => x.rows.length).join() === '5,6,4');
 const rows = x => x.rows.map(r => r.chips.map(c => c.k).join(' ') + '=' + r.t);
-check('Fly and fire: Arrows Fly, Space Turrets, M Missile, R Build a missile, - = Zoom', rows(M.groups[0]).join('|') === 'Arrows=Fly|Space=Turrets|M=Missile|R=Build a missile|- ==Zoom', rows(M.groups[0]).join('|'));
+check('Fly and fire: Arrows Fly, Space Turrets, Z Missile, R Build a missile, - = Zoom', rows(M.groups[0]).join('|') === 'Arrows=Fly|Space=Turrets|Z=Missile|R=Build a missile|- ==Zoom', rows(M.groups[0]).join('|'));
 check('Fleet: W, E, ], \\, Enter and F, with the mock\'s words', rows(M.groups[1]).join('|') === 'W=Who, then 1 to 4|E=Friendly, then a digit|]=Next enemy|\\=Nearest threat|Enter=Attack, guard or form up|F=Look at it', rows(M.groups[1]).join('|'));
 check('Cruiser: the list key, Tab, Esc and N', rows(M.groups[2]).join('|') === 'Q=List, then 1 to 7|Tab=Map|Esc=Back, then pause|N=Tuning', rows(M.groups[2]).join('|'));
 check('the heading is Keys and the close chip is H (the key table\'s help key), with the word Close', M.title === 'Keys' && M.close && M.close.k === J('CAMP_KEYS.help.k') && M.closeWord === 'Close', JSON.stringify(M.close));
