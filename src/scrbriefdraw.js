@@ -22,6 +22,11 @@ function scrBriefOpen(s) {
   if (typeof shipcompSay === 'function' && line) { try { shipcompSay(line); } catch (e) { /* the voice never stops the screen */ } } // ONE sentence a mission, the goal line; the voice's own settings (muted, off, no voice) decide if it is heard
   return true;
 }
+function scrBriefSync(s) { // the H page or the tuning panel over the briefing: its panels wait (they are in the same host as the keys page)
+  const bf = s && s.bf; if (!bf || bf.one !== true || !bf.el) return false;
+  const under = (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(s));
+  scrHostSet(bf.el, 'display', under ? 'none' : ''); return !under;
+}
 function scrBriefDrop(s) {
   const bf = s && s.bf; if (!bf || !bf.one) return false;
   if (bf.el && bf.el.parentNode) bf.el.parentNode.removeChild(bf.el);
@@ -41,6 +46,6 @@ function scrBriefMapExtras(s, X, F, own) {
   (bf.moments || []).forEach(m => {
     const q = X(m.at.x, m.at.y); if (q.x < F.x + 12 || q.x > F.x + F.w - 12 || q.y < F.y + 12 || q.y > F.y + F.h - 12) return; // (nothing is drawn outside the map's glass)
     const c = T[m.kind] || T.mute; g.fillStyle(0x0e1626, 1).fillCircle(q.x, q.y, 11); g.lineStyle(2, c, 1).strokeCircle(q.x, q.y, 11);
-    own(s.add.text(q.x, q.y, String(m.n), uiFont(13, '#e6edf7', { fontStyle: 'bold' }))).setOrigin(0.5).setDepth(138);
+    own(s.add.text(q.x, q.y, String(m.n), uiFont(13, '#e6edf7', { fontStyle: 'bold', fontFamily: typeof CAMPMAPPANEL === 'object' ? CAMPMAPPANEL.face : 'monospace' }))).setOrigin(0.5).setDepth(138);
   });
 }
