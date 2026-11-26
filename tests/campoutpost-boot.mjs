@@ -11,7 +11,7 @@ import { beltSource } from './fixtures/campbelt.mjs';
 // the old Level 1, the belt, as level 1 (card space-game-l1-rim-boots): this boot was written for it and pins its missions and words; the rim run is checked in tests/camprim.mjs. The address started the Campaign scene on the rim run, so it starts again.
 const belt = async t => { await t.ev(beltSource(1)); await t.ev(`(() => { game.scene.stop('Campaign'); game.scene.start('Campaign', { level: 1, techs: [], via: 'address' }); return 1; })()`); };
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { launch, sleep } = await import('./cdp.mjs');
+const { launch, sleep } = await import('./cdp.mjs'); const { canvasListExpr } = await import('./canvashud.mjs');
 const OUT = process.env.OUTPOST_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -51,7 +51,7 @@ try {
   check('the belt starts at Occator Works: the cruiser is in range of that outpost, and its dock is in reach', await j(`campOutpostNear(${SCN}.camp) && campOutpostNear(${SCN}.camp).o.name === 'Occator Works'`));
   await t.run(300); await snap('1-start-in-range');
   await t.ev(`(() => { ${SCN}.camp.ore = 100; return 1; })()`); await t.run(500);
-  const drawn = () => j(`${SCN}.pnl.rows.filter(r => r.name.visible).map(r => r.name.text + ' | ' + r.suffix.text)`); // the rows of the open list as they are drawn: the words, and the word or two of state (src/campanelsdraw.js)
+  const drawn = async () => (await j(canvasListExpr(SCN))).rows.map(r => r.name + ' | ' + r.suffix); // the rows of the open list as they are drawn: the words, and the word or two of state (src/campanelsdraw.js)
   const before = await drawn();
   await key(await zr()); await t.run(300); const crRows = await drawn(), crOpen = await j(`campPanelOpen(${SCN}.pn)`); await snap('2-cruiser-list-undocked'); await key(await zr()); // Q opens the cruiser list, Q again closes it (it was S until card space-game-keys5-qwe; the ship and dock lists are deleted: card space-game-delete-off-lists)
   check('no list is drawn until its key is pressed, then Q opens the cruiser list, which has the Dock row (its digit in the chip), and Q again closes it', before.length === 0 && crOpen === 'cruiser' && (await j(`campPanelOpen(${SCN}.pn)`)) === '' && crRows.some(x => /^Dock at the outpost \|/.test(x)), before.join(' | ') + ' // ' + crRows.join(' // '));

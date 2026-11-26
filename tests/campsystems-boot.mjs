@@ -9,7 +9,7 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { launch } = await import('./cdp.mjs');
+const { launch } = await import('./cdp.mjs'); const { canvasListExpr } = await import('./canvashud.mjs');
 const OUT = process.env.SYSTEMS_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
@@ -50,7 +50,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
     return H.crShieldL ? { l: [H.crShieldL.text, H.crHullL.text], n: [H.crShieldN.text, H.crHullN.text], ore: H.crOre.text, vis: H.crShieldL.visible && H.crOre.visible, want, gauges: !!H.gauges } : null; })()`);
   check('the cruiser\'s status is on the HUD (SHIELD and HULL, the ORE line: as panels with the page HUD, the default, as canvas texts at the top left and right with it off) and the round gauges are gone', !!CR && (CR.page ? CR.vis && CR.canvasHidden && !CR.gauges : CR.vis && CR.l.join() === CR.want.slice(0, 2).join() && CR.n.every(s => /^\d+$/.test(s)) && CR.ore.indexOf(CR.want[2]) === 0 && !CR.gauges), JSON.stringify(CR));
   await t.run(500);
-  check('no list is on the screen at the start, and Emergency shields is a row of the cruiser list, which has a key of its own', await j(`campPanelOpen(${SC}.pn) === '' && !${SC}.pnl.title.visible && ${SC}.pnl.rows.every(r => !r.name.visible) && campKeyVia('emergency').id === 'cruiser' && !!campKeyList('cruiser').code && !campKeyRow('emergency').stay`), JSON.stringify(await j(`[campKeyVia('emergency').id, campKeyList('cruiser').key]`)));
+  check('no list is on the screen at the start, and Emergency shields is a row of the cruiser list, which has a key of its own', await j(`campPanelOpen(${SC}.pn) === '' && (${canvasListExpr(SC)}).head === '' && (${canvasListExpr(SC)}).rows.length === 0 && campKeyVia('emergency').id === 'cruiser' && !!campKeyList('cruiser').code && !campKeyRow('emergency').stay`), JSON.stringify(await j(`[campKeyVia('emergency').id, campKeyList('cruiser').key]`)));
   const PK = await j(`['shields', 'engines', 'weapons'].map(id => campKeyCodes(id)[0] || '')`);
   if (PK[0]) { // the power keys are still in the key table: J gives the shields a pip with no list opened
     const p0 = await j(`${SC}.camp.power.p.slice()`); await key(PK[0]); await t.run(300); const p1 = await j(`${SC}.camp.power.p.slice()`);
@@ -61,8 +61,8 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   // the emergency: the shield is knocked down and there is ore to pay with
   const E = await j(`({ ore: CAMP.emergency.ore, cool: CAMP.emergency.cooldown, max: campShieldMax(${SC}.camp) })`);
   await t.ev(`(() => { const C = ${SC}.camp; C.god = true; C.shield = campShieldMax(C) * 0.25; C.ore = ${E.ore} + 30; return 1; })()`); await t.run(100);
-  const way = await listWay('emergency'), went = await listGo('emergency'), eNum = NUM, eRow = `${SC}.pnl.rows[${NUM - 1} - ${SC}.pn.top]`; await t.run(200); // the cruiser list is numbered (card space-game-s-list-numbers): no highlight, the row is found by its place and given by its digit
-  check('the cruiser list\'s key: the list is open, numbered, and "Emergency shields" is a row of it with a digit, which says what it costs', went === true && way.list === 'cruiser' && eNum >= 1 && eNum <= 9 && await j(`campPanelOpen(${SC}.pn) === 'cruiser' && campPanelNumbered(${SC}.pn) && ${eRow}.name.text === campKeyRow('emergency').label`), JSON.stringify(way) + ' | digit ' + eNum + ' | ' + await j(`${eRow}.name.text + ' | ' + ${eRow}.suffix.text`));
+  const way = await listWay('emergency'), went = await listGo('emergency'), eNum = NUM, eRow = `(${canvasListExpr(SC)}).rows[${NUM - 1} - ${SC}.pn.top]`; await t.run(200); // the cruiser list is numbered (card space-game-s-list-numbers): no highlight, the row is found by its place and given by its digit
+  check('the cruiser list\'s key: the list is open, numbered, and "Emergency shields" is a row of it with a digit, which says what it costs', went === true && way.list === 'cruiser' && eNum >= 1 && eNum <= 9 && await j(`campPanelOpen(${SC}.pn) === 'cruiser' && campPanelNumbered(${SC}.pn) && ${eRow}.name === campKeyRow('emergency').label`), JSON.stringify(way) + ' | digit ' + eNum + ' | ' + await j(`${eRow}.name + ' | ' + ${eRow}.suffix`));
   await shot('1-list');
   const ore0 = await j(`Math.floor(${SC}.camp.ore)`); await key('Digit' + eNum); await t.run(300);
   check('the row\'s digit: the shield is full at once, the ore is paid (' + E.ore + ') and the list closes (the emergency is no row that stays)', await j(`${SC}.camp.shield >= campShieldMax(${SC}.camp) - 1 && Math.floor(${SC}.camp.ore) === ${ore0} - ${E.ore} && campPanelOpen(${SC}.pn) === '' && (${SC}.camp.orders.emergency | 0) === 1`), JSON.stringify(await j(`[Math.round(${SC}.camp.shield), Math.round(campShieldMax(${SC}.camp)), Math.floor(${SC}.camp.ore), campPanelOpen(${SC}.pn)]`)));
@@ -70,7 +70,7 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   await t.ev(`(() => { const C = ${SC}.camp; C.shield = campShieldMax(C) * 0.25; return 1; })()`); await t.run(100);
   const eAt = await j(`campPanelList(${SC}.camp, 'cruiser').findIndex(r => r.id === 'emergency')`);
   await listGo('emergency'); await t.run(300); // the list open again (not given: no digit)
-  check('the list says the emergency is cooling down (its row cannot be given and says N s)', await j(`${eRow}.name.text === campKeyRow('emergency').label && /[0-9]+ s/.test(${eRow}.suffix.text) && campPanelRows(${SC}.camp, 'cruiser')[${eAt}].ok === false`), await j(`${eRow}.name.text + ' | ' + ${eRow}.suffix.text`));
+  check('the list says the emergency is cooling down (its row cannot be given and says N s)', await j(`${eRow}.name === campKeyRow('emergency').label && /[0-9]+ s/.test(${eRow}.suffix) && campPanelRows(${SC}.camp, 'cruiser')[${eAt}].ok === false`), await j(`${eRow}.name + ' | ' + ${eRow}.suffix`));
   await shot('3-cooling');
   const sh0 = await j(`Math.round(${SC}.camp.shield)`), ore1 = await j(`Math.floor(${SC}.camp.ore)`); await key('Digit' + eNum); await t.run(200);
   check('the digit of the cooling row is refused: the list stays open, no ore is paid and it was given once only', await j(`campPanelOpen(${SC}.pn) === 'cruiser' && Math.floor(${SC}.camp.ore) === ${ore1} && (${SC}.camp.orders.emergency | 0) === 1`), JSON.stringify(await j(`[campPanelOpen(${SC}.pn), Math.floor(${SC}.camp.ore), ${SC}.camp.orders.emergency]`)) + ' shield before ' + sh0);
