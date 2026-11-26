@@ -434,3 +434,13 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - The far marks' name gap 10 -> 8 px; the places' pill stands 16 px above the disc as drawn (`campPageHudPlaces`).
 - The cruiser is not a sign at the far zoom (card `space-game-far-zoom-cruiser-picture`, 26 Nov 2026): `slookGlyphKeep(u)` (the carrier) keeps its flat-cut picture, baked at the same `SLGLYPH.buckets` (key `look-carrier-friend-<px>`), scaled down by the hull over the bucket and drawn up by the view's least size like the signs. No number changed; to put the sign back, make `slookGlyphKeep` return false.
 
+
+## Fill the window: the sizing numbers (cards `space-game-fill-window-a-flight`, `space-game-fill-window-scale-bug`)
+
+`src/fillwindow.js`, table `FILL`; the rule is `fillSize(window)`, pinned in `tests/fillwindow.mjs`. Behind `CAMP.flags.fill` (off; Settings > CONTENT, `?fill=1`). All sizes are CSS px; the screen's pixel ratio plays no part.
+
+- `FILL.k: 1.23` (Troy, 25 Nov 2026): the fixed scale, screen px for a game px: the size the game had on his own window that day. A bigger window is more game px at the same size on the glass.
+- The least window is 1575 by 886 px (1280 by 720 game px at 1.23). Under it, either way, the picture scales down to fit, as the game always did: the HUD and the lists are laid out for 1280 by 720.
+- `FILL.cap: 1.5 -> 0` (Troy, 26 Nov 2026, base main `79089997`): **the cap is removed.** For a day no window showed more than 1920 by 1080 game px and past that the picture scaled UP; on a 2000 px wide window that began at 2362 px wide (1329 px tall), and Troy, playing, felt the scale change ("more visible space WITHOUT scaling"). Now nothing scales above the least window: a 2560 by 1440 window is 2082 by 1170 game px. A number in `FILL.cap` (a multiple of 1280 by 720 each way) brings the scale-up back.
+- What a larger view changes: nothing in the rules (what is seen is the sensor's range, `CAMP.sensor`, not the screen; the route-fit zoom `campZoomFit` is worked out for 1280 by 720 always). The eye sees more of the battle on a larger screen.
+- Still on the old fit, scaling with the window: the title, the ready room, the briefing, the warp, Settings and the Tab map while it is open (landing B).
