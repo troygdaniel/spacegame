@@ -17,7 +17,7 @@ const SCRC = { sentinel: '\u0001' }; // a lose tip's key placeholders are filled
 
 // ---- the nodes ----
 const scrTextN = (cls, text, tone) => ({ k: 'text', cls, text: String(text == null ? '' : text), tone: tone || '' });   // cls: lab, t1, t2, t3, sm
-const scrChipN = id => { const c = scrChip(id); return c ? { k: 'chip', id: c.id, cap: c.k } : null; };                 // a key chip: the table's cap (null for a role the table has not: the card draws none)
+const scrChipN = id => { const c = scrChip(id); return c ? { k: 'chip', id: c.id, cap: c.k } : null; };                 // a key chip: the table's cap (null for a role the table has not: the card draws none); ghost (set by the caller): drawn invisible, keeping its room
 const scrPillN = (text, ok, o) => Object.assign({ k: 'pill', text: String(text == null ? '' : text), ok: ok === undefined || ok === null ? null : !!ok }, o);   // o.lead: a number in front (o.leadTone its colour); o.tone
 const scrMeterN = (frac, tone) => { const m = scrMeter(frac, { tone }); return { k: 'meter', pct: m.pct, tone: tone || m.tone }; };
 const scrRingN = (frac, tone, text, size) => { const r = scrRing(frac, { tone, text }); return { k: 'ring', v: r.v, tone: r.tone, text: r.text, size: size || '' }; };
