@@ -152,7 +152,7 @@ function slookFxFrame(scene) { // once a frame, after the ships' sprites are in 
   slookFxTextures(scene); const prot = typeof campConvoyShips === 'function' ? campConvoyShips(C) : [], map = !!scene.mp;
   C.ships.forEach(u => {
     const sp = scene.sp && scene.sp[u.id]; if (!sp) return; alive[u.id] = true;
-    if (u.kind === 'carrier' || (typeof campFeelShip === 'function' && u === campFeelShip(C))) { // the cruiser (or the ship the player flies: src/campfeel.js campFeelShip) has real flames, one for each engine, and no plain trail (card space-game-cruiser-boost-flames)
+    if (typeof campFeelShip === 'function' ? u === campFeelShip(C) : u.kind === 'carrier') { // (the ship he flies: the cruiser, or the fighter whose stick he holds; the cruiser he left has the plain look) // the cruiser (or the ship the player flies: src/campfeel.js campFeelShip) has real flames, one for each engine, and no plain trail (card space-game-cruiser-boost-flames)
       if (typeof campFeelDraw === 'function' && campFeelDraw(scene, S, u, sp, C)) { (S.flames || []).forEach(f => f.setVisible(false)); const t1 = trails[u.id]; if (t1) t1.setVisible(false); return; } // the flight feel (card space-game-cruiser-long-haul-feel, src/campfeel.js): ribbons from both engines and flickering layered flames in place of the steady streaks
       if (typeof campFeelHide === 'function') campFeelHide(S);
       const fs = u.hp > 0 && sp.visible !== false && typeof campFlameState === 'function' ? slookFlameSpecs(u, sp.displayWidth, campFlameState(C)) : [], fl = S.flames || (S.flames = []);

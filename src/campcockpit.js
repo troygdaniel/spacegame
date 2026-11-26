@@ -30,6 +30,7 @@ const campCockpitOn = () => !campCockpitAddrOff() && ((typeof campFlag === 'func
 const campCockpitInput = () => ({ turn: 0, thrust: 0, brake: false, boost: false, fire: false });
 const campCockpitHull = () => Math.max(0.1, +CAMP.cockpit.hpK || 1); // the hull multiplier a take uses (never zero or negative)
 function campEye(C) { const S = C && C.cockpit, u = S && C.by ? C.by[S.id] : null; return u && u.hp > 0 ? u : (C ? C.carrier : null); }
+const campEyeSprite = s => { const C = s && s.camp, e = C && C.carrier ? campEye(C) : null; return s && s.sp && e ? s.sp[e.id] || null : null; }; // the sprite of the ship the camera is on (the cruiser's, or the fighter's while he holds its stick): where a camera that comes home (a drag, F, a peek) goes back to
 const campCockpitAuto = C => !!C && !!C.cockpit && CAMP.cockpit.turrets === 'auto';
 
 // the fighter a take with no id names: the pilot the W pick holds (his squad's first ship out), else Red 1 (Wedge), else the first fighter that is out

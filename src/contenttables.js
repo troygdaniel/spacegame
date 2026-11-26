@@ -1279,6 +1279,7 @@ const UI_TEXT = {
   'camp.corner.chip.cockpit': 'Cockpit',
   'camp.corner.chip.cockpitback': 'Hand back',
   'camp.corner.cruiserline': 'Cruiser {hull}/{max} · shield {shield}',
+  'scr.keys.r.cockpit': "Take a pilot's stick; again hands it back",
   'camp.corner.lost': 'lost',
   'camp.corner.allshort': 'All',
   'camp.corner.attack': 'Attack {name}',
