@@ -23,14 +23,16 @@ function campFarSync(scene) {
   if (!scene.hud.far) scene.hud.far = { g: scene.add.graphics().setScrollFactor(0).setDepth(60), t: [] }; // kept in scene.hud: its objects are destroyed with a scene that ends
   const V = scene.hud.far, g = V.g, z = cam.zoom > 0 ? cam.zoom : 1; g.clear();
   const marks = z < CAMPZOOM.view.markZ && scene.mode === 'play' && !scene.mp ? campZoomMarks(C) : [];
-  const least = CAMPZOOM.view.worldLeast || 0, obst = [], taken = []; let n = 0;
-  if (marks.length) Object.keys(scene.sp || {}).forEach(id => { const sp = scene.sp[id]; if (!sp || sp.visible === false || !(sp.displayWidth > 0)) return; obst.push({ x: (sp.x - cam.scrollX - W / 2) * z + W / 2, y: (sp.y - cam.scrollY - H / 2) * z + H / 2, r: Math.max(sp.displayWidth, sp.displayHeight || 0) * z * 0.3 }); }); // the ships' signs: a name keeps clear of them
+  const least = CAMPZOOM.view.worldLeast || 0, obst = [], taken = [], pic = {}; let n = 0;
+  (scene.placeSets || []).forEach(e => { if (e && e.im && e.im.active !== false && e.p) pic[Math.round(e.p.x) + ',' + Math.round(e.p.y)] = 1; }); // the worlds that have a picture on the scene now (a far body has one only while the cruiser is near it, src/campaignscene.js syncFar)
+  if (marks.length) Object.keys(scene.sp || {}).forEach(id => { const sp = scene.sp[id]; if (!sp || sp.visible === false || !(sp.displayWidth > 0)) return; obst.push({ x: (sp.x - cam.scrollX - W / 2) * z + W / 2, y: (sp.y - cam.scrollY - H / 2) * z + H / 2, r: Math.max(sp.displayWidth, sp.displayHeight || 0) * z * 0.45 }); }); // the ships' signs: a name keeps clear of them
   marks.forEach(m => {
     const sx = (m.x - cam.scrollX - W / 2) * z + W / 2, sy = (m.y - cam.scrollY - H / 2) * z + H / 2, kind = m.goal ? 'goal' : m.kind;
     if (sx < K.edge || sx > W - K.edge || sy < K.edge || sy > H - K.keep) return;
     const rr = m.kind === 'convoy' ? K.ring : least + 4; // a world is its own disc (drawn up to its least size): its name stands clear of it; the goal has a ring round it; a convoy ship its diamond
     if (m.kind === 'convoy') g.lineStyle(K.width, K.color.convoy, 0.95).strokePoints([{ x: sx, y: sy - K.ring }, { x: sx + K.ring, y: sy }, { x: sx, y: sy + K.ring }, { x: sx - K.ring, y: sy }], true);
     else if (kind === 'goal') g.lineStyle(K.width, K.color.goal, 0.95).strokeCircle(sx, sy, rr);
+    if (m.kind === 'place' && !pic[Math.round(m.x) + ',' + Math.round(m.y)]) g.fillStyle(K.color.place, 0.85).fillCircle(sx, sy, least); // a world far from the cruiser has no picture to draw up: its mark is a flat disc of the least size, so a name is never alone
     let t = V.t[n]; if (!t) { t = V.t[n] = scene.add.text(0, 0, '', { fontFamily: K.face, fontSize: K.font + 'px', fontStyle: '600', color: '#ffffff', stroke: '#02060d', strokeThickness: 3 }).setScrollFactor(0).setDepth(61); }
     t.setColor(K.text[kind]); if (t.text !== m.name) t.setText(m.name);
     const at = campFarSpot(sx, sy, rr, t.width || 0, t.height || 0, K.gap, obst, taken); t.setOrigin(at.ox, at.oy).setPosition(at.x, at.y).setVisible(true); taken.push({ x: at.x - at.ox * (t.width || 0), y: at.y - at.oy * (t.height || 0), w: t.width || 0, h: t.height || 0 }); n++;

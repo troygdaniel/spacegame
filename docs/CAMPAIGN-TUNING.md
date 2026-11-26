@@ -426,3 +426,10 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *The cruiser alone* (`campturretlead.mjs`, `campmissiles.mjs`): the pilots start out beside the cruiser, at the mouth, and shoot too; the mouth moved, so the raider of one duel was hit by their guns, not the turrets'. The two suites keep the pilots in the bay (`CAMP.bay.startOut = false`, as the suites of the bay do), which is what they were measuring.
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
+
+## The far zoom, clean (card `space-game-far-zoom-ugly`, 25 Nov 2026; base: main at the landing before it)
+- `CAMPZOOM.view.worldLeast: 7` (new): a world is drawn up so its radius is at least 7 px on the screen (Luna at zoom 0.124 is about 4 px: it is drawn at 7); the far marks' ring is the least plus 4.
+- `SLGLYPH.halo: 0.16 -> 0` (no disc round a sign), `SLGLYPH.rim { color 0x050810, alpha .9, k .05, least 1 }` (new), `SLGLYPH.buckets` (the lengths a sign is baked at: 10 to 640 px) and `SLGLYPH.keep { under 1.15, over 0.6 }` (a sign keeps its bucket between them).
+- `SLOOKMARK.apart: 0.9` (new): two hurt ships' arcs are drawn at least 0.9 of the larger radius apart on the screen; the more hurt one wins.
+- The far marks' name gap 10 -> 8 px; the places' pill stands 16 px above the disc as drawn (`campPageHudPlaces`).
+
