@@ -432,4 +432,5 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - `SLGLYPH.halo: 0.16 -> 0` (no disc round a sign), `SLGLYPH.rim { color 0x050810, alpha .9, k .05, least 1 }` (new), `SLGLYPH.buckets` (the lengths a sign is baked at: 10 to 640 px) and `SLGLYPH.keep { under 1.15, over 0.6 }` (a sign keeps its bucket between them).
 - `SLOOKMARK.apart: 0.9` (new): two hurt ships' arcs are drawn at least 0.9 of the larger radius apart on the screen; the more hurt one wins.
 - The far marks' name gap 10 -> 8 px; the places' pill stands 16 px above the disc as drawn (`campPageHudPlaces`).
+- The cruiser is not a sign at the far zoom (card `space-game-far-zoom-cruiser-picture`, 26 Nov 2026): `slookGlyphKeep(u)` (the carrier) keeps its flat-cut picture, baked at the same `SLGLYPH.buckets` (key `look-carrier-friend-<px>`), scaled down by the hull over the bucket and drawn up by the view's least size like the signs. No number changed; to put the sign back, make `slookGlyphKeep` return false.
 

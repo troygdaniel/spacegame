@@ -35,12 +35,12 @@ function slookPaint(g, kind, side, L, ox, oy) { // the mock's direction 1 for on
   g.fillStyle(slookInt(slookFacet(side, !!k.hot)), 1); g.fillPath();
   slookLobePolygons(kind, L, 8).forEach(q => { slookPath(g, q, ox, oy); g.fillStyle(slookInt(slookLobe(side)), 1); g.fillPath(); }); // more facets (the mothership's wing lobes, lighter than its spine), after the first, as the mock draws them
 }
-function slookTexture(scene, kind, side) { // the texture of a kind as a side, made once; returns its key ('' when the scene has no Phaser to draw with)
+function slookTexture(scene, kind, side, bucket) { // the texture of a kind as a side, made once; returns its key ('' when the scene has no Phaser to draw with); bucket: a hull this many px long in the picture, key look-<kind>-<side>-<bucket> (the far view bakes the cruiser's own picture near the size it shows it at: card space-game-far-zoom-cruiser-picture)
   if (!scene || !scene.textures || !scene.make || !SLOOK.K[kind]) return '';
-  side = side || slookKindSide(kind); const key = slookTexKey(kind, side);
+  side = side || slookKindSide(kind); const key = slookTexKey(kind, side) + (bucket > 0 ? '-' + bucket : '');
   if (scene.textures.exists(key)) return key;
-  const [W, H] = slookSize(kind), g = scene.make.graphics({ x: 0, y: 0, add: false });
-  slookPaint(g, kind, side, slookBakeL(kind), W / 2, H / 2); g.generateTexture(key, W, H); g.destroy();
+  const L = bucket > 0 ? bucket : slookBakeL(kind), [W, H] = slookSizeL(kind, L), g = scene.make.graphics({ x: 0, y: 0, add: false });
+  slookPaint(g, kind, side, L, W / 2, H / 2); g.generateTexture(key, W, H); g.destroy();
   return key;
 }
 function slookProt(scene) { // the ids of the ships you protect (src/campconvoy.js campConvoyShips), worked out once for a state of the game, not for each ship
@@ -59,13 +59,13 @@ function slookSync(scene, u, sp, F) { // one ship's sprite, once a frame: the ne
   if (!F.on) {
     if (sp._sl) { // it was on: back to today's picture, its tint and its scale
       const look = (typeof CAMP_LOOK === 'object' && (CAMP_LOOK[u.kind] || CAMP_LOOK.drone)) || { scale: 1 };
-      sp._sl = ''; sp._sg = false; sp._ls = 0; sp.setTexture(scene.texOf(u.kind)); if (look.tint) sp.setTint(look.tint); else sp.clearTint(); sp.setScale(look.scale * (sp._k > 1 ? sp._k : 1));
+      sp._sl = ''; sp._sg = false; sp._fz = false; sp._ls = 0; sp.setTexture(scene.texOf(u.kind)); if (look.tint) sp.setTint(look.tint); else sp.clearTint(); sp.setScale(look.scale * (sp._k > 1 ? sp._k : 1));
     }
     return;
   }
-  const side = slookSide(u, F.prot.has(u.id)), far = slookGlyphWant(F.z, sp._sg), gb = far ? slookGlyphBucket(u.kind, sp._k > 1 ? sp._k : 1, F.z, sp._gb) : 0; // far out a ship is its signal shape (src/shiplookglyph.js), baked near the size it is shown at (gb: its length on the screen, px), so it is neither blown up nor boiled down
-  const key = far ? slookGlyphTexture(scene, u.kind, side, gb) : slookTexture(scene, u.kind, side);
-  sp._sg = far; sp._gb = gb;
+  const side = slookSide(u, F.prot.has(u.id)), far = slookGlyphWant(F.z, sp._fz), sign = far && !slookGlyphKeep(u), gb = far ? slookGlyphBucket(u.kind, sp._k > 1 ? sp._k : 1, F.z, sp._gb) : 0; // far out a ship is its signal shape (src/shiplookglyph.js), baked near the size it is shown at (gb: its length on the screen, px), so it is neither blown up nor boiled down; the player's cruiser keeps its own flat-cut picture (slookGlyphKeep), baked the same way (card space-game-far-zoom-cruiser-picture)
+  const key = sign ? slookGlyphTexture(scene, u.kind, side, gb) : far ? slookTexture(scene, u.kind, side, gb) : slookTexture(scene, u.kind, side);
+  sp._fz = far; sp._sg = sign; sp._gb = gb;
   if (!key || sp._sl === key) return;
   sp._sl = key; sp._ls = far && gb ? slookLen(u.kind) / gb : slookScale(u.kind); sp.setTexture(key); sp.clearTint(); sp.setScale(sp._ls * (sp._k > 1 ? sp._k : 1)); // (_k: how many times the far view draws it up, src/campzoom.js: the scene keeps it)
 }

@@ -39,10 +39,10 @@ check('and at the start zoom nothing moved: the pill is still 36 world px over t
 console.log('D. the cruiser as a sign');
 const sc = src('src/campaignscene.js');
 g.run(`window.__rec = () => { const calls = []; const o = new Proxy({}, { get: (t, k) => k === 'calls' ? calls : (...a) => { calls.push(String(k)); return o; } }); return o; };
-  window.__bay = (sign) => { const C = __C, c = C.carrier, bayG = __rec(), bayGlow = __rec(); const s = { camp: C, bayG, bayGlow, bayAt: { launch: C.t, land: -1e9 }, sp: { [c.id]: { _sg: sign, _k: 1 } }, add: { graphics: () => __rec() } }; Campaign.prototype.syncBay.call(s); return { g: bayG.calls, h: bayGlow.calls }; };`);
-check('a cruiser that is its sign gets no lit bay: the boxes and the glow are cleared and nothing is drawn', J('(() => { const r = __bay(true); return r.g.every(k => k === "clear") && r.h.every(k => k === "clear"); })()'));
-check('as its picture it keeps its bays (the launch tubes light while the wing leaves)', J('(() => { const r = __bay(false); return r.g.includes("fillPoints") || r.h.includes("fillCircle"); })()'));
-check('the turret mounts are skipped for a sign, and the reach ring rests at nothing for it (it still shows while Space is held: the glow)', /const csp = this\.sp && this\.sp\[c\.id\], sign = !!csp && csp\._sg === true;/.test(sc) && /\(sign \? 0 : CAMP_REACH\.rest\) \+ \(1 - \(sign \? 0 : CAMP_REACH\.rest\)\) \* campReachGlow\(this, C\)/.test(sc) && /if \(!sign\) C\.turrets\.forEach\(/.test(sc));
+  window.__bay = (sign) => { const C = __C, c = C.carrier, bayG = __rec(), bayGlow = __rec(); const s = { camp: C, bayG, bayGlow, bayAt: { launch: C.t, land: -1e9 }, sp: { [c.id]: { _fz: sign, _sg: false, _k: 1 } }, add: { graphics: () => __rec() } }; Campaign.prototype.syncBay.call(s); return { g: bayG.calls, h: bayGlow.calls }; };`);
+check('a cruiser seen from far (its picture drawn small, or a sign) gets no lit bay: the boxes and the glow are cleared and nothing is drawn', J('(() => { const r = __bay(true); return r.g.every(k => k === "clear") && r.h.every(k => k === "clear"); })()'));
+check('as its picture at the play zoom it keeps its bays (the launch tubes light while the wing leaves)', J('(() => { const r = __bay(false); return r.g.includes("fillPoints") || r.h.includes("fillCircle"); })()'));
+check('the turret mounts are skipped for a sign, and the reach ring rests at nothing for it (it still shows while Space is held: the glow)', /const csp = this\.sp && this\.sp\[c\.id\], sign = !!csp && csp\._fz === true;/.test(sc) && /\(sign \? 0 : CAMP_REACH\.rest\) \+ \(1 - \(sign \? 0 : CAMP_REACH\.rest\)\) \* campReachGlow\(this, C\)/.test(sc) && /if \(!sign\) C\.turrets\.forEach\(/.test(sc));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `FAR ZOOM FAIL (${failed} of ${n})` : `FAR ZOOM PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;

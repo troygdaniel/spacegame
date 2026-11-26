@@ -8,6 +8,7 @@
 //   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
 //   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
 //   O  an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)
+//   T  a reload in mint: the building pip, the queued outlines, the R chip, the word MISSILES and the count (card space-game-missile-reload-mint)
 //   S  the radio panel, the goal panel's hint line and the mothership's hull row (card space-game-b3-c-radio-panel)
 //   R  the picked target's flat-cut picture in the hostiles panel (card space-game-page-hud-target-picture)
 //   Q  nothing a player needs under a page panel (card space-game-goal-panel-hides-text): the canvas column starts under the goal panel; the edge pills are put clear of the panels
@@ -587,9 +588,9 @@ check('S no hint: no second line in the goal panel (and the model has none)', J(
 g.run(`window.campDockHint = () => 'Q  dock at Occator Works';`);
 const hn = J('campPageModel(C).hint');
 g.run(`__sync(7800);`);
-check('S the dock hint (what the canvas wrote under the goal panel in amber) is the goal panel\'s second line, in the page\'s warm tone, the same words (campDockHint, src/campoutpost.js)', hn && hn.text === 'Q  dock at Occator Works' && hn.tone === 'warn' && J('SS.pageHud.goal.hint.style.display') === '' && J('SS.pageHud.goal.hint.textContent') === 'Q  dock at Occator Works' && J('SS.pageHud.goal.hint._cls') === 'ph-hint ph-warn');
+check('S the dock hint (what the canvas wrote under the goal panel in amber) is the goal panel\'s second line, in the page\'s warm tone, the same words (campDockHint, src/campoutpost.js)', hn && hn.text === 'Q  dock at Occator Works' && hn.tone === 'warn' && J('SS.pageHud.goal.hint.style.display') === '' && J('SS.pageHud.goal.hintText.textContent') === 'Q  dock at Occator Works' && J('SS.pageHud.goal.hint._cls') === 'ph-hint ph-warn');
 g.run(`window.campRetreat = () => ({ line: 'Retreat to Occator Works: 40 s on Fast.' }); __sync(8000);`);
-check('S the retreat line (hull low, no ship left) comes first, in the hostile pink, in the same place', J('campPageModel(C).hint.tone') === 'foe' && J('SS.pageHud.goal.hint.textContent') === 'Retreat to Occator Works: 40 s on Fast.' && J('SS.pageHud.goal.hint._cls') === 'ph-hint ph-foe');
+check('S the retreat line (hull low, no ship left) comes first, in the hostile pink, in the same place', J('campPageModel(C).hint.tone') === 'foe' && J('SS.pageHud.goal.hintText.textContent') === 'Retreat to Occator Works: 40 s on Fast.' && J('SS.pageHud.goal.hint._cls') === 'ph-hint ph-foe');
 g.run(`window.campRetreat = () => null; window.campObjective = () => ''; __sync(8200);`);
 check('S a mission with no goal line still has its hint: the panel is up with the hint alone (no label, value or meter)', J('campPageModel(C).goal') === null && J('SS.pageHud.goal.el.style.display') === '' && J('SS.pageHud.goal.row.style.display') === 'none' && J('SS.pageHud.goal.meter.style.display') === 'none' && J('SS.pageHud.goal.hint.style.display') === '');
 g.run(`window.campDockHint = window.__dock0; window.campRetreat = window.__ret0; delete window.campObjective;`);
@@ -606,6 +607,33 @@ check('S a canvas line that is hidden (the page HUD hid it) takes no place in th
 const cssS = src('src/camppagehud.css'), pjS = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, ''), cmS = src('src/common.js');
 check('S the style and the script: the panel is a page panel in em with the message\'s colour as its left bar (a variable), the time is TOAST\'s (no number typed in the page HUD for it), no image file or web font', /\.ph-radio \{[^}]*width: 24em/.test(cssS) && /\.ph-rad \{[^}]*border-left: \.25em solid var\(--rc\)/.test(cssS) && !/url\(|@font-face/.test(cssS) && /T0\.hold/.test(pjS) && /T0\.fade/.test(pjS) && !/\b2800\b|\b600\b/.test(pjS.slice(pjS.indexOf('function campPageHudToast'), pjS.indexOf('function campPageHudSet'))));
 check('S common.js: the hook is one line at the top of toast() (after the Tab map\'s own, which takes the message only while the map is open), asking s.toastPanel and taking only `true`', /function toast\(s, msg, color = '#ffd37a', hold = 0\) \{[^\n]*\n(  if \(s\.mp && typeof campMapToast[^\n]*\n)?  if \(typeof s\.toastPanel === 'function' && s\.toastPanel\(msg, color, hold\) === true\) return;/.test(cmS));
+g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('T. a reload in mint (card space-game-missile-reload-mint; Troy, 26 Nov 2026)');
+g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.ore = 400; C.missiles = 3; C.queued = 0; C.reloadAt = 0; window.ST = __scene(); campPageHudSync(ST, 0);`);
+const pcs = () => J(`(() => { const S_ = ST.pageHud.stock; return { pips: S_.pips.map(p => p._cls), key: S_.key._cls, word: S_.missLab._cls, q: S_.queue._cls, qt: S_.queue._text, ore: S_.oreLab._cls }; })()`);
+const pipCode = c => c.pips.map(x => /build/.test(x) ? 'b' : /queued/.test(x) ? 'q' : / on/.test(x) ? 'o' : '.').join('');
+const t0 = pcs();
+check('T nothing built or queued: the pips are white (three on, three empty), the R chip, the word MISSILES and the count have no mint class: the panel is as it was; the model says it is not loading', pipCode(t0) === 'ooo...' && t0.key === 'ph-k' && t0.word === 'ph-lab ph-mw' && t0.q === 'ph-q' && J('campPageModel(C).stock.missiles.loading') === false);
+g.run(`window.__r1 = campReloadDo(C); window.__r2 = campReloadDo(C); window.__r3 = campReloadDo(C); campPageHudSync(ST, 200);`);
+const t1 = pcs();
+check('T three presses of R (the first build runs, two wait behind it): the model is loading; the pip being built is the build pip (mint, filling), the two queued builds are two empty pips outlined in mint, the three finished ones are white; the R chip, the word MISSILES and the +2 glow mint (the word Ore does not)', J('campPageModel(C).stock.missiles.loading') === true && pipCode(t1) === 'ooobqq' && t1.key === 'ph-k ph-mint' && t1.word === 'ph-lab ph-mw ph-mint' && t1.q === 'ph-q ph-mint' && t1.qt === '+2' && t1.ore === 'ph-lab ph-mw', JSON.stringify(t1));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 400);`);
+const t2 = pcs();
+check('T a build lands: its pip is white, the next build starts (its pip fills), and one outline is left (+1); everything is still mint', pipCode(t2) === 'oooobq' && t2.key === 'ph-k ph-mint' && t2.qt === '+1', JSON.stringify(t2));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 600);`);
+const t3 = pcs();
+check('T the last queued build runs with nothing behind it: still mint (a build is running), no outline, no +N', pipCode(t3) === 'ooooob' && t3.key === 'ph-k ph-mint' && t3.word === 'ph-lab ph-mw ph-mint' && t3.qt === '' && J('campPageModel(C).stock.missiles.loading') === true, JSON.stringify(t3));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 800);`);
+const t4 = pcs();
+check('T everything built: all six white, and the chip, the word and the count are back to white (the plain classes)', pipCode(t4) === 'oooooo' && t4.key === 'ph-k' && t4.word === 'ph-lab ph-mw' && t4.q === 'ph-q' && J('campPageModel(C).stock.missiles.loading') === false, JSON.stringify(t4));
+g.run(`C.missiles = 5; C.queued = 0; C.reloadAt = 0; window.__a = campReloadDo(C); window.__b = campReloadDo(C); window.__c = campReloadDo(C); window.__d = campReloadDo(C); campPageHudSync(ST, 1000);`);
+const t5 = pcs();
+check('T the rack has room for no more builds than it can hold (five in the rack of six: one build runs and R queues nothing more, whatever the presses), so the outlines always fit and nothing needs the +N then: the building pip is the last one, no outline, no count, still mint', pipCode(t5) === 'ooooob' && t5.qt === '' && t5.key === 'ph-k ph-mint', JSON.stringify([pipCode(t5), t5.qt]));
+g.run(`CAMP.flags.pagehud = false; campPageHudSync(ST, 2000); CAMP.flags.pagehud = true;`);
+const cssT = src('src/camppagehud.css'), pjT = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
+check('T the style: the mint is ONE token (--ph-fire), the player\'s fire colour of the look table (SLOOK.C.own), and the building pip, the queued outline, the chip, the word and the count use it; no new colour typed elsewhere, no image, no web font', new RegExp('--ph-fire: ' + J('SLOOK.C.own') + ';').test(cssT) && /\.ph-pip\.build \{[^}]*var\(--ph-fire\) var\(--p/.test(cssT) && /\.ph-pip\.queued \{[^}]*box-shadow: inset 0 0 0 1px var\(--ph-fire\)/.test(cssT) && /\.ph-k\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && /\.ph-lab\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && /\.ph-q\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && !/url\(|@font-face/.test(cssT) && !/7df0c0/i.test(pjT));
+check('T what R does is not touched: the model only READS the build (building, queued): no call of campReloadDo, campMissileStep or campReload with an effect in the page HUD\'s model of the stock', !/campReloadDo|campMissileStep/.test(pjT));
 g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('E. the rules');
@@ -652,6 +680,24 @@ console.log('T. the place pills: a gap under the name, clear of the panels, the 
   check('T a pill that has no clear place within CAMP_PAGEHUD.placeSlide (160 px) of its own is not drawn (null: the world under a panel is hidden too), none goes off the screen', J(`campPageHudPlacesClear([{ name: 'Lost', x: 640, y: 360 }], [{ x: 640, y: 360, w: 1400, h: 900 }])`)[0] === null && J(`campPageHudPlacesClear([{ name: 'Edge', x: 1200, y: 360 }], [])`)[0] && J(`CAMP_PAGEHUD.placeSlide`) === 160);
   const hs = src('src/camppagehud.js'), css = src('src/camppagehud.css');
   check('the sync puts the place pills by the clear (PP) and drops the one with no place; the DOM class goal is the relic\'s gold; the relic\'s canvas label is hidden with the other names while the page HUD is on', /PP = campPageHudPlacesClear\(M\.places, PR\)/.test(hs) && /else if \(pl\) set\(p, 'display', 'none'\)/.test(hs) && /'ph-p ph-place' \+ \(pl\.goal \? ' goal' : ''\)/.test(hs) && /\.ph-place\.goal \{ color: #e9b872/.test(css) && /s\.relicLabel && s\.relicLabel\.active !== false\) put\(s\.relicLabel, !offP\)/.test(hs) && /this\.relicLabel = label\(this/.test(src('src/campaignscene.js')));
+}
+
+console.log('U. the sell-ore goal\'s second line: "N ore aboard · dock to sell" (card space-game-sell-goal-aboard-line; Troy, 26 Nov 2026: 0 / 160 beside a full faint bar reads like a bug)');
+{
+  g.run(`window.__hint = (types, mod, near) => { const C9 = campNew(1, [], { seed: 3, mission: 1 }); C9.god = true; C9.ships = C9.ships.filter(u => u.team !== 'alien'); C9.L.objectives = types.map(t => (t === 'cashin' ? { type: 'cashin', n: 160 } : t === 'ore' ? { type: 'ore', n: 450 } : { type: t })); const p = campPlaces(1).ceres; C9.carrier.x = p.x + 70 + (near ? 120 : 900); C9.carrier.y = p.y - 60; if (mod) mod(C9); return { C: C9, hint: campPageHudHint(C9) }; };`);
+  const far = J(`__hint(['cashin'], C => { C.ore = 260.7; }, false)`), nearH = J(`__hint(['cashin'], C => { C.ore = 260; }, true)`);
+  check('the sale is the goal and ore is aboard: the one second line says how many (the real ore aboard, whole), "N ore aboard · dock to sell", with the dock key as a chip, wherever the cruiser is: 900 px from the Works (outside the dock range: the old hint said nothing there) or beside it', far.hint && far.hint.text === '260 ore aboard · dock to sell' && far.hint.tone === 'warn' && far.hint.key === J(`campKeyVar('yardkey')`) && far.hint.key.length >= 1 && nearH.hint && nearH.hint.text === '260 ore aboard · dock to sell' && J(`campOutpostNear(__hint(['cashin'], C => { C.ore = 1; }, false).C)`) === null, JSON.stringify([far.hint, nearH.hint]));
+  check('the dock key chip is the key table\'s (the same {yardkey} the old line printed), not a letter written in the HUD code', !/'Q'|"Q"/.test(src('src/camppagehud.js').split('function campPageHudHint')[1].split('function campPageHudFoes')[0]) && /campKeyVar\('yardkey'\)/.test(src('src/camppagehud.js')));
+  check('gone when nothing is aboard (the sale the goal, no ore): no line; the line follows the ore: 1 aboard, then 0', J(`__hint(['cashin'], C => { C.ore = 0; }, false).hint`) === null && J(`__hint(['cashin'], C => { C.ore = 1; }, false).hint.text`) === '1 ore aboard · dock to sell' && J(`__hint(['cashin'], C => { C.ore = 0.4; }, false).hint`) === null);
+  const mine = J(`__hint(['ore', 'kill', 'cashin'], C => { C.ore = 260; }, true)`), mineFar = J(`__hint(['ore', 'kill', 'cashin'], C => { C.ore = 260; }, false)`);
+  check('while mining (the goal is the ore, not the sale) the old line is as it was: "Q  dock at Occator Works" within the dock range with ore to sell, nothing farther off', mine.hint && /dock at Occator Works$/.test(mine.hint.text) && mine.hint.key === undefined && mineFar.hint === null, JSON.stringify([mine.hint, mineFar.hint]));
+  check('a hurt hull beside the Works with the sale the goal and no ore aboard: the old dock line (repair); the retreat line (hull low, no ships) comes first, in the foe colour, whatever the goal', J(`__hint(['cashin'], C => { C.ore = 0; C.carrier.hp = C.carrier.maxHp * 0.5; }, true).hint.text`) === J(`uiText('camp.hud.dockhint', { name: 'Occator Works' })`) && J(`(() => { const h = __hint(['cashin'], C => { C.ore = 300; C.carrier.hp = C.carrier.maxHp * 0.2; C.bay.fighters = 0; C.ships = C.ships.filter(u => u.kind !== 'fighter'); C.launchQ = []; }, true); return campRetreat(h.C) ? h.hint.tone : 'foe'; })()`) === 'foe');
+  check('not in a won or lost battle, nor while docked', J(`__hint(['cashin'], C => { C.ore = 200; C.result = 'won'; }, false).hint`) === null && J(`__hint(['cashin'], C => { C.ore = 200; C.docked = 'ceres'; }, false).hint`) === null);
+  check('the words are the content\'s with the voice-pack family (not spoken): camp.hud.aboard "{n} ore aboard · dock to sell", the same default in the table and in content/text', J(`uiText('camp.hud.aboard', { n: 5 })`) === '5 ore aboard · dock to sell' && /\| camp\.hud\.aboard \| \{n\} ore aboard · dock to sell \|/.test(src('content/text/campoutpost.md')) && /'camp\.hud\.aboard': '\{n\} ore aboard · dock to sell'/.test(src('src/contenttables.js')));
+  g.run(`CAMP.flags.pagehud = true; window.SU = __scene(); SU.camp = __hint(['cashin'], C => { C.ore = 260; }, false).C; campPageHudSync(SU, 0);`);
+  const dom = J(`(() => { const G = SU.pageHud.goal; return { hint: G.hint.style.display, key: G.hintKey._ph.text, keyShown: G.hintKey._ph.display, text: G.hintText._ph.text, cls: G.hint._ph.cls }; })()`);
+  g.run(`CAMP.flags.pagehud = false;`);
+  check('the panel shows it: the chip with the key, then the words, in the warm colour, as one flex line (class ph-withkey)', dom.hint === '' && dom.key === J(`campKeyVar('yardkey')`) && dom.keyShown === '' && dom.text === '260 ore aboard · dock to sell' && /ph-warn/.test(dom.cls) && /ph-withkey/.test(dom.cls) && /\.ph-hint\.ph-withkey \{ display: flex/.test(src('src/camppagehud.css')), JSON.stringify(dom));
 }
 check('no image files, no libraries: no img tag, no data: URL, no script src in the HUD code', !/<img|data:image|createElement\(['"]script/.test(src('src/camppagehud.js')));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
