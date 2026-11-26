@@ -89,7 +89,7 @@ The words of Settings in the new look (card space-game-screens-e-keys-settings; 
 | scr.sett.r.campaignbtn | Reset campaign |
 | scr.sett.r.campaignhint | Missions, score and rank. Long Haul is kept. |
 | scr.sett.r.game | Long Haul |
-| scr.sett.r.gamebtn | Reset game |
+| scr.sett.r.gamebtn | Reset Long Haul |
 | scr.sett.r.gamehint | Erases your Long Haul save. Keys and sound stay. |
 | scr.sett.r.keys | Keys |
 | scr.sett.r.keysbtn | Forget all keys |

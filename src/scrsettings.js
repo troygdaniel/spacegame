@@ -167,7 +167,7 @@ function scrSetResetCampaign() { // the mission list's Start over, from Settings
   const P0 = campProgressLoad(); campHubStartOver({}, P0); campProgressSave(P0); return true;
 }
 function scrSetPress(s, what) { // the second press within four seconds confirms (the old tab's rule, SETTINGS.confirmMs); the pill says "Press again" and turns pink in between
-  const now = performance.now(), ask = { reset: 'Press Reset game again to erase everything.', plforget: 'Press Forget log again to erase the log kept in this browser.', forget: 'Press Forget all keys again to remove them.', campaign: SCRSET.campaignAsk };
+  const now = performance.now(), ask = { reset: 'Press Reset Long Haul again to erase your Long Haul save.', plforget: 'Press Forget log again to erase the log kept in this browser.', forget: 'Press Forget all keys again to remove them.', campaign: SCRSET.campaignAsk };
   if (!s.armed || s.armed.what !== what || now - s.armed.at > SETTINGS.confirmMs) { s.armed = { what, at: now }; s.say(ask[what] || '', '#ff4d6d'); return scrSetPaint(s, true); }
   if (now - s.armed.at < 350) return false; // a double tap is not a confirmation
   s.armed = null;
