@@ -14,12 +14,11 @@ function scrHubPaint(s, model) {
   if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(s)) scrHostSet(el, 'display', 'none'); // painted again under the briefing: it waits
   return !!el;
 }
-function scrHubSync(s, covered, under) { // covered: a page of the canvas is over the whole host (the H page, the tuning panel): the host is hidden; under: the one-page briefing is up (src/scrbriefdraw.js): only this screen waits, the briefing's panels are in the same host
+function scrHubSync(s, covered, under) { // covered: a page is over the screen (the H page, the tuning panel): only the screen waits; under: the one-page briefing is up (src/scrbriefdraw.js): only this screen waits, the briefing's panels are in the same host
   const R = s && s.scrHost; if (!R || !s.scrHub || s.scrHub.on !== true) return false; // (a stand-in scene of a test answers any property with a function: only a screen this file made counts)
-  if (covered) { scrHostSet(R.root, 'display', 'none'); return false; }
   const canvas = s.game && s.game.canvas; if (canvas) scrHostFit(R, canvas);
-  scrHostSet(s.scrHub.el, 'display', under ? 'none' : '');
-  return true;
+  scrHostSet(s.scrHub.el, 'display', covered || under ? 'none' : ''); // the host stays: the keys page of the new look is a panel in it too (card space-game-screens-batch-fixes)
+  return !covered && !under;
 }
 function scrHubDrop(s) {
   if (!s || !s.scrHub || s.scrHub.on !== true) return false;

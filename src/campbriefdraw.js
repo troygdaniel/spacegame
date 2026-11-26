@@ -110,25 +110,27 @@ function campBriefPaintMap(s) {
   const own = o => { o.setScrollFactor(0).setDepth(133); bf.map.push(o); return o; };
   // nothing is drawn outside the glass (card space-game-night-hunt-l2-l3: zoomed in, the route's dashes ran over the keys line and the YOU label hung under the panel): a circle is stroked as the arcs that are inside the frame, a line is cut to it, a point is drawn only inside it
   const ring = (q, r) => campMapArcs(q.x, q.y, r, F).forEach(pts => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.strokePath(); }), whole = (q, r) => q.x - r >= F.x && q.x + r <= F.x + F.w && q.y - r >= F.y && q.y + r <= F.y + F.h;
+  const one = bf.one === true, FF = one && typeof CAMPMAPPANEL === 'object' ? { fontFamily: CAMPMAPPANEL.face } : {}; // the one page's map has the Tab map's panel look (card space-game-screens-batch-fixes): the page's typeface, a thin frame, thin rings for the docks and the goal
   campBriefMapSpace(g, fit, F, Y.level);
-  hudGlowPath(g, [[F.x, F.y], [F.x + F.w, F.y], [F.x + F.w, F.y + F.h], [F.x, F.y + F.h]], CYAN, 0.85, true, 1.25);
+  if (one) g.lineStyle(1, 0x8caad2, 0.4).strokeRoundedRect(F.x + 0.5, F.y + 0.5, F.w - 1, F.h - 1, 14); else hudGlowPath(g, [[F.x, F.y], [F.x + F.w, F.y], [F.x + F.w, F.y + F.h], [F.x, F.y + F.h]], CYAN, 0.85, true, 1.25);
   // the places: a disc and a name (the names are put where they touch nothing: mapPlace); the outposts wear the Tab map's green frame
   const items = [], texts = [];
   const a = X(Y.start.x, Y.start.y), b = X(Y.focus.x, Y.focus.y), R = bf.route; // the start and the mission's place: their labels are placed first, the names of the places go round them
-  const label = (txt, color, anchor, r, bold) => { const t = own(s.add.text(0, 0, txt, uiFont(11, color, bold ? { fontStyle: 'bold' } : undefined))).setOrigin(0.5).setDepth(136); texts.push(t); items.push({ x: anchor.x, y: anchor.y, r, w: t.width, h: t.height, side: 'below' }); return t; };
+  const label = (txt, color, anchor, r, bold) => { const t = own(s.add.text(0, 0, txt, uiFont(11, color, Object.assign({}, FF, bold ? { fontStyle: 'bold' } : {})))).setOrigin(0.5).setDepth(136); texts.push(t); items.push({ x: anchor.x, y: anchor.y, r, w: t.width, h: t.height, side: 'below' }); return t; };
   const mark = Y.focus.label ? Y.focus.label.toUpperCase() : ''; // the name the mission mark carries
   label(uiText('camp.bf.mission') + (mark ? '  ' + mark : ''), '#ffb454', b, 16, true);
   if (inF(a)) label(uiText('camp.bf.you'), '#ffffff', a, 9, false);
   Y.places.forEach(p => {
     const q = X(p.x, p.y); if (!inF(q)) return; const r = Math.max(p.star ? 7 : 4, p.r * fit.s);
     g.fillStyle(p.star ? 0xffe29a : 0xb9a37a, 0.85).fillCircle(q.x, q.y, r); g.lineStyle(1, p.star ? 0xffe29a : 0xb9a37a, 0.5).strokeCircle(q.x, q.y, r + 3);
-    if (p.outpost) { const e = r + 8; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(q.x - e, q.y - e, e * 2, e * 2); }
+    if (p.outpost) { if (one) g.lineStyle(1.4, CAMPMAPPANEL.dock, 0.95).strokeCircle(q.x, q.y, r + 7); else { const e = r + 8; g.lineStyle(2, 0x6dff9c, 0.95).strokeRect(q.x - e, q.y - e, e * 2, e * 2); } } // a dock: the thin pale ring of the Tab map, not the green square
     if (mark && p.name.toUpperCase() === mark && Math.hypot(q.x - b.x, q.y - b.y) < 40) return; // the mission mark already names this place ("MISSION  KOLGA"): its own label under it would name it twice (card space-game-night-cosmetics, finding D)
-    const t = own(s.add.text(0, 0, p.name.toUpperCase(), uiFont(11, p.star ? '#ffe29a' : '#ffb454'))).setOrigin(0.5).setDepth(134); texts.push(t); items.push({ x: q.x, y: q.y, r: r + 4, w: t.width, h: t.height });
+    const t = own(s.add.text(0, 0, p.name.toUpperCase(), uiFont(11, p.star ? '#ffe29a' : '#ffb454', FF))).setOrigin(0.5).setDepth(134); texts.push(t); items.push({ x: q.x, y: q.y, r: r + 4, w: t.width, h: t.height });
   });
+  if (one) (bf.moments || []).forEach(m => { const q = X(m.at.x, m.at.y); items.push({ x: q.x, y: q.y, r: 13, w: 0, h: 0 }); }); // the numbered moments are marks the names keep clear of (after the names: their places are the names')
   if (items.length) { const at = mapPlace(items, F); texts.forEach((t, i) => t.setPosition(at[i].x, at[i].y)); }
   // the mission's own points
-  const num = (p, label, color) => { if (!inF(p)) return; own(s.add.text(p.x, p.y - 12, label, uiFont(11, color))).setOrigin(0.5).setDepth(135); };
+  const num = (p, label, color) => { if (!inF(p)) return; own(s.add.text(p.x, p.y - 12, label, uiFont(11, color, FF))).setOrigin(0.5).setDepth(135); };
   g.lineStyle(2, 0x7fe9ff, 0.9); Y.scan.forEach(p => { const q = X(p.x, p.y), r = Math.max(7, p.r * fit.s); ring(q, r); if (whole(q, r)) g.fillStyle(0x7fe9ff, 0.15).fillCircle(q.x, q.y, r); num({ x: q.x, y: q.y - r + 2 }, String(p.n), '#7fe9ff'); });
   Y.convoys.forEach(c => { const a = X(c.a.x, c.a.y), b = X(c.b.x, c.b.y), d = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
     g.lineStyle(2, 0xffb454, 0.9); for (let k = 0; k < d - 8; k += 14) { const q = campMapClip(a.x + ux * k, a.y + uy * k, a.x + ux * Math.min(d - 8, k + 8), a.y + uy * Math.min(d - 8, k + 8), F); if (q) g.lineBetween(q[0], q[1], q[2], q[3]); }
@@ -145,9 +147,9 @@ function campBriefPaintMap(s) {
     for (let k = 0; k < d; k += 12) { const q = campMapClip(a.x + (b.x - a.x) * k / d, a.y + (b.y - a.y) * k / d, a.x + (b.x - a.x) * Math.min(d, k + 7) / d, a.y + (b.y - a.y) * Math.min(d, k + 7) / d, F); if (q) g.lineBetween(q[0], q[1], q[2], q[3]); }
   }
   if (inF(a)) { g.fillStyle(0xffffff, 1).fillCircle(a.x, a.y, 4); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(a.x, a.y, 8); } // you: the dot and ring (the label YOU is placed with the others, above)
-  g.lineStyle(3, AMBER, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = b.x + sx * 14, y = b.y + sy * 14; g.beginPath(); g.moveTo(x, y - sy * 9); g.lineTo(x, y); g.lineTo(x - sx * 9, y); g.strokePath(); }); // the mission's place: the amber brackets of the sector map
+  if (one) g.lineStyle(1.6, 0xe9b872, 1).strokeCircle(b.x, b.y, 15); else { g.lineStyle(3, AMBER, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = b.x + sx * 14, y = b.y + sy * 14; g.beginPath(); g.moveTo(x, y - sy * 9); g.lineTo(x, y); g.lineTo(x - sx * 9, y); g.strokePath(); }); } // the mission's place: the amber brackets of the sector map (the one page: a thin gold ring, as the Tab map marks its goal)
   if (bf.one === true && typeof scrBriefMapExtras === 'function') scrBriefMapExtras(s, X, F, own); // the new look: the four numbered moments on the map
-  own(s.add.text(F.x + F.w - 8, F.y + 8, uiText('camp.map.zoom', { pct: Math.round(bf.z * 100) }), uiFont(12, '#7fe9ff'))).setOrigin(1, 0).setDepth(137); // the zoom and its keys, in the corner, as the Tab map says them
+  own(s.add.text(F.x + F.w - 8, F.y + 8, uiText('camp.map.zoom', { pct: Math.round(bf.z * 100) }), uiFont(12, one ? '#8794ab' : '#7fe9ff', FF))).setOrigin(1, 0).setDepth(137); // the zoom and its keys, in the corner, as the Tab map says them
 }
 // the zoom moves: the map is drawn again at the new view (about the mission's place); the key line and the other screens are not touched
 function campBriefZoomTo(s, z) {

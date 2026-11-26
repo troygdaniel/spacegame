@@ -54,16 +54,21 @@ function campHubNewLook(sc) {
   if (sc.scrHubOn !== true) {
     sc.scrHubOn = true;
     (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o.depth >= 80 && o.depth <= 90 && typeof o.setVisible === 'function') o.setVisible(false); }); // the glass, the rows, the pages, the overlay and its click zones, the key line
+    campHubHideNames(sc);
     if (!sc.scrVeil && sc.add && typeof sc.add.rectangle === 'function') sc.scrVeil = sc.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.78).setDepth(79); // the hangar stays, dimmed
     if (sc.scrVeil) sc.scrVeil.setVisible(true);
     if (sc.events && typeof sc.events.once === 'function') sc.events.once('shutdown', () => { sc.scrHubOn = false; });
   }
   return true;
 }
+function campHubHideNames(sc) { // the hangar's own words (MISSIONS, HANGAR 1, the station's name, BAY 01 THE CRUISER, the YOU tag) are canvas text under the panels: hidden while the new look is up (card space-game-screens-batch-fixes)
+  (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o && o.type === 'Text' && o.depth < 79 && o.visible && typeof o.setVisible === 'function') { o.setVisible(false); (sc.scrNamesHidden = sc.scrNamesHidden || []).push(o); } });
+}
 function campHubOldLook(sc) { // the switch went off in the middle of the room: the canvas's own glass comes back (the paint that follows sets what each line shows)
   sc.scrHubOn = false; if (typeof scrHubDrop === 'function') scrHubDrop(sc);
   (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o.depth >= 80 && o.depth <= 90 && typeof o.setVisible === 'function') o.setVisible(true); });
   if (sc.scrVeil) sc.scrVeil.setVisible(false);
+  (sc.scrNamesHidden || []).forEach(o => { if (o && o.active !== false && typeof o.setVisible === 'function') o.setVisible(true); }); sc.scrNamesHidden = [];
 }
 
 class CampHub extends Phaser.Scene {
@@ -311,6 +316,8 @@ class CampHub extends Phaser.Scene {
     interiorTick(this, time);
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)
+    if (this.scrHubOn === true) campHubHideNames(this); // (the YOU tag is made at the first tick)
+    if (this.scrHubOn === true && typeof scrBriefSync === 'function') scrBriefSync(this);
     if (this.scrHubOn === true && typeof scrHubSync === 'function') scrHubSync(this, (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)), typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)); // the new look's panels follow the canvas and wait while a page of the room's own is in front (the briefing's one page lives in the same host: only the room's screen waits for it)
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
