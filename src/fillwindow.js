@@ -20,7 +20,7 @@
 const FILL = {
   W: 1280, H: 720,               // the game's size as it always was: the least it ever is, and the safe area's
   k: 1.23,                       // THE FIXED SCALE (Troy, 25 Nov 2026): screen px for a game px, the size the game has today on his own window (1578 by 1000: 1578 / 1280 is 1.233). Nothing on the glass is bigger or smaller than he sees now; a bigger window adds room
-  cap: 1.5,                      // THE CAP ON THE ROOM (Troy, 25 Nov 2026): at most 1.5 times 1280 by 720 each way (1920 by 1080 game px); past it the picture scales up again, so no screen ever shows more of the battle than that. 0 would be no cap
+  cap: 0,                        // NO CAP (card space-game-fill-window-scale-bug; Troy, 26 Nov 2026, playing: "more visible space WITHOUT scaling"). A cap of 1.5 (1920 by 1080 game px) was here for a day, and past it the picture scaled up: on his 2000 px wide window that began at 2362 px, and he felt it as the scale changing. 0: above the least window nothing ever scales; a number here (a multiple of 1280 by 720 each way) would bring the scale-up back
   addr: 'fill', store: 'longhaul.fill',
   memo: { s: null, v: null },    // the page's address, read again only when it changed
   now: { on: false, w: 1280, h: 720, ox: 0, oy: 0 } // what the game is now
