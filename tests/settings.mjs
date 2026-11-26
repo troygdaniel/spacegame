@@ -99,7 +99,10 @@ const open = async (t, press, key, section) => { await press(key); await t.waitF
 
     console.log('D. the other sections open with the keys of the rail');
     await press('DOWN'); check('Down goes to Keys', await t.ev(`${SE}.section`) === 'keys');
-    check('three key boxes and the model box are on the screen, the Deepgram one has the focus', await t.ev("document.querySelectorAll('input').length") === 4 && await t.ev("document.activeElement === document.querySelectorAll('input')[0]"));
+    check('three key boxes and the model box are on the screen, and none has the keyboard (card space-game-settings-keys-focus: a box takes it on a click, on Enter or when V or C opened Settings for it; the arrows keep moving the tabs)', await t.ev("document.querySelectorAll('input').length") === 4 && await t.ev("document.activeElement === null || document.activeElement.tagName !== 'INPUT'"));
+    await press('DOWN'); check('Down goes on to Listen, and Up comes back to Keys', await t.ev(`${SE}.section`) === 'listen' && (await press('UP'), await t.ev(`${SE}.section`) === 'keys'));
+    await press('ENTER'); check('Enter on the tab starts editing the Deepgram box', await t.ev("document.activeElement === document.querySelectorAll('input')[0]"));
+    await press('ESC'); check('Esc gives the keyboard back and Settings stays', await t.ev("game.scene.isActive('Settings') && document.activeElement.tagName !== 'INPUT'"));
     const k1 = await texts(t);
     ['THESE USE YOUR OWN ACCOUNTS AND MAY COST YOU MONEY', 'DEEPGRAM', 'OPENAI', 'ANTHROPIC', 'no key', 'NPC CHAT', 'PROVIDER', 'Auto: OpenAI'].forEach(w => check('keys shows ' + w, k1.includes(w)));
     check('the note says the keys stay in this browser', k1.includes('stays in this browser'));

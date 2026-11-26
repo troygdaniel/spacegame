@@ -347,7 +347,7 @@ class Settings extends Phaser.Scene {
     this.railDraw();
   }
   makeInput(type, placeholder, max, onEnter) {
-    const el = chatMakeInput(type, placeholder, max, onEnter, () => el.blur()); // Esc in a box leaves the box; a second Esc leaves the screen
+    const el = chatMakeInput(type, placeholder, max, () => { onEnter(); el.blur(); }, () => el.blur()); // Esc in a box leaves the box, and so does Enter once it has done its one thing (save): the arrows are the tabs' again; a second Esc leaves the screen
     el.style.display = 'none'; // update() shows it where it belongs, so it never flashes in the corner
     return el;
   }
@@ -543,7 +543,7 @@ class Settings extends Phaser.Scene {
   // ---------- keys, inputs, closing ----------
   focusFirst() {
     if (this.section !== 'keys') return;
-    if (this.scr && !this.focusKey) return; // the new look (card space-game-settings-keys-focus): a field takes the keyboard only when the player clicks it, presses Enter on the tab, or opened Settings with a field asked for (V or C on the title); arriving on the tab by Up and Down must leave the arrows to the tabs
+    if (!this.focusKey) return; // (card space-game-settings-keys-focus, Troy's batch: in both looks) a field takes the keyboard only when the player clicks it, presses Enter on the tab, or opened Settings with a field asked for (V or C on the title); arriving on the tab by Up and Down must leave the arrows to the tabs, which a field in front of them did not
     const id = this.focusKey === 'chat' ? (CHAT.keys.anthropic && !CHAT.keys.openai ? 'anthropic' : 'openai') : this.focusKey || 'deepgram', el = this.inputs[id];
     this.focusKey = '';
     setTimeout(() => { try { if (el && el.isConnected) el.focus(); } catch (e) { /* focus is a nicety */ } }, 50);

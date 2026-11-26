@@ -195,7 +195,9 @@ check('the same for the Model field', J('document.activeElement === null'));
 g.run(`k2.onKey({ code: 'ArrowDown', repeat: false });`);
 check('and the arrows move the tabs again', J('k2.section') === 'listen');
 g.run(`window.k3 = __set('keys', true); k3.inputs = { deepgram: document.createElement('input') }; document.body.appendChild(k3.inputs.deepgram); k3.focusKey = ''; document.activeElement = null; k3.focusFirst();`); await nap(130);
-check('with the switch off nothing changes: the Keys tab of today still puts the keyboard in the first field as it opens', J('document.activeElement === k3.inputs.deepgram'));
+check('the Keys tab of today (the switch off) follows the same rule: arriving on it takes nothing', J('document.activeElement === null'));
+g.run(`k3.focusKey = 'deepgram'; k3.focusFirst();`); await nap(130);
+check('and a field asked for (V on the title) still gets the keyboard, once', J('document.activeElement === k3.inputs.deepgram') && J('k3.focusKey') === '');
 
 console.log('G. behind the switch');
 g.run(`document.body.children.length = 0; document.body.children.splice(0); CAMP.flags.screens = false; window.__spy = scrSetCreate; window.__made = 0; scrSetCreate = s => { __made++; return __spy(s); }; window.s8 = __set('sound', true); try { Settings.prototype.create.call(s8); } catch (e) { /* today's screen needs Phaser's panel */ }`);
