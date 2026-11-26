@@ -35,7 +35,8 @@ console.log('A. the numbers');
 console.log('B. a raider chasing the carrier');
 {
   g.run(`__setup(1, 'raider', -450, true); __go(2.5);`);
-  check('on Fast (462 px/s) the raider is still on it two seconds in: close, not lost, no line', J('R.lost') !== true && J('campDist(R, C.carrier)') < 760 && J('__lost(C)') === 0, J('campDist(R, C.carrier)'));
+  // re-pinned by card space-game-cruiser-quicker-handling (26 Nov 2026): the cruiser's accel is 340, not 170, so the burn is up to speed sooner and the raider is 762 px behind at 2.5 s where it was 686; still close and not lost, so the bound goes from 760 to 800.
+  check('on Fast (462 px/s) the raider is still on it two seconds in: close, not lost, no line', J('R.lost') !== true && J('campDist(R, C.carrier)') < 800 && J('__lost(C)') === 0, J('campDist(R, C.carrier)'));
   g.run(`__go(4);`);
   check('six seconds into the burn it has fallen behind (past the leash) and has dropped the chase: the ship says "Lost them."', J('campDist(R, C.carrier)') > 650 && J('__lost(C)') === 1 && J('R.seenAt') === null, JSON.stringify(J('[campDist(R, C.carrier), __lost(C), R.lost, R.hold]')));
   g.run(`__go(2);`);

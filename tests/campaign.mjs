@@ -141,7 +141,7 @@ console.log('E. the numbers');
   g.run('C.input.thrust = 0; C.input.brake = true; __run(4)');
   check('S brakes it: under 20 px/s four seconds later', J('Math.hypot(C.carrier.vx, C.carrier.vy)') < 20);
   g.run('__new([], 1); C.carrier.rot = 0; C.input.turn = 1; __run(1)');
-  check('it turns at 1.1 radians a second, heavy', Math.abs(J('C.carrier.rot') - 1.1) < 0.05, J('C.carrier.rot'));
+  check('it turns at 2.2 radians a second, quicker than it was (1.1: card space-game-cruiser-quicker-handling, Troy 26 Nov 2026) and still heavier than the Long Haul\'s 3.6', Math.abs(J('C.carrier.rot') - 2.2) < 0.05, J('C.carrier.rot'));
   // the turrets (card space-game-campaign-turrets): eight on the hull, no other gun; they aim themselves, and fire only while Space is held
   g.run(`window.__shots = 0; window.__bullet0 = campBullet; campBullet = function (C, from, rot, speed, dmg, life, team, ahead, extra) { if (team === 'earth' && extra && extra.pd) __shots++; return __bullet0.apply(null, arguments); }; window.__aim = (hp) => { __new([], 1); C.waves.forEach(w => { w.started = true; }); C.convoys.forEach(v => { v.started = true; }); const u = campSpawn(C, 'gunship', C.carrier.x + 300, C.carrier.y); u.vmax = 0; u.accel = 0; u.nextShot = 1e12; u.hp = u.maxHp = hp || 9000; return u.id; };`);
   g.run('__aim(); C.input.fire = true; __run(3.1); campBullet = __bullet0;');
