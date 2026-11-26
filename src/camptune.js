@@ -21,11 +21,15 @@ const CAMP_TUNE = {
   store: 'longhaul.campaign.tuning',      // the localStorage key: { v: 1, over: { id: value } }
   ver: 1,
   bigStep: 10,                            // Shift with Left or Right: this many steps at once
-  groups: ['ship', 'guns', 'wing', 'foes', 'time', 'view', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
+  groups: ['feel', 'ship', 'guns', 'wing', 'foes', 'time', 'view', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
   rows: [
+    // the cruiser's feel (card space-game-cruiser-feel-sliders; Troy, 26 Nov 2026: he wants to dial the way it flies in, by feel, before anyone guesses numbers): five numbers, each read by the flight every frame, so each is felt at once; the live strip (src/camptunedraw.js) shows these five as sliders over the running battle
+    { id: 'cruiserspeed', group: 'feel', root: 'CAMP', path: 'carrier.speed', min: 60, max: 600, step: 10, unit: 'px/s', when: 'now', holds: 'boostspeed' },   // the top speed (campCarrier: k.speed)
+    { id: 'cruiseraccel', group: 'feel', root: 'CAMP', path: 'carrier.accel', min: 170, max: 900, step: 10, unit: 'px/s a second', when: 'now' },               // the thrust (k.accel)
+    { id: 'cruiserturn', group: 'feel', root: 'CAMP', path: 'carrier.turn', min: 0.3, max: 4, step: 0.1, unit: 'rad/s', when: 'now' },                           // the turn (k.turn)
+    { id: 'boostspeed', group: 'feel', root: 'CAMP', path: 'boost.speed', derive: 'boostspeed', min: 210, max: 1000, step: 10, unit: 'px/s', when: 'now' },       // the boost's top speed in px/s: what the table holds is a multiple of the top speed (CAMP.boost.speed, 1.57: 210 to about 330); the row shows the product and keeps it when the top speed moves
+    { id: 'startview', group: 'feel', root: 'CAMPZOOM', path: 'view.startOver', derive: 'startview', min: 0.2, max: 1, step: 0.005, unit: 'x', when: 'now' },       // the zoom a flight starts at and Backspace goes back to (0.335 today: six presses of minus); the table's startOver is 0 (the presses) until a value is put in it
     // the cruiser
-    { id: 'cruiserspeed', group: 'ship', root: 'CAMP', path: 'carrier.speed', min: 60, max: 600, step: 10, unit: 'px/s', when: 'next' },
-    { id: 'cruiserturn', group: 'ship', root: 'CAMP', path: 'carrier.turn', min: 0.3, max: 4, step: 0.1, unit: 'rad/s', when: 'next' },
     { id: 'shieldsize', group: 'ship', root: 'CAMP', path: 'carrier.shield', min: 30, max: 600, step: 10, unit: 'points', when: 'now' },
     { id: 'shieldmend', group: 'ship', root: 'CAMP', path: 'power.shields.regen', of: 2, min: 0, max: 30, step: 0.5, unit: 'a second', when: 'now' },
     { id: 'emergencyore', group: 'ship', root: 'CAMP', path: 'emergency.ore', min: 0, max: 400, step: 5, unit: 'ore', when: 'now' },                // card space-game-keys2-cruiser: what Emergency shields costs
@@ -117,6 +121,20 @@ function campTuneSlot(row) { // { obj, key } of the row's number (the parent obj
 const campTuneDec = row => { const s = String(row.step || 1), i = s.indexOf('.'); return i < 0 ? 0 : s.length - i - 1; };
 const campTuneRound = (row, v) => +(+v).toFixed(campTuneDec(row) + 3);
 
+// the derived rows (card space-game-cruiser-feel-sliders): a row whose number is not what the table holds. read(): the number the row shows now; put(v, snap): write it into the table (the snapshot's own v, when v is the default and nothing it depends on has moved, puts the table's own number back exactly, so a reset is exact and nothing is rounded into the shipped table).
+//   boostspeed  the boost's top speed in px/s: CAMP.boost.speed is a multiple of the top speed (1.57: 210 to about 330), so the row shows the product, and writing it divides by the top speed. The top speed's row holds it (holds: 'boostspeed'): when the top speed moves, the boost's px/s stays what it was.
+//   startview   the flight's start zoom: the table's view.startOver is 0 (use the presses: six of them, 0.335) or the zoom wanted (src/campzoom.js campZoomDefault)
+const CAMP_TUNE_DERIVE = {
+  boostspeed: {
+    read: () => CAMP.boost.speed * CAMP.carrier.speed,
+    put: (v, s) => { const spd = CAMP.carrier.speed, d = CAMP_TUNE.state.snap && CAMP_TUNE.state.snap.cruiserspeed; CAMP.boost.speed = Math.abs(v - s.v) < 1e-6 && d && Math.abs(spd - d.v) < 1e-9 ? s.raw : v / spd; }
+  },
+  startview: {
+    read: () => (typeof campZoomDefault === 'function' ? campZoomDefault() : 0),
+    put: (v, s) => { CAMPZOOM.view.startOver = Math.abs(v - s.v) < 1e-6 ? (s.raw || 0) : v; }
+  }
+};
+
 // the snapshot: what the table held before any override went in, taken once (so every default is the table's own, whatever a mod or a test did to it before)
 function campTuneSnap() {
   const S = CAMP_TUNE.state; if (S.snap) return S.snap;
@@ -124,7 +142,8 @@ function campTuneSnap() {
   CAMP_TUNE.rows.forEach(row => {
     const sl = campTuneSlot(row); if (!sl) return;
     const v = sl.obj[sl.key];
-    if (campTuneIsFlag(row)) S.snap[row.id] = { v: v === true, arr: null };
+    if (row.derive) S.snap[row.id] = { v: CAMP_TUNE_DERIVE[row.derive].read(), arr: null, raw: v };   // a derived row: the number it shows is worked out from the table (the default is that number at the start), and the table's own number is kept to put back exactly
+    else if (campTuneIsFlag(row)) S.snap[row.id] = { v: v === true, arr: null };
     else if (row.of != null && Array.isArray(v)) S.snap[row.id] = { v: v[row.of], arr: v.slice() };
     else S.snap[row.id] = { v, arr: null };
   });
@@ -140,6 +159,7 @@ const campTuneActive = () => campTuneCount() > 0;
 function campTunePut(row, v) {
   const sl = campTuneSlot(row), s = campTuneSnap()[row.id]; if (!sl || !s) return false;
   if (campTuneIsFlag(row)) { sl.obj[sl.key] = !!v; return true; }
+  if (row.derive) { CAMP_TUNE_DERIVE[row.derive].put(v, s); return true; }
   if (s.arr) { const base = s.arr[row.of]; sl.obj[sl.key] = s.arr.map((x, i) => i === row.of ? v : base ? campTuneRound(row, x * v / base) : x); return true; }
   sl.obj[sl.key] = v; return true;
 }
@@ -148,14 +168,17 @@ function campTuneClamp(row, v) {
   v = Number(v); if (!isFinite(v)) return campTuneDefault(row.id);
   return campTuneRound(row, Math.max(row.min, Math.min(row.max, Math.round(v / row.step) * row.step)));
 }
-const campTuneSame = (row, a, b) => campTuneIsFlag(row) ? !!a === !!b : Math.abs(a - b) < 1e-9;
+const campTuneSame = (row, a, b) => campTuneIsFlag(row) ? !!a === !!b : Math.abs(a - b) < (row.derive ? row.step / 2 : 1e-9); // (a derived row's default is worked out, 329.7 for 330: a value within half a step of it is the default)
 
 function campTuneSet(id, v) {
   const row = campTuneRow(id); if (!row || !campTuneSnap()[id]) return null;
   const val = campTuneClamp(row, v), d = campTuneDefault(id);
-  if (campTuneSame(row, val, d)) delete CAMP_TUNE.state.over[id]; else CAMP_TUNE.state.over[id] = val;
-  campTunePut(row, val); campTuneSave();
-  return val;
+  const same = campTuneSame(row, val, d);
+  if (same) delete CAMP_TUNE.state.over[id]; else CAMP_TUNE.state.over[id] = val;
+  campTunePut(row, same ? d : val);
+  if (row.holds) { const h = campTuneRow(row.holds); if (h) campTunePut(h, campTuneValue(h.id)); } // the top speed moved: the boost's px/s stays what it was
+  campTuneSave();
+  return same ? campTuneRound(row, d) : val;
 }
 function campTuneStep(id, dir, big) {
   const row = campTuneRow(id); if (!row) return null;
@@ -164,7 +187,10 @@ function campTuneStep(id, dir, big) {
 }
 const campTuneReset = id => { const row = campTuneRow(id); return row ? campTuneSet(id, campTuneDefault(id)) : null; };
 function campTuneResetAll() { Object.keys(CAMP_TUNE.state.over).forEach(id => campTuneReset(id)); return campTuneCount(); }
-function campTuneApply() { Object.keys(CAMP_TUNE.state.over).forEach(id => { const row = campTuneRow(id); if (row) campTunePut(row, CAMP_TUNE.state.over[id]); }); }
+function campTuneApply() { // the overrides into the table: the plain rows first, then every derived row (the boost's px/s depends on the top speed, whichever was set first)
+  Object.keys(CAMP_TUNE.state.over).forEach(id => { const row = campTuneRow(id); if (row && !row.derive) campTunePut(row, CAMP_TUNE.state.over[id]); });
+  CAMP_TUNE.rows.filter(r => r.derive && campTuneSnap()[r.id]).forEach(r => campTunePut(r, campTuneValue(r.id)));
+}
 function campTuneRestore() { campTuneSnap(); CAMP_TUNE.rows.forEach(row => campTunePut(row, campTuneDefault(row.id))); } // every row back to the table's own (the overrides are kept: campTuneApply puts them in again)
 
 // how a value reads on the panel: the number in the row's step, with its unit; a switch is ON or OFF
@@ -175,6 +201,14 @@ function campTuneFmt(row, v) {
 }
 const campTuneLabel = row => uiText('camp.ui.tune.row.' + row.id);
 const campTuneWhen = row => uiText('camp.ui.tune.when.' + (row.when || 'now'));
+
+// the cruiser's feel as text (card space-game-cruiser-feel-sliders): the five numbers in one line, as the panel and the live strip show them, so Troy can read them back; nothing leaves the page
+//   campTuneFeelRows()   the five rows, in order; campTuneFeelText()   "Top speed 210 px/s · Thrust 340 · Turn 2.2 rad/s · Boost 330 px/s · Start zoom 0.335"
+const campTuneFeelRows = () => campTuneRows('feel');
+function campTuneFeelText() {
+  const n = id => { const r = campTuneRow(id); return r ? (+campTuneValue(id)).toFixed(campTuneDec(r)) : ''; };
+  return uiText('camp.ui.tune.feel.line', { speed: n('cruiserspeed'), accel: n('cruiseraccel'), turn: n('cruiserturn'), boost: n('boostspeed'), zoom: n('startview') });
+}
 
 // ----- the browser's storage -----
 // A browser a program drives (a boot script, a screenshot tool: navigator.webdriver) has no overrides and keeps none. Node has no localStorage here at all unless a test gives one.
@@ -194,6 +228,7 @@ function campTuneLoad() { // read the saved overrides and put them in; an id thi
     const j = JSON.parse(raw), over = j && j.v === CAMP_TUNE.ver && j.over && typeof j.over === 'object' ? j.over : {};
     campTuneSnap();
     Object.keys(over).forEach(id => { const row = campTuneRow(id); if (!row || !campTuneSnap()[id]) return; const val = campTuneClamp(row, over[id]); if (!campTuneSame(row, val, campTuneDefault(id))) { CAMP_TUNE.state.over[id] = val; campTunePut(row, val); n++; } });
+    if (n) campTuneApply();
   } catch (e) { return 0; }
   return n;
 }
@@ -226,12 +261,13 @@ const campTuneKeepScore = tuned => !tuned;
 
 // ---------- the panel's model (pure: the drawing is src/camptunedraw.js) ----------
 // The list: two action rows (Copy my settings, Reset everything), then each group's heading and rows. A heading is never the highlight. P: { cur, top, msg }.
-//   campTuneItems()                 the list, in order: { kind: 'copy' | 'reset' | 'head' | 'row', group?, row? }
+//   campTuneItems(P)                the list, in order: { kind: 'copy' | 'reset' | 'live' | 'head' | 'row', group?, row? } ('live' only while P.live: the panel was opened in a flight)
 //   campTunePanelNew()              a fresh panel model (the highlight on the first row)
-//   campTunePanelKey(P, code, shift)  a key in the open panel -> { used: true, close, changed, action: '' | 'copy' | 'reset', text, say } (every key is the panel's while it is open; the battle waits)
+//   campTunePanelKey(P, code, shift)  a key in the open panel -> { used: true, close, changed, action: '' | 'copy' | 'reset' | 'live', text, say } (every key is the panel's while it is open; the battle waits)
 const CAMP_TUNE_VIEW = { show: 15 };        // how many lines of the list are on the screen at once; a longer list scrolls with the highlight
-function campTuneItems() {
+function campTuneItems(P) {
   const it = [{ kind: 'copy' }, { kind: 'reset' }];
+  if (P && P.live) it.push({ kind: 'live' });                // in a flight only: the sliders over the running battle (src/camptunedraw.js campTuneLiveOpen)
   CAMP_TUNE.groups.forEach(g => { const rows = campTuneRows(g); if (!rows.length) return; it.push({ kind: 'head', group: g }); rows.forEach(r => it.push({ kind: 'row', row: r })); });
   return it;
 }
@@ -244,7 +280,7 @@ function campTuneKeepSeen(P, items) { // the highlight stays on the screen: the 
   P.top = Math.max(0, Math.min(P.top, Math.max(0, items.length - show)));
 }
 function campTunePanelKey(P, code, shift) {
-  const items = campTuneItems(), res = { used: true, close: false, changed: false, action: '', text: '', say: '' };
+  const items = campTuneItems(P), res = { used: true, close: false, changed: false, action: '', text: '', say: '' };
   if (P.cur >= items.length || items[P.cur].kind === 'head') P.cur = items.findIndex(x => x.kind !== 'head');
   const cur = items[P.cur];
   const move = d => { let i = P.cur; do { i = (i + d + items.length) % items.length; } while (items[i].kind === 'head'); P.cur = i; P.msg = ''; };
@@ -255,6 +291,7 @@ function campTunePanelKey(P, code, shift) {
   else if (code === 'Enter' || code === 'NumpadEnter' || code === 'Space') {
     if (cur.kind === 'copy') { res.action = 'copy'; res.text = campTuneText(); P.msg = res.text ? 'copied' : 'nothing'; }
     else if (cur.kind === 'reset') { const n = campTuneCount(); campTuneResetAll(); res.action = 'reset'; res.changed = n > 0; P.msg = n ? 'reset' : 'nothing'; }
+    else if (cur.kind === 'live') { res.action = 'live'; res.close = true; }                    // the panel closes and the strip comes up over the battle, which runs
     else if (cur.kind === 'row' && campTuneIsFlag(cur.row)) { campTuneStep(cur.row.id, 1, false); res.changed = true; P.msg = ''; }
   } else if (code === 'Backspace' || code === 'Delete') { if (cur.kind === 'row' && campTuneChanged(cur.row.id)) { campTuneReset(cur.row.id); res.changed = true; P.msg = ''; } }
   campTuneKeepSeen(P, items);
