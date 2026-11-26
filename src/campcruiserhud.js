@@ -77,7 +77,7 @@ function campCruiserHudPaint(g, H, C) {
   const hideL = typeof campPageHudHides === 'function' && campPageHudHides('status'); // the page HUD has the shield and hull (card space-game-page-hud): the left plate, its bars and words are not drawn
   ['crShieldL', 'crShieldN', 'crHullL', 'crHullN'].forEach(k => { if (H[k] && typeof H[k].setVisible === 'function' && H[k].visible !== !hideL) H[k].setVisible(!hideL); });
   const hideR = typeof campPageHudHides === 'function' && campPageHudHides('stock'); // the page HUD has the ore and missiles (landing 2)
-  ['crOre', 'crCash', 'crMis', 'crMisWhy', 'crMisKey'].forEach(k => { if (H[k] && typeof H[k].setVisible === 'function' && H[k].visible !== !hideR) H[k].setVisible(!hideR); });
+  ['crOre', 'crCash', 'crMis', 'crMisWhy', 'crMisKey', 'crChipG'].forEach(k => { if (H[k] && typeof H[k].setVisible === 'function' && H[k].visible !== !hideR) H[k].setVisible(!hideR); });
   g.fillStyle(K.color.plate, K.plateAlpha); if (!hideL) g.fillRect(P.x, P.y, P.w, P.h); if (!hideR) g.fillRect(Q.x, Q.y, Q.w, Q.h);
   if (!hideL) [['shield', K.color.shield, 'crShieldN'], ['hull', K.color.hull, 'crHullN']].forEach(([id, col, num], i) => {
     const b = Z.rows[i].bar, d = S[id], w = b.x1 - b.x0, color = d.warn ? K.color.warn : col;

@@ -62,10 +62,13 @@ function camzoomBase(c, zoomNow, fx) {
   return c.out !== null && zoomNow === c.out ? c.base : zoomNow;
 }
 // where a world point is on the screen. A scene with no wheel zoom (the station, the surface) answers as the HUD always worked it out.
+// the camera's scroll as these 1280 by 720 maths want it, and a scroll worked out that way as the camera wants it: the same numbers unless the flight has taken the window's shape (src/fillwindow.js: the world camera is then larger than 1280 by 720 and the old view is its middle)
+const camzoomSX = cam => typeof fillSX === 'function' ? fillSX(cam) : cam.scrollX, camzoomSY = cam => typeof fillSY === 'function' ? fillSY(cam) : cam.scrollY;
+const camzoomPutX = x => typeof fillPutX === 'function' ? fillPutX(x) : x, camzoomPutY = y => typeof fillPutY === 'function' ? fillPutY(y) : y;
 function camzoomZ(s) { return s && s._cz ? s.cameras.main.zoom : 1; }
 function camzoomScreen(s, wx, wy) {
   const cam = s.cameras.main, z = camzoomZ(s);
-  return { x: (wx - cam.scrollX - W / 2) * z + W / 2, y: (wy - cam.scrollY - H / 2) * z + H / 2 };
+  return { x: (wx - camzoomSX(cam) - W / 2) * z + W / 2, y: (wy - camzoomSY(cam) - H / 2) * z + H / 2 };
 }
 
 function camzoomSetup(s) {
@@ -101,7 +104,7 @@ function camzoomFrame(s) {
   c.cur = camzoomEase(c.cur, s.leaving || s.dead ? 1 : CAMZOOM.want, s.game.loop.delta);
   main.setZoom(camzoomCompose(c.base, c.cur)); c.out = main.zoom;
   const z = c.out;
-  if (c.anchor) { const q = camzoomAnchorScroll(c.anchor, z); main.setScroll(q.x, q.y); if (c.cur === CAMZOOM.want) c.anchor = null; } // a zoom about a point (src/campdrag.js): the scroll follows the zoom until it has arrived
+  if (c.anchor) { const q = camzoomAnchorScroll(c.anchor, z); main.setScroll(camzoomPutX(q.x), camzoomPutY(q.y)); if (c.cur === CAMZOOM.want) c.anchor = null; } // a zoom about a point (src/campdrag.js): the scroll follows the zoom until it has arrived
   c.bg.setScroll(main.scrollX, main.scrollY); // the distant bodies drift as they always did, at their own size
   const f = main.fadeEffect; c.ui.setAlpha(f && (f.isRunning || f.isComplete) ? 1 - f.alpha : 1); // a fade of the world takes the HUD with it, as it did with one camera
   // the key cap prompt over the ship or a signal is placed as if the zoom were 1 (src/ui.js, src/poi.js): move it to where that point really is

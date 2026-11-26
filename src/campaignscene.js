@@ -125,7 +125,8 @@ class Campaign extends Phaser.Scene {
     if (typeof campFocusInstall === 'function') campFocusInstall(this); // F glides the camera to the selected ship and follows it (src/campfocus.js)
     if (typeof campDragInstall === 'function') campDragInstall(this); // press and drag pans the flight view and the map, with a RECENTRE mark and the way back (src/campdrag.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
-    this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); }); // no hum left behind when the level ends or the title comes
+    this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); });
+    if (typeof fillRelease === 'function') { const back = () => fillRelease(this); this.events.on('pause', back); this.events.once('shutdown', () => { this.events.off('pause', back); back(); }); } // the ready room at a dock, Settings and every other scene are 1280 by 720: the game goes back to it when this scene pauses or ends, and takes the window again when it runs (fillSync) // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
       this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true, typeof campZoomFloor === 'function' ? campZoomFloor(this.level, this.mi) : 0); CAMZOOM.want = campZoomStart(); camzoomSetup(this); // the view goes out to 0.2 here, or to where this mission's route fits on a long one (campZoomRange, campZoomFloor; the Long Haul's 0.4 is put back below) // every flight starts at the zoom six presses of - reach (campZoomStart); the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
@@ -415,6 +416,7 @@ class Campaign extends Phaser.Scene {
 
   // ----- each frame -----
   update(time, dt) {
+    if (typeof fillSync === 'function') fillSync(this); // the flight takes the window's shape while its switch is on (src/fillwindow.js); nothing is done unless the window or the switch changed
     spaceBackdropTick(this);
     if (typeof campFocusFrame === 'function') campFocusFrame(this, dt); // the camera on the ship that is watched, the label, the cruiser's arrow (src/campfocus.js)
     if (typeof campDragFrame === 'function') campDragFrame(this, dt, campDragFlying(this)); // the view dragged off the cruiser: the way back (a flying key held, the battle over), and its mark
@@ -673,7 +675,7 @@ class Campaign extends Phaser.Scene {
     if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
     if (typeof toastKeep === 'function' && this.toastTop) toastKeep(this, this.toastTop()); // a toast that is up follows the column's end
     if (this.hud.arrow) {
-      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: cam.scrollX, y: cam.scrollY }, W, H, cam.zoom) : null, ar = ar0 && ((ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref)) || (ar0.kind === 'alien' && typeof campPageHudHasFoePill === 'function' && campPageHudHasFoePill(this))) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill), none for the nearest hostile while the hostiles' pill is up (card space-game-edge-pills-position)
+      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, cam.zoom) : null, ar = ar0 && ((ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref)) || (ar0.kind === 'alien' && typeof campPageHudHasFoePill === 'function' && campPageHudHasFoePill(this))) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill), none for the nearest hostile while the hostiles' pill is up (card space-game-edge-pills-position)
       if (!ar) this.hud.arrow.setVisible(false);
       else {
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));

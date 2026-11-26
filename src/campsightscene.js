@@ -15,7 +15,7 @@ function campSightSync(scene) {
   const V = scene.hud.sight, g = V.g, z = cam.zoom > 0 ? cam.zoom : 1; g.clear();
   const pink = typeof slookOn === 'function' && slookOn(); // the new ship look: a hostile mark is pink, red is retired (card space-game-ship-look-d-glyphs)
   const on = scene.mode === 'play' && !scene.mp && !(typeof scene.hudHides === 'function' && scene.hudHides());
-  const arrows = on ? (typeof campPageHudHides === 'function' && campPageHudHides('sight') ? [] : campSightArrows(C, { x: cam.scrollX, y: cam.scrollY }, W, H, z)).concat(typeof campSightFriends === 'function' ? campSightFriends(C, { x: cam.scrollX, y: cam.scrollY }, W, H, z) : []) : [];
+  const arrows = on ? (typeof campPageHudHides === 'function' && campPageHudHides('sight') ? [] : campSightArrows(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, z)).concat(typeof campSightFriends === 'function' ? campSightFriends(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, z) : []) : [];
   const keep = typeof scene.arrowKeep === 'function' ? scene.arrowKeep() : CAMP.nav.arrow.keep; // the places the labels keep out of, as the goal's label does (the gauges, the corner panels, the message band, the key line)
   const its = arrows.map((a, n) => { // the label of each arrow: its words and its size first, so that all of them can be put together
     let t = V.t[n]; if (!t) { t = V.t[n] = scene.add.text(0, 0, '', uiFont(K.font, K.text, { stroke: '#02060d', strokeThickness: 3 })).setOrigin(0.5).setScrollFactor(0).setDepth(K.depth + 1); }

@@ -35,7 +35,7 @@ function slookArcDraw(g, s, u, z) {
   if (!g || !u) return false;
   const gen = s && s.slookGen || 0, seen = s && (s.slookArcs || (s.slookArcs = {})); if (seen && gen && seen[u.id] === gen) return false; if (seen) seen[u.id] = gen; // (once a frame: the ring of a picked ship and the hurt pass both name it)
   const A = SLOOK.arc, f = slookHull(u), Rs = slookMarkR(slookMarkLen(s, u) * z), R = Rs / z, w = A.w / z, cam = s && s.cameras && s.cameras.main;
-  if (cam && s.slookRings) s.slookRings.push({ x: (u.x - (cam.scrollX || 0) - W / 2) * z + W / 2, y: (u.y - (cam.scrollY || 0) - H / 2) * z + H / 2, R: Rs }); // where it is on the screen: the next ship's arc keeps clear of it (slookArcsPaint)
+  if (cam && s.slookRings) s.slookRings.push({ x: (u.x - camzoomSX(cam) - W / 2) * z + W / 2, y: (u.y - camzoomSY(cam) - H / 2) * z + H / 2, R: Rs }); // where it is on the screen: the next ship's arc keeps clear of it (slookArcsPaint)
   g.lineStyle(w, 0xffffff, 0.13); campRing(g, u.x, u.y, R); // the faint full ring behind the arc
   g.lineStyle(w, slookHullColor(f), 1);
   if (f >= 1) campRing(g, u.x, u.y, R); else if (f > 0) g.strokePoints(slookArcPoints(u.x, u.y, R, f), false, false);
@@ -50,7 +50,7 @@ function slookPickMark(g, v, col, z, al, drawn, s) {
 }
 function slookArcsPaint(g, s, z) {
   const C = s && s.camp, cam = s && s.cameras && s.cameras.main; if (!g || !C || !C.ships || !cam) return 0;
-  const K = SLOOKMARK, sx0 = cam.scrollX || 0, sy0 = cam.scrollY || 0, list = []; let n = 0;
+  const K = SLOOKMARK, sx0 = camzoomSX(cam) || 0, sy0 = camzoomSY(cam) || 0, list = []; let n = 0;
   C.ships.forEach(u => {
     if (!slookHurt(u)) return;
     const sx = (u.x - sx0 - W / 2) * z + W / 2, sy = (u.y - sy0 - H / 2) * z + H / 2, Rs = slookMarkR(slookMarkLen(s, u) * z), m = Rs + K.margin;

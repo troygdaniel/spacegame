@@ -33,7 +33,7 @@ function campChargeSync(scene) {
       const ncol = campChargeCss(nl ? slookHullColor(b.hull) : b.color); // the number is the arc's colour in the new look (red is retired: pink under 30 percent)
       if (typeof campLabel === 'function') campLabel(o.t, b.pct + '%', ncol); else { o.t.setText(b.pct + '%'); o.t.setColor(ncol); } // the percentage: only the full bar has it
       const nh = K.number.font * 1.4, ny = nl ? b.y : at - campChargeLook(k, K.line.h, K.bar.h) / 2 / z, tw = o.t.width > 0 ? o.t.width : K.number.font * 0.62 * String(b.pct + '%').length; // (its box on the screen: the text is scaled by 1/z, so its px are the screen's)
-      const side = typeof campChargeNumberSide === 'function' ? campChargeNumberSide({ sx: (b.x - cam.scrollX - W / 2) * z + W / 2, sy: (b.y - cam.scrollY - H / 2) * z + H / 2, ny: (ny - cam.scrollY - H / 2) * z + H / 2, tw, th: nh, off: offPx }, W, H) : 'right'; // not off the edge, not for a ship off the screen
+      const side = typeof campChargeNumberSide === 'function' ? campChargeNumberSide({ sx: (b.x - camzoomSX(cam) - W / 2) * z + W / 2, sy: (b.y - camzoomSY(cam) - H / 2) * z + H / 2, ny: (ny - camzoomSY(cam) - H / 2) * z + H / 2, tw, th: nh, off: offPx }, W, H) : 'right'; // not off the edge, not for a ship off the screen
       if (side && o.side !== side) { o.side = side; o.t.setOrigin(side === 'left' ? 1 : 0, 0.5); } // the right of the bar, or the left of it when the edge would cut it
       o.t.setPosition(b.x + (side === 'left' ? -1 : 1) * offPx / z, ny).setScale(1 / z).setAlpha(k).setVisible(vis && k > 0 && !!side);
     }

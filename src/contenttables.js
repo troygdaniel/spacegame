@@ -626,6 +626,11 @@ const UI_TEXT = {
   'camp.ui.tune.row.baittboats': '1.1 bait wave: torpedo boats',
   'camp.ui.tune.row.baitskiffs': '1.1 bait wave: skiffs',
   'camp.ui.tune.row.pilotleash': "Pilots' chase leash",
+  // Fill the window (card space-game-fill-window-a-flight, content/text/fillwindow.md)
+  'fill.set.on': 'Fill the window: ON',
+  'fill.set.off': 'Fill the window: OFF',
+  'fill.set.said.on': 'Fill the window ON: the flight takes the window\'s shape.',
+  'fill.set.said.off': 'Fill the window OFF: the game keeps its 16:9 shape.',
   'scr.set.row': 'New screens',
   'scr.set.on': 'New screens: ON',
   'scr.set.off': 'New screens: OFF',
