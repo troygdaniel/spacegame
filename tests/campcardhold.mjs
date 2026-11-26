@@ -84,8 +84,8 @@ g.run(`
 // ---- D. Space and the turrets ----
 {
   const s = src('src/campaignscene.js');
-  check('Space is a held-key read of the frame (k.SPACE.isDown), not a press the scene reads: no key handler of the scene says Space, so no card closes on it and the Enter of a card cannot be it', !/'Space'|"Space"|KeyCodes\.SPACE/.test(s) && /inp\.fire = k\.SPACE\.isDown/.test(s));
-  check('the battle does not run under a card: campStep (the turrets, the beams, the rockets) is only called while the mode is play', /if \(this\.mode === 'play' && !C\.result\) \{[\s\S]{0,2200}campStep\(C, /.test(s));
+  check('Space is a held-key read of the frame (k.SPACE.isDown), not a press the scene reads: no key handler of the scene says Space, so no card closes on it and the Enter of a card cannot be it', !/'Space'|"Space"|KeyCodes\.SPACE/.test(s) && /inp\.fire = (cp \? false : )?k\.SPACE\.isDown/.test(s)); // (in a fighter, card space-game-fly-fighter-l1-scene, the cruiser's fire is false: Space is the fighter's gun)
+  check('the battle does not run under a card: campStep (the turrets, the beams, the rockets) is only called while the mode is play', /if \(this\.mode === 'play' && !C\.result\) \{[\s\S]{0,3800}campStep\(C, /.test(s)); // (3800: the fighter's stick adds lines before the step, card space-game-fly-fighter-l1-scene)
   g.run(`__new(); __foe('gunship', 400, 0); const before = C.ships.map(u => u.hp).join();`);
   check('the turrets fire on `input.fire` alone (the Space the player holds): with it off and a held press, nothing fires', J('C.input.fire') === false && J('C.rockets.length') === 0);
 }

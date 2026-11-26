@@ -44,6 +44,7 @@ function scrKeysModel(ids) {
   if (!room) {
     SCRKEYS.groups.forEach(g => {
       const rows = g.rows.map(([w, caps]) => { const c = scrKeysChip(caps); return c ? { chips: [c], t: uiText('scr.keys.r.' + w) } : null; }).filter(Boolean); // a key the table has not (the cruiser list when its panel is off) has no row
+      if (g.id === 'fly' && typeof campCockpitOn === 'function' && campCockpitOn()) { const cc = scrKeysChip(['cockpit']); if (cc) rows.push({ chips: [cc], t: uiText('scr.keys.r.cockpit') }); } // C takes a pilot's stick (card space-game-fly-fighter-l1-scene): its line is on the page only while the switch is on
       if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows });
     });
     if (typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length && typeof campDebugOn === 'function' && campDebugOn()) { // the tune kit (?debug=1): its keys are listed from its own table, as on the old page

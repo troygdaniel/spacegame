@@ -225,7 +225,7 @@ check('6 the contact sentence is a hide of the page HUD (contact) and nothing el
 console.log('I. option D (card space-game-page-hud-3, Troy, 25 Nov 2026)');
 g.run(`CAMP.flags.pagehud = true; CAMP.flags.pagedigit = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.P = campPanelNew(); campTcornerLook(P, 0); window.S = __scene(); campPageHudSync(S, 20000);`);
 const D1 = J(`(() => { const R = S.pageHud, kids = x => x.children.map(c => c._cls.split(' ')[0]); return { top: kids(R.ship.el), row1: kids(R.ship.el.children[0]), row2: kids(R.fleet.el), cruiser: R.ship.el.children.length, label: R.ship.label }; })()`);
-check('8 option D: the left panel is two thin rows with a hairline between (and, since card space-game-cruiser-boost-flames, a thin Boost row between them, and since card space-game-cruiser-all-long-haul-effects a small Speed row under that): row 1 the Q chip with the Shields and Hull meters side by side (each a word and a track); row 2 the W chip, the pilots\' rings, a divider, the E chip, the ships\' rings, and the Enter hint at its end', D1.top.join() === 'ph-row,ph-row,ph-row,ph-hr,ph-row' && D1.row1.join() === 'ph-k,ph-m,ph-m' && D1.row2.join() === 'ph-k,ph-grp,ph-sep,ph-k,ph-grp,ph-g' && D1.label === undefined, JSON.stringify(D1));
+check('8 option D: the left panel is two thin rows with a hairline between (and, since card space-game-cruiser-boost-flames, a thin Boost row between them, and since card space-game-cruiser-all-long-haul-effects a small Speed row under that, and since card space-game-fly-fighter-l1-scene a line for the cruiser he left, hidden unless he flies a fighter): row 1 the Q chip with the Shields and Hull meters side by side (each a word and a track); row 2 the W chip, the pilots\' rings, a divider, the E chip, the ships\' rings, and the Enter hint at its end', D1.top.join() === 'ph-row,ph-row,ph-row,ph-row,ph-hr,ph-row' && D1.row1.join() === 'ph-k,ph-m,ph-m' && D1.row2.join() === 'ph-k,ph-grp,ph-sep,ph-k,ph-grp,ph-g' && D1.label === undefined, JSON.stringify(D1));
 check('8 the style: the rows and the rings are the mock\'s (the small ring 1.55em, the open one 2.4em; the digit and the name only while open; a divider between the groups)', /\.ph-g\s*\{[^}]*--s:\s*1\.55em/.test(css2) && /\.ph-g\.open\s*\{[^}]*--s:\s*2\.4em/.test(css2) && /\.ph-g:not\(\.open\) small\s*\{\s*display:\s*none/.test(css2) && /\.ph-sep\s*\{[^}]*width:\s*1px/.test(css2) && /\.ph-ship\s*\{[^}]*flex-direction:\s*column/.test(css2));
 const ring0 = J(`(() => { const R = S.pageHud; return { pil: R.fleet.pilots.map(g => [g.el._cls, g.text._text, g.under._text]), pbox: R.fleet.pBox._cls, ships: R.fleet.ships.length, sbox: R.fleet.sBox._cls, e: R.fleet.ekey._text, w: R.fleet.pkey._text }; })()`);
 check('9 at rest: three small pilot rings with their digits inside (Troy: the key is always on the screen) and nothing under them, the W and E chips from the table; the rings are not open', ring0.pil.map(x => x[1]).join('') === '123' && ring0.pil.every(x => x[2] === '' && !/open/.test(x[0])) && !/open/.test(ring0.pbox) && !/open/.test(ring0.sbox) && ring0.w === J(`campCornerCap('who')`) && ring0.e === J(`campCornerCap('friendlies')`) && ring0.e !== ring0.w);
@@ -758,6 +758,29 @@ console.log('U. the sell-ore goal\'s second line: "N ore aboard · dock to sell"
   const dom = J(`(() => { const G = SU.pageHud.goal; return { hint: G.hint.style.display, key: G.hintKey._ph.text, keyShown: G.hintKey._ph.display, text: G.hintText._ph.text, cls: G.hint._ph.cls }; })()`);
   g.run(`CAMP.flags.pagehud = false;`);
   check('the panel shows it: the chip with the key, then the words, in the warm colour, as one flex line (class ph-withkey)', dom.hint === '' && dom.key === J(`campKeyVar('yardkey')`) && dom.keyShown === '' && dom.text === '260 ore aboard · dock to sell' && /ph-warn/.test(dom.cls) && /ph-withkey/.test(dom.cls) && /\.ph-hint\.ph-withkey \{ display: flex/.test(src('src/camppagehud.css')), JSON.stringify(dom));
+}
+console.log('W. the cockpit (card space-game-fly-fighter-l1-scene): the fighter\'s bars, the cruiser line, the C chip');
+{
+  g.run(`CAMP.flags.pagehud = true; CAMP.flags.hints = true; CAMP.flags.cockpit = false; window.CW = campNew(1, [], { seed: 5, mission: 0 }); CW.god = true; CW.t = 1000; campStep(CW, 2); CW.ships = CW.ships.filter(u => u.team !== 'alien' && u.team !== 'neutral');`);
+  check('the switch off: no C chip, the cruiser\'s own bars (a shield bar) and no cruiser line', J(`campPageHudFirst(CW).items.some(x => x.id === 'cockpit')`) === false && J('campPageModel(CW).ship.shield !== null') === true && J('campPageModel(CW).ship.cruiser') === null);
+  g.run(`CAMP.flags.cockpit = true;`);
+  check('on, a pilot out: the C chip, last, with the key from the table and the word Cockpit', J(`(() => { const it = campPageHudFirst(CW).items; return it[it.length - 1].id + '|' + it[it.length - 1].key + '|' + it[it.length - 1].word; })()`) === 'cockpit|C|Cockpit');
+  g.run(`campCockpitTake(CW); CW.by[CW.cockpit.id].hp = CW.by[CW.cockpit.id].maxHp / 4; CW.shield = 100; CW.carrier.hp = 540;`);
+  const M = J('campPageModel(CW).ship');
+  check('flying a fighter: no shield bar (a fighter has none), the hull bar is the fighter\'s (a quarter), and the cruiser is a small line: Cruiser 540/600 · shield 100', M.shield === null && near(M.hull.frac, 0.25, 1e-9) && M.cruiser && M.cruiser.text === 'Cruiser 540/600 · shield 100' && M.cruiser.warn === false, JSON.stringify(M));
+  check('the chip says Hand back while he holds the stick', J(`(() => { const it = campPageHudFirst(CW).items; return it[it.length - 1].word; })()`) === 'Hand back');
+  g.run(`CW.carrier.hp = 100;`);
+  check('the cruiser line turns to the warning colour when its hull is low', J('campPageModel(CW).ship.cruiser.warn') === true);
+  g.run(`CW.cockpit.boost.en = 25; CW.by[CW.cockpit.id].vx = 200; CW.by[CW.cockpit.id].vy = 0;`);
+  check('the boost meter is the fighter\'s store (25 of 100, shown) and the speed row its speed (200)', near(J('campPageModel(CW).ship.boost.frac'), 0.25, 1e-9) && J('campPageModel(CW).ship.boost.show') === true && J('campPageModel(CW).ship.speed.n') === 200);
+  g.run(`window.SW = __scene(); SW.camp = CW; campPageHudSync(SW, 0);`);
+  const dom = J(`(() => { const S = SW.pageHud.ship; return { shield: S.shield.el.style.display, hull: S.hull.fill.style.width, cr: S.cruiser._ph.text, crShown: S.cruiser._ph.display, cls: S.cruiser._ph.cls }; })()`);
+  check('the panel: the shield bar is hidden, the hull fill is a quarter, the cruiser line is written and shown (class warn)', dom.shield === 'none' && dom.hull === '25%' && dom.cr === 'Cruiser 100/600 · shield 100' && dom.crShown === '' && /warn/.test(dom.cls), JSON.stringify(dom));
+  g.run(`campCockpitGive(CW, 'hand'); campPageHudSync(SW, 5000);`);
+  const dom2 = J(`(() => { const S = SW.pageHud.ship; return { shield: S.shield.el._ph.display, cr: S.cruiser._ph.display }; })()`);
+  check('handed back: the shield bar is back and the cruiser line is gone', dom2.shield === '' && dom2.cr === 'none', JSON.stringify(dom2));
+  g.run(`CAMP.flags.cockpit = false; CAMP.flags.pagehud = false;`);
+  check('the style: one line for the cruiser he left, in the muted colour, the warning colour when it warns (no new colour)', /\.ph-cruiser \{[^}]*var\(--ph-mute\)/.test(src('src/camppagehud.css')) && /\.ph-cruiser\.warn \{ color: var\(--ph-warn\)/.test(src('src/camppagehud.css')));
 }
 check('no image files, no libraries: no img tag, no data: URL, no script src in the HUD code', !/<img|data:image|createElement\(['"]script/.test(src('src/camppagehud.js')));
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));

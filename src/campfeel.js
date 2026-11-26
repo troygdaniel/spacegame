@@ -54,8 +54,8 @@ function campFeelFlameParts(x, y, rot, len, wid, flick, boost) {
 }
 // THE SHIP THE PLAYER FLIES (Troy, 26 Nov 2026, through ORCH: he may fly a pilot's fighter instead of a faster cruiser): every effect of the feel (this file and src/campfeelfx.js) attaches to the unit this answers, by its drawn size and its engines, never to
 // the cruiser by name. The cruiser today; the one place that changes when the player flies another ship. Its top speed is campFeelTop.
-const campFeelShip = C => (C && C.carrier) || null;
-const campFeelTop = (C, u) => !u ? 0 : u.kind === 'carrier' || u === (C && C.carrier) ? CAMP.carrier.speed * (CAMP.boost && CAMP.boost.speed > 1 ? CAMP.boost.speed : 1) : (u.vmax > 0 ? u.vmax : 0); // the fastest it goes: the cruiser's boost top, else the ship's own vmax
+const campFeelShip = C => (typeof campEye === 'function' ? campEye(C) : C && C.carrier) || null; // the cruiser, or the fighter whose stick he holds (card space-game-fly-fighter-l1: campEye, src/campcockpit.js)
+const campFeelTop = (C, u) => !u ? 0 : u.cockpit ? CAMP.cockpit.boost : u.kind === 'carrier' || u === (C && C.carrier) ? CAMP.carrier.speed * (CAMP.boost && CAMP.boost.speed > 1 ? CAMP.boost.speed : 1) : (u.vmax > 0 ? u.vmax : 0); // the fastest it goes: the cruiser's boost top, else the ship's own vmax
 const campFeelEngines = u => (u && CAMPFEEL.nozzles[u.kind]) || CAMPFEEL.nozzles.default;   // the engines of this ship, as shares of its drawn length
 // where the nozzles are (pure): the ship u, drawn dw px long
 function campFeelNozzles(u, dw) {
@@ -130,7 +130,7 @@ const campFeelLerp = z => CAMPFEEL.cam.lag + (CAMPFEEL.cam.boostLag - CAMPFEEL.c
 function campFeelCamera(scene) {
   const c = scene && scene._cz, cam = scene && scene.cameras && scene.cameras.main, C = scene && scene.camp; if (!c || !cam || !C) return;
   const st = scene.feel || (scene.feel = { z: 0, k: 1, punch: 0, launched: false }), live = campFeelOn() && !scene.dead && !scene.leaving && !c.anchor, dt = scene.game && scene.game.loop ? scene.game.loop.delta : 16.7;
-  st.z = campFeelCamStep(st.z, live && !!(C.boost && C.boost.on), dt);
+  st.z = campFeelCamStep(st.z, live && !!(campBoostHolder(C) && campBoostHolder(C).on), dt); // (the boost of the ship he flies: the fighter's while he holds its stick)
   if (live && !st.launched && scene.mode === 'play' && C.t < 1500) { st.launched = true; st.punch = 1; } // the launch punch (src/campfeelfx.js campFxPunchK; the Long Haul's feelLaunch): the first frames of the flight, once for a scene start
   if (st.punch > 0) st.punch = live && typeof CAMPFX === 'object' ? Math.max(0, st.punch - dt / CAMPFX.punch.ms) : 0;
   const k = campFeelZoomK(st.z) * (st.punch > 0 && typeof campFxPunchK === 'function' ? campFxPunchK(st.punch) : 1);

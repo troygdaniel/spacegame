@@ -102,7 +102,7 @@ console.log('E. the flames');
   check('a ship that is lost has none', J('slookFlameSpecs({ id: "c", kind: "carrier", hp: 0, x: 0, y: 0, rot: 0 }, 98, { th: 1, boost: 1, flare: 1 }).length') === 0);
   const fx = src('src/shiplookfx.js'), tex = fx.slice(fx.indexOf('const fm = SLOOKFX.flame; mk('), fx.indexOf('mk(kl.keys.ring1'));
   check('pale blue and white, never gold or amber: the texture is the friend\'s blue and white; one stretched sprite each (an image set to a size), no particles', /friendHi/.test(tex) && /ffffff/.test(tex) && !/protect|ffc857|ffd37a|gold|amber|emit/i.test(tex) && /setDisplaySize\(e\.len, e\.wid\)/.test(fx) && !/emitter|particles/.test(fx.slice(fx.indexOf('function slookFlameSpecs'), fx.indexOf('// ---- the kill ----'))));
-  check('the cruiser has no plain trail while the flames are drawn: the frame returns before the trail for a carrier, and the flames hide with the switch off', /if \(u\.kind === 'carrier'( \|\| [^\n]*)?\) \{/.test(fx) && /\(S\.flames \|\| \[\]\)\.forEach\(f => f\.setVisible\(false\)\)/.test(fx));
+  check('the cruiser has no plain trail while the flames are drawn: the frame returns before the trail for a carrier, and the flames hide with the switch off', /if \((u\.kind === 'carrier'( \|\| [^\n]*)?|typeof campFeelShip === 'function' \? u === campFeelShip\(C\) : u\.kind === 'carrier')\) \{/.test(fx) && /\(S\.flames \|\| \[\]\)\.forEach\(f => f\.setVisible\(false\)\)/.test(fx));
 }
 
 console.log('F. the page HUD');

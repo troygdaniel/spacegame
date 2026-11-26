@@ -24,5 +24,6 @@ function campBoostStep(C, th, dt) {
   S.fx += ((ok ? 1 : 0) - S.fx) * Math.min(1, dt * 10);
   return { top: S.top, acc: ok ? B.accel : 1 };
 }
-const campBoostStatus = C => { const S = C && C.boost, B = CAMP.boost; return { frac: S ? Math.max(0, Math.min(1, S.en / B.max)) : 1, on: !!(S && S.on), locked: !!(S && S.locked) }; };
-const campFlameState = C => { const S = C && C.boost; return { th: S ? S.th : 0, boost: S ? S.fx : 0, flare: S ? S.flare : 0 }; };
+const campBoostHolder = C => (C && C.cockpit && C.cockpit.boost) || (C && C.boost) || null; // the store of the ship he flies: the fighter's while he holds its stick (card space-game-fly-fighter-l1, src/campcockpit.js), else the cruiser's
+const campBoostStatus = C => { const S = campBoostHolder(C), B = C && C.cockpit && C.cockpit.boost ? CAMP.cockpit.store : CAMP.boost; return { frac: S ? Math.max(0, Math.min(1, S.en / B.max)) : 1, on: !!(S && S.on), locked: !!(S && S.locked) }; };
+const campFlameState = C => { const S = campBoostHolder(C); return { th: S ? S.th : 0, boost: S ? S.fx : 0, flare: S ? S.flare : 0 }; };
