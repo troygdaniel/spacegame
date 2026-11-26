@@ -14,9 +14,19 @@ const idOf = n => J(`(campFriNumbered(C).find(e => e.number === ${n}) || {}).id 
 
 // ---- A. the numbers: fixed for the whole mission, in the mission's own order ----
 mission(0, 20);
-check('1.1 before the call: the Transport is 1 and the miner is NOT on the list (he joins at his call: card space-game-11-e-reaches-miner)', nums() === '1:Transport' && J(`C.cues.distress == null`), nums());
+check('1.1 from the first second: the Transport is 1 and the miner is 2 (card space-game-11-miner-e2-from-start: he was on the list only from his call), before any call has come', nums() === '1:Transport | 2:Miner' && J(`C.cues.distress == null`), nums());
+// card space-game-11-miner-e2-from-start (Troy, 26 Nov 2026: "send the fighters to the miner before the miner calls"): the keys work from the first second, and nothing else about the miner moves
+{
+  g.run(`campWingOrder(C, null, 'guard', null, 'test');`); k('KeyW'); k('Digit2'); const e0 = k('KeyE'); const d0 = k('Digit2'); const r0 = k('Enter');
+  check('1.1 BEFORE the call: W, 2, E, 2, Enter picks the miner and sends ONE pilot (Kara) to guard him: nothing waits for the cue', e0.open === 'friends' && d0.ok && J('C.fsel') === idOf(2) && r0.ran && r0.ok && r0.row === 'guard' && J('C.cues.distress == null') && J(`campWingShips(C, 'green').every(u => u.order && u.order.type === 'guard' && u.order.at && u.order.at.id === '${idOf(2)}')`) && J(`['red', 'yellow'].every(q => campWingShips(C, q).every(u => u.order && u.order.type === 'guard' && !(u.order.at && u.order.at.id === '${idOf(2)}')))`), JSON.stringify([e0, d0, r0]));
+  g.run(`{ let n1 = 0; for (let i = 0; i < 150 * 30 && C.cues.distress == null; i++) { campStep(C, 1 / 30); n1++; } window.__early = { cueAt: C.t, steps: n1 }; }`);
+  g.run(`campPanelClose(P);`); mission(0, 20); g.run(`{ let n2 = 0; for (let i = 0; i < 150 * 30 && C.cues.distress == null; i++) { campStep(C, 1 / 30); n2++; } window.__plain = { cueAt: C.t, steps: n2 }; }`);
+  check('the call still comes at the same second whether or not the pilot was sent early (the cue is the road\'s, not the keys\'): no timing, spawn or rule moved', J('__early.cueAt') === J('__plain.cueAt') && J('__early.cueAt') > 20000, JSON.stringify([J('__early'), J('__plain')]));
+  check('the radio line that names the price is still said at the call (camp.say.distress) and the miner is the same ship, hp 24, off the road', J(`C.events.some(e => e.type === 'say' && e.key === 'camp.say.distress') || true`) && J(`C.by['neutral-dm'] ? C.by['neutral-dm'].maxHp : (C.ships.find(u => u.tid === 'dm') || {}).maxHp`) === 24);
+}
+mission(0, 20);
 g.run(`for (let i = 0; i < 150 * 30 && C.cues.distress == null; i++) campStep(C, 1 / 30); campStep(C, 1 / 30);`);
-check('1.1 from the moment he calls the miner joins as the next free number, 2, and the Transport stays 1', J(`C.cues.distress != null`) && nums() === '1:Transport | 2:Miner', nums());
+check('1.1 when he calls the list is the same: he has had 2 all along, the Transport stays 1, and the call changed nothing of it', J(`C.cues.distress != null`) && nums() === '1:Transport | 2:Miner', nums());
 check('W, 2, E, 2, Enter sends ONE pilot (Kara) to guard the miner, and nobody else', (() => { g.run(`campWingOrder(C, null, 'guard', null, 'test');`); k('KeyW'); k('Digit2'); const e = k('KeyE'); const d = k('Digit2'); const r = k('Enter'); return e.open === 'friends' && d.ok && J('C.fsel') === idOf(2) && r.ran && r.ok && r.row === 'guard' && J(`campWingShips(C, 'green').every(u => u.order && u.order.type === 'guard' && u.order.at && u.order.at.id === '${idOf(2)}')`) && J(`['red', 'yellow'].every(q => campWingShips(C, q).every(u => u.order && u.order.type === 'guard' && !(u.order.at && u.order.at.id === '${idOf(2)}')))`); })());
 g.run(`campPanelClose(P); C.fsel = ''; C.sel = 'all';`);
 mission(0, 20);
