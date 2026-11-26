@@ -27,7 +27,7 @@ function scrView(R, parent, n, ctx) { // ctx (optional): { click(id) } for a til
   } else if (n.k === 'text') {
     e = E('span', 'sc-' + n.cls + tone); scrHostSet(e, 'text', n.text); if (n.w) scrViewSet(e, { width: n.w + 'em', flex: 'none' }); return e;
   } else if (n.k === 'chip') {
-    return scrHostChip(R, parent, { id: n.id, k: n.cap });
+    const c = scrHostChip(R, parent, { id: n.id, k: n.cap }); if (n.ghost && c) scrViewSet(c, { visibility: 'hidden' }); return c; // ghost: takes its room and is not seen
   } else if (n.k === 'pill') {
     e = E('span', 'sc-pill' + tone);
     if (n.lead) { const b = scrHostEl(R, 'b', n.leadTone ? 'sc-' + n.leadTone : '', e); scrHostSet(b, 'text', n.lead); }
