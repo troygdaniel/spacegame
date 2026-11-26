@@ -56,7 +56,7 @@ check('with no zoom given it is as it always was (1)', JSON.stringify(arrowAt(un
 const angOK = z => { const a = arrowAt(z, carrier, scroll), p = scr(z, [0, 0], scroll); return a && near(a.angle, Math.atan2(p.y - a.y, p.x - a.x), 1e-9) && (a.x === 40 || a.x === 1240 || a.y === 40 || a.y === 680); };
 check('the arrow points at where the goal really is on the screen (camzoomScreen\'s formula), on the edge, at 1, 1.6 and 3', [1, 1.6, 3].every(angOK));
 check('a goal seen at one zoom and lost at the next is the same line either way: the direction does not depend on the zoom for a point on the centre line', (() => { const a = arrowAt(1, carrier, scroll), b = arrowAt(2.5, carrier, scroll); return a && b && near(a.angle, b.angle, 1e-9) && near(a.dist, b.dist); })());
-check('the scene gives the arrow the camera\'s zoom', /campNavArrow\(C, \{ x: camzoomSX\(cam\), y: camzoomSY\(cam\) \}, W, H, cam\.zoom\)/.test(sc));
+check('the scene gives the arrow the camera\'s zoom', /fillAsk\(campNavArrow, C, cam, cam\.zoom\)/.test(sc));
 console.log('the map: the view');
 const F = J('CAMPMAP.frame'), R = J('CAMPZOOM.map');
 const base = J(`campMapFit(campMapBounds(1, false), CAMPMAP.frame)`), fitOf = (z, view, z0, focus) => J(`campMapView(${JSON.stringify(base)}, CAMPMAP.frame, ${z}, ${JSON.stringify(view)}, ${z0}, ${JSON.stringify(focus)})`);

@@ -29,6 +29,7 @@
 //     campCornerLineLayout(segs, T0, measure)   where a line's chips and words stand: { chips: [{ x, cap, ok }], words: [{ x, text, ink, bold, size }] } (measure(text, segment) gives a width in px)
 //     campCornerFit(text, room, width)   the text cut short with an ellipsis until width(text) is at most room px (the selection beside a title: card space-game-layout-align)
 const CAMP_CORNERS = []; // the registered corners, in the order they were added
+const CAMP_CORNER_SHIFTX = {}; // pos -> px across: with the page HUD on in a window the flight has filled (src/fillwindow.js), its panels are at the window's corners, outside the 1280 by 720 safe area: the left corners' rows go that far left, the right corner's that far right, so a list still opens under its panel (card space-game-fill-window-clipping)
 const CAMP_CORNER_SHIFT = {}; // pos -> px: a corner's row (and what hangs under it) is moved down this far: the page HUD (src/camppagehud.js, card space-game-page-hud) puts a panel where the rows were, and the lists and details open under it
 const CAMP_CORNER_STATE = new WeakMap(); // C -> { open: { id: { at, ms } }, mem: { id: {} } }: a new C (the next mission) starts with every corner closed
 function campCornerAdd(def) { const i = CAMP_CORNERS.findIndex(d => d.id === def.id); if (i >= 0) CAMP_CORNERS[i] = def; else CAMP_CORNERS.push(def); return def; }
@@ -68,7 +69,7 @@ function campCornerSlide(id, Ns, ext) {
 const campCornerKind = it => it.kind || (it.share !== undefined ? 'bar' : 'text');
 const campCornerItemsH = items => (items || []).reduce((h, it) => h + (CAMP.corner.item[campCornerKind(it)] || CAMP.corner.item.text), 0);
 function campCornerGeom(pos, itemsH, dx, dy, span) { // the title row and the details' frame: the row sits at the corner, the details open away from the screen's edge (all four open downward since card space-game-keys5-corners); dy: the row is slid down (the row above has its details open)
-  const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0), th = K.title.h, ty = (a.dir < 0 ? a.y - th : a.y) + (dy || 0) + (CAMP_CORNER_SHIFT[pos] || 0), dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
+  const K = CAMP.corner, a = K.at[pos], x = a.x + (dx || 0) + (CAMP_CORNER_SHIFTX[pos] || 0), th = K.title.h, ty = (a.dir < 0 ? a.y - th : a.y) + (dy || 0) + (CAMP_CORNER_SHIFT[pos] || 0), dh = itemsH > 0 ? itemsH + K.pad * 2 : 0;
   return { title: { x: x + (span ? span[0] : 0), y: ty, w: span ? span[1] : K.w, h: th }, det: dh ? { x, y: a.dir < 0 ? ty - K.gap - dh : ty + th + K.gap, w: K.w, h: dh } : null };
 }
 function campCornerFit(text, room, width) { // text cut short with an ellipsis until width(text) fits room (width: a function giving a text's width in px); a text that fits is returned as it is

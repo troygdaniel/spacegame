@@ -121,7 +121,7 @@ function campFocusFrame(s, dt) {
 // where the cruiser's arrow sits: the point of the screen's edge (inside pad px of it) on the line from the middle of the screen to the cruiser, and the angle it points at; null when the cruiser is on the screen
 // (cx, cy: the middle of the view in the world, z: the zoom, (px, py): the cruiser)
 function campFocusEdge(cx, cy, z, px, py, pad) {
-  const dx = (px - cx) * z, dy = (py - cy) * z, hx = W / 2 - pad, hy = H / 2 - pad;
+  const dx = (px - cx) * z, dy = (py - cy) * z, hx = W / 2 + fillOx() - pad, hy = H / 2 + fillOy() - pad;
   if (Math.abs(dx) <= hx && Math.abs(dy) <= hy) return null;
   const k = Math.min(hx / (Math.abs(dx) || 1e-9), hy / (Math.abs(dy) || 1e-9));
   return { x: W / 2 + dx * k, y: H / 2 + dy * k, a: Math.atan2(dy, dx) };

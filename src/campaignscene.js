@@ -128,6 +128,7 @@ class Campaign extends Phaser.Scene {
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); });
  // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
+      this.fillUi = true; // this scene can take the window's shape (src/fillwindow.js): its HUD objects follow the HUD camera's scroll (src/camzoom.js camzoomSort)
       this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true, typeof campZoomFloor === 'function' ? campZoomFloor(this.level, this.mi) : 0); CAMZOOM.want = campZoomStart(); camzoomSetup(this); if (typeof fillSync === 'function') fillSync(this); // the view goes out to 0.2 here, or to where this mission's route fits on a long one (campZoomRange, campZoomFloor; the Long Haul's 0.4 is put back below) // every flight starts at the zoom six presses of - reach (campZoomStart); the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
@@ -647,9 +648,9 @@ class Campaign extends Phaser.Scene {
   flowHud(bar) {
     const C = this.camp, H = this.hud, ids = ['wave', 'obj', 'earth', 'repair', 'post'];
     if (typeof campHudFlow !== 'function') return;
-    const top = this.pageHudStack > 0 ? this.pageHudStack + CAMP.hud.pageGap : 0, gh = top > 0; // a goal panel of the page HUD is up (pageHudStack, src/camppagehud.js): it has the wave and goal lines: they take no place in the column, and what is left of it starts under that panel (card space-game-goal-panel-hides-text)
+    const gh = this.pageHudStack > 0, stack = gh ? this.pageHudStack - campPageHudSafeTop() : 0, top = gh ? stack + CAMP.hud.pageGap : 0; // a goal panel of the page HUD is up (pageHudStack, src/camppagehud.js): it has the wave and goal lines: they take no place in the column, and what is left of it starts under that panel (card space-game-goal-panel-hides-text)
     const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && H[id].visible !== false && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
-    if (top > 0 && !items.some(i => i.show)) F.bottom = this.pageHudStack; // nothing left in the column: it ends where the panel does, as it did
+    if (gh && !items.some(i => i.show)) F.bottom = stack; // nothing left in the column: it ends where the panel does, as it did
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
     this.hudBelow = F.bottom;
@@ -662,7 +663,7 @@ class Campaign extends Phaser.Scene {
     const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
     if (H.mother && H.mother.text && this.pageHudOn !== true) b = Math.max(b, col + 20 + 12); // (the mothership's bar is in the hostiles panel while the page HUD is up)
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
-    return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
+    return this.pageHudStack > 0 ? Math.max(b, this.pageHudStack - campPageHudSafeTop()) : Math.max(b, 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js; its end is measured from the canvas's top, the column from the safe area's)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
   toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
@@ -690,12 +691,12 @@ class Campaign extends Phaser.Scene {
     if (this.flowHud) this.flowHud(bar); // (a stand-in scene in a test has none) the lines under the gauges, each where the lines above it end (and Earth's bar under its line)
     if (typeof toastKeep === 'function' && this.toastTop) toastKeep(this, this.toastTop()); // a toast that is up follows the column's end
     if (this.hud.arrow) {
-      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? campNavArrow(C, { x: camzoomSX(cam), y: camzoomSY(cam) }, W, H, cam.zoom) : null, ar = ar0 && ((ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref)) || (ar0.kind === 'alien' && typeof campPageHudHasFoePill === 'function' && campPageHudHasFoePill(this))) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill), none for the nearest hostile while the hostiles' pill is up (card space-game-edge-pills-position)
+      const cam = this.cameras && this.cameras.main, ar0 = cam && typeof campNavArrow === 'function' && !this.mp ? fillAsk(campNavArrow, C, cam, cam.zoom) : null, ar = ar0 && ((ar0.ref && typeof campPageHudHasPill === 'function' && campPageHudHasPill(this, ar0.ref)) || (ar0.kind === 'alien' && typeof campPageHudHasFoePill === 'function' && campPageHudHasFoePill(this))) ? null : ar0; // a stand-in scene in a test has no camera; ar: no arrow for a ship you protect that has its pill at the edge of the page (card space-game-page-hud-friend-edge-pill), none for the nearest hostile while the hostiles' pill is up (card space-game-edge-pills-position)
       if (!ar) this.hud.arrow.setVisible(false);
       else {
         this.hud.arrow.setVisible(true).setText(uiText('camp.nav.arrow', { name: ar.name, km: campNavKm(ar.dist) }));
         const want = (px, py, an) => ({ x: px - Math.cos(an) * 64, y: py - Math.sin(an) * 28 }), aw = this.hud.arrow.width || 160, ah = this.hud.arrow.height || 18; // the label stands back from the arrow, a little off its line
-        const sp = typeof campEdgeSpread === 'function' ? campEdgeSpread([{ x: ar.x, y: ar.y, angle: ar.angle, w: aw, h: ah, want }], { keep: this.arrowKeep(), W, H, m: CAMP.nav.arrow.margin, tri: 13, boxes: this.hud.sight && this.hud.sight.boxes ? this.hud.sight.boxes : [] })[0] : null; // slid along the edge off the hostiles' and friends' arrows (src/campedgespread.js; card space-game-edge-labels-overlap)
+        const sp = typeof campEdgeSpread === 'function' ? fillSpread([{ x: ar.x, y: ar.y, angle: ar.angle, w: aw, h: ah, want }], { keep: this.arrowKeep(), W, H, m: CAMP.nav.arrow.margin, tri: 13, boxes: this.hud.sight && this.hud.sight.boxes ? this.hud.sight.boxes : [] })[0] : null; // slid along the edge off the hostiles' and friends' arrows (src/campedgespread.js; card space-game-edge-labels-overlap)
         const a = sp ? sp.angle : ar.angle, ax = sp ? sp.x : ar.x, ay = sp ? sp.y : ar.y, tri = [{ x: ax + Math.cos(a) * 13, y: ay + Math.sin(a) * 13 }, { x: ax + Math.cos(a + 2.5) * 10, y: ay + Math.sin(a + 2.5) * 10 }, { x: ax + Math.cos(a - 2.5) * 10, y: ay + Math.sin(a - 2.5) * 10 }];
         g.fillStyle(0xffd37a, 0.95).fillPoints(tri, true); g.lineStyle(1, 0x02060d, 1).strokePoints(tri, true);
         const lp = sp ? { x: sp.lx, y: sp.ly } : typeof campNavLabelAt === 'function' ? campNavLabelAt(ar.x - Math.cos(a) * 64, ar.y - Math.sin(a) * 28, aw, ah, this.arrowKeep(), W, H) : { x: Math.max(80, Math.min(W - 80, ar.x - Math.cos(a) * 64)), y: Math.max(14, Math.min(H - 14, ar.y - Math.sin(a) * 28)) };

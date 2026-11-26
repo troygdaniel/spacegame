@@ -182,6 +182,7 @@ function campPageHudEdge(C, view) {
 // a pill's size in game px, from its words (no DOM at the model: the font is CAMP_PAGEHUD.em of the width, the pill's .86 em; about .6 em a letter, its padding and the arrow; the height is the line and the padding, 2.6 of its em, as measured in a browser)
 // the size of the view the pills are placed in, game px: 1280 by 720, or the window's shape while the flight has taken it (src/fillwindow.js: the page HUD lies over the WHOLE canvas, so its pills use the whole view and the camera's own scroll)
 const campPageW = () => typeof fillW === 'function' ? fillW() : W, campPageH = () => typeof fillH === 'function' ? fillH() : H;
+const campPageHudSafeTop = () => (typeof fillOy === 'function' ? fillOy() : 0); // where the canvas HUD's 1280 by 720 safe area starts under the canvas's top, game px: 0 unless the flight has taken a taller window's shape (src/fillwindow.js); the page panels are measured from the canvas's top, the canvas's own lines from the safe area's
 const campPageHudPillSize = text => { const em = W * CAMP_PAGEHUD.em * 0.86; return { w: (String(text).length * 0.6 + 3.4) * em, h: 2.6 * em }; };
 // the pills at the edge keep clear of each other (card space-game-page-hud-friend-edge-pill): in order, the first keeps its place; each next one that would touch one put before it (the fixed ones first: the hostiles' pill) slides ALONG the border, the nearer way first, until it touches none (campEdgeT and campEdgeAt, src/campedgespread.js). items [{ x, y, w, h }], fixed [{ x, y, w, h }] (centres); returns [{ x, y, moved }]: the centre of each, kept whole on the screen (half its width and 6 px in from the sides, half its height and 6 from the top and bottom; a pill is as wide as its words)
 function campPageHudEdgeFit(items, fixed) {
@@ -370,6 +371,7 @@ function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and list
   const R = s && s.pageHud; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
   if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; }
   if (typeof CAMP_CORNER_SHIFT === 'object') { CAMP_CORNER_SHIFT.tl = 0; CAMP_CORNER_SHIFT.bl = 0; CAMP_CORNER_SHIFT.tr = 0; }
+  if (typeof CAMP_CORNER_SHIFTX === 'object') { CAMP_CORNER_SHIFTX.tl = 0; CAMP_CORNER_SHIFTX.bl = 0; CAMP_CORNER_SHIFTX.tr = 0; }
   if (s) { s.pageHudStack = 0; campPageHudHideLines(s, false); if (R && R.backAlpha !== undefined && s.hudBack && s.hudBack.setAlpha) s.hudBack.setAlpha(R.backAlpha); }
 }
 function campPageHudHideLines(s, on) { // the canvas lines the page HUD replaces that the scene keeps as objects: the bottom key line and its strip, and the labels the world draws at the places (landing 3)
@@ -407,6 +409,7 @@ function campPageHudSync(s, now) {
     const shipB = bot(R.ship.el), dyF = (s.cornerDy && s.cornerDy.friendlies) || 0;
     // the rows of the canvas that the panels replace keep their PLACE (the lists and the details open under it): the Q CRUISER row's under the ship panel; the FRIENDLIES row's under the friend panel (which slides down with the Q list); the HOSTILES row's under the lowest of the stock and hostiles panels
     CAMP_CORNER_SHIFT.tl = Math.round(shipB - soy - th - A.tl.y); // (the canvas rows are in the safe area: its top is soy below the canvas's)
+    if (typeof CAMP_CORNER_SHIFTX === 'object') { const sox = typeof fillOx === 'function' ? fillOx() : 0; CAMP_CORNER_SHIFTX.tl = -sox; CAMP_CORNER_SHIFTX.bl = -sox; CAMP_CORNER_SHIFTX.tr = sox; } // and its left edge sox right of the canvas's: the rows go out to the panels at the window's corners
     const friendB = shipB + dyF + gap + th; // a friendly's details are inside the ship panel now: shipB already has them
     CAMP_CORNER_SHIFT.bl = Math.round(friendB - soy - th - A.bl.y - dyF);
     const stockB = bot(R.stock.el); set(R.foes.el, 'top', Math.round((stockB + gap) * k * 10) / 10 + 'px');
@@ -414,7 +417,7 @@ function campPageHudSync(s, now) {
     CAMP_CORNER_SHIFT.tr = Math.round(rightB - soy - th - A.tr.y);
     // toasts start under the goal panel; the dim plate of the canvas column is not wanted under it
     const gb = shown(R.goal.el) ? bot(R.goal.el) : 0;
-    s.pageHudStack = gb > 0 ? Math.max(0, Math.ceil(gb - soy)) : 0;
+    s.pageHudStack = gb > 0 ? Math.ceil(gb) : 0; // (from the canvas's top; the scene takes the safe area's start off it: campPageHudSafeTop)
     campPageHudRadioPaint(R, s, t, k); // the radio panel, under whatever is stacked at the top centre (the goal panel, then the canvas lines under it: the scene's toastTop)
     if (s.hudBack && s.hudBack.setAlpha) { if (R.backAlpha === undefined) R.backAlpha = s.hudBack.alpha; s.hudBack.setAlpha(0); }
     // in space: the pill at the edge for the hostiles off the screen, and a pill for each place in view (world px to the canvas's px)

@@ -501,7 +501,7 @@ for (const mi of [0, 1, 2]) {
   sweep.push([mi, !!t.obj, f.ys.wave, f.ys.obj, low, f.ys.earth < f.ys.repair && f.ys.repair < f.ys.post]);
 }
 check('Q every mission of level 1 (1.1 escort with no wave line, 1.2 ore, 1.3 haulers), every line with words: the lines still drawn (Earth, repair, outpost) are all under the goal panel (52 + the gap) and in their order; the wave and goal lines are not placed', sweep.every(r => r[1] && r[2] === -1 && r[3] === -1 && r[4] >= 52 + J('CAMP.hud.pageGap') && r[5]), JSON.stringify(sweep));
-check('Q the scene asks nothing of the page HUD but the height of its goal panel (pageHudStack): one line in flowHud, no call of the page HUD\'s functions in the scene', /this\.pageHudStack > 0 \? this\.pageHudStack \+ CAMP\.hud\.pageGap : 0/.test(src('src/campaignscene.js')) && (src('src/campaignscene.js').match(/^.*campPageHudHides.*$/gm) || []).length === 0);
+check('Q the scene asks nothing of the page HUD but the height of its goal panel (pageHudStack): one line in flowHud, no call of the page HUD\'s functions in the scene', /const gh = this\.pageHudStack > 0, stack = gh \? this\.pageHudStack - campPageHudSafeTop\(\) : 0, top = gh \? stack \+ CAMP\.hud\.pageGap : 0;/.test(src('src/campaignscene.js')) && (src('src/campaignscene.js').match(/^.*campPageHudHides.*$/gm) || []).length === 0);
 
 const PL = { x: 1160, y: 155, w: 220, h: 110 }; // the HOSTILES panel at the right edge: x 1050 to 1270, y 100 to 210
 const hit = (a, b) => a.x - a.w / 2 < b.x + b.w / 2 && a.x + a.w / 2 > b.x - b.w / 2 && a.y - a.h / 2 < b.y + b.h / 2 && a.y + a.h / 2 > b.y - b.h / 2;

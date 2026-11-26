@@ -94,6 +94,7 @@ function camzoomSort(s, c) {
     const o = list[i]; if (o._cz) continue;
     const cam = o === vig ? c.main : o.scrollFactorX < 1 && o.depth < 0 ? c.bg : o.scrollFactorX === 0 ? c.ui : c.main;
     o.cameraFilter = c.all & ~cam.id; o._cz = 1;
+    if (cam === c.ui && s.fillUi && typeof o.setScrollFactor === 'function') o.setScrollFactor(1); // a scene that can take the window's shape (src/fillwindow.js): its HUD objects follow the HUD camera's scroll, which is 0 until it has, so they are where they were
   }
 }
 function camzoomFrame(s) {

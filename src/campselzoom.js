@@ -27,7 +27,7 @@ const campPeekMid = cam => ({ x: camzoomSX(cam) + W / 2, y: camzoomSY(cam) + H /
 // is the ship on the screen at a view: (mid) the middle of the view in the world, z the zoom; its middle inside the screen less CAMP.peek.view
 function campPeekOnScreen(mid, z, u) {
   const V = CAMP.peek.view, sx = W / 2 + (u.x - mid.x) * z, sy = H / 2 + (u.y - mid.y) * z;
-  return sx >= V.left && sx <= W - V.right && sy >= V.top && sy <= H - V.bottom;
+  return sx >= fillX0() + V.left && sx <= fillX1() - V.right && sy >= fillY0() + V.top && sy <= fillY1() - V.bottom;
 }
 // the zoom the player has: while a peek has its own on, the one he had before it (unless he has moved it since: then it is what he has now)
 function campPeekBase(s) {

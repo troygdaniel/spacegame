@@ -61,10 +61,28 @@ const fillW = () => FILL.now.w, fillH = () => FILL.now.h, fillOx = () => FILL.no
 const fillSX = cam => ((cam && cam.scrollX) || 0) + FILL.now.ox, fillSY = cam => ((cam && cam.scrollY) || 0) + FILL.now.oy;
 const fillPX = p => ((p && p.x) || 0) - FILL.now.ox, fillPY = p => ((p && p.y) || 0) - FILL.now.oy;
 const fillPutX = x => x - FILL.now.ox, fillPutY = y => y - FILL.now.oy;
+// the whole view in the safe area's numbers: it reaches from fillX0 to fillX1 across and fillY0 to fillY1 down (0 to 1280 and 0 to 720 unless a scene has taken the window)
+const fillX0 = () => -FILL.now.ox, fillX1 = () => FILL.W + FILL.now.ox, fillY0 = () => -FILL.now.oy, fillY1 = () => FILL.H + FILL.now.oy;
+// A rule written for a w by h screen (campNavArrow, campSightArrows, campSightFriends: fn(C, view, w, h, ...)) asked for the WHOLE view: it is given the camera's own scroll and the game's size, and what it
+// answers (a point, or a list of points; each may carry the point it aims at, tx and ty) is moved back into the safe area's numbers. With nothing taken it is fn(C, view, 1280, 720, ...) as it was.
+function fillAsk(fn, C, cam, ...rest) {
+  const N = FILL.now, r = fn(C, { x: (cam && cam.scrollX) || 0, y: (cam && cam.scrollY) || 0 }, N.w, N.h, ...rest);
+  if (!r || (!N.ox && !N.oy)) return r;
+  const mv = a => { if (!a || typeof a !== 'object') return a; const b = Object.assign({}, a, { x: a.x - N.ox, y: a.y - N.oy }); if (a.tx != null) b.tx = a.tx - N.ox; if (a.ty != null) b.ty = a.ty - N.oy; return b; };
+  return Array.isArray(r) ? r.map(mv) : mv(r);
+}
+// campEdgeSpread (src/campedgespread.js) for the whole view: the labels at the window's edge keep clear of each other and of the places the HUD keeps (o.keep, o.boxes: in the safe area's numbers, as the answer is)
+function fillSpread(items, o) {
+  const N = FILL.now; if (!N.ox && !N.oy) return campEdgeSpread(items, o);
+  const rect = b => Array.isArray(b) ? [b[0] + N.ox, b[1] + N.oy, b[2] + N.ox, b[3] + N.oy] : Object.assign({}, b, { x: b.x + N.ox, y: b.y + N.oy });
+  const its = items.map(it => { const q = Object.assign({}, it, { x: it.x + N.ox, y: it.y + N.oy }); if (it.tx != null) q.tx = it.tx + N.ox; if (it.ty != null) q.ty = it.ty + N.oy; if (typeof it.want === 'function') q.want = (px, py, an) => it.want(px, py, an); return q; });
+  const out = campEdgeSpread(its, Object.assign({}, o, { W: N.w, H: N.h, keep: (o.keep || []).map(rect), boxes: (o.boxes || []).map(rect) }));
+  return out.map(p => Object.assign({}, p, { x: p.x - N.ox, y: p.y - N.oy, lx: p.lx - N.ox, ly: p.ly - N.oy, boxes: (p.boxes || []).map(b => Object.assign({}, b, { x: b.x - N.ox, y: b.y - N.oy })) }));
+}
 function fillCams(s) { // the three cameras of a flight scene (src/camzoom.js) and the star layers, for the size the game has now
   const N = FILL.now, cz = s && s._cz; if (!cz) return false;
   cz.main.setViewport(0, 0, N.w, N.h); cz.bg.setViewport(0, 0, N.w, N.h); // the world and the stars: the whole window
-  cz.ui.setViewport(N.ox, N.oy, FILL.W, FILL.H);                           // the canvas HUD: the safe area, where its numbers were written for
+  cz.ui.setViewport(0, 0, N.w, N.h); if (typeof cz.ui.setScroll === 'function') cz.ui.setScroll(-N.ox, -N.oy); // the canvas HUD: the whole window too, its 1280 by 720 numbers moved to the safe area by the camera's SCROLL (src/camzoom.js gives a HUD object of a filling scene a scroll factor of 1 for this). Nothing of it is cut at the safe area's border: a list that opens under a page panel in the window's corner, a ring on a ship out in the extra room, are drawn (card space-game-fill-window-clipping: Troy's Q list showed its last row only)
   (s.bgLayers || []).forEach(t => { if (t && t.setSize && (t.width !== N.w || t.height !== N.h)) t.setSize(N.w, N.h); });
   return true;
 }
@@ -93,6 +111,11 @@ function fillMenuSort(s) { // everything that is not the backdrop is the main ca
   for (let i = 0; i < list.length; i++) { const o = list[i]; if (o.fillOn) continue; o.cameraFilter = (o.cameraFilter || 0) | bg.id; o.fillOn = 2; }
 }
 const fillCamsOf = s => (s && s._cz ? fillCams(s) : fillMenuCams(s));
+function fillParent(game) { // the room FIT has for the canvas: the size of the game's parent element, read now (Phaser reads it itself only every half second: a size worked out from the window while FIT still fitted to the old parent left the canvas larger than the window for a moment, its panels cut at the edges); the window's inner size where there is no parent to ask
+  const sc = game && game.scale;
+  try { if (sc && typeof sc.getParentBounds === 'function' && sc.parentSize) { sc.getParentBounds(); if (sc.parentSize.width > 0 && sc.parentSize.height > 0) return { w: sc.parentSize.width, h: sc.parentSize.height }; } } catch (e) { /* the window's size then */ }
+  return { w: window.innerWidth, h: window.innerHeight };
+}
 function fillGame(game, w, h) { // the game's own size (FIT then fits it to the window); nothing is asked when it is that size already
   const sc = game && game.scale; if (!sc || typeof sc.setGameSize !== 'function') return false;
   if (sc.width !== w || sc.height !== h) sc.setGameSize(w, h);
@@ -121,7 +144,7 @@ function fillSync(s, o) {
   if (!want) { if (!keep && (FILL.now.on || s.fillSig)) fillDrop(s.game); if (s.fillSig) { s.fillSig = null; fillCamsOf(s); } return false; }
   fillStamp(s);
   const cam0 = s._cz ? s._cz.main : s.cameras && s.cameras.main; if (s.fillCam !== cam0) { s.fillCam = cam0; s.fillSig = null; s.fillBg = null; } // the scene has started again (its cameras are new ones): what was set on the old ones is forgotten
-  const ww = window.innerWidth, wh = window.innerHeight, z = fillSize(ww, wh), sig = z.w + 'x' + z.h + (s._cz ? 'f' : s.fillBack && s.fillBack.length ? 'b' : 'm'); // (the scene's kind is in it: a scene asks once before its flight cameras or its backdrop are made, and again after)
+  const P = fillParent(s.game), ww = P.w, wh = P.h, z = fillSize(ww, wh), sig = z.w + 'x' + z.h + (s._cz ? 'f' : s.fillBack && s.fillBack.length ? 'b' : 'm'); // (the scene's kind is in it: a scene asks once before its flight cameras or its backdrop are made, and again after)
   if (FILL.now.w !== z.w || FILL.now.h !== z.h || !FILL.now.on) { FILL.now = { on: true, w: z.w, h: z.h, ox: z.ox, oy: z.oy }; fillGame(s.game, z.w, z.h); }
   if (s.fillSig !== sig) { s.fillSig = sig; fillCamsOf(s); }
   if (!s._cz) fillMenuSort(s);
