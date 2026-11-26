@@ -17,7 +17,7 @@ function scrView(R, parent, n, ctx) { // ctx (optional): { click(id) } for a til
   } else if (n.k === 'rule') {
     return E('div', 'sc-rule');
   } else if (n.k === 'card') {
-    e = E('div', (n.bare ? 'sc-abs ' : 'sc-p sc-abs ') + (n.row ? 'sc-r' : 'sc-c') + (n.ctr ? ' sc-ctr' : ''));
+    e = E('div', (n.bare ? 'sc-abs ' : 'sc-p sc-abs ') + (n.row ? 'sc-r' : 'sc-c') + (n.ctr ? ' sc-ctr' : '') + (n.deep ? ' sc-deep' : ''));
     scrViewSet(e, n.at ? Object.assign({ width: n.w ? n.w + 'em' : '', gap: n.gap != null ? n.gap + 'em' : '' }, n.at) : { left: '50%', top: n.top + '%', transform: 'translateX(-50%)', width: n.w + 'em', gap: n.gap + 'em' });
   } else if (n.k === 'row') {
     e = E('div', 'sc-r' + (n.just === 'sp' ? ' sc-sp' : ''));
@@ -45,7 +45,7 @@ function scrView(R, parent, n, ctx) { // ctx (optional): { click(id) } for a til
     const click = n.click != null && ctx && typeof ctx.click === 'function';
     e = scrHostTile(R, parent, { on: n.on, dim: n.dim, id: n.click, onClick: click ? id => ctx.click(id) : null });
     if (n.dash || n.flat) scrHostSet(e, 'cls', 'sc-tile' + (n.on ? ' on' : '') + (n.dim ? ' lock' : '') + (click ? ' act' : '') + (n.dash ? ' sc-dash' : '') + (n.flat ? ' sc-flat' : ''));
-    scrViewSet(e, { flex: n.grow ? '1 1 ' + n.grow + 'em' : '', gap: n.gap != null ? n.gap + 'em' : '', alignItems: n.ctr ? 'center' : '' });
+    scrViewSet(e, { flex: n.grow ? '1 1 ' + n.grow + 'em' : n.fit ? '0 0 auto' : '', gap: n.gap != null ? n.gap + 'em' : '', alignItems: n.ctr ? 'center' : '' });
   } else if (n.k === 'star') { // the distant star of the end card: a glow and a point, and its name (CSS only, no image)
     e = E('div', 'sc-star'); scrHostEl(R, 'i', '', e); const t = scrHostEl(R, 'span', '', e); scrHostSet(t, 'text', n.text); return e;
   } else return null;

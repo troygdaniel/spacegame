@@ -18,6 +18,7 @@ const CAMP_HUBS = {
   keys: { x: 640, y: 696 },                    // the key line, in the south wall
   walk: { ms: 1.6, min: 260 },                 // the pilot's walk to a desk: ms for each px of the way (a brisk walk: 600 px a second), and the shortest walk in ms
   msg: 3200,                                   // ms a purchase's answer stays on the page
+  veil: { room: 0.78, pick: 0.9 },             // the new look (screens on): how dark the veil over the hangar is behind the ready room's card and the refit and rank, and behind the mission pick, whose tiles have no card of their own (card space-game-screens-hub-polish: the crates, the ship and the YOU marker fought the words)
   cruiser: { x: 1090, y: 360, len: 190, name: 502 }, // the cruiser on the pad: where, how long it is drawn (nose up), and the y of its name under the pad's BAY 01
   over: { x: 36, y: 24, w: 1208, h: 408, pad: 20, top: 46, line: 18, col2: 640, hint: 26, lines: 16 }, // the overlay: the glass at the top of the screen, the room inside it (from the left and from the top), a line's height, where the second column starts, how far above its bottom the hint stands, and how many lines of the missions it lists (each has a click zone)
   stops: { board: [200, 246], rank: [336, 312], refit: [640, 246], launch: [1028, 394] }, // where the pilot stands for each row: at the desk's front, in the open hall, at the pad
@@ -55,10 +56,11 @@ function campHubNewLook(sc) {
     sc.scrHubOn = true;
     (sc.children && sc.children.list ? sc.children.list : []).forEach(o => { if (o.depth >= 80 && o.depth <= 90 && typeof o.setVisible === 'function') o.setVisible(false); }); // the glass, the rows, the pages, the overlay and its click zones, the key line
     campHubHideNames(sc);
-    if (!sc.scrVeil && sc.add && typeof sc.add.rectangle === 'function') sc.scrVeil = sc.add.rectangle(W / 2, H / 2, W, H, 0x02060d, 0.78).setDepth(79); // the hangar stays, dimmed
+    if (!sc.scrVeil && sc.add && typeof sc.add.rectangle === 'function') sc.scrVeil = sc.add.rectangle(W / 2, H / 2, W, H, 0x02060d, CAMP_HUBS.veil.room).setDepth(79); // the hangar stays, dimmed
     if (sc.scrVeil) sc.scrVeil.setVisible(true);
     if (sc.events && typeof sc.events.once === 'function') sc.events.once('shutdown', () => { sc.scrHubOn = false; });
   }
+  if (sc.scrVeil && typeof sc.scrVeil.setAlpha === 'function') { const a = sc.hub && sc.hub.open === 'board' ? CAMP_HUBS.veil.pick : CAMP_HUBS.veil.room; if (sc.scrVeilA !== a) { sc.scrVeilA = a; sc.scrVeil.setAlpha(a); } } // darker behind the mission pick (its tiles are bare over the hangar), as it was behind the rest
   return true;
 }
 function campHubHideNames(sc) { // the hangar's own words (MISSIONS, HANGAR 1, the station's name, BAY 01 THE CRUISER, the YOU tag) are canvas text under the panels: hidden while the new look is up (card space-game-screens-batch-fixes)
