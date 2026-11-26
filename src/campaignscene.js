@@ -102,7 +102,7 @@ class Campaign extends Phaser.Scene {
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
     if (this.camp.relic) this.relicLabel = label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), typeof campWorldOn === 'function' && campWorldOn() ? '#e9b872' : '#7fe9ff', 14); // gold with the world look on: the relic is the goal
     this.sync();
-    this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
+    this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12); this.eyeId = this.camp.carrier.id; // eyeId: the ship the camera is on (card space-game-fly-fighter-l1: the cruiser, or the fighter whose stick he holds; eyeSync moves it)
     this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE,SHIFT'); // SHIFT: the cruiser's boost (src/campboost.js)
     this.hudG = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.hudBack = this.add.rectangle(W / 2 - CAMP.hud.plate.w / 2, CAMP.hud.text.y - 6, CAMP.hud.plate.w, CAMP.hud.plate.min, 0x02060d, 0.4).setOrigin(0, 0).setScrollFactor(0).setDepth(99); // a dim plate under the HUD column at the top centre (it was at the top left until card space-game-layout-hud): a bright planet (Ceres at the start of 1.2) drawn through the white objective line and the bay line made them hard to read (card space-game-l1-mine-goal, docs/night/hunt-l1-rim.md D)
@@ -442,13 +442,17 @@ class Campaign extends Phaser.Scene {
     if (typeof campPanelsPaint === 'function') campPanelsPaint(this, this.time.now); // the open list, if one is, and the target's line (src/campanelsdraw.js)
     const C = this.camp;
     if (this.mode === 'play' && !C.result) {
-      const k = this.k, inp = C.input;
+      const k = this.k, inp = C.input, cp = C.cockpit && typeof campCockpitOn === 'function' && campCockpitOn() ? C.cockpit : null; // cp: the stick of a pilot's fighter, when he holds one (card space-game-fly-fighter-l1, src/campcockpit.js)
       // the autopilot (src/campnav.js, card space-game-campaign-navigate): while the map is open the arrows are the list's, not the wheel's; with it closed any of them takes the wheel back
       const typing = typeof document !== 'undefined' && !!document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName); // the strip's own box: the letters typed there are not the wheel
       const listed = (this.pn && typeof campPanelOwnsArrows === 'function' && campPanelOwnsArrows(this.pn)); // an open list that has the arrows (card one-list-keys): the ship coasts. The Q list does not (card space-game-s-list-numbers: it is the digits'): with it open the arrows fly
       const wheel = !this.mp && !listed && !typing && [k.UP, k.DOWN, k.LEFT, k.RIGHT].some(x => x && x.isDown); // the arrows fly (Up thrust, Left and Right turn, Down brake)
-      if (wheel && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip
-      if (!(C.nav && C.nav.on)) {
+      if (wheel && !cp && C.nav && typeof campNavClear === 'function') campNavClear(C, 'key'); // a steering key gives up the trip (not in a fighter: the arrows are his, and the cruiser keeps its order)
+      if (cp) { // the fighter's stick: the arrows, Space and Shift are HIS; the cruiser keeps its last order (the autopilot) or coasts, and its turrets are the sim's (campCockpitAuto)
+        const fi = cp.input, hold = this.mp || listed; // the map's or a list's arrows are not the wheel
+        fi.turn = hold ? 0 : (k.RIGHT.isDown ? 1 : 0) - (k.LEFT.isDown ? 1 : 0); fi.thrust = !hold && k.UP.isDown ? 1 : 0; fi.brake = !hold && !!k.DOWN.isDown; fi.boost = !hold && !typing && !!k.SHIFT && k.SHIFT.isDown; fi.fire = !!k.SPACE.isDown;
+        if (!(C.nav && C.nav.on)) { inp.turn = 0; inp.thrust = 0; inp.brake = false; inp.boost = false; }
+      } else if (!(C.nav && C.nav.on)) {
         if (this.mp || listed) { inp.turn = 0; inp.thrust = 0; inp.brake = false; inp.boost = false; }
         else {
           inp.turn = (k.RIGHT.isDown ? 1 : 0) - (k.LEFT.isDown ? 1 : 0);
@@ -456,9 +460,10 @@ class Campaign extends Phaser.Scene {
           inp.boost = !typing && !!k.SHIFT && k.SHIFT.isDown; // Shift with thrust is the boost (the key table's `boost`)
         }
       }
-      inp.fire = k.SPACE.isDown;
+      inp.fire = cp ? false : k.SPACE.isDown; // (in a fighter Space is his gun: the cruiser's turrets fire by themselves, or not, by CAMP.cockpit.turrets)
       if (this.sayR && this.sayR.wait.length) this.radioShow(campSayDue(this.sayR, this.time.now)); // the radio lines that waited for a kept line's hold are shown now (src/campsayhold.js)
       campStep(C, Math.min(dt, 100) / 1000);
+      if (typeof this.eyeSync === 'function') this.eyeSync();
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
       const now = performance.now(); // the wing's radio: the orders carried out since the last look make a call; the call that is due is said when nothing else is (src/campchatter.js)
@@ -516,6 +521,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }
     else if (e.type === 'launch' || e.type === 'dock') { this.bayAt[e.type === 'launch' ? 'launch' : 'land'] = this.camp.t; beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160); }
+    else if (e.type === 'cockpit') { if (e.stage === 'take') this.tuned = true; } // the stick of a fighter taken: the run is a tuned one (its score and rank are not kept) while the numbers are Troy's to settle (card space-game-fly-fighter-l1)
     else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
     else if (e.type === 'anomaly') this.anomalyEvent(e);
@@ -544,6 +550,11 @@ class Campaign extends Phaser.Scene {
     if (!lit.length) return;
     const sel = typeof campSelNow === 'function' ? campSelNow(C) : null, al = campTgtPulse(), sl = typeof slookOn === 'function' && slookOn() && typeof slookPickMark === 'function'; // (sl: the new ship look: the bright ring in place of the square, src/shiplookmarks.js) the pilot picked has its square from campTgtPaint, so it is not marked twice (with All pilots picked, campTgtPaint marks the three: a squad in focus, which no list brings now, would be drawn over the same square)
     C.ships.forEach(u => { if (u.hp > 0 && u.team === 'earth' && u.squad && lit.indexOf(u.squad) >= 0 && !(sel && sel.unit === u)) { if (sl) slookPickMark(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u), this); else campTgtCorners(sg, u, CAMPTGT.friend, z, al, campTgtDrawn(this, u)); } });
+  }
+  eyeSync() { // the camera is on the ship he flies: the cruiser, or the fighter whose stick he holds (card space-game-fly-fighter-l1); the follow's own lerp is the short pan
+    const C = this.camp, e = C && typeof campEye === 'function' ? campEye(C) : null, sp = e && this.sp ? this.sp[e.id] : null, cam = this.cameras && this.cameras.main;
+    if (!e || !sp || !cam || typeof cam.startFollow !== 'function' || this.eyeId === e.id) return;
+    cam.startFollow(sp, true, 0.12, 0.12); this.eyeId = e.id;
   }
   sync() {
     const C = this.camp, seen = {}, F = typeof slookFrame === 'function' ? slookFrame(this) : null; // F: the new ship look's state for this frame, asked once for all the ships (src/shiplookdraw.js)
