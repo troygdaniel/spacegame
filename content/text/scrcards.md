@@ -74,3 +74,4 @@ The words of the Campaign scene's cards in the new look (card space-game-screens
 | scr.b.neutrals.one | Lose 1 miner at most |
 | scr.b.torpedoes.one | 1 torpedo hit at most |
 | scr.card.kills.one | 1 kill |
+| scr.card.take | Take |

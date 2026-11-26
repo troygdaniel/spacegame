@@ -127,22 +127,25 @@ function scrTechNodes(id, P) { // what a technology changes, as a meter or short
   return parts.length ? [scrRowN(parts.map(pill), { wrap: true, gap: 0.4 })] : [];
 }
 const scrDigitId = i => 'd' + (i < 3 ? i + 1 : i + 3); // the refit's keys: 1 2 3, then 6 7 8 for what was looted (4 buys a fighter)
-function scrTechTiles(choices, P, pick, digit) {
-  return (choices || []).map((id, i) => scrTileN([scrRowN([scrChipN(digit(i)), scrTextN('t3', uiText('camp.tech.' + id + '.name'))])].concat(scrTechNodes(id, P)), { on: pick === id, grow: 14, gap: 0.5 }));
+function scrTechTiles(choices, P, cur, digit) { // cur: the lit one (the bright outline)
+  return (choices || []).map((id, i) => scrTileN([scrRowN([scrChipN(digit(i)), scrTextN('t3', uiText('camp.tech.' + id + '.name'))])].concat(scrTechNodes(id, P)), { on: cur === i, grow: 14, gap: 0.5 }));
 }
-function scrRefitModel(o) { // o: { choices: [tech ids], pick: the chosen id or null, f: fighters bought on this card, w: { ore, credits } the cruiser has, P }
-  o = o || {}; const w = o.w || { ore: 0, credits: 0 }, B = CAMP.refit, funds = (w.credits | 0) + (w.ore | 0), can = (o.f | 0) < B.most && funds >= B.fighterCost;
+// what the keys do on these cards, always on the card (card space-game-refit-card-stuck: the Continue chip came only after a pick and the pick card had none, so Enter did nothing and nothing said so): Left Right choose, Enter takes the lit one (or buys on the fighter row)
+const scrChoiceKeys = (onF, withFighter) => scrRowN([scrRowN([scrChipN('left'), scrChipN('right'), scrTextN('lab', uiText('scr.hub.choose'))]), scrKeyWordN('pick', uiText(onF ? 'scr.hub.buy' : 'scr.card.take'))], { just: 'end', gap: 1.4 });
+function scrRefitModel(o) { // o: { choices: [tech ids], cur: the lit choice (a technology, or the fighter row after them), pick: the chosen id (cur follows it when none is given), f: fighters bought on this card, w: { ore, credits } the cruiser has, P }
+  o = o || {}; const w = o.w || { ore: 0, credits: 0 }, B = CAMP.refit, funds = (w.credits | 0) + (w.ore | 0), can = (o.f | 0) < B.most && funds >= B.fighterCost, n = (o.choices || []).length;
+  const cur = o.cur != null ? o.cur : Math.max(0, (o.choices || []).indexOf(o.pick)), onF = cur >= n;
   const kids = [
     scrRowN([scrTextN('t2', uiText('scr.card.refit')), scrRowN([scrPillN(uiText('scr.card.credits'), null, { lead: scrNum(w.credits | 0), leadTone: 'gold' }), scrPillN(uiText('scr.card.ore'), null, { lead: scrNum(w.ore | 0), leadTone: 'gold' })])], { just: 'sp' }),
     scrTextN('lab', uiText('scr.card.chooseone'), 'gold'),
-    scrRowN(scrTechTiles(o.choices, o.P, o.pick, scrDigitId), { wrap: true, stretch: true }),
-    scrTileN([scrRowN([scrRowN([scrChipN('d4'), scrTextN('t3', uiText('scr.card.fighter'))]), scrRowN([(o.f | 0) > 0 ? scrPillN(uiText('scr.card.bought', { n: o.f | 0 }), null) : null, scrTextN('t3', B.fighterCost, 'gold'), scrTextN('sm', uiText('scr.card.fightercost'))])], { just: 'sp' })], { dim: !can }),
-    o.pick ? scrRowN([scrKeyWordN('pick', uiText('scr.card.continue'))], { just: 'end' }) : null];
+    scrRowN(scrTechTiles(o.choices, o.P, cur, scrDigitId), { wrap: true, stretch: true }),
+    scrTileN([scrRowN([scrRowN([scrChipN('d4'), scrTextN('t3', uiText('scr.card.fighter'))]), scrRowN([(o.f | 0) > 0 ? scrPillN(uiText('scr.card.bought', { n: o.f | 0 }), null) : null, scrTextN('t3', B.fighterCost, 'gold'), scrTextN('sm', uiText('scr.card.fightercost'))])], { just: 'sp' })], { dim: !can, on: onF }),
+    scrChoiceKeys(onF)];
   return scrCardN('earthrefit', { w: 44, top: 12, gap: 1 }, kids);
 }
-function scrPickModel(o) { // the plain pick after the later levels: the tiles with their digits 1 to 6, the first press picks
-  o = o || {};
-  return scrCardN('tech', { w: 44, top: 14, gap: 1 }, [scrTextN('t2', uiText('scr.card.choose')), scrRowN(scrTechTiles(o.choices, o.P, null, i => 'd' + (i + 1)), { wrap: true, stretch: true })]);
+function scrPickModel(o) { // the plain pick after the later levels: the tiles with their digits 1 to 6; a digit takes one at once, the arrows move the light and Enter takes the lit one
+  o = o || {}; const cur = o.cur != null ? o.cur : 0;
+  return scrCardN('tech', { w: 44, top: 14, gap: 1 }, [scrTextN('t2', uiText('scr.card.choose')), scrRowN(scrTechTiles(o.choices, o.P, cur, i => 'd' + (i + 1)), { wrap: true, stretch: true }), scrChoiceKeys(false)]);
 }
 
 // ---- the end card ----
