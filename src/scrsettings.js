@@ -195,8 +195,9 @@ function scrSetShow(s, id) { // Settings.show: the tab is the model's section; t
   scrSetPaint(s, true); s.focusFirst();
 }
 function scrSetInputs(s) { // the real inputs of the Keys tab, as src/settings.js draw_keys makes them (a password field a key, a text field the model); they are laid over the placeholders this draws
-  SETTINGS.keyRows.forEach(r => { s.inputs[r.id] = s.makeInput('password', 'paste your key here', 200, () => s.saveKey(r.id)); });
-  s.inputs.model = s.makeInput('text', '', 60, () => s.saveModel()); s.inputs.model.value = CHAT.model; s.inputs.model.addEventListener('change', () => s.saveModel());
+  const leave = id => { const el = s.inputs && s.inputs[id]; if (el && typeof el.blur === 'function') el.blur(); }; // Enter does its one thing and gives the keyboard back, as Esc does (card space-game-settings-keys-focus): the arrows move the tabs again
+  SETTINGS.keyRows.forEach(r => { s.inputs[r.id] = s.makeInput('password', 'paste your key here', 200, () => { s.saveKey(r.id); leave(r.id); }); });
+  s.inputs.model = s.makeInput('text', '', 60, () => { s.saveModel(); leave('model'); }); s.inputs.model.value = CHAT.model; s.inputs.model.addEventListener('change', () => s.saveModel());
   Object.keys(s.inputs).forEach(id => {
     const el = s.inputs[id]; el.addEventListener('input', () => scrSetPaint(s)); // Save says Clear while a key is saved and nothing is typed
     Object.assign(el.style, SCRSET.input); // the field in the look of the page: the pill's own, not the old amber box

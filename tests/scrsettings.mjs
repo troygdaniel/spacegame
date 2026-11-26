@@ -24,7 +24,7 @@ g.run(`
   window.__chain = new Proxy(function () {}, { get: (t, k) => (k === 'then' ? undefined : __chain), apply: () => __chain });
   window.__set = (section, plain) => { const s = Object.create(Settings.prototype); Object.assign(s, __canvasScene(), { section: section || 'sound', ctab: 'station', inputs: {}, slots: {}, armed: null, closing: false, born: 0, from: 'Title', scrSayMsg: null, scrHost: null, scr: plain ? null : { R: null, el: null, fields: {}, sig: '', at: 0 }, focusKey: '', sig: '',
     add: { rectangle: () => __chain }, input: { keyboard: { on() {} }, on() {} }, scene: { stop() {}, resume() {}, get() { return null; } }, time: { now: 0 } });
-    s.makeInput = (type, ph) => { const e = document.createElement('input'); e.placeholder = ph; e.type = type; return e; }; return s; };
+    s.makeInput = (type, ph) => { const e = document.createElement('input'); e.placeholder = ph; e.type = type; document.body.appendChild(e); return e; }; return s; };
   window.__tabs = s => __find(s.scrHost.root, e => /sc-tab/.test(e._cls)); window.__pills = s => __find(s.scrHost.root, e => /(^| )sc-pill( |$)/.test(e._cls));
   window.__pill = (s, text) => __pills(s).find(e => e.children.some(c => c._text === text)); window.__M = (section, ctab) => scrSetModel({ section, ctab, inputs: {}, armed: null });
   window.__shown = M => scrSetShown(M); window.__w = M => scrSetWords(M);
@@ -169,6 +169,33 @@ check('the Long Haul save, the credits, the keys and the sound are not touched',
 g.run(`scrSetPress(s7, 'plforget'); s7.armed.at -= 1000; scrSetPress(s7, 'campaign'); scrSetPress(s7, 'forget'); s7.armed.at -= 1000; scrSetPress(s7, 'forget');`);
 check('another button pressed in between takes the confirmation away (one is armed at a time); a confirmed Forget all keys removes the keys', J('VOICE.key') === '' && J('s7.armed') === null);
 g.run(`VOICE.key = '';`);
+
+console.log('F2. the keyboard stays with the tabs (card space-game-settings-keys-focus)');
+const nap = ms => new Promise(r => setTimeout(r, ms));
+g.run(`window.__real = section => { const s = __set(section); s.makeInput = (...a) => Settings.prototype.makeInput.apply(s, a); return s; }; window.__stop = 0;
+  window.__key = (el, key) => { (el.listeners.keydown || []).forEach(f => f({ key, stopPropagation() { __stop++; } })); }; document.activeElement = null;`);
+g.run(`window.k1 = __real('sound'); scrSetShow(k1, 'keys');`); await nap(130);
+check('arriving on the Keys tab (Down from Sound, a click on its name) takes nothing: no field has the keyboard, so Up and Down go on moving the tabs', J('document.activeElement === null') && J('Object.keys(k1.inputs).join()') === 'deepgram,openai,anthropic,model');
+g.run(`k1.onKey({ code: 'ArrowDown', repeat: false });`);
+check('and Down from there is the scene\'s: the next tab (Listen)', J('k1.section') === 'listen');
+g.run(`window.k2 = __real('sound'); k2.focusKey = 'deepgram'; scrSetShow(k2, 'keys');`); await nap(130);
+check('Settings opened for a field (V on the title asks for the Deepgram key) puts the keyboard in that field, once: the focus is asked for and used up', J('document.activeElement === k2.inputs.deepgram') && J('k2.focusKey') === '');
+g.run(`document.activeElement = null; scrSetShow(k2, 'listen'); scrSetShow(k2, 'keys');`); await nap(130);
+check('and coming back to the tab does not take it again', J('document.activeElement === null'));
+g.run(`k2.onKey({ code: 'Enter', repeat: false });`);
+check('Enter on the Keys tab is the tab\'s own key: it starts editing the first field', J('document.activeElement === k2.inputs.deepgram'));
+g.run(`__key(k2.inputs.deepgram, 'ArrowDown');`);
+check('a key typed in a field stays in the field (the arrows are the text\'s there: the event is stopped before the scene)', J('__stop') === 1 && J('k2.section') === 'keys');
+g.run(`__key(k2.inputs.deepgram, 'Escape');`);
+check('Esc gives the keyboard back', J('document.activeElement === null'));
+g.run(`k2.inputs.openai.focus(); window.__says = []; const __sy = k2.say; k2.say = (m, c) => { __says.push(m); return __sy.call(k2, m, c); }; __key(k2.inputs.openai, 'Enter');`);
+check('Enter in a field does its one thing (Save: with nothing typed it says so) and gives the keyboard back', J('document.activeElement === null') && J('__says[0]') === 'Paste a key first.');
+g.run(`k2.inputs.model.focus(); __key(k2.inputs.model, 'Enter');`);
+check('the same for the Model field', J('document.activeElement === null'));
+g.run(`k2.onKey({ code: 'ArrowDown', repeat: false });`);
+check('and the arrows move the tabs again', J('k2.section') === 'listen');
+g.run(`window.k3 = __set('keys', true); k3.inputs = { deepgram: document.createElement('input') }; document.body.appendChild(k3.inputs.deepgram); k3.focusKey = ''; document.activeElement = null; k3.focusFirst();`); await nap(130);
+check('with the switch off nothing changes: the Keys tab of today still puts the keyboard in the first field as it opens', J('document.activeElement === k3.inputs.deepgram'));
 
 console.log('G. behind the switch');
 g.run(`document.body.children.length = 0; document.body.children.splice(0); CAMP.flags.screens = false; window.__spy = scrSetCreate; window.__made = 0; scrSetCreate = s => { __made++; return __spy(s); }; window.s8 = __set('sound', true); try { Settings.prototype.create.call(s8); } catch (e) { /* today's screen needs Phaser's panel */ }`);

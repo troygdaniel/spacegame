@@ -543,6 +543,7 @@ class Settings extends Phaser.Scene {
   // ---------- keys, inputs, closing ----------
   focusFirst() {
     if (this.section !== 'keys') return;
+    if (this.scr && !this.focusKey) return; // the new look (card space-game-settings-keys-focus): a field takes the keyboard only when the player clicks it, presses Enter on the tab, or opened Settings with a field asked for (V or C on the title); arriving on the tab by Up and Down must leave the arrows to the tabs
     const id = this.focusKey === 'chat' ? (CHAT.keys.anthropic && !CHAT.keys.openai ? 'anthropic' : 'openai') : this.focusKey || 'deepgram', el = this.inputs[id];
     this.focusKey = '';
     setTimeout(() => { try { if (el && el.isConnected) el.focus(); } catch (e) { /* focus is a nicety */ } }, 50);
