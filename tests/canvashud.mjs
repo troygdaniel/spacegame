@@ -5,6 +5,7 @@
 // A BOOT TEST (tests/*-boot.mjs) IS RUN WITH WHAT A PLAYER HAS (card space-game-boots-after-looks): the address is left as it is, so the page HUD, the new ship look and the world look are on; a boot that is about the old canvas names ?pagehud=0
 // (or ?shiplook=0, ?worldlook=0) in its own address, which wins as above. The environment says otherwise for a run: CAMP_LOOKS=old is the rule above for a boot too, CAMP_LOOKS=defaults is the same as a boot's own, CAMP_LOOKS=screens is the defaults
 // with ?screens=1 added (the new screens around the flight: what the screens' default-on will be). Every other test that opens the page (the playtests, the picture checks) keeps the rule above.
+// THE NEW SCREENS AND FILL THE WINDOW ARE ON FOR EVERY PLAYER TOO (card space-game-screens-fill-default-on, 26 Nov 2026): so the rule above also adds ?screens=0 and ?fill=0 for a test that is not a boot, and a boot (or CAMP_LOOKS=defaults) has them on, as a player does; a boot that is about the old screens names ?screens=0 itself.
 // CAMP_LOOKS is a list of words, comma between: `old` (a boot gets the rule above too), `defaults` (the address as it is: what a boot has), `screens` (adds ?screens=1: the new screens around the flight) and `fill` (adds ?fill=1: the flight takes the window's shape);
 // `screens,fill` is both (card space-game-boots-fill-screens: both switches are to become the default, so the boots must pass with them on). An address that names one of them keeps its own.
 export function canvasHudAddr(h = '') {
@@ -14,7 +15,7 @@ export function canvasHudAddr(h = '') {
   const oldRule = !words.length || words.indexOf('old') >= 0;
   h = String(h || ''); const i = h.indexOf('#'), q = i < 0 ? h : h.slice(0, i), frag = i < 0 ? '' : h.slice(i);
   const named = name => new RegExp('(^\\?|&)' + name + '(=|&|$)', 'i').test(q);
-  const more = (oldRule ? ['pagehud', 'shiplook', 'worldlook'].filter(k => !named(k)).map(k => k + '=0') : []).concat(['screens', 'fill'].filter(k => words.indexOf(k) >= 0 && !named(k)).map(k => k + '=1')).join('&');
+  const more = (oldRule ? ['pagehud', 'shiplook', 'worldlook', 'screens', 'fill'].filter(k => !named(k) && !(['screens', 'fill'].indexOf(k) >= 0 && words.indexOf(k) >= 0)).map(k => k + '=0') : []).concat(['screens', 'fill'].filter(k => words.indexOf(k) >= 0 && !named(k)).map(k => k + '=1')).join('&');
   if (!more) return h;
   if (q === '') return '?' + more + frag;
   return q.charAt(0) === '?' ? q + '&' + more + frag : h;

@@ -78,9 +78,9 @@ check('the other feel picked: the amber meter moves to it and the seconds are it
 g.run(`handlingSet(Object.keys(HANDLING)[0]);`);
 
 M = J(`__M('content')`);
-check('Content: New screens On or Off (kept until the default-on card), Fill the window beside it, Pack: Core pack and a tick with No problems', M.body[0].label === 'New screens' && M.body[0].items[0].text === 'On' && M.body[0].items[0].act === 'screens' && M.body[0].items[0].arg === false && M.body[1].label === 'Fill the window' && M.body[1].items[0].act === 'fill' && M.body[2].label === 'Pack' && M.body[2].items[0].text === 'Core pack' && M.body[2].items[1].t === 'ok' && M.body[2].items[1].text === 'No problems', JSON.stringify(M.body)); // (the Fill the window row sits beside New screens, as the old Settings has it: card space-game-batch-922-small-fixes)
+check('Content: one row, Pack: Core pack and a tick with No problems (the New screens and Fill the window rows went with card space-game-screens-fill-default-on: both are on for every player, no switch)', M.body.length === 1 && M.body[0].label === 'Pack' && M.body[0].items[0].text === 'Core pack' && M.body[0].items[1].t === 'ok' && M.body[0].items[1].text === 'No problems' && M.body.every(r => r.label !== 'New screens' && r.label !== 'Fill the window'), JSON.stringify(M.body));
 g.run(`CONTENT_ERRORS.push({ path: 'a.md', message: 'one' }, { path: 'b.md', message: 'two' }); CONTENT_STATE.modded = true;`);
-check('with problems and a mod: Modded pack, the number of problems (amber), and the first lines of what went wrong (not more than four)', J(`__M('content').body[2].items[0].text`) === 'Modded pack' && J(`__M('content').body[2].items[1].text`) === '2 problems' && J(`__M('content').body.length`) === 5);
+check('with problems and a mod: Modded pack, the number of problems (amber), and the first lines of what went wrong (not more than four)', J(`__M('content').body[0].items[0].text`) === 'Modded pack' && J(`__M('content').body[0].items[1].text`) === '2 problems' && J(`__M('content').body.length`) === 3);
 g.run(`CONTENT_ERRORS.length = 0; CONTENT_STATE.modded = false;`);
 
 M = J(`__M('reset')`);
@@ -111,7 +111,7 @@ g.run(`scrSetAct(s1, 'chatter', 'off')`); check('Chatter Off', J('chatterMode()'
 g.run(`scrSetAct(s1, 'chatter', 'quiet'); scrSetAct(s1, 'spoken', 'full')`); check('Replies Full', J('VOICE.spoken') === 'full' && J('chatterMode()') === 'quiet');
 g.run(`window.__v0 = VOICE.voice; scrSetAct(s1, 'voicestep')`); check('the Voice pill steps to the next voice', J('VOICE.voice') !== J('__v0'));
 g.run(`scrSetAct(s1, 'voiceon')`); check('the Ship voice pill is the switch', J('VOICE.on') === false);
-g.run(`__reset(); scrSetAct(s1, 'screens', false)`); check('New screens Off flips the switch (the scene\'s screensToggle)', J('scrOn()') === false);
+g.run(`__reset(); scrSetAct(s1, 'screens', false)`); check('there is no pill for the screens switch any more: the act \'screens\' does nothing and the screens stay on (no switch back for a player)', J('scrOn()') === true);
 g.run(`scrSetAct(s1, 'screens', true)`); check('and On puts it back', J('scrOn()') === true);
 g.run(`window.s2 = __set('keys'); scrSetInputs(s2); s2.inputs.openai.value = ${JSON.stringify(FAKE)}; scrSetAct(s2, 'keysave', 'openai')`);
 check('Save with a key typed saves it (the scene\'s saveKey) and the field is emptied', J('CHAT.keys.openai') === FAKE && J('s2.inputs.openai.value') === '');
@@ -208,8 +208,8 @@ g.run(`window.s10 = __set('content'); window.s10.scr = { R: null, el: null, fiel
 check('the old methods answer the new look: say, the refreshes and the screens switch draw the page and nothing of the old slots', (() => { g.run(`s10.say('hello', '#ffd37a'); s10.soundRefresh(); s10.keysRefresh(); s10.listenRefresh(); s10.railDraw(); s10.tagDraw();`); return J(`__find(s10.scrHost.root, e => /sc-stat/.test(e._cls)).map(e => e._text).join()`) === 'hello'; })());
 
 g.run(`window.__fill0 = fillOn(); scrSetAct(s10, 'fill', !fillOn())`);
-check('the Fill the window pill is the switch (the scene\'s fillToggle): it flips, says so, and the page shows the new state', J('fillOn()') !== J('__fill0') && J(`__find(s10.scrHost.root, e => /sc-stat/.test(e._cls)).map(e => e._text).join(' ')`).indexOf('Fill the window') >= 0 && J(`__M('content').body[1].items[0].on`) === J('fillOn()'), J(`__find(s10.scrHost.root, e => /sc-stat/.test(e._cls)).map(e => e._text).join(' ')`));
-g.run(`scrSetAct(s10, 'fill', __fill0)`); check('and back (the browser\'s memory is the old one again)', J('fillOn()') === J('__fill0'));
+check('there is no Fill the window pill (card space-game-screens-fill-default-on): the act \'fill\' does nothing, and the Content page shows no row for it', J('fillOn()') === J('__fill0') && J(`__M('content').body.every(r => r.label !== 'Fill the window')`) === true);
+
 
 console.log('H. the words');
 const md = ['scrsettings.md', 'scrctl.md'].map(f => readFileSync(ROOT + '/content/text/' + f, 'utf8')), keys = md.flatMap(m => [...m.matchAll(/^\| (scr\.(?:sett|ctl)\.[\w.]+) \| (.*) \|$/gm)].map(x => x[1]));

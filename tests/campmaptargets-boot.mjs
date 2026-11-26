@@ -31,7 +31,8 @@ try {
   // (the units get 1e6 hp: the pilots now start out beside the cruiser and would kill the raiders in the fifteen seconds, which ends the trip as it should; the test kills its target by hand)
   // (the drone stands at x 1000, not 2200: near the right edge the Fly and Fast buttons of its set mark stand to its LEFT, over the raiders' spot, and a click there is a click on a button)
   // two raiders close together (a stack) and a drone alone, held still so the clicks land where they are drawn
-  await t.ev(`(() => { const C = ${SC}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); const a = campSpawn(C, 'raider', -300, 1500), b = campSpawn(C, 'raider', -296, 1502), d = campSpawn(C, 'drone', 1000, 1700); [a, b, d].forEach(u => { u.nextShot = 1e9; u.hold = true; u.hp = 1e6; }); window.__ids = [a.id, b.id, d.id]; return 1; })()`);
+  // (PINNED: a held alien wakes when a ship of yours comes within its reach, about 800 px, and then flies at it at 155 px a second; with the cruiser's quicker handling that put it 149 px from the cruiser at the one moment this boot looked, though the cruiser had stopped at its stand-off as it should. The distance read further down must be the autopilot's doing, so after every step of the game these three are put back where they were made, asleep and at rest. Card space-game-maptargets-boot-red)
+  await t.ev(`(() => { const C = ${SC}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); const a = campSpawn(C, 'raider', -300, 1500), b = campSpawn(C, 'raider', -296, 1502), d = campSpawn(C, 'drone', 1000, 1700); [a, b, d].forEach(u => { u.nextShot = 1e9; u.hold = true; u.hp = 1e6; u.pin = { x: u.x, y: u.y }; }); if (!window.__pin) { window.__pin = () => { const K = game.scene.getScene('Campaign').camp; (window.__ids || []).forEach(id => { const u = K && K.by[id]; if (u && u.pin) { u.x = u.pin.x; u.y = u.pin.y; u.vx = 0; u.vy = 0; u.hold = true; } }); }; game.events.on('poststep', window.__pin); } window.__ids = [a.id, b.id, d.id]; return 1; })()`);
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(600);
   check('Tab opens the map', await j(`!!${SC}.mp`));
   const at = (x, y) => j(`(() => { const mp = ${SC}.mp, p = campMapPoint(mp.fit, campMapFrameOf(mp), ${x}, ${y}); return { x: p.x, y: p.y }; })()`);
@@ -50,9 +51,12 @@ try {
   await clickAt(t, b.x, b.y); await t.run(300);
   check('the Fly button flies to it: the autopilot is on, regular speed, on that raider', (await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === false && ${SC}.camp.nav.id === ${SC}.mp.setId`)) === true);
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes, the flight goes on
-  await t.run(16000);
-  const dist = await j(`(() => { const C = ${SC}.camp, u = C.by[C.nav && C.nav.ref]; return u ? Math.round(campDist(C.carrier, u)) : -1; })()`);
-  check('about fifteen seconds on, the cruiser has come to turret range (about 400 px) of it and holds there: the trip is still on', dist > 200 && dist < 700 && (await j(`!!${SC}.camp.nav`)), dist + ' px');
+  await t.run(11000);
+  const seen = []; // the settled distance, over a window of five seconds: one sample said nothing of holding
+  for (let i = 0; i < 5; i++) { await t.run(1000); seen.push(await j(`(() => { const C = ${SC}.camp, u = C.by[C.nav && C.nav.ref], c = C.carrier; return u ? { d: Math.round(campDist(c, u)), v: Math.round(Math.hypot(c.vx, c.vy)), still: Math.hypot(u.vx || 0, u.vy || 0) < 1 } : { d: -1, v: -1, still: false }; })()`)); }
+  const stop = await j(`CAMP.nav.stopEnemy`), dist = seen[seen.length - 1].d;
+  check('the raider it flies to has not moved (it is held: the distance is the autopilot\'s doing)', seen.every(x => x.still), JSON.stringify(seen));
+  check('eleven to sixteen seconds on, the cruiser has come to turret range of it (the stand-off, ' + stop + ' px) and HOLDS there, second after second: never nearer than 80 px inside it nor farther than 80 px outside, at rest by the end, the trip still on', seen.every(x => x.d > stop - 80 && x.d < stop + 80) && seen[seen.length - 1].v < 12 && Math.max(...seen.map(x => x.d)) - Math.min(...seen.map(x => x.d)) < 60 && (await j(`!!${SC}.camp.nav`)), JSON.stringify(seen));
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(500);
   await snap(t, 'follow');
   check('and with the map open the set mark is still marked with its buttons, Fly ON (it is being followed)', (await j(`(() => { const o = ${mapBtn(SC, 'fly')}; return o.visible && o.on; })()`)) === true, await j(`${mapBtn(SC, 'fly')}.text`));

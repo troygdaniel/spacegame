@@ -6,11 +6,11 @@
 // stays where its numbers put it, in a 1280 by 720 SAFE AREA in the middle (the HUD camera's viewport); the page HUD goes to the window's true corners. The Campaign's other screens do it too (landing B: the
 // title, the ready room with its pick and briefing, the warp, Settings over them, the Tab map): each keeps its 1280 by 720 layout in the safe area at the same fixed scale, with sky round it where it has a
 // backdrop. The Long Haul's scenes never ask, so the game is 1280 by 720 for them, as it was.
-// Behind one switch, OFF at first: CAMP.flags.fill (src/campaign.js), a row of Settings > CONTENT (kept in the browser), and the address ?fill=1 / ?fill=0 (the tests' way).
+// Behind one switch, ON for every player since card space-game-screens-fill-default-on (Troy, 26 Nov 2026): CAMP.flags.fill (src/campaign.js) is true, there is no row of Settings and nothing is remembered; the address ?fill=0 gives the game back at 1280 by 720 with bands (the tests' way).
 // The one idea the other files need: the old maths of "where is this world point on the screen" are all written for a 1280 by 720 view, and they stay TRUE in the safe area if the camera's scroll is read
 // through fillSX / fillSY (the scroll the view would have at 1280 by 720: the real one plus the safe area's offset) and a pointer through fillPX / fillPY (its place in the safe area). With the switch off the
 // offsets are 0 and all four give back what they were given.
-//   fillOn()                      is it on: the flag or ?fill=1, unless ?fill=0;   fillSet(on): the Settings row's (the flag and the browser's memory);   fillLoad(): the memory read back when the page starts
+//   fillOn()                      is it on: the flag (true in the table), unless ?fill=0
 //   fillSize(winW, winH)          PURE: the game's size for a window: { w, h, ox, oy, k } (k: screen px for a game px, FILL.k unless the window is too small for 1280 by 720 at it, then the scale that fits;
 //                                 w by h: the window divided by k, to an even pixel, never less than 1280 by 720; ox, oy: where the 1280 by 720 safe area starts). The tests' 1280 by 720 window gives exactly 1280 by 720 and 0, 0
 //   fillW(), fillH()              the size now (1280 and 720 unless the flight has taken the window);   fillOx(), fillOy(): the safe area's offset now (0 unless it has)
@@ -23,7 +23,7 @@ const FILL = {
   W: 1280, H: 720,               // the game's size as it always was: the least it ever is, and the safe area's
   k: 1.23,                       // THE FIXED SCALE (Troy, 25 Nov 2026): screen px for a game px, the size the game has today on his own window (1578 by 1000: 1578 / 1280 is 1.233). Nothing on the glass is bigger or smaller than he sees now; a bigger window adds room
   cap: 0,                        // NO CAP (card space-game-fill-window-scale-bug; Troy, 26 Nov 2026, playing: "more visible space WITHOUT scaling"). A cap of 1.5 (1920 by 1080 game px) was here for a day, and past it the picture scaled up: on his 2000 px wide window that began at 2362 px, and he felt it as the scale changing. 0: above the least window nothing ever scales; a number here (a multiple of 1280 by 720 each way) would bring the scale-up back
-  addr: 'fill', store: 'longhaul.fill',
+  addr: 'fill',
   memo: { s: null, v: null },    // the page's address, read again only when it changed
   now: { on: false, w: 1280, h: 720, ox: 0, oy: 0 }, // what the game is now
   stamp: -1, tick: 0, idle: 2, live: [], watch: null          // the frame a scene last asked for the window; the frames with no asking after which it is given back; the scenes whose cameras are set for it; the game whose loop is watched
@@ -40,15 +40,6 @@ function fillAddrVal(search) { // the value of ?fill in the address, lower case:
 const fillAddrOn = search => ['', '1', 'on', 'true', 'yes'].indexOf(fillAddrVal(search)) >= 0;
 const fillAddrOff = search => ['0', 'off', 'false', 'no'].indexOf(fillAddrVal(search)) >= 0;
 const fillOn = () => !fillAddrOff() && ((typeof campFlag === 'function' && campFlag('fill')) || fillAddrOn());
-function fillSet(on) {
-  if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.fill = !!on;
-  try { if (typeof localStorage !== 'undefined' && localStorage) localStorage.setItem(FILL.store, on ? '1' : '0'); } catch (e) { /* no storage: the flag still moved */ }
-  return !!on;
-}
-function fillLoad() {
-  try { const v = typeof localStorage !== 'undefined' && localStorage ? localStorage.getItem(FILL.store) : null; if (v === '1' || v === '0') { if (typeof CAMP === 'object' && CAMP && CAMP.flags) CAMP.flags.fill = v === '1'; return v === '1'; } } catch (e) { /* no storage */ }
-  return typeof CAMP === 'object' && CAMP && CAMP.flags ? !!CAMP.flags.fill : false;
-}
 function fillSize(winW, winH) {
   const W0 = FILL.W, H0 = FILL.H, ww = +winW, wh = +winH;
   if (!(ww > 0) || !(wh > 0)) return { w: W0, h: H0, ox: 0, oy: 0, k: 1 };
@@ -167,4 +158,3 @@ function fillSafeRect(canvas) {
   const N = FILL.now, k = r.width / (N.w > 0 ? N.w : FILL.W);
   return { left: r.left + N.ox * k, top: r.top + N.oy * k, width: FILL.W * k, height: FILL.H * k, k };
 }
-fillLoad(); // the Settings row's memory, read when the page starts

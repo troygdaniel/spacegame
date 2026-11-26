@@ -53,7 +53,7 @@ const campWingGroupName = (C, id) => { const s = campWingGroupSpec(C, id); retur
 // the ships of a group that are out now
 function campWingShips(C, id) {
   const sp = campWingGroupSpec(C, id); if (!sp) return [];
-  return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind === 'fighter' && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && (!sp.squad || u.squad === sp.squad));
+  return C.ships.filter(u => u.team === 'earth' && u.hp > 0 && !u.cockpit && u.kind === 'fighter' && (sp.ships ? sp.ships.indexOf(u.id) >= 0 : (sp.kinds || []).indexOf(u.kind) >= 0) && (!sp.squad || u.squad === sp.squad));
 }
 
 // THE PILOTS IN THE BAY (card space-game-keys-orders; Troy, 23 Nov 2026: "an order to a pilot in the bay launches them"). A pilot that was recalled lands and waits in the bay (C.bay.fighters); the mission starts with all three out (src/campaign.js campStartOut).
