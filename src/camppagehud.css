@@ -26,7 +26,7 @@
 .ph-fill.ph-boost.full { background: #ffffff; opacity: 1; }
 .ph-fill.ph-boost.dry { background: #cfe6ff; opacity: .4; } /* locked: the player's pale blue, dim (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour) */
 .ph-boostrow.dry .ph-lab { opacity: .6; }
-.ph-boostrow.dry b.ph-lab { width: auto; opacity: .85; color: #cfe6ff; white-space: nowrap; } /* the word RECHARGING where the percentage goes */
+.ph-boostrow.dry b.ph-lab { width: auto; opacity: .85; color: #cfe6ff; white-space: nowrap; } /* the word REFILLING where the percentage goes */
 .ph-fill.ph-hull { background: var(--ph-good); }
 .ph-icw { display: inline-flex; flex: none; }
 .ph-ic { width: 1.05em; height: 1.05em; flex: none; }
