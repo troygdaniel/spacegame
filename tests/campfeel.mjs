@@ -62,14 +62,16 @@ check('the flicker has no Math.random in it: the same clock gives the same flame
 const size = J('campFeelFlameSize(100, { th: 1, boost: 0, flare: 0 })'), sizeB = J('campFeelFlameSize(100, { th: 1, boost: 1, flare: 0 })'), sizeF = J('campFeelFlameSize(100, { th: 1, boost: 0, flare: 1 })'), steady = J('slookFlameSpecs({ hp: 1, rot: 0, x: 0, y: 0 }, 100, { th: 1, boost: 1, flare: 0 })');
 check('the length grows with thrust (half the cruiser\'s length at full thrust), flares longer on boost (1.1 times it) and with the flare at the start of a thrust, and the width grows with them: the steady streaks\' rule (the same state, campFlameState) with the layers\' own, shorter numbers', Math.abs(size.len - 50) < 1e-9 && Math.abs(sizeB.len - 110) < 1e-9 && sizeF.len > size.len && sizeB.wid > size.wid && sizeB.len < steady[0].len && J('campFeelFlameSize(100, { th: 0.5, boost: 0, flare: 0 }).len') === 25);
 check('no flame when the engines are off (a length under 4 percent of the cruiser) or the numbers are bad', J('campFeelFlameSize(100, { th: 0, boost: 0, flare: 0 })') === null && J('campFeelFlameSize(100, null)') === null && J('campFeelFlameSize(0, { th: 1 })') === null && J('campFeelFlameSize(100, { th: NaN, boost: NaN })') === null);
-const noz = J('campFeelNozzles({ x: 10, y: 20, rot: 0 }, 100)');
+const noz = J("campFeelNozzles({ kind: 'carrier', x: 10, y: 20, rot: 0 }, 100)");
 check('two nozzles at the back of the cruiser, the steady streaks\' places (0.5 of the length behind, 0.07 either side)', noz.length === 2 && Math.abs(noz[0].x - (10 - 50)) < 1e-9 && Math.abs(noz[0].y - (20 + 7)) < 1e-9 && Math.abs(noz[1].y - (20 - 7)) < 1e-9);
 
 console.log('D. the drawing');
+g.run(`window.CT = campNew(1, [], { seed: 5, god: true, mission: 0 }); CT.arrivedAt = 0; for (let i = 0; i < 30; i++) campStep(CT, 1 / 30);`);
+check('the Campaign clock the drawing reads is in MILLISECONDS (campStep: C.t += dt * 1000: a second of 30 steps is 1000), the unit the ribbons\' and the dots\' histories are kept in (the first version read it as seconds and a ribbon never had a second point in the game)', Math.abs(J('CT.t') - 1000) < 1 && /const t = C\.t \|\| 0/.test(src('src/campfeel.js')) && !/C\.t \* 1000/.test(code('src/campfeel.js')), J('CT.t'));
 g.run(`
   window.Phaser = { BlendModes: { ADD: 'ADD' } };
   window.__gfx = () => { const o = { calls: [], blend: '', depth: 0, vis: true, cleared: 0 };
-    o.clear = () => { o.calls.length = 0; o.cleared++; return o; }; o.setDepth = d => { o.depth = d; return o; }; o.setBlendMode = b => { o.blend = b; return o; }; o.setVisible = v => { o.vis = v; return o; };
+    o.clear = () => { o.calls.length = 0; o.cleared++; return o; }; o.setDepth = d => { o.depth = d; return o; }; o.setBlendMode = b => { o.blend = b; return o; }; o.setVisible = v => { o.vis = v; return o; }; o.setScrollFactor = () => o;
     o.lineStyle = (w, c, a) => { o.calls.push(['lineStyle', w, c, a]); return o; }; o.lineBetween = (a, b, c, d) => { o.calls.push(['line', a, b, c, d]); return o; };
     o.fillStyle = (c, a) => { o.calls.push(['fillStyle', c, a]); return o; }; o.fillTriangle = (...p) => { o.calls.push(['tri', ...p]); return o; }; o.fillCircle = (x, y, r) => { o.calls.push(['disc', x, y, r]); return o; }; return o; };
   window.__scene = (zoom) => { const made = []; const s = { made, mp: null, cameras: { main: { zoom } }, add: { graphics: () => { const o = __gfx(); made.push(o); return o; } } }; return s; };
@@ -79,13 +81,13 @@ g.run(`
 `);
 g.run(`window.sc = __scene(1); window.u = __cruiser(1000, 0, 0); window.sp = { displayWidth: 100, visible: true };`);
 let drew = true;
-for (let k = 0; k < 30; k++) drew = drew && J(`(() => { u.x = 1000 + ${k} * 5; return campFeelDraw(sc, S0, u, sp, __camp(${k} * 0.016, 1, 0)); })()`) === true;
-check('with the feel on it draws: true each frame, ONE Graphics (ADD blend, depth 4.4, cleared each frame) made for both engines', drew && J('sc.made.length') === 1 && J('S0.feelG.blend') === 'ADD' && J('S0.feelG.depth') === 4.4 && J('S0.feelG.cleared') === 30);
+for (let k = 0; k < 30; k++) drew = drew && J(`(() => { u.x = 1000 + ${k} * 5; return campFeelDraw(sc, S0, u, sp, __camp(${k} * 16, 1, 0)); })()`) === true;
+check('with the feel on it draws: true each frame, ONE Graphics for the ribbons and the flames (ADD blend, depth 4.4, cleared each frame) made for both engines (and the three of src/campfeelfx.js beside it)', drew && J('sc.made.length') === 4 && J('S0.feelG.blend') === 'ADD' && J('S0.feelG.depth') === 4.4 && J('S0.feelG.cleared') === 30);
 const calls = J('S0.feelG.calls');
 check('it draws the ribbons (lines from both nozzles) first and then the layers of each flame (three triangles and a disc for each of the two engines)', calls.filter(c => c[0] === 'line').length > 40 && calls.filter(c => c[0] === 'tri').length === 6 && calls.filter(c => c[0] === 'disc').length === 2 && calls.findIndex(c => c[0] === 'tri') > calls.findIndex(c => c[0] === 'line') && calls.map(c => c[0]).lastIndexOf('line') < calls.map(c => c[0]).indexOf('tri'));
-g.run(`S0.feelG.setVisible(true); sc.mp = {};`); g.run(`campFeelDraw(sc, S0, u, sp, __camp(1, 1, 0));`);
+g.run(`S0.feelG.setVisible(true); sc.mp = {};`); g.run(`campFeelDraw(sc, S0, u, sp, __camp(1000, 1, 0));`);
 check('under the map the pictures are hidden (the map is over the battle)', J('S0.feelG.vis') === false);
-g.run(`sc.mp = null; u.hp = 0; campFeelDraw(sc, S0, u, sp, __camp(2, 1, 0));`);
+g.run(`sc.mp = null; u.hp = 0; campFeelDraw(sc, S0, u, sp, __camp(2000, 1, 0));`);
 check('a cruiser that is gone draws nothing and its history goes', J('S0.feelG.calls.length') === 0 && J('S0.feelR.rib.every(r => r.length === 0)') === true);
 g.run(`u.hp = 100; CAMP.flags.feel = false; window.S1 = {}; window.sc1 = __scene(1);`);
 check('with the feel off nothing is made here (false: the ship look draws its steady streaks as before)', J('campFeelDraw(sc1, S1, u, sp, __camp(0, 1, 0))') === false && J('sc1.made.length') === 0 && J('!S1.feelG') === true);
