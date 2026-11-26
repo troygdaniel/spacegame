@@ -8,6 +8,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { mapBtn } from './mapboot.mjs'; // the map's Fly and Fast buttons in either look (card space-game-boots-after-looks)
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.MAPFLY_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
@@ -42,13 +43,13 @@ async function campaign() {
     check('the pilots are aboard before the map is tried (recalled by the order)', await settle(t, `campNavOut(${SC}.camp) === 0 && ${SC}.camp.launchQ.length === 0`, 200), JSON.stringify(await j(`campNavOut(${SC}.camp)`)));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(400);
     check('Tab opens the map', await j(`!!${SC}.mp`));
-    const at = id => j(`(() => { const s = ${SC}, mp = s.mp, r = mp.rows.find(r => r.id === '${id}'), p = campMapPoint(mp.fit, CAMPMAP.frame, r.x, r.y); return { x: p.x, y: p.y }; })()`);
+    const at = id => j(`(() => { const s = ${SC}, mp = s.mp, r = mp.rows.find(r => r.id === '${id}'), p = campMapPoint(mp.fit, campMapFrameOf(mp), r.x, r.y); return { x: p.x, y: p.y }; })()`);
     const mars = await at('place:vesta');
     await clickAt(t, mars.x, mars.y); await t.run(300);
-    const st = await j(`({ set: ${SC}.mp.setId, nav: !!${SC}.camp.nav, fly: ${SC}.mp.btnFly.visible, fast: ${SC}.mp.btnFast.visible, ft: ${SC}.mp.btnFly.text, st: ${SC}.mp.btnFast.text })`);
+    const st = await j(`({ set: ${SC}.mp.setId, nav: !!${SC}.camp.nav, fly: ${mapBtn(SC, 'fly')}.visible, fast: ${mapBtn(SC, 'fast')}.visible, ft: ${mapBtn(SC, 'fly')}.text, st: ${mapBtn(SC, 'fast')}.text })`);
     check('a click on Vesta SETS it (no flight), and the two buttons are by it with the keys and the times', st.set === 'place:vesta' && !st.nav && st.fly && st.fast && /Enter/.test(st.ft) && /Shift\+Enter/.test(st.st), JSON.stringify(st));
     await snap(t, 'campaign-set');
-    const b = await j(`({ x: ${SC}.mp.btnFast.x + 12, y: ${SC}.mp.btnFast.y + 8 })`);
+    const b = await j(`(() => { const o = ${mapBtn(SC, 'fast')}; return { x: o.gx, y: o.gy }; })()`);
     await clickAt(t, b.x, b.y); await t.run(300);
     check('a click on Fast flies there with the burn on', await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === true`));
     await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes
@@ -64,12 +65,12 @@ async function campaign() {
     check('Enter on the set place flies there at regular speed', await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === false`));
     // Troy, 20 Nov 2026: mid-flight the two buttons and Enter / Shift+Enter stay live; the active one is marked; the target is kept and only the speed changes
     await t.run(300);
-    check('mid-flight the two buttons are still on the map, with Fly marked ON (regular speed)', (await j(`${SC}.mp.btnFly.visible && ${SC}.mp.btnFast.visible && /ON$/.test(${SC}.mp.btnFly.text) && !/ON$/.test(${SC}.mp.btnFast.text)`)) === true, JSON.stringify(await j(`[${SC}.mp.btnFly.text, ${SC}.mp.btnFast.text, ${SC}.mp.setId]`)));
+    check('mid-flight the two buttons are still on the map, with Fly marked ON (regular speed)', (await j(`(() => { const f = ${mapBtn(SC, 'fly')}, x = ${mapBtn(SC, 'fast')}; return f.visible && x.visible && f.on && !x.on; })()`)) === true, JSON.stringify(await j(`[${mapBtn(SC, 'fly')}.text, ${mapBtn(SC, 'fast')}.text, ${SC}.mp.setId]`)));
     await t.ev(`(() => { window.__trip = ${SC}.camp.nav; return 1; })()`);
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(300);
-    check('Shift+Enter on the same place: the same trip, now a burn, and Fast is marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === true && /ON$/.test(${SC}.mp.btnFast.text) && !/ON$/.test(${SC}.mp.btnFly.text)`)) === true, JSON.stringify(await j(`[${SC}.mp.btnFly.text, ${SC}.mp.btnFast.text]`)));
-    const fb2 = await j(`({ x: ${SC}.mp.btnFly.x + 12, y: ${SC}.mp.btnFly.y + 8 })`); await clickAt(t, fb2.x, fb2.y); await t.run(300);
-    check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && /ON$/.test(${SC}.mp.btnFly.text)`)) === true);
+    check('Shift+Enter on the same place: the same trip, now a burn, and Fast is marked ON', (await j(`(() => { const f = ${mapBtn(SC, 'fly')}, x = ${mapBtn(SC, 'fast')}; return ${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === true && x.on && !f.on; })()`)) === true, JSON.stringify(await j(`[${mapBtn(SC, 'fly')}.text, ${mapBtn(SC, 'fast')}.text]`)));
+    const fb2 = await j(`(() => { const o = ${mapBtn(SC, 'fly')}; return { x: o.gx, y: o.gy }; })()`); await clickAt(t, fb2.x, fb2.y); await t.run(300);
+    check('a click on Fly: back to regular speed, the same trip, Fly marked ON', (await j(`${SC}.camp.nav === window.__trip && ${SC}.camp.nav.fast === false && ${mapBtn(SC, 'fly')}.on`)) === true);
     await snap(t, 'campaign-switch');
     // card space-game-burn-with-wing-out (it was fast-board: Fast needed the wing aboard): the wing is out, and Fast on the map burns at once with the pilots towed
     // the wing is sent out again by the launch order (the all-squads list and its Launch row are switched off: card space-game-keys-orders). A list's key over the map closes the map (W, the fleet pick: card space-game-keys5-qwe; Q is the map's own reset since card space-game-q-recentre-map and closes nothing), so Tab opens it again after
@@ -83,7 +84,7 @@ async function campaign() {
     check('the wing is out (the three pilots)', (await j(`campNavOut(${SC}.camp)`)) === 3);
     // the place is chosen on the map's list and set (not by a click on its mark: the carrier is by Vesta now), and the keys do the rest: the Fast button, Shift+Enter, Shift+Enter
     await t.ev(`(() => { ${SC}.mp.selId = 'place:pallas'; ${SC}.mp.setId = 'place:pallas'; ${SC}.mp.dirty = true; return 1; })()`); await t.run(300);
-    check('with the wing out the Fast button is the same button: its key and its time, no "wing is out" (a burn tows the wing: card space-game-burn-with-wing-out)', /^FAST\s+Shift\+Enter/.test(await j(`${SC}.mp.btnFast.text`)) && !/wing is out/.test(await j(`${SC}.mp.btnFast.text`)), await j(`${SC}.mp.btnFast.text`));
+    check('with the wing out the Fast button is the same button: its key and its time, no "wing is out" (a burn tows the wing: card space-game-burn-with-wing-out)', /^FAST\s+Shift\+Enter/.test(await j(`${mapBtn(SC, 'fast')}.text`)) && !/wing is out/.test(await j(`${mapBtn(SC, 'fast')}.text`)), await j(`${mapBtn(SC, 'fast')}.text`));
     const recalls0 = await j(`${SC}.camp.orders.recall`); // the mission's count of recall orders so far (this walk recalled the wing once to test it): a burn must add none
     await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', shiftKey: true, repeat: false }); return 1; })()`); await t.run(200);
     check('Shift+Enter burns at once with the wing out: the trip is on and fast, nobody is recalled, nothing waits', (await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === true && ${SC}.camp.orders.recall === ${recalls0} && !${SC}.camp.navWait`)) === true, JSON.stringify(await j(`({ nav: ${SC}.camp.nav && ${SC}.camp.nav.id, fast: ${SC}.camp.nav && ${SC}.camp.nav.fast, recall: ${SC}.camp.orders.recall, navWait: ${SC}.camp.navWait })`)));

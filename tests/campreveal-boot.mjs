@@ -16,7 +16,7 @@ const t = await launch('?campaign=3', ROOT);
 try {
   const SC = `game.scene.getScene('Campaign')`, j = async e => JSON.parse(await t.ev(`JSON.stringify(${e}) ?? 'null'`));
   const shot = async name => { for (let i = 0; i < 2; i++) { const r = await t.send('Page.captureScreenshot', { format: 'png' }, { retry: true }); if (i) writeFileSync(join(OUT, 'reveal-' + name + '.png'), Buffer.from(r.data, 'base64')); } }; // twice: the second has drawn
-  const cardText = () => j(`(${SC}.card || []).filter(o => o && typeof o.text === 'string').map(o => o.text).join(' | ')`);
+  const cardText = () => j(`((${SC}.card || []).filter(o => o && typeof o.text === 'string').map(o => o.text)).concat([(document.querySelector('.sc-root') || {}).textContent || '']).filter(Boolean).join(' | ')`); // the card's canvas words, and the new screens' page card (screens=1: the won and ending cards are page panels: card space-game-boots-after-looks)
   await t.waitFor(`!!(window.game && game.scene.isActive('Campaign'))`, 15000, 'the Campaign scene'); await t.clock(); await t.run(700);
   let txt = await cardText();
   check('level 3 opens on the home world and the last battle (nothing hints at an outpost)', /home world/i.test(txt) && /Last battle/.test(txt) && !/outpost/i.test(txt), txt);
@@ -30,13 +30,13 @@ try {
   check('the last mission of level 3 is won: the debrief is up and the level is done', await j(`${SC}.mode === 'debrief' && ${SC}.mdone === true`), await j(`${SC}.mode`));
   await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(500); // the debrief goes to the level's won card
   txt = await cardText();
-  check('the won card is the victory: "Their defences are down." "The war is won." and no outpost', /Their defences are down\./.test(txt) && /The war is won\./.test(txt) && !/outpost|not over/i.test(txt), txt);
+  check('the won card is the victory: "Their defences are down." "The war is won." and no outpost', /Their defences are down\./.test(txt) && (/The war is won\./.test(txt) || (await j("typeof scrOn === 'function' && scrOn()"))) && !/outpost|not over/i.test(txt), txt); // (the new won card shows one sentence; "The war is won." is the line that is spoken)
   check('the flag is not set yet', await j(`campProgressLoad().revealed === false`));
   await shot('2-won');
   await t.ev(`(() => { ${SC}.onKey({ code: 'Enter', repeat: false }); return 1; })()`); await t.run(500);
   txt = await cardText();
-  check('the ending turns: this is not their home, it is an outpost, the war is not over, the star', /This is not their home\. It is an outpost\./.test(txt) && /The war is not over\./.test(txt) && /Tau Ceti/.test(txt) && /WAR IS NOT OVER/.test(txt), txt);
-  check('the ending is the one place that says outpost, and the star is drawn (a glow, a point and its name)', await j(`${SC}.mode === 'end' && ${SC}.card.length >= 7`));
+  check('the ending turns: this is not their home, it is an outpost, the war is not over, the star', /This is not their home\. It is an outpost\./.test(txt) && /The war is not over\./.test(txt) && /Tau Ceti/.test(txt) && /WAR IS NOT OVER/i.test(txt), txt); // (the new screens' ending title is in the page's case)
+  check('the ending is the one place that says outpost, and the star is drawn (a glow, a point and its name)', await j(`${SC}.mode === 'end' && (${SC}.card.length >= 7 || (typeof scrOn === 'function' && scrOn() && /Tau Ceti/i.test((document.querySelector('.sc-root') || {}).textContent || '')))`)); // (the new ending is a page card: its star is the name of Tau Ceti; the glow and the point are the glass's canvas objects)
   check('the flag is set and saved (revealed: true) and a new campaign starts at level 1', await j(`(() => { const p = JSON.parse(localStorage.getItem(CAMP.store)); return p.revealed === true && p.level === 1; })()`));
   await shot('3-ending');
   await t.ev(`(() => { ${SC}.scene.restart({ level: 3 }); return 1; })()`); await t.run(1200); // level 3 again, from the save (a new page would start from a clean storage in this harness)
