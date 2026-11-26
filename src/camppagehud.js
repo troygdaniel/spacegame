@@ -89,7 +89,7 @@ function campPageHudGoal(C) {
   const full = typeof campObjective === 'function' ? campObjective(C) : ''; if (!full) return null;
   const objs = C.L && C.L.objectives && typeof campObjectives === 'function' ? campObjectives(C) : null, o = objs ? objs.find(x => !x.done) : null, i = full.indexOf(': ');
   const label = i > 0 ? full.slice(0, i) : full.replace(/\.$/, ''), value = i > 0 ? full.slice(i + 2).split(/\.\s/)[0].replace(/\.$/, '').replace(/ of /, ' / ') : '', need = o && o.need >= 1 && value ? o.need : 0; // a meter when the objective is counted (it has a value to show)
-  return { label, value, frac: need ? Math.max(0, Math.min(1, o.got / need)) : null, tone: o && (o.type === 'ore' || o.type === 'cashin') ? 'ore' : 'good' };
+  return { label, value, frac: need ? Math.max(0, Math.min(1, o.shown / need)) : null, tone: o && (o.type === 'ore' || o.type === 'cashin') ? 'ore' : 'good' };
 }
 // the stock (landing 2): the ore as a meter, the missiles as one pip each with the reload key's chip (the key table's). The credits are not shown in flight
 // the build under way (card space-game-page-hud-reload-progress; Troy, 25 Nov 2026): how far the missile being built is, 0 to 1 (C.reloadAt is when it is done, the build time is campReload(C), CAMP.missile.reload: nothing typed here; src/campmissilebuild.js), 0 when none is building. The next empty pip fills with it and turns solid when it lands; queued (C.queued) is the builds waiting behind it, shown as +N to the right of the pips. What R does, its cost and its time are not touched
