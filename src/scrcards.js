@@ -24,11 +24,11 @@ const scrRingN = (frac, tone, text, size) => { const r = scrRing(frac, { tone, t
 const scrStatN = (label, value) => ({ k: 'stat', label: String(label), value: String(value) });
 const scrRowN = (kids, o) => Object.assign({ k: 'row', kids: (kids || []).filter(Boolean) }, o);                          // o: just ('end', 'ctr', 'sp'), wrap, gap (em), push (margin-left:auto)
 const scrColN = (kids, o) => Object.assign({ k: 'col', kids: (kids || []).filter(Boolean) }, o);
-const scrTileN = (kids, o) => Object.assign({ k: 'tile', kids: (kids || []).filter(Boolean) }, o);                        // o: on (the picked one), dim, grow (flex-basis in em)
+const scrTileN = (kids, o) => Object.assign({ k: 'tile', kids: (kids || []).filter(Boolean) }, o);                        // o: on (the picked one), dim, grow (flex-basis in em), fit (as wide as its words: it never shrinks)
 const scrKeyWordN = (id, word) => { const c = scrChipN(id); return c ? scrRowN([c, scrTextN('lab', word)]) : null; };       // a chip and what it does
 const scrScreenN = (id, kids) => ({ k: 'screen', id, kids: (kids || []).filter(Boolean) });                                 // a whole screen: its kids carry their own place (o.at: { left, top, right, bottom, transform }, o.bare: no panel)
 const scrRuleN = () => ({ k: 'rule' });
-const scrCardN = (id, o, kids) => Object.assign({ k: 'card', id, kids: (kids || []).filter(Boolean) }, o);                 // o: w (em), top (percent), gap (em), ctr
+const scrCardN = (id, o, kids) => Object.assign({ k: 'card', id, kids: (kids || []).filter(Boolean) }, o);                 // o: w (em), top (percent), gap (em), ctr, deep (a darker panel with the picture behind it blurred and dimmed: the mission pick's tiles)
 function scrNodeWords(n) { // the words and numbers a tree shows
   if (!n || typeof n !== 'object') return 0;
   let w = 0;
