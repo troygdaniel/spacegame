@@ -26,7 +26,7 @@ const FILL = {
   addr: 'fill', store: 'longhaul.fill',
   memo: { s: null, v: null },    // the page's address, read again only when it changed
   now: { on: false, w: 1280, h: 720, ox: 0, oy: 0 }, // what the game is now
-  stamp: -1, idle: 2, live: [], watch: null          // the frame a scene last asked for the window; the frames with no asking after which it is given back; the scenes whose cameras are set for it; the game whose loop is watched
+  stamp: -1, tick: 0, idle: 2, live: [], watch: null          // the frame a scene last asked for the window; the frames with no asking after which it is given back; the scenes whose cameras are set for it; the game whose loop is watched
 };
 function fillAddrVal(search) { // the value of ?fill in the address, lower case: null when it is not there, '' for a bare ?fill (the last one counts)
   try {
@@ -84,14 +84,28 @@ function fillCams(s) { // the three cameras of a flight scene (src/camzoom.js) a
   cz.main.setViewport(0, 0, N.w, N.h); cz.bg.setViewport(0, 0, N.w, N.h); // the world and the stars: the whole window
   cz.ui.setViewport(0, 0, N.w, N.h); if (typeof cz.ui.setScroll === 'function') cz.ui.setScroll(-N.ox, -N.oy); // the canvas HUD: the whole window too, its 1280 by 720 numbers moved to the safe area by the camera's SCROLL (src/camzoom.js gives a HUD object of a filling scene a scroll factor of 1 for this). Nothing of it is cut at the safe area's border: a list that opens under a page panel in the window's corner, a ring on a ship out in the extra room, are drawn (card space-game-fill-window-clipping: Troy's Q list showed its last row only)
   (s.bgLayers || []).forEach(t => { if (t && t.setSize && (t.width !== N.w || t.height !== N.h)) t.setSize(N.w, N.h); });
+  fillVeils(s);
   return true;
 }
+// A VEIL: a rectangle that dims the whole screen under a card, a page or the map (1280 by 720, in the middle). In a window that is larger it is drawn large enough to dim the whole window, or its border would
+// show as a box. Found by its shape the first time it is seen (fillSeen), stretched whenever the size changes.
+const fillIsVeil = o => !!o && o.type === 'Rectangle' && o.width === FILL.W && o.height === FILL.H && o.x === FILL.W / 2 && o.y === FILL.H / 2 && typeof o.setScale === 'function';
+const fillVeilFit = o => { const N = FILL.now; o.setScale((FILL.W + 2 * N.ox) / FILL.W, (FILL.H + 2 * N.oy) / FILL.H); };
+function fillVeils(s) { const list = s && s.children && s.children.list; if (list) for (let i = 0; i < list.length; i++) if (list[i].fillVeil) fillVeilFit(list[i]); }
+function fillSeen(s) { // every object of a filling scene, looked at once, the first frame after it is made: a veil is marked and fitted; in a screen that is not the flight, an object fixed to the screen (scroll factor 0) follows the camera's scroll like the rest, and what is not the backdrop is kept off the back camera
+  const list = s && s.children && s.children.list; if (!list) return; const bg = s.fillBg, menu = !s._cz;
+  for (let i = 0; i < list.length; i++) { const o = list[i]; if (o.fillOn) continue; o.fillOn = 2;
+    if (menu && o.scrollFactorX === 0 && typeof o.setScrollFactor === 'function') o.setScrollFactor(1);
+    if (menu && bg) o.cameraFilter = (o.cameraFilter || 0) | bg.id;
+    if (fillIsVeil(o)) { o.fillVeil = 1; fillVeilFit(o); } }
+}
 // a screen that is not the flight (the title, the ready room with its pick and briefing, the warp, Settings; landing B, card space-game-fill-window-b-screens): everything it draws was laid out for 1280 by 720, so its one
-// camera becomes the safe area in the middle, at the same fixed scale, and nothing of it moves or scales. What the scene names as its backdrop (scene.fillBack: star layers, a planet) goes on a camera of its own
+// camera shows it in the safe area in the middle, at the same fixed scale, and nothing of it moves or scales. What the scene names as its backdrop (scene.fillBack: star layers, a planet) goes on a camera of its own
 // under it that covers the whole window: a tile layer is made the window's size, anything else moves with the safe area, so the room round the safe area is sky, not a dark band.
 function fillMenuCams(s) {
   const N = FILL.now, main = s && s.cameras && s.cameras.main; if (!main || typeof main.setViewport !== 'function') return false;
-  main.setViewport(N.ox, N.oy, FILL.W, FILL.H);
+  main.setViewport(0, 0, N.w, N.h); if (typeof main.setScroll === 'function') main.setScroll(-N.ox, -N.oy); // the whole window, its 1280 by 720 numbers moved to the safe area by the camera's scroll (no screen of these moves its camera itself): nothing is cut at the safe area's border
+  fillVeils(s);
   const back = s.fillBack;
   if (back && back.length && typeof s.cameras.add === 'function') {
     let bg = s.fillBg;
@@ -106,10 +120,6 @@ function fillMenuCams(s) {
   }
   return true;
 }
-function fillMenuSort(s) { // everything that is not the backdrop is the main camera's alone: looked at once, the first frame after it is made (as src/camzoom.js sorts a flight scene's objects)
-  const bg = s.fillBg, list = bg && s.children && s.children.list; if (!list) return;
-  for (let i = 0; i < list.length; i++) { const o = list[i]; if (o.fillOn) continue; o.cameraFilter = (o.cameraFilter || 0) | bg.id; o.fillOn = 2; }
-}
 const fillCamsOf = s => (s && s._cz ? fillCams(s) : fillMenuCams(s));
 function fillParent(game) { // the room FIT has for the canvas: the size of the game's parent element, read now (Phaser reads it itself only every half second: a size worked out from the window while FIT still fitted to the old parent left the canvas larger than the window for a moment, its panels cut at the edges); the window's inner size where there is no parent to ask
   const sc = game && game.scale;
@@ -121,15 +131,15 @@ function fillGame(game, w, h) { // the game's own size (FIT then fits it to the 
   if (sc.width !== w || sc.height !== h) sc.setGameSize(w, h);
   return true;
 }
-// Who holds the window. A scene that fills calls fillSync every frame of its own; that is its word that it still wants the window (FILL.stamp, the game loop's frame). A watch on the game's own loop gives the
+// Who holds the window. A scene that fills calls fillSync every frame of its own; that is its word that it still wants the window (FILL.stamp, the count of the game's steps then). A watch on the game's own loop gives the
 // window back when no scene has said so for FILL.idle frames: a scene of the Long Haul has started, or the switch went off while the scene that asked is paused. So nothing is given back between two filling
 // scenes (the title to the ready room, the flight to Settings and back): no frame at the old size, no flicker.
 function fillStamp(s) {
-  const g = s.game; FILL.stamp = g.loop && typeof g.loop.frame === 'number' ? g.loop.frame : FILL.stamp;
+  const g = s.game; FILL.stamp = FILL.tick;
   if (FILL.live.indexOf(s) < 0) FILL.live.push(s);
   if (FILL.watch !== g && g.events && typeof g.events.on === 'function') { FILL.watch = g; g.events.on('poststep', () => fillTick(g)); }
 }
-function fillTick(g) { if (!FILL.now.on) return false; const f = g.loop && typeof g.loop.frame === 'number' ? g.loop.frame : 0; if (f - FILL.stamp <= FILL.idle) return false; return fillDrop(g); }
+function fillTick(g) { FILL.tick++; if (!FILL.now.on) return false; if (FILL.tick - FILL.stamp <= FILL.idle) return false; return fillDrop(g); } // (its own count of the game's steps: the loop's frame number does not move when a test steps the game by hand)
 function fillDrop(game) { // the game is 1280 by 720 again, and every scene that had taken the window has its cameras back as they were
   if (!FILL.now.on && FILL.now.w === FILL.W && FILL.now.h === FILL.H && !FILL.live.length) return false;
   FILL.now = { on: false, w: FILL.W, h: FILL.H, ox: 0, oy: 0 };
@@ -147,7 +157,7 @@ function fillSync(s, o) {
   const P = fillParent(s.game), ww = P.w, wh = P.h, z = fillSize(ww, wh), sig = z.w + 'x' + z.h + (s._cz ? 'f' : s.fillBack && s.fillBack.length ? 'b' : 'm'); // (the scene's kind is in it: a scene asks once before its flight cameras or its backdrop are made, and again after)
   if (FILL.now.w !== z.w || FILL.now.h !== z.h || !FILL.now.on) { FILL.now = { on: true, w: z.w, h: z.h, ox: z.ox, oy: z.oy }; fillGame(s.game, z.w, z.h); }
   if (s.fillSig !== sig) { s.fillSig = sig; fillCamsOf(s); }
-  if (!s._cz) fillMenuSort(s);
+  fillSeen(s);
   return true;
 }
 function fillRelease(s) { return fillDrop(s && s.game); } // at once (the watch does it by itself when no scene asks any more)
