@@ -232,6 +232,20 @@ The Campaign's backdrop is three new textures (`wlook-stars1` 2048 by 1024 with 
 
 - **Painting:** 31 to 42 ms, once, at the first Campaign scene of a session (four runs: 34, 37, 42, 31 ms). The Long Haul's own sky, which stays as it is, paints in about 196 ms at boot (`waSpaceArt`, the 1024 px fbm nebula), so the boot cost (`tests/world.mjs`) does not move: nothing here runs at boot. Memory: three canvases, 8 MB + 1 MB + 4 MB (the old three are 4 + 1 + 4 MB and stay, because the Long Haul and the title use them); the texture count is 191 then 194.
 - **A frame of the busiest fight:** `node tools/perfcampaign.mjs frames busy1`, 600 stepped frames, today's backdrop (the harness boots with `?worldlook=0`) against the new one swapped in inside the same page by `PERF_PATCH` (`campWorldBackdrop(S)` after destroying the old layers), four runs each, alternating. Mean of a frame, median of four (range): **3.93 ms (3.74 to 4.92) today, 4.14 ms (3.80 to 4.42) new**; update 3.16 and 3.33; render 0.48 and 0.51; display list 269 and 269; heap 11.0 MB and 11.0 MB. The three layers are three full-screen tile sprites as before, the same fill for the drawing; the spread between runs of one build is larger than the difference, so no change is claimed.
+## Flat rocks (card `space-game-b3-e-flat-rocks`, 25 Nov 2026)
+
+The rocks of the asteroid fields are one grey polygon and one darker facet in a 64 by 64 texture painted once (`src/shiplookrock.js`), in place of the boulder `waAsteroid` paints (craters, speckle, glowing veins). The number of rock sprites, their size, their blend and the texture's size are the same, so the draw cost should not move: measured to be sure. `node tools/perfcampaign.mjs frames busy1` (600 stepped frames of level 1's busiest fight, the ships' new look on in both), the rocks' key swapped inside one page by `PERF_PATCH` (the old boulders: `window.slookRockKey = () => ''`, then the rock sprites are made again), four runs each, alternating, on a Mac at load 10 to 14 (a frame time is a size, not a speed: the spread between runs of the same build is larger than the difference between the two):
+
+| Mean of a frame (ms) | Old boulders | Flat rocks |
+|---|---|---|
+| Frame, median of four runs (range) | 3.79 (3.37 to 4.17) | 3.83 (2.85 to 3.99) |
+| Update | 2.93 (2.61 to 3.26) | 2.99 (2.19 to 3.11) |
+| Render (the drawing) | 0.59 (0.53 to 0.64) | 0.59 (0.47 to 0.62) |
+| Sprite sync | 0.14 | 0.14 |
+| Display list / visible | 284 / 178 | 284 / 178 |
+| Heap | 10.8 MB | 10.8 MB |
+
+No difference that the noise does not cover; the three new textures (`look-rock-0` to `look-rock-2`, 64 by 64, painted once with fills and paths, no gradient) cost nothing a frame. (A first set of runs against the card's parent, with the look off in both because the test harness boots with `?shiplook=0`, drew boulders on both sides and is not the comparison.)
 
 ## Measuring again
 
