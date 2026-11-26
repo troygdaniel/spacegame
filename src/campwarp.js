@@ -102,6 +102,7 @@ class CampWarp extends Phaser.Scene {
     this.events.once('shutdown', () => { if (typeof hyperHumStop === 'function') hyperHumStop(this.hum); this.hum = null; });
   }
   update(time, delta) {
+    if (typeof fillSync === 'function') fillSync(this); // the warp keeps its 1280 by 720 picture in the safe area while Fill the window is on (src/fillwindow.js)
     if (this.went) return;
     const dt = Math.min(delta, 100) / 1000, f = campWarpStep(this.S, dt);
     this.frame(f, dt);

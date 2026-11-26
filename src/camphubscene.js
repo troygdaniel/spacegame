@@ -315,6 +315,7 @@ class CampHub extends Phaser.Scene {
   }
   leave() { if (typeof this.d.onLeave === 'function') this.d.onLeave(this); else go(this, 'Title'); }
   update(time) {
+    if (typeof fillSync === 'function') fillSync(this); // the ready room keeps its 1280 by 720 layout in the safe area while Fill the window is on (src/fillwindow.js)
     interiorTick(this, time);
     if (typeof campTuneMark === 'function') campTuneMark(this); // the TUNED mark, while any override is on (src/camptunedraw.js)
     if (typeof campWalkTickScene === 'function') campWalkTickScene(this, time); // the briefing's walking map plays on (src/campbriefwalkdraw.js)

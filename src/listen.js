@@ -212,7 +212,7 @@ function listenPaint() {
   const d = listenDom(); if (!d) return v;
   try {
     if (!v) { d.root.style.display = 'none'; return v; }
-    const c = LISTEN_CSS[v.mark] || LISTEN_CSS.cyan, canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
+    const c = LISTEN_CSS[v.mark] || LISTEN_CSS.cyan, canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? (typeof fillSafeRect === 'function' ? fillSafeRect(canvas) : canvas.getBoundingClientRect()) : null;
     d.head.textContent = (v.mark === 'red' ? '● ' : '') + v.head; d.body.textContent = v.body;
     Object.assign(d.root.style, { display: 'block', borderColor: c, color: v.mark === 'red' ? c : '#cfefff', left: r ? (r.left + r.width / 2) + 'px' : '50%', top: r ? (r.top + r.height * 0.1) + 'px' : '10%', transform: 'translateX(-50%)' });
     d.head.style.color = c; d.root.style.boxShadow = v.mark === 'red' ? '0 0 18px rgba(255,77,109,0.55)' : 'none';
@@ -254,7 +254,7 @@ function listenCapPaint() {
     const game = LISTEN.game || (typeof window !== 'undefined' ? window.game : undefined), busy = S.state !== 'idle'; listenKeysSync(game); if (d.key && d.key.textContent !== LISTEN.cap) d.key.textContent = LISTEN.cap;
     if (!busy && !listenCapShown(game)) { d.root.style.display = 'none'; return null; }
     if (busy && !listenCapShown(game) && S.state !== 'listening' && S.state !== 'opening') { d.root.style.display = 'none'; return null; } // the scene went away under the ring
-    const v = listenCapView(), canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
+    const v = listenCapView(), canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? (typeof fillSafeRect === 'function' ? fillSafeRect(canvas) : canvas.getBoundingClientRect()) : null;
     Object.assign(d.root.style, { display: 'block', left: (r ? r.left + 14 : 14) + 'px', top: (r ? r.top + r.height / 2 - 29 : 300) + 'px', opacity: v.idle ? '0.55' : '1',
       background: v.fill >= 1 ? v.color : 'conic-gradient(' + v.color + ' ' + Math.round(v.fill * 360) + 'deg, rgba(56,225,255,0.2) 0)', boxShadow: v.glow !== undefined ? '0 0 ' + Math.round(8 + v.glow * 30) + 'px ' + v.color : 'none' });
     d.label.textContent = v.label; d.label.style.color = v.idle ? '#8fb4c9' : v.color;

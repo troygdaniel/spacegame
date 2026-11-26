@@ -145,8 +145,8 @@ function campMapPanelClose(s) {
   const R = s && s.mpPanel; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
   if (s) { s.mpPanel = null; s.mapRadio = null; }
 }
-const campMapPanelFit = (R, canvas) => { // the root over the canvas rectangle, at the page HUD's font size
-  const r = canvas.getBoundingClientRect(), set = campPageHudSet, fs = r.width * (typeof CAMP_PAGEHUD === 'object' ? CAMP_PAGEHUD.em : 0.0112);
+const campMapPanelFit = (R, canvas) => { // the root over the canvas rectangle (the 1280 by 720 safe area of it while the flight has taken the window's shape: the canvas map is drawn there), at the page HUD's font size
+  const r = (typeof fillSafeRect === 'function' ? fillSafeRect(canvas) : canvas.getBoundingClientRect()), set = campPageHudSet, fs = r.width * (typeof CAMP_PAGEHUD === 'object' ? CAMP_PAGEHUD.em : 0.0112);
   set(R.root, 'display', ''); set(R.root, 'left', Math.round(r.left) + 'px'); set(R.root, 'top', Math.round(r.top) + 'px'); set(R.root, 'width', Math.round(r.width) + 'px'); set(R.root, 'height', Math.round(r.height) + 'px'); set(R.root, 'fontSize', Math.round(fs * 100) / 100 + 'px');
   return r.width / 1280; // k: screen px for a game px
 };

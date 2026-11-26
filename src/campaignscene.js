@@ -126,7 +126,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campDragInstall === 'function') campDragInstall(this); // press and drag pans the flight view and the map, with a RECENTRE mark and the way back (src/campdrag.js)
     if (typeof campMapInstall === 'function') campMapInstall(this); // Tab: the map of the level, over the battle, which goes on behind it (src/campmap.js, src/campmapdraw.js)
     this.events.once('shutdown', () => { if (typeof stopBeamHum === 'function') stopBeamHum(); });
-    if (typeof fillRelease === 'function') { const back = () => fillRelease(this); this.events.on('pause', back); this.events.once('shutdown', () => { this.events.off('pause', back); back(); }); } // the ready room at a dock, Settings and every other scene are 1280 by 720: the game goes back to it when this scene pauses or ends, and takes the window again when it runs (fillSync) // no hum left behind when the level ends or the title comes
+ // no hum left behind when the level ends or the title comes
     if (typeof camzoomSetup === 'function') { // the Long Haul's own camera zoom (src/camzoom.js): the world on one camera, the HUD, panels and strip on another that never scales; + - = 0 and the wheel zoom the world (src/campzoom.js)
       this.lhZoom = CAMZOOM.want; if (typeof campZoomRange === 'function') campZoomRange(true, typeof campZoomFloor === 'function' ? campZoomFloor(this.level, this.mi) : 0); CAMZOOM.want = campZoomStart(); camzoomSetup(this); // the view goes out to 0.2 here, or to where this mission's route fits on a long one (campZoomRange, campZoomFloor; the Long Haul's 0.4 is put back below) // every flight starts at the zoom six presses of - reach (campZoomStart); the Long Haul's own is put back when this scene is left
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
@@ -431,7 +431,7 @@ class Campaign extends Phaser.Scene {
 
   // ----- each frame -----
   update(time, dt) {
-    if (typeof fillSync === 'function') fillSync(this); // the flight takes the window's shape while its switch is on (src/fillwindow.js); nothing is done unless the window or the switch changed
+    if (typeof fillSync === 'function') fillSync(this); // the flight takes the window's shape while its switch is on (src/fillwindow.js): it asks every frame, and the window is given back by itself when no scene asks any more (a scene of the Long Haul)
     spaceBackdropTick(this);
     if (typeof campFocusFrame === 'function') campFocusFrame(this, dt); // the camera on the ship that is watched, the label, the cruiser's arrow (src/campfocus.js)
     if (typeof campDragFrame === 'function') campDragFrame(this, dt, campDragFlying(this)); // the view dragged off the cruiser: the way back (a flying key held, the battle over), and its mark

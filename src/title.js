@@ -61,8 +61,9 @@ class Title extends Phaser.Scene {
     this.cameras.main.fadeIn(700, 0, 0, 0);
     this.s1 = this.add.tileSprite(0, 0, W, H, 'stars1').setOrigin(0);
     this.s2 = this.add.tileSprite(0, 0, W, H, 'stars2').setOrigin(0);
-    this.add.image(1030, 790, 'planet').setScale(1.15);
+    const pl = this.add.image(1030, 790, 'planet').setScale(1.15);
     const st = this.add.image(230, 210, 'station').setScale(0.5).setAlpha(0.9);
+    this.fillBack = [this.s1, this.s2, pl, st]; this.fillBg = null; this.fillSig = null; // the sky: on the whole window when the title has taken its shape (src/fillwindow.js)
     this.tweens.add({ targets: st, angle: 360, duration: 160000, repeat: -1 });
 
     // a ship crosses the screen every few seconds
@@ -189,6 +190,7 @@ class Title extends Phaser.Scene {
     (this.scrDoors || []).forEach(o => { const d = M.doors.find(x => x.go === o.go); if (!d) return; scrHostSet(o.sub, 'text', d.sub); if (o.at) { scrHostSet(o.at, 'text', d.at); scrHostSet(o.meter, 'width', d.meter.pct + '%'); } });
   }
   update(time, dt) {
+    if (typeof fillSync === 'function') fillSync(this); // the title takes the window's shape while Fill the window is on (src/fillwindow.js): its layout stays in the 1280 by 720 safe area, the sky (this.fillBack) covers the window
     if (this.scr === true && this.scrHost) { // the panels follow the canvas (a window that changed size) and step aside for the keys page, which is drawn on the canvas
       if (time - (this.scrFitAt || 0) > TITLE_SCR.refit) { this.scrFitAt = time; scrHostMount(this); }
       scrHostSet(this.scrHost.root, 'visibility', typeof campKeysIsOpen === 'function' && campKeysIsOpen(this) ? 'hidden' : '');

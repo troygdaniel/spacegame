@@ -200,7 +200,7 @@ function cmdstripPaint() {
     const v = sc ? cmdstripView(S, now, S.voice) : null;
     S.shown = !!v;
     if (!v) { d.root.style.display = 'none'; return null; }
-    const canvas = game && game.canvas, r = canvas && canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null, k = r ? r.width / 1280 : 1;
+    const canvas = game && game.canvas, r = canvas && canvas.getBoundingClientRect ? (typeof fillSafeRect === 'function' ? fillSafeRect(canvas) : canvas.getBoundingClientRect()) : null, k = r ? r.width / 1280 : 1; // (the 1280 by 720 safe area while a scene has taken the window's shape: src/fillwindow.js)
     const color = v.mode === 'voice' ? (CS_COLOR[v.mark] || CS_COLOR.cyan) : '#38e1ff';
     Object.assign(d.root.style, { display: 'block', left: (r ? r.left : 0) + 'px', top: (r ? r.top : 0) + 'px', transform: 'scale(' + k + ')', opacity: String(v.alpha) });
     d.box.style.pointerEvents = talking ? 'auto' : 'none'; d.box.style.cursor = talking ? 'pointer' : 'default'; // clickable only while the voice speaks: a click then stops it
