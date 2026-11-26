@@ -12,7 +12,7 @@ const SCRKEYS = {
   groups: [
     { id: 'fly', rows: [['fly', ['fly']], ['fire', ['fire']], ['missile', ['missile']], ['reload', ['reload']], ['zoom', ['zoomout', 'zoomin']]] },
     { id: 'fleet', rows: [['who', ['who']], ['friend', ['friendlies']], ['enemy', ['hostiles']], ['near', ['near']], ['order', ['order']], ['look', ['focus']]] },
-    { id: 'cruiser', rows: [['list', ['@cruiser']], ['map', ['map']], ['esc', ['pause']], ['tune', ['tune']]] }
+    { id: 'cruiser', rows: [['list', ['@cruiser']], ['map', ['map']], ['esc', ['pause']], ['tune', ['tune']], ['boost', ['boost']]] }
   ],
   veil: 0.55, depth: 300                       // how dark the canvas goes behind the panel, and over what (the old page's depth: over the cards, the map and the lists)
 };

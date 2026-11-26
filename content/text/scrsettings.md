@@ -79,6 +79,8 @@ The words of Settings in the new look (card space-game-screens-e-keys-settings; 
 | scr.sett.c.screenshint | Kept in this browser. A page address ending in ?screens=0 turns it off, ?screens=1 turns it on. |
 | scr.sett.c.on | On |
 | scr.sett.c.off | Off |
+| scr.sett.c.fill | Fill the window |
+| scr.sett.c.fillhint | The flight takes the window's shape. Kept in this browser. A page address ending in ?fill=0 turns it off, ?fill=1 turns it on. |
 | scr.sett.c.pack | Pack |
 | scr.sett.c.core | Core pack |
 | scr.sett.c.modded | Modded pack |
