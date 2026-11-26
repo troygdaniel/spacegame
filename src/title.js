@@ -63,7 +63,8 @@ class Title extends Phaser.Scene {
     this.s2 = this.add.tileSprite(0, 0, W, H, 'stars2').setOrigin(0);
     const pl = this.add.image(1030, 790, 'planet').setScale(1.15);
     const st = this.add.image(230, 210, 'station').setScale(0.5).setAlpha(0.9);
-    this.fillBack = [this.s1, this.s2, pl, st]; this.fillBg = null; this.fillSig = null; // the sky: on the whole window when the title has taken its shape (src/fillwindow.js)
+    this.fillBack = [this.s1, this.s2, pl, st]; // the sky: on the whole window when the title has taken its shape (src/fillwindow.js)
+    if (typeof fillSync === 'function') fillSync(this); // from its first frame (no frame at the old fit)
     this.tweens.add({ targets: st, angle: 360, duration: 160000, repeat: -1 });
 
     // a ship crosses the screen every few seconds

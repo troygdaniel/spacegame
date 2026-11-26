@@ -120,7 +120,8 @@ function fillSync(s, o) {
   const keep = !!(o && o.keep), want = fillOn() && (!keep || FILL.now.on);
   if (!want) { if (!keep && (FILL.now.on || s.fillSig)) fillDrop(s.game); if (s.fillSig) { s.fillSig = null; fillCamsOf(s); } return false; }
   fillStamp(s);
-  const ww = window.innerWidth, wh = window.innerHeight, z = fillSize(ww, wh), sig = z.w + 'x' + z.h;
+  const cam0 = s._cz ? s._cz.main : s.cameras && s.cameras.main; if (s.fillCam !== cam0) { s.fillCam = cam0; s.fillSig = null; s.fillBg = null; } // the scene has started again (its cameras are new ones): what was set on the old ones is forgotten
+  const ww = window.innerWidth, wh = window.innerHeight, z = fillSize(ww, wh), sig = z.w + 'x' + z.h + (s._cz ? 'f' : s.fillBack && s.fillBack.length ? 'b' : 'm'); // (the scene's kind is in it: a scene asks once before its flight cameras or its backdrop are made, and again after)
   if (FILL.now.w !== z.w || FILL.now.h !== z.h || !FILL.now.on) { FILL.now = { on: true, w: z.w, h: z.h, ox: z.ox, oy: z.oy }; fillGame(s.game, z.w, z.h); }
   if (s.fillSig !== sig) { s.fillSig = sig; fillCamsOf(s); }
   if (!s._cz) fillMenuSort(s);
