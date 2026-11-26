@@ -22,3 +22,4 @@ The words of the Tab map in the panel look (card space-game-b3-f-tab-map-build; 
 | camp.map.flyinglab | Flying |
 | camp.map.pillfly | Fly |
 | camp.map.pillfast | Fast |
+| camp.map.dock | Docks ({n}) |

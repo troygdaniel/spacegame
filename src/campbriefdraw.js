@@ -161,7 +161,7 @@ function campBriefZoomView(s) {
 // ---------- screen 2: what to do ----------
 // a sprite of a picture: the game's own texture of that kind, at k times the size it has in the battle
 function campBriefSprite(s, look, F) { // F: the new ship look's state for this picture (src/shiplookpic.js; card space-game-ship-look-e-panel-brief): with the switch on a ship is the flat-cut one of its usual side, the same texture the flight view has, with no tint
-  if (look === 'pod' || look === 'rock' || look === 'ore') return { key: look === 'rock' ? 'asteroid' : look, scale: 1, tint: 0 };
+  if (look === 'pod' || look === 'rock' || look === 'ore') return { key: look === 'rock' ? (typeof slookRockKey === 'function' && slookRockKey(s, 'rock-0')) || 'asteroid' : look, scale: 1, tint: 0 }; // a rock: the flat-cut one while the look is on (src/shiplookrock.js, card space-game-b3-e-flat-rocks), else the boulder
   const L = typeof CAMP_LOOK !== 'undefined' ? CAMP_LOOK[look] : null; if (!L) return null;
   const np = typeof slookPic === 'function' ? slookPic(s, look, null, F) : null; if (np) return { key: np.key, scale: np.scale, tint: 0, np: true };
   const key = L.art ? campShipTexture(s, L.art) : L.tex; return { key, scale: L.scale, tint: L.tint || 0 };
