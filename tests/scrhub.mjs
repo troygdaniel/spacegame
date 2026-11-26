@@ -88,7 +88,7 @@ console.log('E. the mission pick');
 {
   g.run(`__fresh(); window.__pm = scrHubPickModel(PR, HB, {});`);
   const tiles = kinds('__pm', 'tile');
-  check('Missions, the chips Up Down Choose, Enter Briefing, Left Back (from the key table)', texts('__pm')[0] === 'Missions' && chips('__pm').join() === 'up:Up,down:Down,pick:Enter,left:Left' && ['Choose', 'Briefing', 'Back'].every(t => texts('__pm').indexOf(t) > 0));
+  check('Missions, the chips Up Down Left Right Choose, Enter Briefing, Esc Back (from the key table: all four arrows move round the grid since card space-game-screens-arrows-walk, Esc is Back)', texts('__pm')[0] === 'Missions' && chips('__pm').join() === 'up:Up,down:Down,left:Left,right:Right,pick:Enter,close:Esc' && ['Choose', 'Briefing', 'Back'].every(t => texts('__pm').indexOf(t) > 0));
   check('nine tiles in three rows, a row to a level with its name (1 · The rim run ...)', tiles.length === 9 && kinds('__pm', 'row').filter(r => (r.kids || []).filter(k => k.k === 'tile').length === 3).length === 3 && texts('__pm').indexOf('1 \u00b7 ' + J('CAMP.levels[1].name')) > 0 && texts('__pm').indexOf('3 \u00b7 ' + J('CAMP.levels[3].name')) > 0);
   check('the next mission is lit and says Next; every other one is dim; nothing is dashed; the kind is under each name', tiles[0].on === true && texts('__pm').indexOf('Next') > 0 && tiles.slice(1).every(t => t.dim && !t.on && !t.dash) && texts('__pm').indexOf('Escort') < 0 && texts('__pm').filter(t => /^(Escort|Recon|Attack|Defend)$/i.test(t)).length === 9);
   check('only the next mission can be clicked (a click id: its place among the missions the cursor can stand on); the dim ones are not targets', tiles.filter(t => t.click !== undefined).map(t => t.click).join() === '0');
@@ -129,9 +129,9 @@ console.log('G. the keys are the hub\'s own');
   g.run(`CAMP.flags.screens = false; __flown(); HB.open = 'board'; window.__len0 = CAMP_HUB.over.board.len(PR); window.__n = campHubSelectable(PR).length;`);
   check('OFF: the missions list has the Start over row after the missions (as always)', J('__len0') === J('__n') + 1);
   g.run(`CAMP.flags.screens = true; window.__len1 = CAMP_HUB.over.board.len(PR); HB.cur = __n - 1; window.__r = campHubKey(HB, PR, 'ArrowDown', {});`);
-  check('ON: the list ends at the last mission; Down from it goes round to the first, never to a Start over row', J('__len1') === J('__n') && J('HB.cur') === 0);
+  check('ON: the list ends at the last mission, never a Start over row; Down from the last row stays (the grid has edges: the arrows no longer go round)', J('__len1') === J('__n') && J('HB.cur') === J('__n') - 1);
   g.run(`HB.cur = 0; campHubKey(HB, PR, 'ArrowUp', {});`);
-  check('ON: Up from the first goes round to the last mission', J('HB.cur') === J('__n') - 1);
+  check('ON: Up from the first row stays on the first mission', J('HB.cur') === 0);
   g.run(`CAMP.flags.screens = false;`);
   check('the other keys are untouched: campHubKey, the digits, Enter, L, T, Esc are not read by the new look (nothing in src/scrhub.js or src/scrhubdraw.js reads a key code)', !/\b(Key[A-Z]|Digit\d|ArrowUp|ArrowDown|Enter|Escape|keydown)\b/.test(code('src/scrhub.js') + code('src/scrhubdraw.js')));
 }
@@ -186,7 +186,7 @@ g.run(`
 }
 {
   const cs = code('src/camphubscene.js'), ch = code('src/camphub.js');
-  check('the scene asks for the new look in one place (paint) and one sync in update; the only use of the switch in the pure hub is the length of the missions list', (cs.match(/campHubNewLook\(this\)/g) || []).length === 1 && (cs.match(/scrHubSync\(this/g) || []).length === 1 && (ch.match(/\bscrOn\(/g) || []).length === 1);
+  check('the scene asks for the new look in one place (paint) and one sync in update; the only uses of the switch in the pure hub are the length of the missions list and the grid of the mission pick (campHubKey, card space-game-screens-arrows-walk)', (cs.match(/campHubNewLook\(this\)/g) || []).length === 1 && (cs.match(/scrHubSync\(this/g) || []).length === 1 && (ch.match(/\bscrOn\(/g) || []).length === 2);
   check('no key, rule, price or save of the hub changed: campHubKey, the refit\'s buy and give back and the saves are read, not written, by the new look (nothing in src/scrhub.js assigns to the progress or the hub state)', !/\b(PR|HB)\.[a-z]+\s*(=|\+=|-=|\+\+|--)[^=]/.test(code('src/scrhub.js')) && !/campProgressSave|campHubBuy|campHubGiveBack|campHubStartOver/.test(code('src/scrhub.js') + code('src/scrhubdraw.js')));
 }
 

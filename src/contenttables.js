@@ -858,6 +858,7 @@ const UI_TEXT = {
   'scr.ctl.any.2': 'Pause',
   'scr.ctl.any.3': 'Mute',
   'scr.ctl.any.4': 'Talk to the ship',
+  'scr.walk.step': 'Step',
   'scr.card.paused': 'Paused',
   'scr.card.resume': 'Resume',
   'scr.card.restart': 'Restart',

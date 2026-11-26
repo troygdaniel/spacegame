@@ -7,6 +7,7 @@
 //   campBriefMoments(level, i)   the four moments of a mission: [{ n, kind: 'mute' | 'help' | 'threat' | 'goal', text, at: { x, y } }], from the walk table's row (src/data_briefwalk.js `moments`) and the words scr.bf.<level>.<mission>.<key>; [] when the mission has none yet
 //   scrBriefModel(P, bf)         the page: the heading and its chips, the goal line, the moments as tiles with a ring each, the bonus pills and the pilots' rings
 const SCRBRIEF = {
+  walk: { zoom: 2.4, ms: 520 },                 // Left and Right walk the four moments (card space-game-screens-arrows-walk): the map zooms to this many times the view it was and pans to the moment's mark in this many ms (smoothly, not a jump)
   frame: { x: 51, y: 144, w: 1178, h: 330 },   // px: the map on the page (92 percent of the width, from 20 percent down): the one page's frame; the three-screen briefing's is CAMPBRIEF.frame
   tones: { mute: 0x9fb3c8, help: 0xffc857, threat: 0xff6fa8, goal: 0xe9b872 },   // the colour of a moment's marker on the map (the tile's ring has the same, by name: mute, amber, foe, gold)
   ring: { mute: 'mute', help: 'amber', threat: 'foe', goal: 'gold' }              // a moment's ring in the tile: the page tokens of src/screens.css
@@ -65,8 +66,8 @@ function scrBriefModel(P, bf) { // bf: { t: { level, i, replay, skipped }, brief
   const B = bf.brief, t = bf.t, rp = t.replay === true && t.skipped !== true, goal = scrGoalLine(t.level, t.i), moments = bf.moments || [];
   const head = scrCardN('brief.head', { bare: true, at: { left: '4%', right: '4%', top: '4%' }, gap: 0 }, [scrRowN([
     scrColN([scrTextN('lab', uiText(rp ? 'scr.bf.headreplay' : 'scr.bf.head', { n: B.n, kind: B.kindText, par: scrClock(B.par) }), 'gold'), scrTextN('t1', B.title), goal ? scrTextN('sm', goal) : null], { gap: 0.1 }),
-    scrRowN([scrChipN('launch'), scrTextN('t3', uiText('scr.hub.launch')), scrChipN('left'), scrTextN('lab', uiText('scr.hub.back'))])], { just: 'sp', full: true })]);
-  const strip = moments.length ? scrCardN('brief.moments', { row: true, bare: true, at: { left: '4%', right: '4%', top: '68%' }, gap: 0.8 }, moments.map(m => scrTileN([scrRowN([scrRingN(1, SCRBRIEF.ring[m.kind] || 'mute', m.n, '1.7em'), scrTextN('t3', m.text)])], { grow: 1 }))) : null;
+    scrRowN([scrChipN('launch'), scrTextN('t3', uiText('scr.hub.launch')), scrChipN('left'), scrChipN('right'), scrTextN('lab', uiText('scr.walk.step')), scrChipN('close'), scrTextN('lab', uiText('scr.hub.back'))])], { just: 'sp', full: true })]);
+  const strip = moments.length ? scrCardN('brief.moments', { row: true, bare: true, at: { left: '4%', right: '4%', top: '68%' }, gap: 0.8 }, moments.map(m => scrTileN([scrRowN([scrRingN(1, SCRBRIEF.ring[m.kind] || 'mute', m.n, '1.7em'), scrTextN('t3', m.text)])], { grow: 1, on: bf.step === m.n }))) : null;
   const bonus = scrCardN('brief.bonus', { row: true, bare: true, at: { left: '4%', right: '4%', bottom: '5%' }, gap: 1 }, [scrRowN([
     scrRowN([scrTextN('lab', uiText('scr.bf.bonus'), 'gold')].concat(((typeof campMissionRow === 'function' && (campMissionRow(t.level, t.i) || {}).bonus) || []).map(b => scrPillN(scrBonusText(b), null))), { wrap: true, gap: 0.5 }),
     scrRowN(scrPilotNames().map((n, k) => scrRingN(1, 'good', k + 1, '1.7em')))], { just: 'sp', full: true })]);

@@ -147,6 +147,19 @@ CAMP_HUB.over.board = {
     return null;
   }
 };
+// the mission pick's GRID in the new look (card space-game-screens-arrows-walk; Troy, 26 Nov 2026, playing with the new screens: "all four arrows move round the grid, Enter selects"): the rows are the levels and the columns the missions of a level. Left and Right go to the next tile of the row the cursor can stand on
+// (done, skipped, next: the dim ones are skipped over), Up and Down to the row above or below that has one (the same column, else the nearest), and every move stops at an edge. dir: 'left', 'right', 'up' or 'down'. Pure: it moves H.cur (an index into campHubSelectable) and says whether it moved.
+function campHubGridMove(P, H, dir) {
+  const sel = campHubSelectable(P); if (!sel.length) return false;
+  const at = Math.max(0, Math.min(sel.length - 1, H.cur | 0)), cur = sel[at], rowOf = lv => sel.map((s, k) => ({ s, k })).filter(x => x.s.level === lv);
+  let to = -1;
+  if (dir === 'left' || dir === 'right') { const row = rowOf(cur.level), n = row[row.findIndex(x => x.k === at) + (dir === 'right' ? 1 : -1)]; if (n) to = n.k; }
+  else if (dir === 'up' || dir === 'down') {
+    const levels = campHubLevels().filter(lv => sel.some(s => s.level === lv)), lv = levels[levels.indexOf(cur.level) + (dir === 'down' ? 1 : -1)];
+    if (lv != null) { let best = null; rowOf(lv).forEach(x => { const d = Math.abs(x.s.i - cur.i); if (!best || d < best.d) best = { d, k: x.k }; }); if (best) to = best.k; } // (the nearest column; the lower one when two are as near)
+  }
+  if (to < 0 || to === at) return false; H.cur = to; return true;
+}
 // the MOUSE on the Missions overlay (card space-game-click-mission; Troy, 24 Nov 2026): a click on a mission is what the arrows are, a second click on the chosen one is Enter. The lines a click can land on are the
 // missions the cursor can stand on (the same rule: done, skipped, next); Start over is left to the keys (Enter asks, a second Enter does it: a stray double click must not wipe a campaign)
 function campHubBoardHits(P, max) {
@@ -285,6 +298,10 @@ function campHubKey(H, P, code, ctx) {
   const enter = code === 'Enter' || code === 'NumpadEnter', d = campHubDigit(code);
   if (!enter) H.ask = false; // the Start over row's question stands until a key other than Enter
   if (d != null) { if (d >= 1 && d <= n) { H.row = d - 1; H.open = ''; res.used = res.moved = true; } return res; }
+  if (ov && H.open === 'board' && typeof scrOn === 'function' && scrOn()) { // the new look's mission pick: a grid, all four arrows move round it (Left no longer closes it and Right no longer opens a briefing: Esc is Back, Enter selects)
+    const dir = campHubLeft(code) ? 'left' : campHubRight(code) ? 'right' : campHubUp(code) ? 'up' : campHubDown(code) ? 'down' : '';
+    if (dir) { res.used = true; res.moved = campHubGridMove(P, H, dir); return res; }
+  }
   if (ov) { // an overlay is up: Left and Esc close it, Up and Down move in its list, Enter or Right does the thing on the choice, and its own keys
     if (code === 'Escape' || campHubLeft(code)) { H.open = ''; res.used = res.moved = true; return res; }
     if (campHubUp(code) || campHubDown(code)) { const len = ov.len(P); res.used = true; if (len > 1) { ov.set(H, (ov.get(H) + (campHubDown(code) ? 1 : len - 1)) % len); res.moved = true; } return res; }

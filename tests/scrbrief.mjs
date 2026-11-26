@@ -61,7 +61,7 @@ console.log('D. the page\'s model');
 {
   g.run(`window.__bf = { t: { level: 1, i: 0, replay: false, skipped: false }, brief: campHubBrief(PR, 1, 0), moments: campBriefMoments(1, 0) }; window.__bm = scrBriefModel(PR, __bf);`);
   check('the heading: Mission 1 · Escort · par 6:40, the mission\'s name large and the goal line under it', texts('__bm')[0] === 'Mission 1 · ' + J('campHubBrief(PR, 1, 0).kindText') + ' · par 6:40' && texts('__bm')[1] === 'Rim escort' && texts('__bm')[2] === 'Escort the transport to Ceres.' && kinds('__bm', 'text')[0].tone === 'gold');
-  check('the chips: L Launch and Left Back (from the key table)', chips('__bm').join() === 'launch:L,left:Left' && texts('__bm').indexOf('Launch') > 0 && texts('__bm').indexOf('Back') > 0);
+  check('the chips: L Launch, Left Right Step, Esc Back (from the key table; Left and Right walk the four moments since card space-game-screens-arrows-walk)', chips('__bm').join() === 'launch:L,left:Left,right:Right,close:Esc' && texts('__bm').indexOf('Launch') > 0 && texts('__bm').indexOf('Step') > 0 && texts('__bm').indexOf('Back') > 0);
   const rings = kinds('__bm', 'ring'), tiles = kinds('__bm', 'tile');
   check('four tiles under the map, each a ring with its number and the moment\'s words; the rings are grey, amber, pink, pink', tiles.length === 4 && rings.slice(0, 4).map(r => r.text + ':' + r.tone).join() === '1:mute,2:amber,3:foe,4:foe' && ['Patrol leaves', 'A miner may call', 'Ambush likely', 'Pirate leader'].every(t => texts('__bm').indexOf(t) > 0));
   check('Bonus and five pills in their short words: Under 6:40, Hull over 60%, No miner lost, Leader killed, No torpedo hits', texts('__bm').indexOf('Bonus') > 0 && kinds('__bm', 'pill').map(p => p.text).join('|') === 'Under 6:40|Hull over 60%|No miner lost|Leader killed|No torpedo hits');
@@ -101,12 +101,13 @@ g.run(`
   check('the zoom keys work as ever: + zooms the map in (and the page stays)', J('S.bf.z') > J('__z0') && J('S.bf.el !== null'));
   g.run(`window.__zv = S.bf.zoom; campBriefKey(S, 'KeyM', false);`);
   check('M goes round the views as before', J('S.bf.zoom') !== J('__zv'));
-  g.run(`campBriefKey(S, 'ArrowRight', false); campBriefKey(S, 'KeyQ', false); campBriefKey(S, 'Tab', false);`);
-  check('Right, Q and Tab do nothing (no next screen; the page takes every key: nothing under it moves), and a held key is not a second launch', J('campBriefIsOpen(S)') === true && J('__launched') === 0);
+  g.run(`campBriefKey(S, 'KeyQ', false); campBriefKey(S, 'Tab', false);`);
+  check('Q and Tab do nothing (no next screen; the page takes every key: nothing under it moves), and a held key is not a second launch', J('campBriefIsOpen(S)') === true && J('__launched') === 0);
   g.run(`campBriefKey(S, 'Escape', false);`);
   check('Esc takes the page away: the panels leave the host, the state is gone, nothing launched', J('campBriefIsOpen(S)') === false && J('S.bf') === null && J('S.scrHost.root.children.length') === 0 && J('__launched') === 0);
   g.run(`campBriefOpen(S); campBriefKey(S, 'ArrowLeft', false);`);
-  check('Left (the Back chip) does the same', J('campBriefIsOpen(S)') === false && J('S.scrHost.root.children.length') === 0);
+  check('Left no longer closes the page (it is the walk\'s: Esc is Back; tests/scrwalk.mjs): on the whole route it stays', J('campBriefIsOpen(S)') === true && J('S.scrHost.root.children.length') === 1 && J('S.bf.step | 0') === 0);
+  g.run(`campBriefKey(S, 'Escape', false);`);
   g.run(`campBriefOpen(S); campBriefKey(S, 'Enter', false);`);
   check('Enter launches: the page closes and the room\'s launch is called (the briefing was the last step)', J('__launched') === 1 && J('campBriefIsOpen(S)') === false && J('S.scrHost.root.children.length') === 0);
   g.run(`campBriefOpen(S); campBriefKey(S, 'KeyL', false);`);
