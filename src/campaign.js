@@ -36,6 +36,7 @@ const CAMP = {
     shiplook: true,                        // the new ship look, the flat cut (card space-game-ship-look-default-on; Troy played it on 25 Nov 2026: "no switch back"; the mock is docs/ship-look-mock.html, the table src/shiplook.js). ON for every player: no row of the N panel, nothing is remembered. ?shiplook=0 draws today's pictures (the tests' and the comparison's way, not shown to a player; the old drawing code stays for now)
     worldlook: true,                       // the new world look, direction 1, flat discs (card space-game-world-w1-backdrop, the first of its pieces; Troy approved it on 25 Nov 2026; the mock is docs/world-look-mock.html, the switch src/campworldlook.js): the backdrop (W1), then the planets, stations, mission objects and the shield hit as each piece lands. ON for every player: no row of the N panel, nothing is remembered. ?worldlook=0 draws today's world (the tests' and the comparison's way). The Campaign only: the Long Haul's pictures are never changed
     feel: true,                            // the cruiser flies with the Long Haul ship's feel (card space-game-cruiser-long-haul-feel; Troy, 26 Nov 2026; src/campfeel.js): ribbon trails from both engines, flickering layered flames, a soft camera that pulls ahead and zooms out a little while boosting. Pictures and the camera only, no rule of the flight. ON for every player; the address ?feel=0 is the way back to the steady streaks and the plain camera. It needs the new ship look's own switch on for the flames and ribbons
+    cockpit: false,                        // take the stick of a pilot's fighter with the C key (card space-game-fly-fighter-l1; Troy, 26 Nov 2026; src/campcockpit.js, the numbers CAMP.cockpit): the fighter flies with the Long Haul Wren's feel while the cruiser keeps its last order and its turrets fire by themselves. OFF: no C key, no cockpit, nothing changes. The address ?cockpit=1 turns it on for a run, ?cockpit=0 off
     fill: true,                            // fill the window (card space-game-fill-window-a-flight; Troy, 25 Nov 2026; src/fillwindow.js): the Campaign's flight takes the window's shape. ON for every player since card space-game-screens-fill-default-on (Troy, 26 Nov 2026): no row of Settings, nothing is remembered. ?fill=0 gives the game back at 1280 by 720 with bands (the tests' and the comparison's way, not shown to a player; the old drawing code stays for now)
     screens: true                          // the new screens around the flight (card space-game-screens-f-foundation; the mock is docs/screens-mock.html, the shared pieces src/screens.js, src/scrhost.js, src/screens.css). ON for every player since card space-game-screens-fill-default-on (Troy, 26 Nov 2026): no row of Settings, nothing is remembered. ?screens=0 draws the screens of before (the tests' and the comparison's way, not shown to a player; the old drawing code stays for now)
   },
@@ -272,6 +273,21 @@ const CAMP = {
     aim: 0.3,                              // rad: how far off its target the nose may be and still fire
     hold: 240,                             // px: the ring it circles an alien at (pirateSteer's hold)
     beside: 150                            // px: how far from its convoy a fighter on the Escort order keeps station (it was the escort ship's)
+  },
+  cockpit: {                               // TAKING THE STICK OF A PILOT'S FIGHTER (card space-game-fly-fighter-l1; Troy, 26 Nov 2026: he loves how the Long Haul ship flies and wants it on a fighter, the cruiser left heavy; src/campcockpit.js; behind CAMP.flags.cockpit): the FLIGHT numbers are the Long Haul Wren's (src/data_ships.js, src/boost.js, src/handling.js classic), the COMBAT numbers are the pilot's fighter's own (CAMP.fighter)
+    speed: 480,                            // px/s top speed (the Wren's)
+    boost: 800,                            // px/s top speed while boosting (the Wren's)
+    accel: 720,                            // px/s per s of thrust (the Wren's)
+    boostAccel: 25 / 12,                   // the thrust times this while boosting: 1500 (the Wren's)
+    turn: 3.6,                             // rad/s the nose turns (the Wren's 0.0036 a ms)
+    drag: 0.55,                            // velocity kept after one second with no thrust (the Wren's)
+    brakeDrag: 0.12,                       // the same with the brake held (the Wren's)
+    fall: 900,                             // px/s each second the top speed comes down after the boost (the Wren's BOOST.fall): a fade, not a wall
+    store: { max: 100, drain: 25, pause: 1000, regen: 17, back: 0.25 }, // the boost store (the Wren's src/boost.js BOOST and its first booster tier): units, units a second while boosting, ms before it refills, units a second refilling, the share that unlocks it after it ran dry
+    hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
+    damageK: 1,                            // times the pilot's shot damage (CAMP.fighter.damage)
+    rateK: 1,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this)
+    turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
     groups: {                              // three built-in groups, as data (a list of kinds, or of ship ids): numbered groups drop in later as C.groups[id] = { name, ships: [ids] }
@@ -851,7 +867,7 @@ function campFightPace(C) {
   if (C.t < (C.fightAt || 0)) return; C.fightAt = C.t + CAMP.pace.every;
   const F = C.fightOn ? Math.max(0.05, +CAMP.pace.fight || 1) : 1, r0 = CAMP.pace.engage[0], r1 = Math.max(r0 + 1, CAMP.pace.engage[1]), ships = C.ships;
   for (let i = 0; i < ships.length; i++) {
-    const u = ships[i]; if (!u.base || u.hp <= 0 || u.boat) continue; // a torpedo boat is a slow hull, not a dogfighter: at half its speed the turrets kill it before it can launch, so it flies and arms as it always did
+    const u = ships[i]; if (!u.base || u.hp <= 0 || u.boat || u.cockpit) continue; // a torpedo boat is a slow hull, not a dogfighter: at half its speed the turrets kill it before it can launch, so it flies and arms as it always did
     let fp = 1;
     if (F !== 1 && !u.running) { // a runner (a pirate that has broken off, src/camppirates.js) flees at its full run speed: slowed by the carrier at its heels, it could never get away
       let best = Infinity; const al = u.team === 'alien';
@@ -1003,7 +1019,7 @@ function campKill(C, u) {
 }
 // the win rules call this: a mission with objectives is won when ALL of them are met (campObjectives); the old rows with none are won at once by the rule that fired
 function campWin(C, why) { if (C.L.objectives) { C.flags[why] = true; return; } campEnd(C, 'won', why); }
-function campEnd(C, result, why) { if (C.result) return; C.result = result; C.why = why; if (result === 'won') C.score = campScore(C); C.events.push({ type: 'end', result, why, score: C.score || null }); }
+function campEnd(C, result, why) { if (C.result) return; C.result = result; C.why = why; if (typeof campCockpitGive === 'function') campCockpitGive(C, 'result'); if (result === 'won') C.score = campScore(C); C.events.push({ type: 'end', result, why, score: C.score || null }); }
 const campConvoyName = u => u.cname || (CAMP.places[String(u.id).split('-')[1]] || {}).name || 'a';
 // a defended place (a mission of kind defend): an Earth-like thing with a shield the aliens go for; the mission is won by holding it for hold seconds
 function campDefend(level, d) { const p = campPlaces(level)[d.place]; return { x: p.x, y: p.y, r: d.r || p.r || 120, shield: d.shield, max: d.shield, name: d.name || p.name, loseWhy: 'base' }; }
@@ -1148,12 +1164,13 @@ function campTick(C, dt) {
   campPowerStep(C, dt); // the ship's systems: the emergency's end, the shield's cap and its mending, the low lines
   campLaserStep(C, dt); // the turrets' charge mends at the rate of the weapons' power
   campCarrier(C, dt);
+  if (typeof campCockpitStep === 'function') campCockpitStep(C, dt); // the fighter the player has taken, if one (src/campcockpit.js)
   campLaunch(C);
   campRepairTick(C); // the fighters mended in the bay are whole again (src/camprepair.js)
   campDogPair(C); // the fighters and the raiders pair off, one on one (src/campdogfight.js)
   campFightPace(C); // a small ship near a foe flies and fires at the fight pace (card space-game-slower-fights)
   if (typeof campWingGuardStep === 'function') campWingGuardStep(C); // a squad guarding a ship that is lost or safe goes back to the cruiser, and says so (src/campwing.js)
-  C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier') campAI(C, u, dt); });
+  C.ships.forEach(u => { if (u.hp > 0 && u.kind !== 'carrier' && !u.cockpit) campAI(C, u, dt); }); // (the fighter whose stick the player holds is flown by campCockpitStep, src/campcockpit.js)
   campBullets(C, dt);
   if (typeof campTorpedoes === 'function') campTorpedoes(C, dt); // the torpedoes fly, hit and go off (src/camptorpedo.js)
   campBeam(C, dt);
@@ -1354,7 +1371,7 @@ function campTurrets(C) {
     if (!best) { let rd = reach; C.rocks.forEach(r => { const d = campDist(r, tu) - r.r; if (r.hp > 0 && d <= rd) { rd = d; rock = r; } }); if (rock) tu.aim = Math.atan2(rock.y - tu.y, rock.x - tu.x); }
     tu.rock = rock ? rock.id : '';
     if (C.t < tu.at) return;
-    const go = !!(best || rock) && campFiring(C) && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
+    const go = !!(best || rock) && (campFiring(C) || (!!best && typeof campCockpitAuto === 'function' && campCockpitAuto(C))) && campLaserSpend(C); // a shot at something in reach spends charge; with none left the slot is let go, so the turrets fire as fast as the charge mends
     if (rock && go) {
       tu.shotAt = C.t; campRockHit(C, rock, k.pd * k_laser_turret(C)); C.laserNow.push({ from: c.id, to: rock.id, kind: 'rock' }); C.events.push({ type: 'laser', src: 'turret', i, x: tu.x, y: tu.y, tx: rock.x - Math.cos(tu.aim) * rock.r * 0.6, ty: rock.y - Math.sin(tu.aim) * rock.r * 0.6, rock: rock.id }); // the beam of this turret lands on the rock's near side
     }

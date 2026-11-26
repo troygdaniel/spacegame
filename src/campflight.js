@@ -11,7 +11,7 @@
 const campFlightNum = u => parseInt(String(u.id).split('-')[1], 10) || 0;
 function campFlightMembers(C, u) {
   const F = C.flights && C.flights.t === C.t ? C.flights : (C.flights = { t: C.t, by: {} }), key = (u.kind === 'fighter' ? u.squad || '' : u.kind) + '';
-  return F.by[key] || (F.by[key] = C.ships.filter(s => s.hp > 0 && s.team === 'earth' && !s.scout && s.kind === u.kind && (s.kind !== 'fighter' || (s.squad || '') === (u.squad || ''))).sort((a, b) => campFlightNum(a) - campFlightNum(b)));
+  return F.by[key] || (F.by[key] = C.ships.filter(s => s.hp > 0 && s.team === 'earth' && !s.scout && s.kind === u.kind && (s.kind !== 'fighter' || (s.squad || '') === (u.squad || '')) && !s.cockpit).sort((a, b) => campFlightNum(a) - campFlightNum(b)));
 }
 function campFlightRank(C, u) { const m = campFlightMembers(C, u), i = m.indexOf(u); return i < 0 ? m.length : i; }
 function campFlightSlot(C, u, P) {

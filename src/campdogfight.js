@@ -14,7 +14,7 @@
 //   campDogPair(C)               the pairing, once a tick      campDogOn(C, u, tgt)  whether this ship flies this fight as a dogfight      campDogFoe(C, u, foe)  the foe a ship that picked `foe` by "the nearest" flies at: its partner when `foe` is a
 //                                dogfighter too (a drone or a gunship that is nearer is still the nearest: it is not a duel, and it is fought as it always was), else `foe`
 // a dogfighter: the wing's fighter, the aliens' raider, or a pirate that flies like the raider (the skiff: CAMP.pirate.kinds[kind].base). Its role is its base kind: 'fighter' or 'raider'
-const campDogRole = u => !u ? null : CAMP.dog.kinds.indexOf(u.kind) >= 0 ? u.kind : (u.faction === 'pirate' && CAMP.pirate.kinds[u.kind] && CAMP.dog.kinds.indexOf(CAMP.pirate.kinds[u.kind].base) >= 0) ? CAMP.pirate.kinds[u.kind].base : null;
+const campDogRole = u => !u || u.cockpit ? null : CAMP.dog.kinds.indexOf(u.kind) >= 0 ? u.kind : (u.faction === 'pirate' && CAMP.pirate.kinds[u.kind] && CAMP.dog.kinds.indexOf(CAMP.pirate.kinds[u.kind].base) >= 0) ? CAMP.pirate.kinds[u.kind].base : null;
 const campDogIs = u => campDogRole(u) !== null;
 const campDogOn = (C, u, tgt) => !!(u && tgt && campDogIs(u) && campDogIs(tgt) && u.team !== tgt.team && tgt.hp > 0);
 // who is at war with whom, for the ones that point their guns: the aliens and the pirates (team 'alien') against everyone else, the neutrals (patrols, miners) included
