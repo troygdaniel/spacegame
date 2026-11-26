@@ -139,7 +139,7 @@ class Campaign extends Phaser.Scene {
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint && !D) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
     (this.placeSets = this.placeSets || []).push({ p, nm, pb }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js)
-    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
+    if (p.base) { const ST = D && typeof campStationTexture === 'function' ? campStationTexture(this, p) : null; made.push(this.add.image(p.x + 70, p.y - 60, ST ? ST.key : 'station').setScale(ST ? CAMPSTATION.world / ST.R : 0.16).setDepth(2), pb); this.placeLabels.push(pb); } // the world look (card space-game-world-w3-stations): a flat-cut steel ring or hexagon (src/campworldstation.js), the same place and about the same size as Long Haul's station picture
     return made;
   }
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
@@ -545,6 +545,7 @@ class Campaign extends Phaser.Scene {
     const rg = this.relicG, R = C.relic, L = C.L;
     rg.clear();
     if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
+    if (typeof campDockMarkSync === 'function') campDockMarkSync(this); // the world look: a dashed gold ring round the market station while selling ore is the goal (src/campworldstation.js)
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
