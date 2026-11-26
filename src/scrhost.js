@@ -12,7 +12,8 @@
 const SCRHOST = { em: 0.015, z: 6, W: 1280, cls: 'sc-root' };   // the menus' em (a share of the canvas's width), the root's z-index (over the flight HUD's 5, under Settings' inputs at 20), the game's width in px
 function scrHostBox(rect, W) {
   const r = rect || {}, w = Math.max(0, +r.width || 0), h = Math.max(0, +r.height || 0), gw = W > 0 ? W : SCRHOST.W;
-  return { left: Math.round(+r.left || 0), top: Math.round(+r.top || 0), width: Math.round(w), height: Math.round(h), em: Math.round(w * SCRHOST.em * 100) / 100, k: w / gw };
+  const live = typeof fillW === 'function' ? fillW() : gw, k = w / (live > 0 ? live : gw); // the canvas is `live` game px wide: 1280, or more while the flight has taken a wider window's shape (src/fillwindow.js); the menus' em is a share of 1280 game px either way, so text does not grow with the extra view
+  return { left: Math.round(+r.left || 0), top: Math.round(+r.top || 0), width: Math.round(w), height: Math.round(h), em: Math.round(k * gw * SCRHOST.em * 100) / 100, k };
 }
 function scrHostBuild(doc) {
   const root = campPageHudEl(doc, 'div', SCRHOST.cls, null);

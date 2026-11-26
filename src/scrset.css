@@ -1,0 +1,35 @@
+/* The keys page and Settings in the new look (landing E of the new screens; card space-game-screens-e-keys-settings): the rules of src/scrkeys.js and src/scrsettings.js, in the tokens of src/screens.css (the mock is docs/screens-mock.html).
+   Everything is inside .sc-root, so with the switch off nothing of this is on the page. The root takes no click: only a pill, a tab or a meter with a handler (.act) does; nothing is focusable. System typeface, no web font, no image, no request. */
+.sc-keys{left:5%;right:5%;top:7%;bottom:7%;display:flex;flex-direction:column;gap:1.2em;overflow:hidden}
+.sc-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4em 2em;align-content:start}
+.sc-cols.two{grid-template-columns:repeat(2,1fr)}
+.sc-g{gap:.55em;min-width:0}
+.sc-set{left:8%;right:8%;top:8%;bottom:8%;align-items:stretch;gap:1.6em}
+.sc-rail{width:10em;gap:.3em;flex:none}
+.sc-tab{border:1px solid transparent;border-radius:.9em;padding:.45em .8em;color:#c3cde0;font-size:1.05em;font-weight:400}
+.sc-tab.on{border-color:var(--sc-ink);background:rgba(255,255,255,.08);color:var(--sc-ink);font-weight:600}
+.sc-tab.act:hover{background:rgba(255,255,255,.07)}
+.sc-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:.9em}
+.sc-row{display:flex;align-items:center;gap:.7em;flex-wrap:wrap;min-width:0}
+.sc-rl{width:8em;flex:none}
+.sc-rn{width:11em;flex:none;display:flex;flex-direction:column;gap:0}
+.sc-pill.on{border-color:var(--sc-ink)}
+.sc-pill.amber{color:var(--sc-amber)}
+.sc-pill.pink{color:var(--sc-foe);border-color:rgba(255,111,168,.45)}
+.sc-pill.pink.on{border-color:var(--sc-foe)}
+.sc-pill.field{flex:1;min-width:8em;color:var(--sc-mute)}
+.sc-pill.act:hover{background:rgba(255,255,255,.12)}
+.sc-m.act{height:.6em;cursor:pointer}
+.sc-two{flex:1;min-width:0}.sc-two .sc-m{flex:1}
+.sc-m.amber i{background:var(--sc-amber)}
+.sc-m.blue i{background:var(--sc-blue)}
+.sc-m.mute i{background:var(--sc-mute)}
+.sc-warn{border-color:rgba(255,200,87,.5)}
+.sc-foot{margin-top:auto;justify-content:flex-end}
+.sc-stat{font-size:.84em;min-height:1.4em}
+.sc-stat.good{color:var(--sc-good)}.sc-stat.warn{color:var(--sc-warn)}.sc-stat.foe{color:var(--sc-foe)}
+.sc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:.45em 1.6em;align-content:start}
+.sc-grid2>div{min-width:0}
+.sc-val{font-size:1.05em;font-weight:600;min-width:3.2em}
+.sc-hint{font-size:.84em;color:var(--sc-mute)}
+.sc-sec{width:4.5em;text-align:right;font-size:.84em;color:#c3cde0;flex:none}

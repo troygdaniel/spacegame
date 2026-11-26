@@ -23,7 +23,7 @@ function campSelPeekUnits(C) {
 // the peek of a scene, or null: a stand-in scene in a test may answer any property with a stub, so only an object made here counts
 const campPeekOf = s => { const p = s && s.peek; return p && typeof p === 'object' && typeof p.id === 'string' && p.pt ? p : null; };
 // the middle of the view in the world: the camera's scroll is its top left at zoom 1, and the zoom is about the middle (src/campfocus.js campFocusMid reads it the same way)
-const campPeekMid = cam => ({ x: cam.scrollX + W / 2, y: cam.scrollY + H / 2 });
+const campPeekMid = cam => ({ x: camzoomSX(cam) + W / 2, y: camzoomSY(cam) + H / 2 });
 // is the ship on the screen at a view: (mid) the middle of the view in the world, z the zoom; its middle inside the screen less CAMP.peek.view
 function campPeekOnScreen(mid, z, u) {
   const V = CAMP.peek.view, sx = W / 2 + (u.x - mid.x) * z, sy = H / 2 + (u.y - mid.y) * z;
@@ -111,7 +111,7 @@ function campPeekFrame(s, dt) {
     if (!u || (!p.post && (u.hp <= 0 || u.gone))) campPeekBack(s); else if (!p.post) { p.pt.x = u.x; p.pt.y = u.y; }
   }
   const dtc = Math.max(0, Math.min(dt || 0, 100)), glide = Math.max(1, K.glide), ease = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
-  const put = (a, b, e) => { cam.scrollX = a.x + (b.x - a.x) * e - W / 2; cam.scrollY = a.y + (b.y - a.y) * e - H / 2; }; // the middle of the view at the eased share of the way from a to b (b is where the ship is of the moment: a ship that moves is caught)
+  const put = (a, b, e) => { cam.scrollX = camzoomPutX(a.x + (b.x - a.x) * e - W / 2); cam.scrollY = camzoomPutY(a.y + (b.y - a.y) * e - H / 2); }; // the middle of the view at the eased share of the way from a to b (b is where the ship is of the moment: a ship that moves is caught)
   if (p.phase === 'out') {
     p.t += dtc; put(p.from, p.pt, ease(p.t / glide));
     if (p.t >= glide) { p.phase = 'hold'; p.t = 0; }

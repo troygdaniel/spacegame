@@ -11,18 +11,26 @@
 //   slookGlyphMark(g, m, x, y)     one ship mark of the Tab map as its sign (m: a mark of campMapMarks with its kind), in its side's colour, turned the way it flies; false for a mark that is not a ship
 const SLGLYPH = {
   dark: 0x0b1220,                                          // the dark of the signs that have a dark inner part (the mock's C.dark)
-  halo: 0.16,                                              // a baked sign has a faint halo round it (the mock's shadow glow): its alpha; its radius is 0.58 of the length, kept inside the picture
+  halo: 0,                                                 // a baked sign had a faint disc round it (the mock's shadow glow, alpha 0.16, radius 0.58 of the length): on the screen it was a hard-edged grey circle round every ship (card space-game-far-zoom-ugly, Troy, 25 Nov 2026: "faint dark circles round the ships"), so there is none: a sign is a flat crisp shape
+  rim: { color: 0x050810, alpha: 0.9, k: 0.05, least: 1 },  // the thin dark rim of a sign's solid shapes (the ships' own, SLOOK.rim): its colour, its width as a share of the length and its least width (px): ships that fly together stay separate shapes instead of one blob
+  buckets: [10, 14, 20, 28, 40, 56, 80, 112, 160, 224, 320, 448, 640], // the lengths (px) a sign is baked at: it is made at the one nearest above the length it is shown at, so the sprite's scale stays near 1 (a picture boiled down 4 times or blown up looks soft)
+  keep: { under: 1.15, over: 0.6 },                        // a sign keeps its bucket while it is shown between 0.6 and 1.15 times its length (no change of picture for every step of the wheel)
   cap: 0.2,                                                // the width of a stroke of a sign (chevron, ring) as a share of the length, and its least (px) below
   least: 2,
   map: { base: 5, k: 0.1, min: 8, max: 16 },               // a Tab map mark's length: base plus k times the ship's length, between min and max
   types: { carrier: 'friend', wing: 'friend', convoy: 'protect', miner: 'protect', patrol: 'neutral', pirate: 'foe', tboat: 'foe', rival: 'foe', torpedo: 'foe', alien: 'alien', mother: 'alien', tower: 'alien' } // a map mark's type as a side (hostile pink, aliens violet, what you protect amber)
 };
-function slookGlyphSize(kind) { // the sign's picture: the ship's own width (the least-size rule of src/campzoom.js goes by it for the kinds with no size row, so a swap must not change it) and a height that holds the sign (a chevron or a bar is taller than a narrow ship)
-  const [W, H] = slookSize(kind), L = slookBakeL(kind); let hy = 0;
+function slookGlyphSize(kind, L) { // the sign's picture for a hull L px long (the baked length if none): the ship's own width (the least-size rule of src/campzoom.js goes by it for the kinds with no size row, so a swap must not change it) and a height that holds the sign (a chevron or a bar is taller than a narrow ship)
+  L = L > 0 ? L : slookBakeL(kind); const [W, H] = slookSizeL(kind, L); let hy = 0;
   slookGlyphShapes(SLOOK.K[kind].g, L).forEach(x => { if (x.t === 'poly') { for (let i = 1; i < x.pts.length; i += 2) hy = Math.max(hy, Math.abs(x.pts[i])); } else hy = Math.max(hy, Math.abs(x.y) + x.r + (x.t === 'ring' ? x.w / 2 : 0)); });
   return [W, Math.max(H, 2 * Math.ceil(hy + 2))];
 }
-const slookGlyphKey = (kind, side) => 'look-g-' + kind + '-' + (side || slookKindSide(kind));
+const slookGlyphKey = (kind, side, bucket) => 'look-g-' + kind + '-' + (side || slookKindSide(kind)) + (bucket > 0 ? '-' + bucket : '');
+function slookGlyphBucket(kind, k, z, prev) { // the length (px) to bake a sign at: the one nearest above its length on the screen (the hull's length times the far view's draw-up k times the zoom); the one it has stays while it is shown near that length
+  const Ls = slookLen(kind) * (k > 0 ? k : 1) * (z > 0 ? z : 1), B = SLGLYPH.buckets;
+  if (prev > 0 && Ls <= prev * SLGLYPH.keep.under && Ls >= prev * SLGLYPH.keep.over) return prev;
+  return B.find(b => b >= Ls) || B[B.length - 1];
+}
 const slookGlyphWant = (z, was) => !(z > 0) ? !!was : was ? z < SLOOK.glyph.over : z < SLOOK.glyph.under;
 const slookMapLen = kind => Math.max(SLGLYPH.map.min, Math.min(SLGLYPH.map.max, SLGLYPH.map.base + SLGLYPH.map.k * (typeof slookLen === 'function' ? slookLen(kind) : 30)));
 const slookMapType = type => SLGLYPH.types[type] || 'neutral';
@@ -61,24 +69,25 @@ function slookGlyphShapes(id, L) {
   }
 }
 const SLGLYPH_PTS = []; // the corners of the shape being drawn, turned: one list, used again by the next (fillPoints reads it at once)
-function slookGlyphPaint(g, id, color, L, ox, oy, rot) {
+function slookGlyphPaint(g, id, color, L, ox, oy, rot, rim) { // rim: the width (px) of the thin dark outline of the solid shapes (a baked sign has one; the Tab map's marks have none)
   const c = rot ? Math.cos(rot) : 1, s = rot ? Math.sin(rot) : 0, T = (x, y) => [ox + x * c - y * s, oy + x * s + y * c];
   slookGlyphShapes(id, L).forEach(sh => {
     if (sh.t === 'poly') {
       const n = sh.pts.length / 2; SLGLYPH_PTS.length = n;
       for (let i = 0; i < n; i++) { const q = T(sh.pts[2 * i], sh.pts[2 * i + 1]), o = SLGLYPH_PTS[i] || (SLGLYPH_PTS[i] = { x: 0, y: 0 }); o.x = q[0]; o.y = q[1]; }
       g.fillStyle(sh.dark ? SLGLYPH.dark : color, 1); g.fillPoints(SLGLYPH_PTS, true);
-    } else if (sh.t === 'disc') { const q = T(sh.x, sh.y); g.fillStyle(sh.dark ? SLGLYPH.dark : color, 1); campDisc(g, q[0], q[1], sh.r); }
+      if (rim > 0 && !sh.dark) { g.lineStyle(rim, SLGLYPH.rim.color, SLGLYPH.rim.alpha); g.strokePoints(SLGLYPH_PTS, true, true); }
+    } else if (sh.t === 'disc') { const q = T(sh.x, sh.y); g.fillStyle(sh.dark ? SLGLYPH.dark : color, 1); campDisc(g, q[0], q[1], sh.r); if (rim > 0 && !sh.dark) { g.lineStyle(rim, SLGLYPH.rim.color, SLGLYPH.rim.alpha); campRing(g, q[0], q[1], sh.r); } }
     else if (sh.t === 'ring') { const q = T(sh.x, sh.y); g.lineStyle(sh.w, color, 1); campRing(g, q[0], q[1], sh.r); }
   });
 }
-function slookGlyphTexture(scene, kind, side) { // a kind's sign as a side, painted once (the same picture size as the ship's, so the sprite keeps its scale), with the mock's faint glow round it
+function slookGlyphTexture(scene, kind, side, bucket) { // a kind's sign as a side, painted once (the same picture size as the ship's, so the sprite keeps its scale; bucket: a hull this many px long in the picture, key look-g-<kind>-<side>-<bucket>: the far view bakes it near the size it shows it at); flat, with a thin rim
   if (!scene || !scene.textures || !scene.make || !SLOOK.K[kind]) return '';
-  side = side || slookKindSide(kind); const key = slookGlyphKey(kind, side);
+  side = side || slookKindSide(kind); const key = slookGlyphKey(kind, side, bucket);
   if (scene.textures.exists(key)) return key;
-  const [W, H] = slookGlyphSize(kind), L = slookBakeL(kind), col = slookInt(slookColor(side)), g = scene.make.graphics({ x: 0, y: 0, add: false });
-  g.fillStyle(col, SLGLYPH.halo); campDisc(g, W / 2, H / 2, Math.max(2, Math.min(0.58 * L, H / 2 - 1, W / 2 - 1)));
-  slookGlyphPaint(g, SLOOK.K[kind].g, col, L, W / 2, H / 2, 0); g.generateTexture(key, W, H); g.destroy();
+  const L = bucket > 0 ? bucket : slookBakeL(kind), [W, H] = slookGlyphSize(kind, L), col = slookInt(slookColor(side)), g = scene.make.graphics({ x: 0, y: 0, add: false });
+  if (SLGLYPH.halo > 0) { g.fillStyle(col, SLGLYPH.halo); campDisc(g, W / 2, H / 2, Math.max(2, Math.min(0.58 * L, H / 2 - 1, W / 2 - 1))); }
+  slookGlyphPaint(g, SLOOK.K[kind].g, col, L, W / 2, H / 2, 0, Math.max(SLGLYPH.rim.least, L * SLGLYPH.rim.k)); g.generateTexture(key, W, H); g.destroy();
   return key;
 }
 function slookGlyphMark(g, m, x, y) { // a Tab map mark of a ship as its sign: the colour of its side (a fighter of a squad in focus keeps the squad's), turned the way it flies

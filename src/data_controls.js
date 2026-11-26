@@ -158,7 +158,8 @@ const CAMP_SCREEN_KEYS = {
   d6: { k: '6', codes: ['Digit6'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
   d7: { k: '7', codes: ['Digit7'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
   d8: { k: '8', codes: ['Digit8'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
-  tipfriendlies: { same: 'friendlies', on: ['lost'], src: ['src/camptcorner.js'] }, tiporder: { same: 'order', on: ['lost'], src: ['src/campaignscene.js'] }, tipnear: { same: 'near', on: ['lost'], src: ['src/camppanel.js'] }, tipmissile: { same: 'missile', on: ['lost'], src: ['src/campaignscene.js'] }
+  tipfriendlies: { same: 'friendlies', on: ['lost'], src: ['src/camptcorner.js'] }, tiporder: { same: 'order', on: ['lost'], src: ['src/campaignscene.js'] }, tipnear: { same: 'near', on: ['lost'], src: ['src/camppanel.js'] }, tipmissile: { same: 'missile', on: ['lost'], src: ['src/campaignscene.js'] },
+  door: { k: 'Arrows', codes: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], on: ['title'], src: ['src/title.js'] }                                                                           // the title: move the light to the other door (Enter does the lit one: the Campaign at first on the new title, Troy, 25 Nov 2026; Long Haul on today's)
 };
 const CAMP_VOICEROW = { t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP', voice: 1 }; // the H page's row for the voice: on the page only while the voice has a key (campVoiceSet)
 function campVoiceSet(on, key) { // the switch (CAMP_VOICE): hold to speak. Off: no key and no row. On: the key given ({ k, codes }, e.g. from the card that brings the voice back) and its row after the strip's

@@ -33,7 +33,7 @@ function campPanelsInstall(s) {
   L.title = tx(15, '#ffffff', { letterSpacing: 2 }).setOrigin(0, 0.5); L.count = tx(12, '#9fbdd1').setOrigin(1, 0.5);
   for (let i = 0; i < n; i++) L.rows.push({ cap: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), cap2: tx(12, '#02101c', { fontStyle: 'bold' }).setOrigin(0.5), name: tx(15, K.rowInk.ok).setOrigin(0, 0.5), suffix: tx(12, K.rowInk.suffix).setOrigin(1, 0.5) });
   L.more = tx(12, '#9fbdd1').setOrigin(0, 0.5); L.keys = tx(12, '#9fbdd1').setOrigin(0, 0.5);
-  L.onPointer = p => { s.pnTook = campPanelsClick(s, p.x, p.y) && typeof p.downTime === 'number' ? p.downTime : null; }; // the press the list took is marked (its time): the drag's own handler ignores it, whichever of the two runs first (card space-game-drag-on-list-pans: a row's order closes the list, and the drag then saw none)
+  L.onPointer = p => { s.pnTook = campPanelsClick(s, campPX(p), campPY(p)) && typeof p.downTime === 'number' ? p.downTime : null; }; // the press the list took is marked (its time): the drag's own handler ignores it, whichever of the two runs first (card space-game-drag-on-list-pans: a row's order closes the list, and the drag then saw none)
   if (s.input && s.input.on) s.input.on('pointerdown', L.onPointer);
   if (s.events && s.events.once) { const off = () => { try { if (s.input && s.input.off) s.input.off('pointerdown', L.onPointer); } catch (e) { /* gone */ } }; s.events.once('shutdown', off); s.events.once('destroy', off); }
 }
