@@ -427,6 +427,28 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
 
+## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
+The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
+
+**The rule, the smallest that does it:** the price wave of the 1.1 row (the third wave, at 34 percent of the road, 3 torpedo boats and 2 skiffs for the transport) carries `perAway: { tboat: 0.5 }`. When it spawns, the scheduler (`campSchedule`) asks `campMinerAway` how many pilots are away at the miner and sends `Math.round(away * 0.5)` more torpedo boats: 3 boats with nobody away, 4 with one, 4 with two, 5 with all three. One line in the scheduler and one field on a row; no new state, no words, no recording, no key. The briefing still counts the base wave (5 boats in all).
+
+**Why this lever:** the boats arrive while the wing is at the miner, so more boats against fewer guards is the whole price; the cruiser's turrets alone stop three boats about two times in three (ignore 9 of 32), five get through nearly every time. The ambush (4 skiffs, 2 boats) and the call itself are untouched.
+
+32 seeds per answer (the bots `plaini`, `plaing`, `plaina`), before (base `6f1672ff`) and with each size of the step:
+
+| per pilot away | ignore: torpedoes / hull / won | one pilot: torpedoes / hull / won / miner saved | all three: torpedoes / hull / won / miner saved |
+|---|---|---|---|
+| none (before) | 9 / 175 / 32 | 10 / 171 / 32 / 23 | 9 / 171 / 32 / 31 |
+| 0.34 (boats 3, 3, 4, 4) | 9 / 175 / 32 | 10 / 171 / 32 / 23 | 13 / 158 / 31 / 31 |
+| **0.5 (boats 3, 4, 4, 5), taken** | 9 / 175 / 32 | 11 / 166 / 32 / 25 | **27 / 113 / 31 / 30** |
+| 1 (boats 3, 4, 5, 6) | 9 / 175 / 32 | 11 / 166 / 32 / 25 | 29 / 93 / 23 / 31 |
+
+At 0.34 the all-three step (9 to 13 of 32) is inside the noise of 32 seeds; at 1 the all-three answer loses 9 runs of 32 (the transport dies), which is a wall, not a price. 0.5 is the smallest step that is clear: torpedoes 9, 11 and 27 of 32, hull 175, 166 and 113, in the order of the pilots away, every answer still winning on 31 or 32 seeds, the miner saved on 0, 25 and 30 of 32 (so ignoring still costs the miner and the "No miner lost" bonus, as it did).
+
+**1.1's win rate (all 26 bots, 32 seeds, mission 1.1 only):** mean 88.5 percent before, **88.0** with the step (84.2 at 1); the plain bot 100 before and after; the median win time 306 s throughout. Three bots lose a run each: `noescort` 100 to 97, `late` 100 to 94, `plaina` 100 to 97 (all "convoy": the transport lost), the others do not move. Within a few points of 88, as asked.
+
+**The pins:** `tests/campminer.mjs` reads thirty-two seeds of each answer now (about forty seconds) and says the table above (the order never reverses; all three costs the transport at least 40 hull and at least 10 more torpedoes than ignoring; every answer wins at least 28 of 32; the "no torpedo hits" bonus is lost in exactly the runs a torpedo got through); a unit check says the counts 3, 4, 4, 5 and that only the price wave has the field. The through-the-keys check no longer says "no torpedo gets through" (it never held beyond three seeds; it says the same torpedoes as the order).
+
 ## The cruiser turns and pushes about twice as quickly (card `space-game-cruiser-quicker-handling`; Troy, 26 Nov 2026: "yes"; base main `922b7a92`, which has the Shift boost)
 Troy felt the Long Haul's Wren (turn about 3.6 rad/s, accel 720) and the cruiser as heavy as a barge. After the boost landed alone, so he could feel it first, the cruiser's own handling is about twice as responsive and still clearly heavier than the Wren.
 
