@@ -1,7 +1,8 @@
 // smoke: fill the window, landing A: the sizing rule (a window's shape in, the game's size out, the cap, 16:9 is exactly today's), the safe area, the switch, the flight's cameras, and the 1280 by 720 maths kept true (plain Node, no Chrome)
 // Card space-game-fill-window-a-flight (Troy, 25 Nov 2026; the plan is the report on card space-game-fill-window-scope). src/fillwindow.js is the one new file:
 //   A. the switch: CAMP.flags.fill is false in the table; ?fill=1 turns it on, ?fill=0 off whatever the flag says; fillSet keeps the choice in the browser and fillLoad reads it back
-//   B. the sizing rule: one side is always 1280 or 720 and the other is longer; the result has the window's shape; nothing wider than 21:9 or taller than 4:3; a 16:9 window of any size is exactly 1280 by 720
+//   B. the sizing rule (Troy: "extra room because i open up the window.. not scale"): a FIXED scale, 1.23 screen px a game px, so a bigger window is more game px; a window too small for 1280 by 720 at it scales down to fit;
+//      the cap, 1.5 times 1280 by 720 each way, past which the picture scales up; the tests' 1280 by 720 window is exactly 1280 by 720
 //   C. the safe area and the helpers: the offsets, the scroll and the pointer as the old maths want them; all of them give back what they got while the game is 1280 by 720
 //   D. fillSync and fillRelease: the game's size, the three cameras (the world and the stars on the whole size, the canvas HUD on the centred 1280 by 720), the star layers; only when the window or the switch changes; back when the
 //      scene pauses or ends and while the Tab map is open
@@ -31,13 +32,16 @@ check('fillSet keeps the choice in the browser and fillLoad reads it back', J('f
 
 console.log('B. the sizing rule');
 const size = (w, h) => J(`fillSize(${w}, ${h})`);
-check('a 16:9 window of any size is exactly 1280 by 720, no offset: today\'s game, number for number', [[1280, 720], [1920, 1080], [2560, 1440], [640, 360], [3840, 2160]].every(([w, h]) => { const z = size(w, h); return z.w === 1280 && z.h === 720 && z.ox === 0 && z.oy === 0; }));
-check('Troy\'s window, 1578 by 1000 (taller than 16:9): the width is 1280, the height 812 (811 to the even pixel), the safe area 46 px down', (z => z.w === 1280 && z.h === 812 && z.ox === 0 && z.oy === 46)(size(1578, 1000)), JSON.stringify(size(1578, 1000)));
-check('a wide window, 2100 by 900: the height is 720, the width 1680, the safe area 200 px in', (z => z.w === 1680 && z.h === 720 && z.ox === 200 && z.oy === 0)(size(2100, 900)), JSON.stringify(size(2100, 900)));
-check('one side is always 1280 or 720 and neither is ever less, whatever the window', [[300, 900], [900, 300], [1000, 1000], [5000, 800], [1578, 1000], [1281, 720], [1280, 721]].every(([w, h]) => { const z = size(w, h); return z.w >= 1280 && z.h >= 720 && (z.w === 1280 || z.h === 720); }));
-check('the game has the window\'s shape (to the rounding of a pixel) inside the cap', [[1578, 1000], [2100, 900], [1600, 1000], [1440, 1000], [1700, 800]].every(([w, h]) => { const z = size(w, h); return Math.abs(z.w / z.h - w / h) < 0.004; }));
-check('the cap: no wider than 21:9 (1680 by 720), no taller than 4:3 (1280 by 960): a third more view along the long side at most', (a => a.w === 1680 && a.h === 720)(size(4000, 900)) && (b => b.w === 1280 && b.h === 960)(size(900, 1600)) && (c => c.w === 1280 && c.h === 960)(size(1000, 1000)));
-check('k is the screen px of a game px: the window is filled along both sides inside the cap, along one past it', Math.abs(size(1578, 1000).k - 1000 / 812) < 1e-9 && Math.abs(size(2100, 900).k - 1.25) < 1e-9 && Math.abs(size(4000, 900).k - 1.25) < 1e-9);
+check('the table: a fixed scale of 1.23 screen px for a game px (the size on Troy\'s own window today, 1578 / 1280), and a cap of 1.5 times 1280 by 720 each way', J('FILL.k') === 1.23 && J('FILL.cap') === 1.5 && Math.abs(1578 / 1280 - J('FILL.k')) < 0.01);
+check('Troy\'s window, 1578 by 1000: the scale is the fixed one, the game is 1282 by 814: the width he sees today and 94 game px more room up and down', (z => z.k === 1.23 && z.w === 1282 && z.h === 814 && z.ox === 1 && z.oy === 47)(size(1578, 1000)), JSON.stringify(size(1578, 1000)));
+check('a bigger window is MORE ROOM at the same scale, not a bigger picture: 1920 by 1080 is 1560 by 878 game px, 2100 by 900 is 1708 by 732', (a => a.k === 1.23 && a.w === 1560 && a.h === 878 && a.ox === 140 && a.oy === 79)(size(1920, 1080)) && (b => b.k === 1.23 && b.w === 1708 && b.h === 732 && b.ox === 214 && b.oy === 6)(size(2100, 900)), JSON.stringify([size(1920, 1080), size(2100, 900)]));
+check('the scale never grows with the window under the cap: every window from Troy\'s up to 2300 by 1300 has k 1.23', [[1578, 1000], [1700, 1000], [1920, 1080], [2100, 900], [2300, 1300], [1600, 1300]].every(([w, h]) => size(w, h).k === 1.23));
+check('the tests\' window, 1280 by 720, is too small for the fixed scale: it scales down to fit, exactly 1280 by 720, no offset (today\'s game, number for number)', (z => z.w === 1280 && z.h === 720 && z.ox === 0 && z.oy === 0 && z.k === 1)(size(1280, 720)));
+check('a smaller window scales down to fit as today: 640 by 360 is 1280 by 720 at half size; a window too small one way only keeps 1280 or 720 that way and has room the other way', (a => a.w === 1280 && a.h === 720 && a.k === 0.5)(size(640, 360)) && (b => b.w === 1280 && b.h > 720 && b.k < 1.23)(size(1400, 1000)) && (c => c.h === 720 && c.w > 1280 && c.k < 1.23)(size(1800, 800)), JSON.stringify([size(1400, 1000), size(1800, 800)]));
+check('the game is never less than 1280 by 720, whatever the window', [[300, 900], [900, 300], [1000, 1000], [5000, 800], [1578, 1000], [1281, 720], [1280, 721], [200, 200]].every(([w, h]) => { const z = size(w, h); return z.w >= 1280 && z.h >= 720; }));
+check('THE CAP: no window shows more than 1920 by 1080 game px; past it the picture scales up again (2560 by 1440 is 1920 by 1080 at 1.33; 3840 by 2160 at 2)', (a => a.w === 1920 && a.h === 1080 && Math.abs(a.k - 2560 / 1920) < 1e-9)(size(2560, 1440)) && (b => b.w === 1920 && b.h === 1080 && b.k === 2)(size(3840, 2160)) && [[2560, 1440], [3840, 2160], [5000, 800], [800, 5000], [3000, 3000], [2400, 1400]].every(([w, h]) => { const z = size(w, h); return z.w <= 1920 && z.h <= 1080; }), JSON.stringify([size(2560, 1440), size(5000, 800), size(3000, 3000)]));
+check('just under the cap the scale is still the fixed one (2360 by 1328 is 1918 by 1080 at 1.23)', (z => z.k === 1.23 && z.w <= 1920 && z.h <= 1080 && z.w >= 1916)(size(2360, 1328)), JSON.stringify(size(2360, 1328)));
+check('both sides are an even number of px and the safe area starts on a whole pixel, so the middle of the view is the middle of the safe area', [[1578, 1000], [2100, 900], [1921, 1083], [1333, 777], [2560, 1440]].every(([w, h]) => { const z = size(w, h); return z.w % 2 === 0 && z.h % 2 === 0 && Number.isInteger(z.ox) && Number.isInteger(z.oy) && z.ox === (z.w - 1280) / 2 && z.oy === (z.h - 720) / 2; }));
 check('no window (0, a NaN, a negative) is 1280 by 720', [[0, 0], ['NaN', 5], [-3, 100]].every(([w, h]) => { const z = size(w, h); return z.w === 1280 && z.h === 720 && z.ox === 0 && z.oy === 0; }));
 
 console.log('C. the safe area and the helpers');
@@ -71,22 +75,22 @@ g.run(`
 `);
 check('the switch off: fillSync asks nothing of the game', J('fillSync(S1)') === false && J('__sized.length') === 0 && J('FILL.now.on') === false);
 g.run(`CAMP.flags.fill = true;`);
-check('the switch on: the game takes the window\'s shape (1280 by 812 for 1578 by 1000)', J('fillSync(S1)') === true && J('__sized').join() === '1280x812' && J('FILL.now').w === 1280 && J('FILL.now').h === 812 && J('FILL.now').oy === 46);
-check('the world camera and the star camera are the whole size; the canvas HUD\'s camera is the 1280 by 720 safe area, centred', J('S1._cz.main.v').join() === '0,0,1280,812' && J('S1._cz.bg.v').join() === '0,0,1280,812' && J('S1._cz.ui.v').join() === '0,46,1280,720');
-check('the star layers cover the whole size', J('S1.bgLayers.map(t => t.width + "x" + t.height)').join() === '1280x812,1280x812,1280x812');
+check('the switch on: the game takes the window\'s shape (1282 by 814 for 1578 by 1000)', J('fillSync(S1)') === true && J('__sized').join() === '1282x814' && J('FILL.now').w === 1282 && J('FILL.now').h === 814 && J('FILL.now').oy === 47);
+check('the world camera and the star camera are the whole size; the canvas HUD\'s camera is the 1280 by 720 safe area, centred', J('S1._cz.main.v').join() === '0,0,1282,814' && J('S1._cz.bg.v').join() === '0,0,1282,814' && J('S1._cz.ui.v').join() === '1,47,1280,720');
+check('the star layers cover the whole size', J('S1.bgLayers.map(t => t.width + "x" + t.height)').join() === '1282x814,1282x814,1282x814');
 check('the next frames ask nothing more (the window and the switch have not changed)', (g.run('fillSync(S1); fillSync(S1);'), J('__sized.length')) === 1);
 g.run(`window.innerWidth = 2100; window.innerHeight = 900;`);
-check('the window changes: the game follows at the next frame (1680 by 720, the safe area 200 px in)', J('fillSync(S1)') === true && J('__sized').join() === '1280x812,1680x720' && J('S1._cz.ui.v').join() === '200,0,1280,720' && J('S1._cz.main.v').join() === '0,0,1680,720');
+check('the window changes: the game follows at the next frame (1708 by 732, the safe area 214 px in)', J('fillSync(S1)') === true && J('__sized').join() === '1282x814,1708x732' && J('S1._cz.ui.v').join() === '214,6,1280,720' && J('S1._cz.main.v').join() === '0,0,1708,732');
 g.run(`S1.mp = { open: true };`);
 check('the Tab map opens: the game is 1280 by 720 again while it is (the map is laid out for that)', J('fillSync(S1)') === false && J('__sized').slice(-1)[0] === '1280x720' && J('S1._cz.ui.v').join() === '0,0,1280,720' && J('FILL.now.on') === false && J('fillOx()') === 0);
 g.run(`S1.mp = null;`);
-check('and closes: the window is taken again', J('fillSync(S1)') === true && J('__sized').slice(-1)[0] === '1680x720');
-check('the scene pauses or ends (fillRelease): 1280 by 720, the cameras as they were, the offsets 0; the next frame of the scene takes the window again', J('fillRelease(S1)') === true && J('__sized').slice(-1)[0] === '1280x720' && J('S1._cz.main.v').join() === '0,0,1280,720' && J('S1._cz.ui.v').join() === '0,0,1280,720' && J('[fillW(), fillH(), fillOx(), fillOy()]').join() === '1280,720,0,0' && J('fillSync(S1)') === true && J('__sized').slice(-1)[0] === '1680x720');
+check('and closes: the window is taken again', J('fillSync(S1)') === true && J('__sized').slice(-1)[0] === '1708x732');
+check('the scene pauses or ends (fillRelease): 1280 by 720, the cameras as they were, the offsets 0; the next frame of the scene takes the window again', J('fillRelease(S1)') === true && J('__sized').slice(-1)[0] === '1280x720' && J('S1._cz.main.v').join() === '0,0,1280,720' && J('S1._cz.ui.v').join() === '0,0,1280,720' && J('[fillW(), fillH(), fillOx(), fillOy()]').join() === '1280,720,0,0' && J('fillSync(S1)') === true && J('__sized').slice(-1)[0] === '1708x732');
 g.run(`CAMP.flags.fill = false;`);
 check('the switch goes off in Settings: the next frame gives the window back', J('fillSync(S1)') === false && J('__sized').slice(-1)[0] === '1280x720' && J('S1.bgLayers[0].width') === 1280);
 check('a release with nothing taken asks nothing', (n0 => J('fillRelease(S1)') === false && J('__sized.length') === n0)(J('__sized.length')));
-g.run(`window.innerWidth = 1920; window.innerHeight = 1080; CAMP.flags.fill = true; window.S2 = __scene(); __sized.length = 0;`);
-check('a 16:9 window with the switch on: the game is asked for nothing (it is 1280 by 720 already) and the cameras are today\'s', J('fillSync(S2)') === true && J('__sized.length') === 0 && J('S2._cz.ui.v').join() === '0,0,1280,720' && J('S2._cz.main.v').join() === '0,0,1280,720');
+g.run(`window.innerWidth = 1280; window.innerHeight = 720; CAMP.flags.fill = true; window.S2 = __scene(); __sized.length = 0;`);
+check('the tests\' 1280 by 720 window with the switch on: the game is asked for nothing (it is 1280 by 720 already) and the cameras are today\'s', J('fillSync(S2)') === true && J('__sized.length') === 0 && J('S2._cz.ui.v').join() === '0,0,1280,720' && J('S2._cz.main.v').join() === '0,0,1280,720');
 g.run(`CAMP.flags.fill = false; FILL.now = { on: false, w: 1280, h: 720, ox: 0, oy: 0 };`);
 
 console.log('F. the files');
