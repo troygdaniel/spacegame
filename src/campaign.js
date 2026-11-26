@@ -60,8 +60,8 @@ const CAMP = {
   carrier: {
     hull: 600,                             // hit points of the flagship; zero and the level is lost
     speed: 210,                            // px/s, top speed: big, slow, heavy
-    accel: 170,                            // px/s per s of thrust (W)
-    turn: 1.1,                             // rad/s the nose turns (A, D)
+    accel: 340,                            // px/s per s of thrust (W): 170 before card space-game-cruiser-quicker-handling (Troy, 26 Nov 2026: about twice as quick, still clearly heavier than the Long Haul's Wren: turn about 3.6 rad/s, accel 720). The top speed is unchanged (the boost is the surge)
+    turn: 2.2,                             // rad/s the nose turns (A, D): 1.1 before card space-game-cruiser-quicker-handling
     drag: 0.55,                            // velocity kept after one second with no thrust (0.55 is the Wren's)
     brakeDrag: 0.12,                       // the same with S held
     mounts: [[30, -7], [30, 7], [2, -20], [2, 20], [-6, -20], [-6, 20], [-22, -20], [-22, 20]], // the turrets (there is no other gun): where each sits, px from the carrier's centre in its own frame (x along the nose), spread along the hull; the number of turrets is the number of rows // the two at the front sat at x 10 until card space-game-ship-look-default-on: the flat-cut hull is only 11 px wide forward of x 5, so they are at x 2, back on the pods (the bots' 32-seed table of missions 1.1 to 1.3, old numbers against these, is in docs/CAMPAIGN-TUNING.md)
