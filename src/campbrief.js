@@ -74,6 +74,7 @@ function campBriefBounds(Y, zoom) {
   Y.scan.forEach(p => add(p.x, p.y, p.r)); Y.convoys.forEach(c => { add(c.a.x, c.a.y, 0); add(c.b.x, c.b.y, 0); }); Y.caches.forEach(c => add(c.x, c.y, 0));
   Y.guards.forEach(g => add(g.x, g.y, 0)); if (Y.mother) add(Y.mother.x, Y.mother.y, 0);
   Y.towers.forEach(t => add(t.x, t.y, t.r)); if (Y.relic) add(Y.relic.x, Y.relic.y, Y.relic.r); if (Y.defend) add(Y.defend.x, Y.defend.y, Y.defend.r);
+  (Y.moments || []).forEach(m => add(m.at.x, m.at.y, 0)); // the one page's numbered moments (src/scrbrief.js): the map shows them all (a mission of the three screens has none)
   const ex = CAMPBRIEF.minExtent, w = b.x1 - b.x0, h = b.y1 - b.y0, cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   if (w < ex) { b.x0 = cx - ex / 2; b.x1 = cx + ex / 2; } if (h < ex) { b.y0 = cy - ex / 2; b.y1 = cy + ex / 2; }
   return b;
