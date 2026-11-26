@@ -580,7 +580,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, c = C.carrier, B = CAMP_BAY;
     if (!this.bayG || (this.bayG.active === false && !this.bayG.scene)) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
     const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
-    const csp = this.sp && this.sp[c.id]; if (csp && csp._sg === true) return; // the cruiser is its sign at the far zoom: a sign has no bays (the lit boxes and their glow blew up with the picture)
+    const csp = this.sp && this.sp[c.id]; if (csp && csp._fz === true) return; // out far (a sign, or the cruiser's small picture): no lit bay boxes (they and their glow blew up)
     if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
     const L = campBayLight(C, this.bayAt), bays = typeof slookOn === 'function' && slookOn() ? slookBays() : campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
     const kc = campShipK(this, c.id); // the picture drawn up by the far view: the boxes and the halo go out with it (card space-game-ships-bigger)
@@ -616,7 +616,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG, tone = typeof slookGunTone === 'function' ? slookGunTone : c => c; g.clear(); mg.clear(); // tone: the new look's blue for the reach ring and the mounts' gold (src/shiplookfx.js), as it was with the switch off
     if (c.hp > 0) {
-      const csp = this.sp && this.sp[c.id], sign = !!csp && csp._sg === true; // the cruiser is drawn as its sign (the far zoom, src/shiplookglyph.js): a sign has no turrets, no bays and no resting ring round it (card space-game-far-zoom-ugly: a dark base a dozen times its size under every mount was mud round the ship)
+      const csp = this.sp && this.sp[c.id], sign = !!csp && csp._fz === true; // out far (src/shiplookglyph.js; the cruiser is its small picture, cards space-game-far-zoom-ugly and -cruiser-picture): no turrets, no bays, no resting ring (a dark base a dozen times its size under every mount was mud)
       g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha * ((sign ? 0 : CAMP_REACH.rest) + (1 - (sign ? 0 : CAMP_REACH.rest)) * campReachGlow(this, C))).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further); a sign shows it only while Space is held
       const kc = campShipK(this, c.id); // the picture drawn up by the far view (card space-game-ships-bigger): the mounts sit where the picture's turrets are, and are drawn as much bigger
       if (!sign) C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
