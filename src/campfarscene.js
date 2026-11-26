@@ -25,7 +25,7 @@ function campFarSync(scene) {
   const marks = z < CAMPZOOM.view.markZ && scene.mode === 'play' && !scene.mp ? campZoomMarks(C) : [];
   const least = CAMPZOOM.view.worldLeast || 0, obst = [], taken = [], pic = {}; let n = 0;
   (scene.placeSets || []).forEach(e => { if (e && e.im && e.im.active !== false && e.p) pic[Math.round(e.p.x) + ',' + Math.round(e.p.y)] = 1; }); // the worlds that have a picture on the scene now (a far body has one only while the cruiser is near it, src/campaignscene.js syncFar)
-  if (marks.length) Object.keys(scene.sp || {}).forEach(id => { const sp = scene.sp[id]; if (!sp || sp.visible === false || !(sp.displayWidth > 0)) return; obst.push({ x: (sp.x - cam.scrollX - W / 2) * z + W / 2, y: (sp.y - cam.scrollY - H / 2) * z + H / 2, r: Math.max(sp.displayWidth, sp.displayHeight || 0) * z * 0.45 }); }); // the ships' signs: a name keeps clear of them
+  if (marks.length) Object.keys(scene.sp || {}).forEach(id => { const sp = scene.sp[id]; if (!sp || sp.visible === false || !(sp.displayWidth > 0)) return; obst.push({ x: (sp.x - cam.scrollX - W / 2) * z + W / 2, y: (sp.y - cam.scrollY - H / 2) * z + H / 2, r: Math.max(sp.displayWidth, sp.displayHeight || 0) * z * 0.55 }); }); // the ships' signs: a name keeps clear of them
   marks.forEach(m => {
     const sx = (m.x - cam.scrollX - W / 2) * z + W / 2, sy = (m.y - cam.scrollY - H / 2) * z + H / 2, kind = m.goal ? 'goal' : m.kind;
     if (sx < K.edge || sx > W - K.edge || sy < K.edge || sy > H - K.keep) return;
