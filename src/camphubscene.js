@@ -36,6 +36,7 @@ function campHubOldNote(P) {
 // picked on the board from another level, or a level started with no room (a retry, an address), finds none cached and paints them as before. Returns how many it will paint.
 function campHubWarm(sc, level) {
   if (!sc || !sc.time || typeof sc.time.delayedCall !== 'function' || typeof planetTexture !== 'function' || typeof campPlaces !== 'function') return 0;
+  if (typeof campWorldOn === 'function' && campWorldOn()) return 0; // the world look (card space-game-world-w2-planets): a flat disc paints in a few ms at the level's start, there is nothing slow to do early
   const pl = campPlaces(level) || {}, near = Object.keys(pl).map(id => pl[id]).filter(p => p && !p.hidden && !p.far && p.kind !== 'star').slice(0, 5); // the ones the scene draws at its start (drawPlace), no more than the cache keeps
   near.forEach((p, i) => sc.time.delayedCall(600 + 160 * i, () => { if (!sc.leaving) campTry(() => planetTexture(sc, p.kind || 'rock', p.seed || 1), 0); })); // after the fade-in, a frame or more apart; a scene that is left takes its timers with it
   return near.length;
