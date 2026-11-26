@@ -52,6 +52,15 @@ const campShipK = (s, id) => { const sp = s && s.sp && s.sp[id]; return sp && sp
 // a tech as the pick and the refit cards list it (card space-game-ready-room-simple): its name and what it changes in plain words with the numbers (src/camphub.js campHubTechChange), else the tech's own sentence
 const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id, P)) || uiText('camp.tech.' + id + '.text')); // P: the pilot's progress, for the numbers that depend on what he has
 
+// THE STORY CARD IS GONE in the new look (piece b of the new screens, card space-game-screens-b-briefing; Troy, 25 Nov 2026): Launch starts the flight, and the level's opening lines (camp.l<N>.before.*, the words of the old story card) are said on the
+// radio instead, in order, about four seconds apart and before anything else of the flight: each is offered to the radio's hold (src/campsayhold.js) as a kept line, so a line that is up is never overwritten and none is dropped; spaced like this
+// the voice (a queue of two, six seconds: src/voice.js) says each in full. Only a level started from the ready room (via 'hub'), and not a replay: the others keep the card.
+const CAMP_OPENERS = { first: 900, gap: 4500 }; // ms from the start of the flight to the first line, and between the lines
+function campOpeners(sc) { // the number of lines that will be said
+  const lines = typeof campStory === 'function' ? campStory(sc.level, 'before', !!(sc.P && sc.P.revealed)) : []; if (!lines.length || !sc.time || typeof sc.time.delayedCall !== 'function') return 0;
+  lines.forEach((l, i) => sc.time.delayedCall(CAMP_OPENERS.first + i * CAMP_OPENERS.gap, () => { if (!sc.leaving && sc.camp && !sc.camp.result && typeof sc.radioShow === 'function') sc.radioShow(campSayOffer(sc.sayR || (sc.sayR = campSayNew()), (sc.time && sc.time.now) || 0, { text: l, keep: true })); }));
+  return lines.length;
+}
 // the new look of the cards (src/scrcards.js, src/scrcardsdraw.js; piece a of the new screens, behind CAMP.flags.screens): true when the card was drawn as page panels, false when the old card is to be drawn (the switch is off, or there is no page to draw on).
 // A function and not a method, and the switch asked first: a stand-in scene of a test, which has only the card functions it needs, is not touched while the switch is off
 function campNewCard(s, model, veil) {
@@ -244,6 +253,7 @@ class Campaign extends Phaser.Scene {
   afterIntro() { if (this.via === 'hub') { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
   showIntro() {
     if (this.replay === true || this.mi > 0) { this.afterIntro(); return; } // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
+    if (this.via === 'hub' && typeof scrOn === 'function' && scrOn() && campOpeners(this) > 0) { this.afterIntro(); return; } // the new look: no card, the lines are on the radio (campOpeners)
     this.mode = 'intro'; const lines = campStory(this.level, 'before', !!(this.P && this.P.revealed));
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
