@@ -94,7 +94,7 @@ if (what === 'sim') {
 
 // ------------------------------------------------------------------ Chrome
 const { launch, sleep } = await import('../tests/cdp.mjs');
-const hashOf = k => '?campaign=' + (SCEN[k] || SCEN.busy1).level;
+const hashOf = k => '?campaign=' + (SCEN[k] || SCEN.busy1).level + (process.env.PERF_ADDR || ''); // PERF_ADDR='&pagehud=1&shiplook=1': more of the address (the tests' boot asks for the canvas HUD and today's ships unless the address names them: a measure of what a player sees says so)
 const SRC = process.env.PERF_ROOT || ROOT; // PERF_ROOT=<another checkout of the game>: measure that code (the tool and the scenario stay this file's), to set an old commit beside a new one
 
 async function enter(key, opts = {}) {

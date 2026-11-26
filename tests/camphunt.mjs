@@ -100,9 +100,9 @@ check('a level with aliens from the start (the guards of 2.2) reports them, and 
 
 // ---- 11. the haulers' goal counts the haulers home while the mission waits for the rest ----
 // 1.3 needs one hauler home ("deliver 1") and ends when none is still on the way; the HUD said "Haulers delivered: 0 of 1." with two of them home.
-check('1.3: "Haulers delivered: 0 of 1." until one is home, then "Haulers home: 1. Still flying: 2." and after the second "Haulers home: 2. Still flying: 1."; 1.1\'s single transport still ends the mission when she arrives',
+check('1.3: "Haulers delivered: 0 of 3, need 1." until one is home (card space-game-b3-d-panel-cap-pill-goal: three fly, one must arrive), then "Haulers home: 1. Still flying: 2." and after the second "Haulers home: 2. Still flying: 1."; 1.1\'s single transport still ends the mission when she arrives',
   (g.run(`window.C11 = __cv(1, 2); for (let i = 0; i < 30 * 30; i++) campStep(C11, 1 / 30); window.H0 = campObjective(C11); window.__arrive = C => { const f = C.ships.filter(u => u.kind === 'freighter' && u.hp > 0).sort((a, b) => a.id < b.id ? -1 : 1)[0]; f.x = f.dest.x; f.y = f.dest.y; campStep(C, 1 / 30); return campObjective(C); }; window.H1 = __arrive(C11); window.H2 = __arrive(C11);`),
-    J('H0 === "Haulers delivered: 0 of 1." && H1 === "Haulers home: 1. Still flying: 2." && H2 === "Haulers home: 2. Still flying: 1."')) && (g.run(`window.C12 = __cv(1, 0); campStep(C12, 1 / 30); const f = C12.ships.find(u => u.kind === 'freighter'); f.x = f.dest.x; f.y = f.dest.y; campStep(C12, 1 / 30);`), J('C12.result === "won"')), J('[H0, H1, H2]'));
+    J('H0 === "Haulers delivered: 0 of 3, need 1." && H1 === "Haulers home: 1. Still flying: 2." && H2 === "Haulers home: 2. Still flying: 1."')) && (g.run(`window.C12 = __cv(1, 0); campStep(C12, 1 / 30); const f = C12.ships.find(u => u.kind === 'freighter'); f.x = f.dest.x; f.y = f.dest.y; campStep(C12, 1 / 30);`), J('C12.result === "won"')), J('[H0, H1, H2]'));
 
 // ---- 12. no string key is defined twice (my camp.say.arrived took the mission arrival line's key: the second definition wins, silently) ----
 const ROOT12 = join(dirname(fileURLToPath(import.meta.url)), '..');

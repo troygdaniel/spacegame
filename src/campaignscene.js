@@ -52,6 +52,12 @@ const campShipK = (s, id) => { const sp = s && s.sp && s.sp[id]; return sp && sp
 // a tech as the pick and the refit cards list it (card space-game-ready-room-simple): its name and what it changes in plain words with the numbers (src/camphub.js campHubTechChange), else the tech's own sentence
 const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id, P)) || uiText('camp.tech.' + id + '.text')); // P: the pilot's progress, for the numbers that depend on what he has
 
+// the new look of the cards (src/scrcards.js, src/scrcardsdraw.js; piece a of the new screens, behind CAMP.flags.screens): true when the card was drawn as page panels, false when the old card is to be drawn (the switch is off, or there is no page to draw on).
+// A function and not a method, and the switch asked first: a stand-in scene of a test, which has only the card functions it needs, is not touched while the switch is off
+function campNewCard(s, model, veil) {
+  if (typeof scrOn !== 'function' || !scrOn() || typeof scrCardShow !== 'function') return false;
+  Campaign.prototype.cardPrep.call(s); return scrCardShow(s, model(), veil);
+}
 class Campaign extends Phaser.Scene {
   constructor() { super('Campaign'); }
   init(d) { // d: { level, techs (instead of the saved ones: the address's), via, seed, god }
@@ -149,10 +155,13 @@ class Campaign extends Phaser.Scene {
   }
 
   // ----- the cards: the story, the pick, the end -----
-  showCard(title, lines, hint, tall, band) {
+  cardPrep() {
     this.hideCard(); if (typeof campMapClose === 'function') campMapClose(this); // a card (the story, the end) comes up over the map: the map goes
     (this.toasts || []).forEach(o => { if (o && o.t && o.t.destroy) { o.t.destroy(); o.bg.destroy(); o.tab.destroy(); } }); this.toasts = []; // and the toast of the moment before (it floats above a card and ran through the debrief's title)
     if (typeof campPanelsClose === 'function') campPanelsClose(this); // and a panel
+  }
+  showCard(title, lines, hint, tall, band) {
+    Campaign.prototype.cardPrep.call(this); // (by name: a stand-in scene of a test has the card functions it needs and not this one)
     if (band) { this.drawPauseBand(title, lines, hint); return; } // the pause is not a card but a band (below)
     const o = [], cx = W / 2, cy = H / 2 - 20, style = uiFont(20, '#e8f6ff', { align: 'center', wordWrap: { width: 720 }, lineSpacing: 4 }), text = lines.join('\n\n');
     // the card is as tall as its words: the refit with the three techs (two lines each) was 376 px of text in a 380 px card, so the title sat on its first line and the hint on its last, and with the looted techs
@@ -202,6 +211,7 @@ class Campaign extends Phaser.Scene {
     const M = this.camp.L, k = 'camp.m.' + this.level + '.' + (M.mission + 1) + '.', clock = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     const R0 = this.replay === true && this.tuned !== true ? this.replayRes : null, R = R0 && !R0.first ? R0 : null, // (the first win of a skipped mission is a debrief as any other: there is no best to compare with)
        num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (campNewCard(this, () => scrWonModel(this.camp, this.P, { sc, title: uiText(k + 'title'), replay: R, tuned: this.tuned === true, mdone: this.mdone }))) { this.mode = 'debrief'; this.say([uiText('camp.ui.score', { score: sc.score })]); return; } // the new look (src/scrcards.js): the same facts as numbers and ticks; the voice says the score as ever
     const scoreLine = uiText('camp.ui.score', { score: sc.score }), lines = [R ? scoreLine + '\n' + uiText('camp.ui.replayscore', { now: num(R.now), old: num(R.old) }) + ' ' + (R.improved || R.first ? uiText('camp.ui.replaybest', { best: num(R.best) }) : uiText('camp.ui.replaykept', { best: num(R.best) })) : scoreLine].concat(sc.bonuses.map(b => b.ok ? uiText('camp.ui.bonusmet', { pts: b.points, text: this.bonusText(b) }) : uiText('camp.ui.bonusmiss', { text: this.bonusText(b) })), [uiText('camp.ui.debriefstats', { time: clock(sc.t), hull: sc.hullLeft, lost: sc.shipsLost })], sc.haulersLost > 0 ? [uiText('camp.ui.debriefhaulers', { n: sc.haulersLost, pts: sc.haulerLost })] : []); // a replay says so, and the old best against this run
     const dk = M.dock && campPlaces(this.level)[M.dock]; if (dk && dk.outpost) lines.push(uiText('camp.ui.outpost', { outpost: dk.outpost, name: dk.name })); // the debrief is at the outpost of the mission's dock
     if (this.tuned === true) lines.push(uiText('camp.ui.tune.notkept')); // a tuned run keeps no score and no rank (the tuning panel)
@@ -239,11 +249,14 @@ class Campaign extends Phaser.Scene {
     this.say(lines);
   }
   showWon(resumed) {
-    this.mode = 'won'; const lines = campStory(this.level, 'after', !!(this.P && this.P.revealed)), res = typeof campWinLine === 'function' && !resumed ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
+    this.mode = 'won'; const lines = campStory(this.level, 'after', !!(this.P && this.P.revealed));
+    if (campNewCard(this, () => scrLevelWonModel(this.camp, this.P, this.level, resumed))) { this.say(lines); return; } // the new look: Level N won with four numbers; the level's closing lines are still said, and the first is the card's caption
+    const res = typeof campWinLine === 'function' && !resumed ? campWinLine(this.camp) : ''; // src/campwin.js: how it went, for reading
     this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
     this.mode = 'pick'; this.choices = campTechChoices(this.level, this.P);
+    if (campNewCard(this, () => scrPickModel({ choices: this.choices, P: this.P }))) return;
     this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + campTechLine(id, this.P)), '', 340);
   }
   // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters for the next level (the workshop's prices)
@@ -251,7 +264,9 @@ class Campaign extends Phaser.Scene {
     this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, w: campCarryOut({}, this.camp) }; this.paintRefit(); // w: the ore and the credits the cruiser came home with; the refit spends credits first (campSpend)
   }
   paintRefit() {
-    const R = this.refit, B = CAMP.refit, lines = [uiText('camp.ui.refitore', { ore: R.w.ore, credits: R.w.credits, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
+    const R = this.refit, B = CAMP.refit;
+    if (campNewCard(this, () => scrRefitModel({ choices: this.choices, pick: R.pick, f: R.f, w: R.w, P: this.P }))) return; // the new look: one panel, a tile a technology with its digit, the fighter row; the keys are refitKey's, as ever
+    const lines = [uiText('camp.ui.refitore', { ore: R.w.ore, credits: R.w.credits, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
       .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost })]);
     this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
   }
@@ -274,9 +289,14 @@ class Campaign extends Phaser.Scene {
   }
   showLost(why) {
     this.mode = 'lost'; const lines = typeof campLoseLines === 'function' ? campLoseLines(this.camp, why) : [uiText('camp.lose.' + why)]; // src/camplose.js: what happened, how far, one thing to try
-    const ms = !!(this.camp && this.camp.L && this.camp.L.objectives); this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
+    const ms = !!(this.camp && this.camp.L && this.camp.L.objectives);
+    if (campNewCard(this, () => scrLostModel(this.camp, why, { mission: ms, level: this.level }))) { this.say([lines[0]].concat(lines.slice(2))); return; } // the new look: the cause, two numbers, the tip with its keys as chips; the cause and the tip are said as ever
+    this.showCard(ms ? uiText('camp.ui.lostmission', { title: uiText('camp.m.' + this.level + '.' + (this.camp.L.mission + 1) + '.title') }) : uiText('camp.ui.lost', { n: this.level }), lines, uiText(ms ? 'camp.ui.retrymission' : 'camp.ui.retry')); this.say([lines[0]].concat(lines.slice(2))); // the numbers are for reading: the cause and the tip are said
   }
-  showPause() { this.mode = 'pause'; this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398, true); } // the band (card space-game-paused-big: PAUSED large across the middle; the height only keeps the old card's room for the tests); the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
+  showPause() {
+    this.mode = 'pause'; const C = this.camp, ms = !!(C && C.L && C.L.objectives);
+    if (campNewCard(this, () => scrPauseModel(C, { mission: ms, debug: typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? campDebugLine(C) : '' }), CAMP_PAUSE.veil)) return;
+    this.showCard(uiText('camp.ui.pausetitle'), [uiText('camp.ui.pausegoal', { goal: campObjective(this.camp) }), uiText('camp.ui.pausemap'), uiText('camp.ui.pausepanels')].concat([uiText('camp.ui.pausehelp')], (this.camp && this.camp.L && this.camp.L.objectives) ? [uiText('camp.ui.pauseretry')] : [], typeof campDebugOn === 'function' && campDebugOn() && typeof campDebugLine === 'function' ? [campDebugLine(this.camp)] : []), uiText('camp.ui.paused'), (this.camp && this.camp.L && this.camp.L.objectives) ? 428 : 398, true); } // the band (card space-game-paused-big: PAUSED large across the middle; the height only keeps the old card's room for the tests); the goal first (docs/night/ux.md 7), then the map and the help lines, then campDebugLine: the tune kit's one short line of its keys
   next(w) { // after the story (and the pick, or the refit): the next level, or after the last one the end, with a new campaign waiting. w: the ore and the credits that are left to carry (the refit spent some), { ore, credits }
     const last = !CAMP.levels[this.level + 1]; this.P.levelDone = 0; // the story and the pick are done: the level is over
     this.P.level = last ? 1 : Math.max(this.P.level, this.level + 1); if (last) { this.P.techs = []; this.P.found = []; this.P.ore = 0; this.P.credits = 0; this.P.bonus = { fighters: 0 }; this.P.revealed = true; } // a new campaign: the techs and the loot of the last one are gone with the ore and the ships (the rank is the pilot's career and stays) // the ending is about to show: from now on a replay says the outpost (SPOILER)
@@ -288,6 +308,7 @@ class Campaign extends Phaser.Scene {
   // SPOILER (card space-game-campaign-outpost-reveal): the ending turns. Level 3 was an outpost, not their home, and the war is not over; the data points to a star, drawn small and far on the card. Spoken line by line
   showEnd() {
     this.mode = 'end'; campReveal(true); const lines = campEnding(), R = CAMP.levels[3].reveal || {};
+    if (campNewCard(this, () => scrEndModel(lines, R.star))) { this.say(lines); return; } // the new look: the three lines large, the star a CSS glow
     this.showCard(uiText('camp.ui.title'), lines, uiText('camp.ui.end'), 300);
     const x = W / 2 + 320, y = H / 2 - 100, sg = this.add.graphics().setScrollFactor(0).setDepth(201); // the distant star, up in the corner of the card: a glow, a point, a faint cross
     sg.fillStyle(0xffe29a, 0.12).fillCircle(x, y, 26); sg.fillStyle(0xffe29a, 0.3).fillCircle(x, y, 12); sg.fillStyle(0xfff6d6, 1).fillCircle(x, y, 3.2);
@@ -420,6 +441,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campTgtPaint === 'function') campTgtPaint(this); // the brackets round the enemy [ ] \ picked, the pilot Q W picked and the friendly O P picked (src/camptargetdraw.js)
     if (typeof campSelPeek === 'function') campSelPeek(this); // a ship newly picked (a key or a click) that is off the screen starts a peek: the camera glides to it, holds, glides back; one on the screen moves nothing (src/campselzoom.js)
     if (typeof campPeekFrame === 'function') campPeekFrame(this, dt); // the glide out, the hold and the glide back, by time
+    if (typeof scrCardSync === 'function') scrCardSync(this); // a card of the new look (src/scrcardsdraw.js) follows the canvas and hides under the H page and the tuning panel
     if (typeof campPageHudSync === 'function') campPageHudSync(this, this.time.now); // the page HUD, when its switch is on (src/camppagehud.js); before the corners, which open under its panel
     if (typeof campPickPaint === 'function') campPickPaint(this); // the candidate a target sub-list is on, shown in the flight view (and the zoom out to it; src/camppickdraw.js)
     if (typeof campTcornerLook === 'function') campTcornerLook(this.pn, this.time.now); // what the target corners read besides the game: the panels' state (the ship an order's list is on) and the clock (src/camptcorner.js)
@@ -604,7 +626,7 @@ class Campaign extends Phaser.Scene {
     return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
-  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? CAMPMAP.frame.y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
+  toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
