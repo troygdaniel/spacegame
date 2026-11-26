@@ -53,9 +53,13 @@
 .ph-hint { font-size: .82em; line-height: 1.3; }
 .ph-hint.ph-warn { color: var(--ph-warn); }
 .ph-hint.ph-foe { color: var(--ph-foe); }
-.ph-goal b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ph-goal b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; } /* the number never breaks across lines ("60 /" over "160" with a long label): the label wraps instead (card space-game-12-goal-sold-aboard) */
 .ph-fixed { flex: none; }
 .ph-fill.ph-ore { background: var(--ph-ore); }
+/* the goal's meter of a sale (card space-game-12-goal-sold-aboard): the ore sold is the solid fill, the ore aboard a faint fill behind it and after it (the ghost is first in the meter, the solid fill over it) */
+.ph-goal .ph-meter { position: relative; }
+.ph-goal .ph-fill { position: relative; }
+.ph-fill.ph-ghost { position: absolute; left: 0; top: 0; background: var(--ph-ore); opacity: .32; }
 .ph-fill.ph-good { background: var(--ph-good); }
 /* top right: the stock; the ore as a meter, the missiles as one pip each and the reload key's chip */
 .ph-stock { right: 1.3em; top: 1.3em; width: 17.5em; display: flex; flex-direction: column; gap: .65em; }
