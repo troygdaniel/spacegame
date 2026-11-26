@@ -5,7 +5,7 @@
 //   C. the boost: Shift with thrust takes the top speed from 210 to about 330 within a second, drains the store 25 a second (four seconds from full), locks at empty with one dry click, and the speed settles back at 150 px/s each second
 //   D. the refill: after a pause of a second, 14 a second; the lock lifts when a quarter is back; nothing drains without thrust; the autopilot's burn is not the boost
 //   E. the flames: two, one for each engine, none with the engines off, longer with thrust, longest while boosting, a brief flare when thrust starts, pale blue and white (no gold or amber), one stretched sprite each
-//   F. the page HUD: a thin Boost meter under Shields and Hull, its share, its percentage only under 100, bright while boosting and amber while locked
+//   F. the page HUD: a thin Boost meter under Shields and Hull, its share, its percentage only under 100, bright while boosting, white when full, dim pale blue with the word Recharging while locked (never amber)
 // Run: node tests/campboost.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -105,14 +105,15 @@ console.log('E. the flames');
 console.log('F. the page HUD');
 {
   g.run(`__mk(); window.__bm = () => campPageHudBoost(C);`);
-  check('a full store: the share 1, no percentage (it shows only below 100, as Shields and Hull), the word Boost, not on, not locked', (() => { const b = J('__bm()'); return b.frac === 1 && b.show === false && b.word === 'Boost' && b.on === false && b.locked === false; })());
+  check('a full store: the share 1, no percentage (it shows only below 100, as Shields and Hull), the word Boost, not on, not locked', (() => { const b = J('__bm()'); return b.frac === 1 && b.show === false && b.word === 'Boost' && b.on === false && b.locked === false && b.full === true && b.pctText === undefined; })());
   g.run(`C.input.boost = true; __run(2);`);
   check('boosting with half the store: 50 percent shown, on', (() => { const b = J('__bm()'); return Math.abs(b.frac - 0.5) < 0.01 && b.show === true && b.pct >= 49 && b.pct <= 50 && b.on === true && b.locked === false; })());
   g.run(`__run(3);`);
-  check('run dry: nothing left, locked (amber), not on', (() => { const b = J('__bm()'); return b.frac === 0 && b.pct === 0 && b.locked === true && b.on === false; })());
+  check('run dry: nothing left, locked (not amber: the row is dim pale blue with the word Recharging where the percentage goes), not on', (() => { const b = J('__bm()'); return b.frac === 0 && b.pct === 0 && b.locked === true && b.on === false && b.full === false && b.pctText === 'Recharging'; })());
   check('the model carries it in the left panel beside Shields and Hull (campPageModel: ship.shield, ship.hull, ship.boost)', J('Object.keys(campPageModel(C).ship).filter(k => ["shield", "hull", "boost"].indexOf(k) >= 0).join()') === 'shield,hull,boost');
   const hud = src('src/camppagehud.js'), css = src('src/camppagehud.css');
-  check('a thin row of its own under the two meters (a ring would be taken for a ship: the rings of the panel are the pilots and the ships you protect): a word, a thin track, a percentage; bright and glowing while it boosts, amber while locked', /ph-row ph-boostrow/.test(hud) && /ph-fill ph-boost' \+ \(b\.on \? ' on' : b\.locked \? ' dry' : ''\)/.test(hud) && /\.ph-fill\.ph-boost\.on \{[^}]*box-shadow/.test(css) && /\.ph-fill\.ph-boost\.dry \{ background: var\(--ph-warn\)/.test(css));
+  check('a thin row of its own under the two meters (a ring would be taken for a ship: the rings of the panel are the pilots and the ships you protect): a word, a thin track, a percentage; bright and glowing while it boosts, white when full, dim pale blue while locked (never amber)', /ph-row ph-boostrow/.test(hud) && /ph-fill ph-boost' \+ \(b\.on \? ' on' : b\.locked \? ' dry' : b\.full \? ' full' : ''\)/.test(hud) && /\.ph-fill\.ph-boost\.on \{[^}]*box-shadow/.test(css) && /\.ph-fill\.ph-boost\.dry \{ background: #cfe6ff; opacity: \.4;/.test(css) && /\.ph-fill\.ph-boost\.full \{ background: #ffffff/.test(css) && !/\.ph-(fill\.ph-boost|boostrow)[^{]*\{[^}]*(--ph-warn|--ph-ore|#ffc857)/.test(css));
+  check('the locked word is the content table\'s too (camp.corner.m.recharging: Recharging), shown never said; the page draws it by CSS in capitals', J(`uiText('camp.corner.m.recharging')`) === 'Recharging' && J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.m.recharging') && r.why && !r.spoken)`) === true);
   check('the word is the content table\'s (camp.corner.m.boost: Boost), shown never said', J(`uiText('camp.corner.m.boost')`) === 'Boost' && J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.m.boost') && r.why && !r.spoken)`) === true);
 }
 
