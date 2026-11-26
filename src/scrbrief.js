@@ -18,15 +18,47 @@ function scrGoalLine(level, i) {
   return B && B.lines[0] ? B.lines[0] : '';
 }
 const scrGoalSpoken = (level, i) => scrGoalLine(level, i);
+// WHERE a moment happens, from the mission's own row, so a moment cannot point at a place the mission no longer has (card space-game-screens-f-briefings): a spec is one of
+//   { place }, { spot }, { rival }, { road }, { x, y }            as the walk's (src/campbriefwalk.js campWalkWhere): a place of the level, a neutral ship, a rival, a share of the convoy's road, a point of the world
+//   { start }                where the cruiser starts;  { rocks }  the middle of the mission's rock fields;  { caches }  the middle of its caches;  { guards }  the middle of its guards;  { relic }  the relic's place
+//   { tower: k }             the place of tower group k;  { scan: k }  scan point k;  { wave: k }  where wave k comes from (its own point, or its place on the road);  { waveWith: 'tboat' }  the first wave with that kind of ship
+//   { mid: [spec, spec] }    half way between two;  and any of them with `off: [dx, dy]`: that many px away (so two moments at one place do not sit on each other)
+function scrMomentWhere(spec, ctx) {
+  const s = spec || {}, L = ctx.L, avg = list => list.length ? { x: list.reduce((a, q) => a + q.x, 0) / list.length, y: list.reduce((a, q) => a + q.y, 0) / list.length } : null;
+  let p = null;
+  if (s.mid) { const a = scrMomentWhere(s.mid[0], ctx), b = scrMomentWhere(s.mid[1], ctx); p = a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : null; }
+  else if (s.start) p = ctx.start;
+  else if (s.rocks) p = avg((L.rocks || []).map(r => ({ x: r.at[0], y: r.at[1] })));
+  else if (s.caches) p = avg((L.caches || []).map(c => ({ x: c[0], y: c[1] })));
+  else if (s.guards) p = avg((L.guards || []).map(g => ({ x: g.at[0], y: g.at[1] })));
+  else if (s.relic) { const q = L.relic && ctx.pl[L.relic.place]; p = q ? { x: q.x, y: q.y } : null; }
+  else if (s.tower != null) { const t = (L.towers || [])[s.tower], q = t && ctx.pl[t.place]; p = q ? { x: q.x, y: q.y } : null; }
+  else if (s.scan != null) { const o = (L.objectives || []).find(x => x.type === 'scan'), q = o && (o.points || [])[s.scan]; p = q ? { x: q.at[0], y: q.at[1] } : null; }
+  else if (s.wave != null || s.waveWith) {
+    const w = s.waveWith ? (L.waves || []).find(x => x.ships && x.ships[s.waveWith] > 0) : (L.waves || [])[s.wave];
+    if (w && w.from) p = { x: w.from[0], y: w.from[1] };
+    else if (w && w.on && w.on.lane != null && ctx.road) p = campWalkWhere({ road: ((+w.on.lane) * ctx.road.len + (+w.ahead || 0)) / ctx.road.len }, ctx);
+  } else p = campWalkWhere(s, ctx);
+  return p && s.off ? { x: p.x + s.off[0], y: p.y + s.off[1] } : p;
+}
+// the numbers a moment's words may name, from the mission's row (so "Hold 14 seconds" is the relic's own 14): {cachesword} two, {guardsword} Seven, {towersword} Four, {wavesword} Two, {hold}, {scansecs}
+const scrNumWord = n => ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][n | 0] || String(n | 0);
+const scrCapital = t => t.charAt(0).toUpperCase() + t.slice(1);
+function scrMomentVars(L) {
+  const scan = (L.objectives || []).find(o => o.type === 'scan'), caches = (L.objectives || []).find(o => o.type === 'caches'), towers = (L.towers || []).reduce((a, t) => a + (t.n || 1), 0);
+  return { cachesword: scrNumWord(caches ? caches.n : (L.caches || []).length), guardsword: scrCapital(scrNumWord((L.guards || []).length)), towersword: scrCapital(scrNumWord(towers)), wavesword: scrCapital(scrNumWord((L.waves || []).filter(w => !w.secret).length)),
+    hold: L.relic ? L.relic.hold | 0 : 0, scansecs: scan && scan.points && scan.points[0] ? scan.points[0].secs | 0 : 0 };
+}
 function campBriefMoments(level, i) {
   const D = typeof CAMPWALKS === 'object' && CAMPWALKS ? CAMPWALKS[level + '.' + ((i | 0) + 1)] : null, list = D && Array.isArray(D.moments) ? D.moments : null; if (!list) return [];
   const L = typeof campMissionRow === 'function' ? campMissionRow(level, i) : null; if (!L) return [];
   let road = null; try { road = typeof campWalkRoad === 'function' ? campWalkRoad(level, i, D) : null; } catch (e) { road = null; }
-  const ctx = { L, pl: campPlaces(level), road }, vars = road && typeof campWalkVars === 'function' ? campWalkVars(road) : {};
+  const pl = campPlaces(level), st = pl[L.start] || { x: 0, y: 0 }, sa = L.startAt || [0, 0], ctx = { L, pl, road, start: { x: st.x + (sa[0] || 0), y: st.y + (sa[1] || 0) } };
+  const vars = Object.assign({}, road && typeof campWalkVars === 'function' ? campWalkVars(road) : {}, scrMomentVars(L));
   return list.map((m, k) => {
-    let at = null; try { at = typeof campWalkWhere === 'function' ? campWalkWhere(m.at, ctx) : null; } catch (e) { at = null; } // (a road or a rival place of a mission with no road: nowhere)
+    let at = null; try { at = scrMomentWhere(m.at, ctx); } catch (e) { at = null; } // (a road, a wave or a place the mission lacks: nowhere, so left out)
     const key = 'scr.bf.' + level + '.' + ((i | 0) + 1) + '.' + m.key;
-    return at && scrHas(key) ? { n: k + 1, kind: String(m.kind || 'mute'), text: uiText(key, vars), at } : null;
+    return at && Number.isFinite(at.x) && Number.isFinite(at.y) && scrHas(key) ? { n: k + 1, kind: String(m.kind || 'mute'), text: uiText(key, vars), at } : null;
   }).filter(Boolean).map((m, k) => Object.assign(m, { n: k + 1 }));
 }
 function scrBriefModel(P, bf) { // bf: { t: { level, i, replay, skipped }, brief: campHubBrief, moments: campBriefMoments }

@@ -36,5 +36,57 @@ const CAMPWALKS = {
       { key: 'm3', kind: 'threat', at: { road: 0.56 } },     // pirates ambush somewhere along the middle of the road
       { key: 'm4', kind: 'threat', at: { rival: 'leader' } } // the pirate leader waits near Ceres
     ]
-  }
+  },
+  // ---- the other eight missions: their FOUR MOMENTS (card space-game-screens-f-briefings; Troy approved the words on 25 Nov 2026). A row with `moments` and no `steps` has no stepped walk (campWalkData answers null): it is only for the one-page briefing.
+  // Where each is comes from the mission's own row (src/scrbrief.js scrMomentWhere: its rocks, waves, guards, towers, scan points, relic, caches, or a share of the convoy's road), and the numbers in the words too (scrMomentVars), so none can go stale.
+  // kind: mute (news), help (a call, or what helps), threat (a danger), goal (what you are there for). The words are scr.bf.<level>.<mission>.m1 to m4.
+  '1.2': { moments: [
+    { key: 'm1', kind: 'goal', at: { rocks: true } },                             // the rock fields round Ceres
+    { key: 'm2', kind: 'threat', at: { wave: 0 } },                                // the raids come in from the first wave's side
+    { key: 'm3', kind: 'threat', at: { waveWith: 'tboat' } },                      // the torpedo boats
+    { key: 'm4', kind: 'help', at: { place: 'ceres', off: [180, -140] } }          // the Works: it keeps its doors shut while a pirate is near
+  ] },
+  '1.3': { convoy: 'h1', moments: [
+    { key: 'm1', kind: 'mute', at: { road: 0.02 } },                               // the haulers leave Ceres
+    { key: 'm2', kind: 'threat', at: { wave: 2 } },                                // the pirates keep coming along the road
+    { key: 'm3', kind: 'threat', at: { waveWith: 'tboat' } },                      // a torpedo boat
+    { key: 'm4', kind: 'threat', at: { road: 0.8 } }                               // something else: a hint of where, never what
+  ] },
+  '2.1': { moments: [
+    { key: 'm1', kind: 'goal', at: { caches: true } },                             // the caches
+    { key: 'm2', kind: 'mute', at: { start: true, off: [450, -350] } },            // any ship of yours that flies close picks one up
+    { key: 'm3', kind: 'threat', at: { wave: 0 } },                                // the aliens come from the west
+    { key: 'm4', kind: 'threat', at: { place: 'alpha-cen-b', off: [380, 260] } }   // and all of them must die
+  ] },
+  '2.2': { moments: [
+    { key: 'm1', kind: 'threat', at: { guards: true } },                           // the guards
+    { key: 'm2', kind: 'threat', at: { wave: 0 } },                                // reinforcements
+    { key: 'm3', kind: 'help', at: { guards: true, off: [-500, -380] } },          // missiles help against the heavy ones
+    { key: 'm4', kind: 'goal', at: { place: 'proxima-d', off: [320, -300] } }      // clear them all
+  ] },
+  '2.3': { moments: [
+    { key: 'm1', kind: 'goal', at: { relic: true } },                              // fly into the ring
+    { key: 'm2', kind: 'goal', at: { relic: true, off: [330, 220] } },             // hold it
+    { key: 'm3', kind: 'threat', at: { relic: true, off: [-380, 280] } },          // keep the aliens off
+    { key: 'm4', kind: 'threat', at: { wave: 0 } }                                 // they arrive fast
+  ] },
+  '3.1': { moments: [
+    { key: 'm1', kind: 'goal', at: { scan: 0 } },                                  // fly to each ring
+    { key: 'm2', kind: 'goal', at: { scan: 1 } },                                  // a scan takes seconds
+    { key: 'm3', kind: 'threat', at: { wave: 0 } },                                // the aliens answer
+    { key: 'm4', kind: 'threat', at: { scan: 2 } }                                 // kill every alien
+  ] },
+  '3.2': { moments: [
+    { key: 'm1', kind: 'goal', at: { tower: 0 } },                                 // the towers
+    { key: 'm2', kind: 'mute', at: { mid: [{ start: true }, { tower: 0 }] } },     // the wing goes first
+    { key: 'm3', kind: 'threat', at: { wave: 0 } },                                // reinforcements
+    { key: 'm4', kind: 'threat', at: { tower: 0, off: [260, -240] } }              // the towers are tough
+  ] },
+  '3.3': { moments: [
+    { key: 'm1', kind: 'goal', at: { tower: 0 } },                                 // the towers
+    { key: 'm2', kind: 'threat', at: { wave: 0 } },                                // two waves come
+    { key: 'm3', kind: 'mute', at: { mid: [{ start: true }, { tower: 0 }] } },     // the wing goes first
+    { key: 'm4', kind: 'threat', at: { wave: 1 } }                                 // the last battle
+  ] }
+
 };
