@@ -1,12 +1,17 @@
-// ---------- The new world look, the switch (card space-game-world-w5-shield-hit adds it; the pieces W1 to W5 of the report on card space-game-world-look-scope share it) ----------
-// Troy approved a new look for the world of the Campaign (25 Nov 2026; the mock is docs/world-look-mock.html, direction 1, flat discs): the backdrop, the planets and moons, the stations and the docking mark, the mission objects and the
-// shield hit. All five pieces are behind ONE switch, CAMP.flags.worldlook (src/campaign.js): TRUE in the table, so a player who touched nothing has it; no row of the N panel and nothing remembered; the address ?worldlook=0 (also off,
-// false, no) draws today's world, for the tests and a comparison, and ?worldlook=1 is on whatever the flag says. A test of today's world sets the flag false (the node harness does: nodeGame({ worldlook: 'table' }) keeps the table's value).
-// The Long Haul's painters (src/art_world.js, src/stationart.js, src/boot.js) are not changed: the new world is Campaign-only code and texture keys in its own files.
-//   campWorldOn()      is the new world look on now: the flag or ?worldlook=1, unless ?worldlook=0
-//   campWorldAddrOn(s) / campWorldAddrOff(s)   what an address says (s: a search string, else the page's own)
-const CAMPWORLD = { addr: 'worldlook', memo: { s: null, v: null } }; // the address's name for the switch, and the page's address as last read (it is asked many times a frame)
-function campWorldAddrVal(search) { // the value of ?worldlook in the address, lower case: null when it is not there, '' for a bare ?worldlook (the last one counts)
+// ---------- The new world look: the switch (card space-game-world-w1-backdrop; the first piece of the world look, scope report on card space-game-world-look-scope, the mock is docs/world-look-mock.html, direction 1, flat discs) ----------
+// Troy approved a new look for the world around the ships (25 Nov 2026, the cloud session's brief 5: all eight decisions yes): the backdrop (W1: near black, white stars, two faint slate clouds), planets and moons (W2), stations and the
+// docking mark (W3), mission objects, ore and the mining beam (W4), the shield hit (W5). ONE switch for all five pieces: CAMP.flags.worldlook (src/campaign.js; ON in the table, so every player has the new world as each piece lands; no
+// row of the N panel, nothing is remembered), and the address ?worldlook=0 (the tests' and the comparison's way back to today's world, like ?shiplook=0 and ?pagehud=0). Each piece asks campWorldOn() where it draws: with it off the
+// Campaign draws what it drew before. It comes out when all five are played and Troy says the old look can go.
+// The Campaign only. The Long Haul's painters (src/art_world.js, src/stationart.js, src/boot.js) are never changed by this look and never asked: the new pictures are made in the files of the look, under their own texture keys, and only
+// the Campaign's scenes call them. The first piece to land (this one) holds the switch; the pieces after it append their painters below it.
+//   campWorldOn()            is the new world look on now: the flag or ?worldlook=1, unless ?worldlook=0
+//   campWorldAddrOn(s) / campWorldAddrOff(s)   what an address says (s: a search string, else the page's own);  campWorldAddrVal(s)   the value of ?worldlook, lower case: null when it is not there
+const CAMPWORLD = {
+  addr: 'worldlook',          // the address's name for the switch: ?worldlook=1 is on whatever the flag says, ?worldlook=0 is off
+  memo: { s: null, v: null }  // the page's address, read again only when it changed (the switch is asked many times a frame)
+};
+function campWorldAddrVal(search) { // the value of ?worldlook in the address, lower case: null when it is not there, '' for a bare ?worldlook (the last one counts); the page's own address is read again only when it changed
   try {
     const own = typeof search !== 'string', s = own ? (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '') : search, M = CAMPWORLD.memo;
     if (own && M.s === s) return M.v;

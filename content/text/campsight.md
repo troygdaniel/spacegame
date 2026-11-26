@@ -13,6 +13,7 @@ The words of the sensors (card space-game-see-hostiles-earlier; Troy, 22 Nov 202
 | camp.sight.hostile.many | {n} hostiles |
 | camp.sight.kind.one | {n} {kind} |
 | camp.sight.kind.many | {n} {kind}s |
+| camp.sight.more | +{n} |
 | camp.sight.dir.north | north |
 | camp.sight.dir.north-east | north-east |
 | camp.sight.dir.east | east |
