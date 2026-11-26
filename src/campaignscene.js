@@ -52,6 +52,15 @@ const campShipK = (s, id) => { const sp = s && s.sp && s.sp[id]; return sp && sp
 // a tech as the pick and the refit cards list it (card space-game-ready-room-simple): its name and what it changes in plain words with the numbers (src/camphub.js campHubTechChange), else the tech's own sentence
 const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + ((typeof campHubTechChange === 'function' && campHubTechChange(id, P)) || uiText('camp.tech.' + id + '.text')); // P: the pilot's progress, for the numbers that depend on what he has
 
+// THE STORY CARD IS GONE in the new look (piece b of the new screens, card space-game-screens-b-briefing; Troy, 25 Nov 2026): Launch starts the flight, and the level's opening lines (camp.l<N>.before.*, the words of the old story card) are said on the
+// radio instead, in order, about four seconds apart and before anything else of the flight: each is offered to the radio's hold (src/campsayhold.js) as a kept line, so a line that is up is never overwritten and none is dropped; spaced like this
+// the voice (a queue of two, six seconds: src/voice.js) says each in full. Only a level started from the ready room (via 'hub'), and not a replay: the others keep the card.
+const CAMP_OPENERS = { first: 900, gap: 4500 }; // ms from the start of the flight to the first line, and between the lines
+function campOpeners(sc) { // the number of lines that will be said
+  const lines = typeof campStory === 'function' ? campStory(sc.level, 'before', !!(sc.P && sc.P.revealed)) : []; if (!lines.length || !sc.time || typeof sc.time.delayedCall !== 'function') return 0;
+  lines.forEach((l, i) => sc.time.delayedCall(CAMP_OPENERS.first + i * CAMP_OPENERS.gap, () => { if (!sc.leaving && sc.camp && !sc.camp.result && typeof sc.radioShow === 'function') sc.radioShow(campSayOffer(sc.sayR || (sc.sayR = campSayNew()), (sc.time && sc.time.now) || 0, { text: l, keep: true })); }));
+  return lines.length;
+}
 // the new look of the cards (src/scrcards.js, src/scrcardsdraw.js; piece a of the new screens, behind CAMP.flags.screens): true when the card was drawn as page panels, false when the old card is to be drawn (the switch is off, or there is no page to draw on).
 // A function and not a method, and the switch asked first: a stand-in scene of a test, which has only the card functions it needs, is not touched while the switch is off
 function campNewCard(s, model, veil) {
@@ -138,9 +147,8 @@ class Campaign extends Phaser.Scene {
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint && !D) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
-    (this.placeSets = this.placeSets || []).push({ p, nm, pb, im, r, base: im.scaleX }); // (im, r, base: the picture of the world, its radius and its own scale: syncWorldLeast draws it up when the view is out)
-    // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js)
-    if (p.base) { made.push(this.add.image(p.x + 70, p.y - 60, 'station').setScale(0.16).setDepth(2), pb); this.placeLabels.push(pb); }
+    (this.placeSets = this.placeSets || []).push({ p, nm, pb, im, r, base: im.scaleX }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js); (im, r, base: the picture of the world, its radius and its own scale: syncWorldLeast draws it up when the view is out)
+    if (p.base) { const ST = D && typeof campStationTexture === 'function' ? campStationTexture(this, p) : null; made.push(this.add.image(p.x + 70, p.y - 60, ST ? ST.key : 'station').setScale(ST ? CAMPSTATION.world / ST.R : 0.16).setDepth(2), pb); this.placeLabels.push(pb); } // the world look (card space-game-world-w3-stations): a flat-cut steel ring or hexagon (src/campworldstation.js), the same place and about the same size as Long Haul's station picture
     return made;
   }
   syncWorldLeast() { // a world keeps a size you can see when the view is out (src/campzoom.js campZoomWorldScale): its picture is drawn up so its radius is not under CAMPZOOM.view.worldLeast px on the screen; the flat discs of the world look and the old pictures alike
@@ -249,6 +257,7 @@ class Campaign extends Phaser.Scene {
   afterIntro() { if (this.via === 'hub') { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
   showIntro() {
     if (this.replay === true || this.mi > 0) { this.afterIntro(); return; } // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
+    if (this.via === 'hub' && typeof scrOn === 'function' && scrOn() && campOpeners(this) > 0) { this.afterIntro(); return; } // the new look: no card, the lines are on the radio (campOpeners)
     this.mode = 'intro'; const lines = campStory(this.level, 'before', !!(this.P && this.P.revealed));
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
     this.say(lines);
@@ -530,7 +539,7 @@ class Campaign extends Phaser.Scene {
     if (!this.osp) this.osp = {}; const seenOre = {}; // (made in create; a stand-in scene in a test has none)
     C.pickups.forEach(o => { // rocks are asteroids, a wreck's ore glows; a wreck blinks in its last seconds
       let im = this.osp[o.id];
-      if (!im) { im = this.osp[o.id] = o.kind === 'rock' ? this.add.image(o.x, o.y, ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(o.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(o.x) : this.add.image(o.x, o.y, 'ore').setDepth(3).setBlendMode('ADD').setScale(1.4); }
+      if (!im) { im = this.osp[o.id] = o.kind === 'rock' ? this.add.image(o.x, o.y, (typeof slookRockKey === 'function' && slookRockKey(this, o.id)) || ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(o.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(o.x) : this.add.image(o.x, o.y, 'ore').setDepth(3).setBlendMode('ADD').setScale(1.4); }
       if (o.kind === 'wreck') im.setAlpha(C.t - o.born > CAMP.ore.wreckLife - 6000 && Math.sin(C.t / 90) < 0 ? 0.3 : 1);
       seenOre[o.id] = true;
     });
@@ -539,7 +548,7 @@ class Campaign extends Phaser.Scene {
     if (!this.rsp) this.rsp = {}; const seenRock = {}, now = C.t, bg = this.beamG; if (bg) bg.clear();
     C.rocks.forEach(r => {
       let im = this.rsp[r.id];
-      if (!im) im = this.rsp[r.id] = this.add.image(r.x, r.y, ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(r.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(r.x).setScale(r.r * 2.4 / 64);
+      if (!im) im = this.rsp[r.id] = this.add.image(r.x, r.y, (typeof slookRockKey === 'function' && slookRockKey(this, r.id)) || ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(r.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(r.x).setScale(r.r * 2.4 / 64);
       const cut = Math.max(0, Math.min(1, 1 - r.hp / r.maxHp)), hot = now - r.cutAt < 160;
       im.setTint(hot ? 0xfff0b0 : cut > 0 ? (0xff << 16) | (Math.round(255 - 90 * cut) << 8) | Math.round(255 - 160 * cut) : 0xffffff).setRotation(r.x + (hot ? Math.sin(now / 25) * 0.04 : 0)); seenRock[r.id] = true;
       if (bg && cut > 0) { const n = 1 + Math.floor(cut * 4); bg.lineStyle(1.5, 0x2a1408, 0.9); for (let i = 0; i < n; i++) { const a = (parseInt(String(r.id).split('-')[1], 10) * 1.7 + i * 2.1), l = r.r * (0.5 + 0.5 * cut); bg.lineBetween(r.x + Math.cos(a) * 2, r.y + Math.sin(a) * 2, r.x + Math.cos(a) * l, r.y + Math.sin(a) * l + (i % 2 ? 3 : -3)); } } // the cracks
@@ -551,6 +560,7 @@ class Campaign extends Phaser.Scene {
     const rg = this.relicG, R = C.relic, L = C.L;
     rg.clear();
     if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
+    if (typeof campDockMarkSync === 'function') campDockMarkSync(this); // the world look: a dashed gold ring round the market station while selling ore is the goal (src/campworldstation.js)
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
       const b = C.bullets[i]; if (!b) { im.setVisible(false); return; }
@@ -617,7 +627,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, H = this.hud, ids = ['wave', 'obj', 'earth', 'repair', 'post'];
     if (typeof campHudFlow !== 'function') return;
     const top = this.pageHudStack > 0 ? this.pageHudStack + CAMP.hud.pageGap : 0, gh = top > 0; // a goal panel of the page HUD is up (pageHudStack, src/camppagehud.js): it has the wave and goal lines: they take no place in the column, and what is left of it starts under that panel (card space-game-goal-panel-hides-text)
-    const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
+    const items = ids.map(id => ({ id, show: !!(H[id] && H[id].text) && H[id].visible !== false && !(gh && (id === 'wave' || id === 'obj')), h: id === 'earth' ? 12 : 0 })), F = campHudFlow(items, top);
     if (top > 0 && !items.some(i => i.show)) F.bottom = this.pageHudStack; // nothing left in the column: it ends where the panel does, as it did
     ids.forEach(id => { if (H[id] && H[id].setY && F.ys[id] !== undefined) H[id].setY(F.ys[id]); });
     if (C.earth && F.ys.earth !== undefined) bar(W / 2 - 110, F.ys.earth + 18, 220, C.earth.shield / C.earth.max, 0x38e1ff);
@@ -629,12 +639,13 @@ class Campaign extends Phaser.Scene {
   // where everything stacked at the top centre ends: the column (col), the mothership's name and bar 2 and 20 px under it (the bar is 12 high), or the rival's bars and its phase line under it (src/camprivaldraw.js)
   hudStackBottom(col) {
     const H = this.hud || {}, D = typeof CAMP_RIVAL_DRAW === 'object' ? CAMP_RIVAL_DRAW.hud : null; let b = col;
-    if (H.mother && H.mother.text) b = Math.max(b, col + 20 + 12);
+    if (H.mother && H.mother.text && this.pageHudOn !== true) b = Math.max(b, col + 20 + 12); // (the mothership's bar is in the hostiles panel while the page HUD is up)
     if (D && H.rivalName && H.rivalName.text) b = Math.max(b, col + 2 + D.hullY + 12, H.rivalPhase && H.rivalPhase.text ? col + 2 + D.phaseY + 20 : 0);
     return Math.max(b, this.pageHudStack || 0); // (the page HUD's goal panel at the top centre ends here at the lowest: src/camppagehud.js)
   }
   // the y a toast starts at (src/common.js toast and toastKeep): just under whatever is stacked at the top centre, CAMP.hud.toastGap px below it, short column or tall (cards space-game-toast-over-topcentre and space-game-toast-gap: the band's own top, 86, was a floor that left a toast 60 px under a one-line column). Before the first frame there is no stack yet: the band's top
   toastTop() { return this.mp && Array.isArray(this.mp.objs) ? campMapFrameOf(this.mp).y + CAMPMAP.toastIn : this.hudStack ? Math.ceil(this.hudStack + CAMP.hud.toastGap) : TOAST.top; } // the Tab map open: just inside the top of its frame, under the map's title (card space-game-map-title-and-labels)
+  toastPanel(msg, color, hold) { return typeof campPageHudToast === 'function' && campPageHudToast(this, msg, color, hold); } // the page HUD's radio panel takes the message when it is up (src/common.js toast asks first; src/camppagehud.js; card space-game-b3-c-radio-panel)
   // the goal's arrow and the lines of text (the gauges are gone: card space-game-layout-hud; the radar that was in the bottom right corner is the target display now: src/camptdispscene.js)
   paintHud() {
     const C = this.camp, g = this.hudG, c = C.carrier, bar = (x, y, w, f, color) => { g.fillStyle(0x04101c, 0.8).fillRect(x, y, w, 12); g.fillStyle(color, 1).fillRect(x + 1, y + 1, Math.max(0, (w - 2) * Math.max(0, Math.min(1, f))), 10); g.lineStyle(1, 0x38e1ff, 0.5).strokeRect(x, y, w, 12); };
@@ -643,7 +654,7 @@ class Campaign extends Phaser.Scene {
     if (typeof campCruiserHudPaint === 'function') campCruiserHudPaint(g, this.hud, C); // the plate, the shield and hull bars and the ore line at the top left (src/campcruiserhud.js)
     if (typeof campRivalHud === 'function') campRivalHud(this, g, bar); // a rival ship's name, shield and hull and the warning of its phase (src/camprivaldraw.js)
     const m = C.ships.find(u => u.kind === 'mother' && u.hp > 0);
-    if (m) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
+    if (m && this.pageHudOn !== true) bar(W / 2 - 150, (this.hudBelow || 0) + 20, 300, m.hp / m.maxHp, 0xc9a0ff); // under the column of lines: the name 2 px under it, the bar under the name
     const waves = C.L.waves;
     this.hud.earth.setText(C.earth ? uiText('camp.ui.earth') + '  ' + Math.round(C.earth.shield / C.earth.max * 100) + '%' : ''); this.hud.obj.setText(campObjective(C));
     const wc = typeof campWaveCount === 'function' ? campWaveCount(C) : { n: C.waves.filter(w => w.started).length, total: waves.length }; // the waves that can come on the lane she flies (src/camproute.js)
