@@ -122,7 +122,7 @@ function campTorpedoBoom(C, t, hit) {
   C.events.push({ type: 'torpedo', stage: 'hit', id: t.id, from: t.from, target: hit ? hit.id : '', x: t.x, y: t.y });
   C.events.push({ type: 'tboom', x: t.x, y: t.y, r: T.blast });
   if (hit) {
-    campHurt(C, hit, t.dmg);
+    campHurt(C, hit, t.dmg, undefined, Math.atan2(t.y - hit.y, t.x - hit.x)); // (the angle: toward the torpedo, for the shield's arc)
     C.ships.forEach(u => { if (u !== hit && u.hp > 0 && (u.team === 'earth' || u.team === 'neutral') && campDist(u, t) <= T.blast + u.r) campHurt(C, u, t.dmg * T.splash); });
     const took = hit.cord === 'tuck' && typeof campConvoyCover === 'function' && campConvoyCover(C, hit, true) || hit; // a tucked ship's hit is the cruiser's (src/campconvoy.js)
     if (took.kind === 'carrier' || took.kind === 'freighter' || took.team === 'neutral') campTorpSay(C, 'hit', campTorpKey(took, 'camp.say.torp.hit'), { name: campTorpName(took) });

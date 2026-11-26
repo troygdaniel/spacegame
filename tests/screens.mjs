@@ -171,6 +171,9 @@ const PIECES = [
   'campbriefdraw.js', // b: the briefing
   'scrbrief.js',
   'scrbriefdraw.js',
+  'campkeys.js', // e: (the keys page and Settings: card space-game-screens-e-keys-settings, whose Settings row is settings.js)
+  'scrkeys.js',
+  'scrsettings.js',
   'title.js' // d: the title (card space-game-screens-d-title, tests/scrtitle.mjs)
 ];
 { // nothing but the helpers, the host, the Settings row and the pieces names the new pieces' functions (each piece's own suite holds it to the switch: tests/scrcards.mjs)
