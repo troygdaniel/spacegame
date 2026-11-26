@@ -14,8 +14,9 @@
 const CAMPFEEL = {
   addr: 'feel',                  // the address's name for the switch: ?feel=0 is off whatever the flag says, ?feel (=1) on
   memo: { s: null, v: null },    // the page's address, read again only when it changed
-  ribbon: { ms: 600, jump: 240, speedK: 1800, min: 25, thr: 0.05, w: 0.03, wTh: 0.03, wBoost: 0.5, minPx: 1.4, a: 0.45, aBoost: 0.7, cap: 72, color: 0x6fd6ff, hot: 0xb4e8ff }, // ms of history (420 in the Long Haul; the cruiser is slower, so a little more); jump: px a nozzle may move between two frames before it is a teleport (speedK px/s times the frame's time, at least jump); min: px/s under which a ship with no thrust leaves none; w: the ribbon's width as a share of the cruiser's drawn length, plus wTh for full thrust and wBoost more on boost; minPx: never thinner than this on the screen; a, aBoost: the opacity at the head; cap: points kept at most; color, hot: the pale blue, and the white it goes to on boost
-  flame: { engines: [[-0.5, 0.07], [-0.5, -0.07]], min: 0.04, thrust: 0.5, boost: 0.6, flare: 0.35, wid: 0.1, boostWid: 0.01, flareWid: 0.006, flick: [0.85, 0.3], glow: [1.6, 1.25, 0.14], plume: 0.65, core: [0.45, 0.55, 0.85], disc: [0.7, 0.45], color: 0x6fd6ff, hot: 0x9fe4ff, depth: 4.4 }, // the lengths and widths are the steady streaks' (src/shiplookfx.js SLOOKFX.flame, as a share of the cruiser's length); the Long Haul's layers: glow (width x1.6, length x1.25, opacity 0.16), plume (width x1, length x1, 0.8), core (width x0.45, length x0.55, 0.9), a disc at the nozzle (radius x0.7, 0.5); the flicker is 0.85 to 1.15 each frame
+  ribbon: { ms: 600, jump: 240, speedK: 1800, min: 25, thr: 0.05, w: 0.02, wTh: 0.015, wBoost: 0.5, minPx: 1.4, a: 0.32, aBoost: 0.5, cap: 72, color: 0x6fd6ff, hot: 0xb4e8ff }, // ms of history (420 in the Long Haul; the cruiser is slower, so a little more); jump: px a nozzle may move between two frames before it is a teleport (speedK px/s times the frame's time, at least jump); min: px/s under which a ship with no thrust leaves none; w: the ribbon's width as a share of the cruiser's drawn length, plus wTh for full thrust and wBoost more on boost; minPx: never thinner than this on the screen; a, aBoost: the opacity at the head; cap: points kept at most; color, hot: the pale blue, and the white it goes to on boost
+  nozzles: { carrier: [[-0.5, 0.07], [-0.5, -0.07]], default: [[-0.5, 0]] },   // where the engines are, by the kind of ship, as shares of its drawn length (back, side): the cruiser's two; any other ship the player may fly (a pilot's fighter) has one in the middle of its tail until its own are written here
+  flame: { min: 0.04, thrust: 0.5, boost: 0.6, flare: 0.35, wid: 0.1, boostWid: 0.01, flareWid: 0.006, flick: [0.85, 0.3], glow: [1.6, 1.25, 0.14], plume: 0.65, core: [0.45, 0.55, 0.85], disc: [0.7, 0.45], color: 0x6fd6ff, hot: 0x9fe4ff, depth: 4.4 }, // the lengths and widths are the steady streaks' (src/shiplookfx.js SLOOKFX.flame, as a share of the cruiser's length); the Long Haul's layers: glow (width x1.6, length x1.25, opacity 0.16), plume (width x1, length x1, 0.8), core (width x0.45, length x0.55, 0.9), a disc at the nozzle (radius x0.7, 0.5); the flicker is 0.85 to 1.15 each frame
   cam: { lag: 0.12, boostLag: 0.07, boostZoom: 0.9, rateIn: 2.2, rateOut: 1.4 }  // the follow's lerp (the Long Haul's 0.12; the scene's own), the lerp at full boost (the cruiser pulls ahead), the zoom's multiplier at full boost (a slight zoom-out), and how fast the boost's share comes (per second: about half a second) and goes (a little under a second)
 };
 
@@ -51,10 +52,15 @@ function campFeelFlameParts(x, y, rot, len, wid, flick, boost) {
     { kind: 'disc', x, y, r: hw * F.disc[0], color: 0xffffff, a: F.disc[1] }
   ];
 }
-// where the two nozzles are (pure): the cruiser u, drawn dw px long
+// THE SHIP THE PLAYER FLIES (Troy, 26 Nov 2026, through ORCH: he may fly a pilot's fighter instead of a faster cruiser): every effect of the feel (this file and src/campfeelfx.js) attaches to the unit this answers, by its drawn size and its engines, never to
+// the cruiser by name. The cruiser today; the one place that changes when the player flies another ship. Its top speed is campFeelTop.
+const campFeelShip = C => (C && C.carrier) || null;
+const campFeelTop = (C, u) => !u ? 0 : u.kind === 'carrier' || u === (C && C.carrier) ? CAMP.carrier.speed * (CAMP.boost && CAMP.boost.speed > 1 ? CAMP.boost.speed : 1) : (u.vmax > 0 ? u.vmax : 0); // the fastest it goes: the cruiser's boost top, else the ship's own vmax
+const campFeelEngines = u => (u && CAMPFEEL.nozzles[u.kind]) || CAMPFEEL.nozzles.default;   // the engines of this ship, as shares of its drawn length
+// where the nozzles are (pure): the ship u, drawn dw px long
 function campFeelNozzles(u, dw) {
   const c = Math.cos(u.rot || 0), s = Math.sin(u.rot || 0);
-  return CAMPFEEL.flame.engines.map(e => ({ x: u.x + c * e[0] * dw - s * e[1] * dw, y: u.y + s * e[0] * dw + c * e[1] * dw }));
+  return campFeelEngines(u).map(e => ({ x: u.x + c * e[0] * dw - s * e[1] * dw, y: u.y + s * e[0] * dw + c * e[1] * dw }));
 }
 // the flame's size from the boost's own state f = { th, boost, flare } (src/campboost.js campFlameState), as a share of the cruiser's drawn length dw: { len, wid } in px, or null when the engines are off (the steady streak's own rule)
 function campFeelFlameSize(dw, f) {
@@ -96,18 +102,20 @@ function campFeelDraw(scene, S, u, sp, C) {
   if (!campFeelOn() || !scene || !scene.add || !S || !u || !sp) return false;
   const g = S.feelG || (S.feelG = scene.add.graphics().setDepth(CAMPFEEL.flame.depth).setBlendMode(Phaser.BlendModes.ADD)), map = !!scene.mp, dw = sp.displayWidth;
   g.clear(); g.setVisible(!map);
-  if (!(u.hp > 0) || sp.visible === false || !(dw > 0)) { if (S.feelR) S.feelR.rib.forEach(r => { r.length = 0; }); return true; }
-  const R = S.feelR || (S.feelR = campFeelRibbonNew(CAMPFEEL.flame.engines.length)), f = typeof campFlameState === 'function' ? campFlameState(C) : { th: 0, boost: 0, flare: 0 };
-  const t = C.t * 1000 || 0, z = scene.cameras && scene.cameras.main && scene.cameras.main.zoom > 0 ? scene.cameras.main.zoom : 1, speed = Math.hypot(u.vx || 0, u.vy || 0), noz = campFeelNozzles(u, dw), size = campFeelFlameSize(dw, f);
+  if (!(u.hp > 0) || sp.visible === false || !(dw > 0)) { if (S.feelR) S.feelR.rib.forEach(r => { r.length = 0; }); if (typeof campFxHide === 'function') campFxHide(S); return true; }
+  const eng = campFeelEngines(u); if (!S.feelR || S.feelId !== u.id || S.feelR.rib.length !== eng.length) { S.feelR = campFeelRibbonNew(eng.length); S.feelId = u.id; if (S.fxs) { S.fxs.dots.length = 0; S.fxs.puffs.length = 0; S.fxs.rotPrev = null; } } // (another ship, or another number of engines: a new history)
+  const R = S.feelR, f = typeof campFlameState === 'function' ? campFlameState(C) : { th: 0, boost: 0, flare: 0 };
+  const t = C.t || 0, z = scene.cameras && scene.cameras.main && scene.cameras.main.zoom > 0 ? scene.cameras.main.zoom : 1, speed = Math.hypot(u.vx || 0, u.vy || 0), noz = campFeelNozzles(u, dw), size = campFeelFlameSize(dw, f);
   noz.forEach((p, i) => campFeelRibbonPush(R, i, p.x, p.y, t, f.th, f.boost, speed, dw));
   R.rib.forEach(rib => campFeelRibbonSegs(rib, t, z).forEach(s => { g.lineStyle(s.w, s.color, s.a); g.lineBetween(s.x0, s.y0, s.x1, s.y1); }));
   if (size) noz.forEach((p, i) => campFeelFlameParts(p.x, p.y, u.rot || 0, size.len, size.wid, campFeelFlick(t, i), f.boost).forEach(o => {
     g.fillStyle(o.color, o.a);
     if (o.kind === 'disc') g.fillCircle(o.x, o.y, o.r); else g.fillTriangle(o.pts[0], o.pts[1], o.pts[2], o.pts[3], o.pts[4], o.pts[5]);
   }));
+  if (typeof campFxDraw === 'function') campFxDraw(scene, S, u, noz, f, dw, z, t, scene.game && scene.game.loop ? Math.min(250, scene.game.loop.delta) : 16.7, C); // the rest of the Long Haul's flight effects (src/campfeelfx.js): sparks, puffs, the engine glow, the line ahead, the streaks
   return true;
 }
-function campFeelHide(S) { if (S && S.feelG) S.feelG.setVisible(false); if (S && S.feelR) S.feelR.rib.forEach(r => { r.length = 0; }); } // the switch went off (or the look): the picture goes and the history with it
+function campFeelHide(S) { if (S && S.feelG) S.feelG.setVisible(false); if (S && S.feelR) S.feelR.rib.forEach(r => { r.length = 0; }); if (typeof campFxHide === 'function') campFxHide(S); } // the switch went off (or the look): the picture goes and the history with it
 
 // ---- the camera ----
 // the boost's share of the camera's change, eased: z 0 to 1, in at rateIn and out at rateOut per second (dt in ms); never overshoots
@@ -121,9 +129,11 @@ const campFeelLerp = z => CAMPFEEL.cam.lag + (CAMPFEEL.cam.boostLag - CAMPFEEL.c
 // that camzoomFrame then multiplies by the player's zoom, and the follow's lerp drops while boosting. Nothing happens with the feel off, the cruiser gone, or the camera not on the cruiser's follow: the share goes back to 0
 function campFeelCamera(scene) {
   const c = scene && scene._cz, cam = scene && scene.cameras && scene.cameras.main, C = scene && scene.camp; if (!c || !cam || !C) return;
-  const st = scene.feel || (scene.feel = { z: 0, k: 1 }), live = campFeelOn() && !scene.dead && !scene.leaving && !c.anchor, dt = scene.game && scene.game.loop ? scene.game.loop.delta : 16.7;
+  const st = scene.feel || (scene.feel = { z: 0, k: 1, punch: 0, launched: false }), live = campFeelOn() && !scene.dead && !scene.leaving && !c.anchor, dt = scene.game && scene.game.loop ? scene.game.loop.delta : 16.7;
   st.z = campFeelCamStep(st.z, live && !!(C.boost && C.boost.on), dt);
-  const k = campFeelZoomK(st.z);
+  if (live && !st.launched && scene.mode === 'play' && C.t < 1500) { st.launched = true; st.punch = 1; } // the launch punch (src/campfeelfx.js campFxPunchK; the Long Haul's feelLaunch): the first frames of the flight, once for a scene start
+  if (st.punch > 0) st.punch = live && typeof CAMPFX === 'object' ? Math.max(0, st.punch - dt / CAMPFX.punch.ms) : 0;
+  const k = campFeelZoomK(st.z) * (st.punch > 0 && typeof campFxPunchK === 'function' ? campFxPunchK(st.punch) : 1);
   if (c.base === st.k && c.out !== null && cam.zoom === c.out) { c.base = k; st.k = k; } // the base is ours while it is what we last wrote and nothing else has moved the zoom; if a zoom effect or a setZoom of the scene has made it something else, ours waits (it never writes over another's value)
   if (cam._follow && cam.lerp && typeof cam.lerp.set === 'function') { const l = live || st.z > 0 ? campFeelLerp(st.z) : CAMPFEEL.cam.lag; if (cam.lerp.x !== l) cam.lerp.set(l, l); } // (the scene's own is CAMPFEEL.cam.lag, 0.12: the drag and the focus put it back to the same)
 }
