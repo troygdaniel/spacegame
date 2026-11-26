@@ -21,7 +21,7 @@ const CAMP_TUNE = {
   store: 'longhaul.campaign.tuning',      // the localStorage key: { v: 1, over: { id: value } }
   ver: 1,
   bigStep: 10,                            // Shift with Left or Right: this many steps at once
-  groups: ['feel', 'ship', 'guns', 'wing', 'foes', 'time', 'view', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
+  groups: ['feel', 'cockpit', 'ship', 'guns', 'wing', 'foes', 'time', 'view', 'ore', 'systems'],   // the panel's headings, in order (camp.ui.tune.group.<id>)
   rows: [
     // the cruiser's feel (card space-game-cruiser-feel-sliders; Troy, 26 Nov 2026: he wants to dial the way it flies in, by feel, before anyone guesses numbers): five numbers, each read by the flight every frame, so each is felt at once; the live strip (src/camptunedraw.js) shows these five as sliders over the running battle
     { id: 'cruiserspeed', group: 'feel', root: 'CAMP', path: 'carrier.speed', min: 60, max: 600, step: 10, unit: 'px/s', when: 'now', holds: 'boostspeed' },   // the top speed (campCarrier: k.speed)
@@ -29,6 +29,20 @@ const CAMP_TUNE = {
     { id: 'cruiserturn', group: 'feel', root: 'CAMP', path: 'carrier.turn', min: 0.3, max: 4, step: 0.1, unit: 'rad/s', when: 'now' },                           // the turn (k.turn)
     { id: 'boostspeed', group: 'feel', root: 'CAMP', path: 'boost.speed', derive: 'boostspeed', min: 210, max: 1000, step: 10, unit: 'px/s', when: 'now' },       // the boost's top speed in px/s: what the table holds is a multiple of the top speed (CAMP.boost.speed, 1.57: 210 to about 330); the row shows the product and keeps it when the top speed moves
     { id: 'startview', group: 'feel', root: 'CAMPZOOM', path: 'view.startOver', derive: 'startview', min: 0.2, max: 1, step: 0.005, unit: 'x', when: 'now' },       // the zoom a flight starts at and Backspace goes back to (0.335 today: six presses of minus); the table's startOver is 0 (the presses) until a value is put in it
+    // THE FLOWN FIGHTER (card space-game-fly-fighter-l3; Troy, 26 Nov 2026: he will fly a pilot's fighter with the C key, src/campcockpit.js, the table CAMP.cockpit): the Wren's flight numbers, the hull, the guns and the rate as multiples of the pilot's own, and the cruiser's turrets while he is away.
+    // The flight numbers, the multipliers of the guns and the turrets are read every tick of a flown fighter, so they are felt at once; hpK is read when the stick is taken (the next C). The switch is CAMP.flags.cockpit: off, nothing of this runs.
+    { id: 'cockpitflag', kind: 'flag', group: 'cockpit', flag: 'cockpit', when: 'now' },
+    { id: 'cockpitspeed', group: 'cockpit', root: 'CAMP', path: 'cockpit.speed', min: 100, max: 900, step: 10, unit: 'px/s', when: 'now' },
+    { id: 'cockpitboost', group: 'cockpit', root: 'CAMP', path: 'cockpit.boost', min: 100, max: 1600, step: 10, unit: 'px/s', when: 'now' },
+    { id: 'cockpitaccel', group: 'cockpit', root: 'CAMP', path: 'cockpit.accel', min: 100, max: 1600, step: 10, unit: 'px/s2', when: 'now' },
+    { id: 'cockpitturn', group: 'cockpit', root: 'CAMP', path: 'cockpit.turn', min: 0.5, max: 8, step: 0.1, unit: 'rad/s', when: 'now' },
+    { id: 'cockpitstore', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.max', min: 10, max: 400, step: 10, unit: 'units', when: 'now' },
+    { id: 'cockpitdrain', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.drain', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
+    { id: 'cockpitregen', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.regen', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
+    { id: 'cockpithull', group: 'cockpit', root: 'CAMP', path: 'cockpit.hpK', min: 0.5, max: 8, step: 0.25, unit: 'x', when: 'now' },
+    { id: 'cockpitdamage', group: 'cockpit', root: 'CAMP', path: 'cockpit.damageK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
+    { id: 'cockpitrate', group: 'cockpit', root: 'CAMP', path: 'cockpit.rateK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
+    { id: 'cockpitturrets', group: 'cockpit', root: 'CAMP', path: 'cockpit.turrets', derive: 'cockpitturrets', min: 0, max: 1, step: 1, unit: '', when: 'now' },
     // the cruiser
     { id: 'shieldsize', group: 'ship', root: 'CAMP', path: 'carrier.shield', min: 30, max: 600, step: 10, unit: 'points', when: 'now' },
     { id: 'shieldmend', group: 'ship', root: 'CAMP', path: 'power.shields.regen', of: 2, min: 0, max: 30, step: 0.5, unit: 'a second', when: 'now' },
@@ -128,6 +142,10 @@ const CAMP_TUNE_DERIVE = {
   boostspeed: {
     read: () => CAMP.boost.speed * CAMP.carrier.speed,
     put: (v, s) => { const spd = CAMP.carrier.speed, d = CAMP_TUNE.state.snap && CAMP_TUNE.state.snap.cruiserspeed; CAMP.boost.speed = Math.abs(v - s.v) < 1e-6 && d && Math.abs(spd - d.v) < 1e-9 ? s.raw : v / spd; }
+  },
+  cockpitturrets: { // the cruiser's turrets while the player is in a fighter (CAMP.cockpit.turrets is 'auto' or 'off', a word): the row shows 1 for 'auto' and 0 for 'off' (card space-game-fly-fighter-l3)
+    read: () => (CAMP.cockpit.turrets === 'auto' ? 1 : 0),
+    put: (v, s) => { CAMP.cockpit.turrets = v >= 0.5 ? 'auto' : 'off'; }
   },
   startview: {
     read: () => (typeof campZoomDefault === 'function' ? campZoomDefault() : 0),

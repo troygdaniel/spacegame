@@ -25,6 +25,19 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.msg.noclip | This browser would not copy. The settings are kept here all the same. |
 | camp.ui.tune.group.ship | The cruiser |
 | camp.ui.tune.group.feel | The cruiser's feel |
+| camp.ui.tune.group.cockpit | The flown fighter (C) |
+| camp.ui.tune.row.cockpitflag | Fly a pilot's fighter with C |
+| camp.ui.tune.row.cockpitspeed | Fighter top speed |
+| camp.ui.tune.row.cockpitboost | Fighter boost top speed |
+| camp.ui.tune.row.cockpitaccel | Fighter thrust |
+| camp.ui.tune.row.cockpitturn | Fighter turn rate |
+| camp.ui.tune.row.cockpitstore | Fighter boost store |
+| camp.ui.tune.row.cockpitdrain | Fighter boost drain |
+| camp.ui.tune.row.cockpitregen | Fighter boost refill |
+| camp.ui.tune.row.cockpithull | Flown hull (times the pilot's) |
+| camp.ui.tune.row.cockpitdamage | Flown guns (times the pilot's) |
+| camp.ui.tune.row.cockpitrate | Flown rate of fire (times) |
+| camp.ui.tune.row.cockpitturrets | Cruiser turrets on their own |
 | camp.ui.tune.row.cruiseraccel | Cruiser thrust |
 | camp.ui.tune.row.boostspeed | Boost top speed |
 | camp.ui.tune.row.startview | Start zoom |
