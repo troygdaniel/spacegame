@@ -958,12 +958,14 @@ const campConvoys = C => C.ships.filter(u => u.kind === 'freighter' && u.hp > 0)
 function campNearest(list, p, max) { let best = null, bd = max == null ? Infinity : max; list.forEach(u => { const d = campDist(u, p); if (d < bd) { bd = d; best = u; } }); return best; }
 
 // ---------- damage and deaths ----------
-function campHurt(C, u, dmg, byId) {
+// the angle a hit came from, for the shield's arc (the new world look, src/campshieldhit.js): the bearing from the ship hit to the shooter, in radians as the sim has them (0 east, y down); undefined when the shooter is not known. A caller that knows better (a shot's own direction) gives it as `ang`. Nothing in the sim reads it
+function campHitAngle(C, u, byId) { const s = byId && C.by ? C.by[byId] : null; return s && s !== u ? Math.atan2(s.y - u.y, s.x - u.x) : undefined; }
+function campHurt(C, u, dmg, byId, ang) {
   if (u.hp <= 0 || C.result) return;
   if (u.cord === 'tuck' && typeof campConvoyCover === 'function') { const c = campConvoyCover(C, u); if (c) u = c; } // a ship tucked in under the cruiser's shield: the hit is the cruiser's (src/campconvoy.js)
   if (u.kind === 'carrier') {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
-    if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y }); } // the shield first
+    if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y, a: ang !== undefined ? ang : campHitAngle(C, u, byId) }); } // the shield first
   }
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
@@ -1653,7 +1655,7 @@ function campBullets(C, dt) {
       if (u.hp <= 0) continue;
       if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) {
         if (b.beam) { b.hit = b.hit || {}; if (b.hit[u.id]) continue; b.hit[u.id] = true; } // a beam goes through every ship in its line, but hurts each one once (it hurt a big one every step it was inside: 21 times as much on the mothership)
-        campHurt(C, u, b.dmg, b.from); if (!b.beam) { b.dead = true; return; }
+        campHurt(C, u, b.dmg, b.from, Math.atan2(-b.vy, -b.vx)); if (!b.beam) { b.dead = true; return; } // (the angle: the way the shot came from, for the shield's arc)
       }
     }
     if (C.torpedoes && C.torpedoes.length && (b.team === 'earth' || b.team === 'neutral') && campTorpedoShot(C, b, px, py)) return; // a torpedo in the way (src/camptorpedo.js)
