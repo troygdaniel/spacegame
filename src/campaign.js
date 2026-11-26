@@ -1782,7 +1782,7 @@ function campMissionTried(P, level, i) { const k = campResultKey(level, i); if (
 // (every wave has come and no alien is alive). All met: the mission is won. campObjectives(C) is each one's state; a mission with none is won by the old rule (docs/CAMPAIGN.md, Missions).
 function campObjectives(C) {
   return (C.L.objectives || []).map((o, i) => {
-    let got = 0, need = 1;
+    let got = 0, need = 1, shown = null; // shown: the count the HUD writes (card space-game-12-sell-goal-count); got is the rule's (done = got >= need) and is not touched
     if (o.type === 'scan') { need = C.scan.length; got = C.scan.filter(p => p.got).length; }
     else if (o.type === 'deliver') { need = o.n; got = C.delivered >= o.n && !campConvoys(C).length && C.L.convoys.every((cv, k) => C.convoys[k].started) ? o.n : Math.min(C.delivered, o.n - 1); } // done when n have arrived and no hauler is still flying or waiting to leave (so a bonus for delivering them all can be earned)
     else if (o.type === 'kill') {
@@ -1793,11 +1793,11 @@ function campObjectives(C) {
       else if (/^wave:/.test(o.what)) { const w = parseInt(o.what.slice(5), 10); got = C.waves[w] && C.waves[w].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w) ? 1 : 0; }
     } else if (o.type === 'hold') { need = o.secs; got = Math.min(o.secs, Math.floor(campMissionClock(C))); }
     else if (o.type === 'ore') { need = o.n; got = Math.min(o.n, Math.floor(C.oreBest)); } // the store held this much at some time (selling it afterwards does not undo it)
-    else if (o.type === 'cashin') { need = o.n || 1; got = Math.min(need, Math.floor(C.sold)); } // this much ore sold at a market outpost (campSell)
+    else if (o.type === 'cashin') { need = o.n || 1; got = Math.min(need, Math.floor(C.sold)); shown = Math.min(need, Math.floor((C.sold || 0) + Math.max(0, C.ore || 0))); } // got: this much ore SOLD at a market outpost (campSell); shown: the ore sold plus the ore in the store, so the goal reads what the player has toward it (a dock sells the whole store at once, so the sold count alone sat at 0 until the sale ended the mission: Troy, 25 Nov 2026) and does not fall when the ore is sold
     else if (o.type === 'relic') got = C.flags.relic ? 1 : 0;
     else if (o.type === 'caches') { need = o.n; got = Math.min(o.n, C.cachesGot); }
     else if (o.type === 'clear') got = C.waves.length && C.waves.every(w => w.started) && !campAliens(C).length ? 1 : 0;
-    return { i, type: o.type, what: o.what, word: o.word, got, need, done: got >= need };
+    return { i, type: o.type, what: o.what, word: o.word, got, need, shown: shown == null ? got : shown, done: got >= need };
   });
 }
 // every tick: the recon points fill up while a ship of yours is near them; a mission whose objectives are all met is won; one that can no longer be met is lost (haulers)
@@ -1843,7 +1843,7 @@ function campObjective(C) {
   if (L.objectives) { // a mission: the first objective that is not done yet
     const o = campObjectives(C).find(x => !x.done); if (!o) return uiText('camp.o.done');
     if (o.type === 'deliver' && C.delivered >= o.need) return uiText('camp.o.deliverleft', { n: C.delivered, left: campConvoys(C).length + C.L.convoys.filter((cv, k) => !C.convoys[k].started).length }); // the haulers needed are home but the mission waits for the rest of them: say so (it read "0 of 1" with two haulers home; card space-game-night-hunt-l1-rim)
-    return uiText(campObjKey(o, C.L.convoys.length), { got: o.got, need: o.need, total: C.L.convoys.length, secs: o.need });
+    return uiText(campObjKey(o, C.L.convoys.length), { got: o.shown, need: o.need, total: C.L.convoys.length, secs: o.need });
   }
   if (win === 'mother') return uiText(C.ships.some(u => u.kind === 'mother' && u.hp > 0) ? 'camp.obj.mother' : 'camp.obj.motherwait'); // the mothership comes with the last wave: until then the goal is to hold
   if (win === 'towers') return uiText('camp.obj.towers', { n: C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length });
