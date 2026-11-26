@@ -58,7 +58,7 @@ function campPeekEnd(s, keepZoom) {
   const p = campPeekOf(s); if (!p) return false;
   if (keepZoom) p.zoom = null; else campPeekZoomBack(s);
   s.peek = null;
-  const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
+  const cam = s.cameras && s.cameras.main, sp = campEyeSprite(s);
   if (cam && sp && typeof cam.startFollow === 'function') cam.startFollow(sp, true, typeof CAMPDRAG !== 'undefined' ? CAMPDRAG.follow : 0.12, typeof CAMPDRAG !== 'undefined' ? CAMPDRAG.follow : 0.12);
   return true;
 }
@@ -71,7 +71,7 @@ function campPeekBreak(s) {
 // after F's press broke a peek (campPeekBreak): when F did not take the camera (nothing to focus: the way back), the camera follows the cruiser again. true when it was put back
 function campPeekHome(s) {
   if (!s || s.panned || (typeof campFocusOf === 'function' && campFocusOf(s))) return false;
-  const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
+  const cam = s.cameras && s.cameras.main, sp = campEyeSprite(s);
   if (!cam || !sp || typeof cam.startFollow !== 'function') return false;
   const f = typeof CAMPDRAG !== 'undefined' ? CAMPDRAG.follow : 0.12; cam.startFollow(sp, true, f, f); return true;
 }

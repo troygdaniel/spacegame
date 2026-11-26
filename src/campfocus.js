@@ -89,7 +89,7 @@ function campFocusReturn(s) {
 function campFocusEnd(s, why) {
   const f = campFocusOf(s); if (!f) return false;
   campFocusZoomBack(s); s.focus = null;
-  const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
+  const cam = s.cameras && s.cameras.main, sp = campEyeSprite(s);
   if (cam && sp) cam.startFollow(sp, true, CAMPDRAG.follow, CAMPDRAG.follow);
   return true;
 }

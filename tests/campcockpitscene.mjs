@@ -72,8 +72,10 @@ console.log('D. the camera');
   check('the camera starts on the cruiser', J('F.followed') === J('F.camp.carrier.id') && J('F.eyeId') === J('F.camp.carrier.id'));
   g.run(`F.onKey({ code: 'KeyC' }); __tick(0.1);`);
   check('after a take it follows the fighter whose stick he holds', J('F.followed') === J('F.camp.cockpit.id') && J('F.eyeId') === J('F.camp.cockpit.id'));
+  check('the camera\'s way home (a drag, F, a peek) goes to the sprite of the ship he flies: the fighter\'s while he holds the stick', J('campEyeSprite(F).id') === J('F.camp.cockpit.id'));
   g.run(`F.onKey({ code: 'KeyC' }); __tick(0.1);`);
   check('after a hand-back, the cruiser again', J('F.followed') === J('F.camp.carrier.id'));
+  check('and the way home is the cruiser\'s sprite again (and a scene with no sprite for it answers null)', J('campEyeSprite(F).id') === J('F.camp.carrier.id') && J('campEyeSprite({ camp: F.camp, sp: {} })') === null);
   g.run(`F.onKey({ code: 'KeyC' }); __tick(0.1); { const u = F.camp.by[F.camp.cockpit.id]; u.hp = 0; campKill(F.camp, u); } __tick(0.2);`);
   check('the fighter is lost: the stick is handed back by itself and the camera is on the cruiser again', J('F.camp.cockpit') === null && J('F.followed') === J('F.camp.carrier.id') && J('F.eyeId') === J('F.camp.carrier.id'));
 }

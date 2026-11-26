@@ -57,7 +57,7 @@ function campViewRecentre(s) {
   if (typeof campFocusEnd === 'function' && campFocusEnd(s, 'back')) return true; // Backspace and the mark also end a focus (src/campfocus.js): the camera follows the cruiser again
   if (!s || !s.panned) return false;
   s.panned = false; s.dragFly = 0; if (s._cz) s._cz.anchor = null;
-  const cam = s.cameras && s.cameras.main, sp = s.sp && s.camp && s.camp.carrier ? s.sp[s.camp.carrier.id] : null;
+  const cam = s.cameras && s.cameras.main, sp = campEyeSprite(s);
   if (cam && sp) cam.startFollow(sp, true, CAMPDRAG.follow, CAMPDRAG.follow);
   return true;
 }

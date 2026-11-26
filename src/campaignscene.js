@@ -553,7 +553,9 @@ class Campaign extends Phaser.Scene {
   }
   eyeSync() { // the camera is on the ship he flies: the cruiser, or the fighter whose stick he holds (card space-game-fly-fighter-l1); the follow's own lerp is the short pan
     const C = this.camp, e = C && typeof campEye === 'function' ? campEye(C) : null, sp = e && this.sp ? this.sp[e.id] : null, cam = this.cameras && this.cameras.main;
-    if (!e || !sp || !cam || typeof cam.startFollow !== 'function' || this.eyeId === e.id) return;
+    if (!e || !sp || !cam || typeof cam.startFollow !== 'function') return;
+    if (typeof this.eyeId !== 'string') { this.eyeId = e.id; return; } // (a scene that was not made by create has no eye yet, and a test's stand-in may answer any property: it is on the ship it is on)
+    if (this.eyeId === e.id) return;
     cam.startFollow(sp, true, 0.12, 0.12); this.eyeId = e.id;
   }
   sync() {
