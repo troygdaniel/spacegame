@@ -294,3 +294,14 @@ Measured in Node, NO Chrome, two runs each on the same Mac, the old commit (a se
 | after | 0.43 and 0.42 ms | 0.53 and 0.52 ms | 5.9 and 5.9 KB |
 
 The step is the same within noise (2.5 to 2.6 percent of a 60 fps frame); it allocates about 0.3 KB more a step (the small answer object). The bots, which never press Shift, give the same tables on 32 seeds of 1.1, 1.2 and 1.3 (26 bots each: identical in every figure). The drawing and the HUD row were NOT measured (Chrome was not free): two extra sprites and a row of three writes are expected to be below the noise of `node tools/perfcampaign.mjs frames busy1`; run it with the new address before the default is relied on.
+
+## The cruiser's Long Haul feel: ribbons, layered flames, the camera (card `space-game-cruiser-long-haul-feel`, 26 Nov 2026)
+What it adds each frame, with the feel on (`CAMP.flags.feel`, src/campfeel.js): for the cruiser only, two nozzle positions pushed into two short lists (about 37 points each, 600 ms), the segments of the two ribbons (about 70 `lineBetween` calls) and the layers of the two flames (six triangles and two discs) on ONE Graphics that is cleared and drawn again each frame (no new objects after the first frame, no particles); and in the camera one small function before `camzoomFrame` (the boost's share eased, the base zoom and the follow's lerp written).
+`PERF_ADDR='&pagehud=1&shiplook=1'` with `PERF_PATCH` holding the boost (`campBoostStep` wrapped so `input.boost` is on, the store is full and the thrust at least 0.5, so the ribbons, the flames and the camera are all at work) and `CAMP.flags.feel` off or on: `node tools/perfcampaign.mjs frames busy1` (600 stepped frames, 30 to 35 ships), two runs each on the same Mac:
+
+| | frame mean | frame median | frame p95 | update mean | render mean |
+|---|---|---|---|---|---|
+| feel off | 0.54 and 0.55 ms | 0.4 and 0.5 ms | 1.0 and 1.1 ms | 0.36 and 0.37 ms | 0.12 and 0.10 ms |
+| feel on | 0.59 and 0.60 ms | 0.5 and 0.5 ms | 1.2 and 1.2 ms | 0.39 and 0.39 ms | 0.10 and 0.16 ms |
+
+About 0.05 ms more a frame (a third of a percent of a 60 fps frame), all of it in the update (the ribbons' history and the Graphics' commands). The stepped frames time the game's own work; the drawing itself is a few dozen thin lines and eight small shapes. Pictures and a frame series (before and after, at the start zoom and at 0.9) are in `~/dev/spacegame-night/cruiserfeel/`.
