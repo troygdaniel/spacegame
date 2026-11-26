@@ -18,3 +18,6 @@ The words of the Campaign's first level, the asteroid belt (card space-game-camp
 | camp.ui.refitbuy | 4  +1 fighter ({fc})     credits first, then ore |
 | camp.ui.refitore | CREDITS  {credits}   ORE  {ore}     EXTRA SHIPS  {xf} fighters |
 | camp.ui.refitgot | Chosen: {name}.  Enter  continue |
+| camp.ui.refithint | Left Right  choose     Enter  take {name}     4  buy a fighter |
+| camp.ui.refithintf | Enter  buy a fighter     Up  back to the technologies |
+| camp.ui.pickhint | Left Right  choose     Enter  take the one marked > |

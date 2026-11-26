@@ -270,32 +270,47 @@ class Campaign extends Phaser.Scene {
     this.showCard(uiText('camp.ui.won', { n: this.level }), res ? lines.concat([res]) : lines, uiText('camp.ui.next')); this.say(lines);
   }
   showPick() {
-    this.mode = 'pick'; this.choices = campTechChoices(this.level, this.P);
-    if (campNewCard(this, () => scrPickModel({ choices: this.choices, P: this.P }))) return;
-    this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (i + 1) + '   ' + campTechLine(id, this.P)), '', 340);
+    this.mode = 'pick'; this.choices = campTechChoices(this.level, this.P); this.pickCur = 0; // the first technology is lit when the card opens (card space-game-refit-card-stuck: nothing said that a key was needed)
+    Campaign.prototype.paintPick.call(this); // (by name: a stand-in scene of a test has the card functions it needs and not this one)
+  }
+  paintPick() {
+    const cur = this.pickCur | 0;
+    if (campNewCard(this, () => scrPickModel({ choices: this.choices, P: this.P, cur }))) return;
+    this.showCard(uiText('camp.ui.pick'), this.choices.map((id, i) => (cur === i ? '> ' : '   ') + (i + 1) + '   ' + campTechLine(id, this.P)), uiText('camp.ui.pickhint'), 340); // the lit one has a >, and the foot says what the keys do
   }
   // the Earth refit after the belt: one of the three techs (pick again before Enter), and ore buys extra fighters for the next level (the workshop's prices)
   showRefit() {
-    this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: null, f: 0, w: campCarryOut({}, this.camp) }; this.paintRefit(); // w: the ore and the credits the cruiser came home with; the refit spends credits first (campSpend)
+    this.mode = 'refit'; this.choices = campTechChoices(this.level, this.P); this.refit = { pick: this.choices[0] || null, cur: 0, last: 0, f: 0, w: campCarryOut({}, this.camp) }; this.paintRefit(); // cur: the lit choice (a technology, or the fighter row after them), the first technology when the card opens: Enter takes what is lit (card space-game-refit-card-stuck) // w: the ore and the credits the cruiser came home with; the refit spends credits first (campSpend)
   }
   paintRefit() {
     const R = this.refit, B = CAMP.refit;
-    if (campNewCard(this, () => scrRefitModel({ choices: this.choices, pick: R.pick, f: R.f, w: R.w, P: this.P }))) return; // the new look: one panel, a tile a technology with its digit, the fighter row; the keys are refitKey's, as ever
+    const n = this.choices.length, cur = R.cur == null ? Math.max(0, this.choices.indexOf(R.pick)) : R.cur, onF = cur >= n;
+    if (campNewCard(this, () => scrRefitModel({ choices: this.choices, pick: R.pick, cur, f: R.f, w: R.w, P: this.P }))) return; // the new look: one panel, a tile a technology with its digit, the fighter row, the lit one bright and the keys under it; the keys are refitKey's
     const lines = [uiText('camp.ui.refitore', { ore: R.w.ore, credits: R.w.credits, xf: R.f }), uiText('camp.ui.refitpick', { keys: this.choices.map((id, i) => i < 3 ? i + 1 : i + 3).join('  ') })]
-      .concat(this.choices.map((id, i) => (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (R.pick === id ? '   <' : '')), [uiText('camp.ui.refitbuy', { fc: B.fighterCost })]);
-    this.showCard(uiText('camp.ui.refit'), lines, R.pick ? uiText('camp.ui.refitgot', { name: uiText('camp.tech.' + R.pick + '.name') }) : '', 380);
+      .concat(this.choices.map((id, i) => (cur === i ? '> ' : '  ') + (i < 3 ? i + 1 : i + 3) + '   ' + campTechLine(id, this.P) + (cur === i ? '   <' : '')), [(onF ? '> ' : '  ') + uiText('camp.ui.refitbuy', { fc: B.fighterCost })]);
+    this.showCard(uiText('camp.ui.refit'), lines, onF ? uiText('camp.ui.refithintf') : uiText('camp.ui.refithint', { name: uiText('camp.tech.' + (this.choices[cur] || R.pick) + '.name') }), 380); // the foot always says what Enter does
   }
   refitKey(c) {
-    const R = this.refit, B = CAMP.refit, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c]; // 4 buys a ship, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
-    if (i !== undefined && this.choices[i]) R.pick = this.choices[i];
-    else if (c === 'Digit4' && R.f < CAMP.refit.most && campSpend(R.w, B.fighterCost)) R.f++;
-    else if (c === 'Enter' && R.pick) { campPick(this.P, R.pick); this.P.bonus = { fighters: R.f }; this.hideCard(); this.next(R.w); return; }
+    const R = this.refit, B = CAMP.refit, i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit6: 3, Digit7: 4, Digit8: 5 }[c], n = this.choices.length; // 4 buys a ship, so what was looted from the cloaked caches (src/campanomaly.js) is chosen with 6, 7 and 8
+    if (R.cur == null) R.cur = Math.max(0, this.choices.indexOf(R.pick)); const onF = R.cur >= n, enter = c === 'Enter' || c === 'NumpadEnter', buy = () => { if (R.f < CAMP.refit.most && campSpend(R.w, B.fighterCost)) { R.f++; return true; } return false; };
+    const lit = k => { R.cur = k; R.last = k; R.pick = this.choices[k]; }; // the lit technology is the chosen one
+    if (i !== undefined && this.choices[i]) lit(i); // 1 2 3 (6 7 8) light a technology directly, as ever; Enter takes it
+    else if (c === 'Digit4') { if (!buy()) return; }
+    else if (c === 'ArrowLeft' && n && !onF) lit((R.cur + n - 1) % n); // the arrows move the light: Left and Right along the technologies, Down to the fighter row, Up back
+    else if (c === 'ArrowRight' && n && !onF) lit((R.cur + 1) % n);
+    else if (c === 'ArrowDown' && !onF) { R.last = R.cur; R.cur = n; }
+    else if (c === 'ArrowUp' && onF && n) lit(Math.min(n - 1, R.last | 0));
+    else if (enter && onF) { if (!buy()) return; } // on the fighter row Enter buys one (the light stays)
+    else if (enter && this.choices[R.cur]) { campPick(this.P, this.choices[R.cur]); this.P.bonus = { fighters: R.f }; this.hideCard(); this.next(R.w); return; } // Enter takes the lit technology
     else return;
     this.paintRefit();
   }
   pickKey(c) { // the plain pick after the later levels: one of the level's techs, or what was looted from a cloaked cache, with 1 to 6 (no ships are bought on this card)
-    const i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5 }[c];
-    if (i !== undefined && this.choices[i]) { campPick(this.P, this.choices[i]); this.hideCard(); this.next(); }
+    const i = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5 }[c], n = this.choices.length, take = id => { campPick(this.P, id); this.hideCard(); this.next(); };
+    if (i !== undefined && this.choices[i]) take(this.choices[i]); // a digit takes that one at once, as ever
+    else if (c === 'ArrowLeft' && n) { this.pickCur = ((this.pickCur | 0) + n - 1) % n; Campaign.prototype.paintPick.call(this); } // the arrows move the light, Enter takes the lit one (card space-game-refit-card-stuck)
+    else if (c === 'ArrowRight' && n) { this.pickCur = ((this.pickCur | 0) + 1) % n; Campaign.prototype.paintPick.call(this); }
+    else if ((c === 'Enter' || c === 'NumpadEnter') && this.choices[this.pickCur | 0]) take(this.choices[this.pickCur | 0]);
   }
   anomalyEvent(e) { // the cloaked caches (src/campanomaly.js): noticed (a soft ping), decloaked (the cloak breaks: a flash and a shock), looted (a rise; what is kept is saved at once)
     if (e.stage === 'sense') beep(880, 0.08, 'sine', 0.035, 240);
