@@ -115,6 +115,7 @@ class Settings extends Phaser.Scene {
 
   create() {
     const { w, h } = SETTINGS;
+    if (typeof scrOn === 'function' && scrOn() && typeof scrSetCreate === 'function' && scrSetCreate(this)) return; // the new look of the screens (src/scrsettings.js, card space-game-screens-e-keys-settings): the same scene, the same keys and the same actions, drawn as panels of the page
     this.ui = panel(this, { w, h, title: 'SETTINGS', dim: true, depth: 0 });
     this.box = this.ui.box;
     // nothing of the scene behind reads through (the blind critic, picture 10: LONG HAUL and PRESS ANY KEY of the title ghosted through the
@@ -144,6 +145,7 @@ class Settings extends Phaser.Scene {
 
   // ---- the rail ----
   railDraw() {
+    if (this.scr) return; // (the new look's tabs are its model's: src/scrsettings.js)
     const g = this.rail; g.clear();
     this.railItems.forEach(it => {
       const on = it.id === this.section, y = it.y, x = it.x, w = SETTINGS.railW;
@@ -157,6 +159,7 @@ class Settings extends Phaser.Scene {
   keyOf(id) { return id === 'deepgram' ? VOICE.key : CHAT.keys[id] || ''; }
 
   show(id) {
+    if (this.scr) return scrSetShow(this, id);
     this.dropInputs(); this.armed = null;
     this.section = id; this.body.removeAll(true); this.slots = {};
     this['draw_' + id]();
@@ -164,6 +167,7 @@ class Settings extends Phaser.Scene {
     this.focusFirst();
   }
   tagDraw() {
+    if (this.scr) return;
     const tag = { sound: G.muted ? 'MUTED' : 'VOLUME ' + Math.round(G.volume * 100) + '%', keys: 'STAY IN THIS BROWSER', listen: 'HOLD ' + LISTEN.cap + ' TO TALK', controls: controlsGroup(this.ctab).title, flight: 'FEEL ' + handlingNow().name.toUpperCase(), content: '', reset: 'AUTOSAVE ON' }[this.section];
     this.ui.tagText.setText(tag || '');
   }
@@ -198,7 +202,7 @@ class Settings extends Phaser.Scene {
     this.txt(x + 18, y + 36, text, 13, '#ffe9c0', { oy: 0, style: { wordWrap: { width: w - 36 }, lineSpacing: 3 } });
   }
   line(y) { const g = this.add.graphics(); g.lineStyle(1, CYAN, 0.3); g.lineBetween(this.bx, y, this.bx + this.bw, y); this.body.add(g); }
-  say(msg, color = '#9fe9ff') { if (this.slots.status) this.slots.status.setText(msg).setColor(color); }
+  say(msg, color = '#9fe9ff') { if (this.scr) return scrSetSay(this, msg, color); if (this.slots.status) this.slots.status.setText(msg).setColor(color); }
 
   // ---------- SOUND ----------
   draw_sound() {
@@ -248,6 +252,7 @@ class Settings extends Phaser.Scene {
     this.soundRefresh();
   }
   soundRefresh() {
+    if (this.scr) { scrSetPaint(this); return; }
     const s = this.slots, bx = this.bx, by = this.by;
     if (!s.bar) return;
     s.bar.clear(); hudBar(s.bar, bx + 52, by + 29, 404, 18, G.muted ? 0 : G.volume, G.muted ? 0x5b7a92 : CYAN, 20);
@@ -328,6 +333,7 @@ class Settings extends Phaser.Scene {
     this.say(!VOICE.key && !CHAT.keys.openai && !CHAT.keys.anthropic ? 'No keys yet: the ship does not speak and the characters keep their scripted lines. The sound effects play.' : 'Keys are saved in this browser. Test asks the provider once, when you press it.');
   }
   keysRefresh() {
+    if (this.scr) { scrSetPaint(this); return; }
     const s = this.slots; if (!s.chatOn) return;
     SETTINGS.keyRows.forEach(r => {
       const k = this.keyOf(r.id), bad = r.id === 'deepgram' ? VOICE.bad : CHAT.bad && chatProvider() === r.id && !!k;
@@ -349,6 +355,7 @@ class Settings extends Phaser.Scene {
   saveKey(id) {
     const el = this.inputs[id], v = el ? el.value.trim() : '';
     if (id !== 'deepgram') this.saveModel();
+    if (!v && this.scr && this.keyOf(id)) return this.forgetKey(id); // the new look folds Clear into Save: Save with nothing typed removes the saved key (the pill says Clear then)
     if (!v) return this.say(this.keyOf(id) ? 'The saved key is unchanged.' : 'Paste a key first.');
     if (v.length < 16 || /\s/.test(v)) return this.say('That does not look like ' + (id === 'deepgram' ? 'a Deepgram' : 'an API') + ' key.', '#ff4d6d');
     if (id === 'openai' && /^sk-ant-/.test(v)) return this.say('That looks like an Anthropic key. Paste it in the Anthropic row.', '#ff4d6d');
@@ -393,6 +400,7 @@ class Settings extends Phaser.Scene {
     this.listenRefresh();
   }
   listenRefresh() {
+    if (this.scr) { scrSetPaint(this); return; }
     const s = this.slots; if (!s.listenOn) return;
     const st = listenStatus(), h = listenHint();
     s.listenOn.set(LISTEN.on ? 'Listening: ON' : 'Listening: OFF').color(LISTEN.on ? '#6dff9c' : '#8fb4c9').mark(LISTEN.on);
@@ -467,6 +475,7 @@ class Settings extends Phaser.Scene {
   }
   screensToggle() {
     const on = scrSet(!scrOn());
+    if (this.scr) { this.say(uiText(on ? 'scr.set.said.on' : 'scr.set.said.off'), on ? '#6dff9c' : '#ffd37a'); return scrSetPaint(this, true); }
     this.slots.scrOn.set(uiText(on ? 'scr.set.on' : 'scr.set.off')).mark(on); this.slots.scrOn.edge = on ? GREEN : CYAN; this.slots.scrOn.draw(false);
     this.say(uiText(on ? 'scr.set.said.on' : 'scr.set.said.off'), on ? '#6dff9c' : '#ffd37a');
   }
@@ -493,6 +502,7 @@ class Settings extends Phaser.Scene {
   }
   playlogToggle() {
     const on = playlogSet(!playlogOn());
+    if (this.scr) { this.say(on ? 'Play log ON.' : 'Play log OFF: nothing more is recorded.', on ? '#6dff9c' : '#ffd37a'); return scrSetPaint(this, true); }
     this.slots.plOn.set(on ? 'Play log: ON' : 'Play log: OFF').mark(on); this.slots.plOn.edge = on ? GREEN : CYAN; this.slots.plOn.draw(false);
     this.say(on ? 'Play log ON.' : 'Play log OFF: nothing more is recorded.', on ? '#6dff9c' : '#ffd37a');
   }
@@ -502,6 +512,7 @@ class Settings extends Phaser.Scene {
   }
   // a second press within four seconds confirms
   press(what) {
+    if (this.scr) return scrSetPress(this, what);
     const now = performance.now();
     if (this.armed && this.armed.what !== what) { this.armed = null; this.show('reset'); } // the other button was waiting: put it back
     const b = this.slots[what];
@@ -525,7 +536,8 @@ class Settings extends Phaser.Scene {
     clearSave(); newGameState(); saveGame(true);
     const pause = this.from === 'Pause' ? this.scene.get('Pause') : null;
     if (pause) { this.closing = true; this.dropInputs(); this.scene.stop(); pause.toStation(); return; } // the run in front of the pause menu is gone: back to the station, new game
-    this.slots.reset.set('Reset game').color('#ff8da0').mark(false); this.say('Game reset. Press Enter on the title screen to start again.', '#6dff9c');
+    if (this.slots.reset) this.slots.reset.set('Reset game').color('#ff8da0').mark(false);
+    this.say('Game reset. Press Enter on the title screen to start again.', '#6dff9c');
   }
 
   // ---------- keys, inputs, closing ----------
@@ -565,6 +577,7 @@ class Settings extends Phaser.Scene {
   }
   update() {
     if (!this.inputs) return;
+    if (this.scr) return scrSetUpdate(this); // the new look: the inputs over their placeholders, the page when the state moved
     const r = this.game.canvas.getBoundingClientRect(), k = r.width / W, cx = W / 2, cy = H / 2; // the boxes follow the canvas when the window is resized
     const keys = this.section === 'keys';
     Object.keys(this.inputs).forEach(id => {

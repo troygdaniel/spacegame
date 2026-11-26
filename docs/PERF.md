@@ -250,6 +250,20 @@ The rocks of the asteroid fields are one grey polygon and one darker facet in a 
 
 No difference that the noise does not cover; the three new textures (`look-rock-0` to `look-rock-2`, 64 by 64, painted once with fills and paths, no gradient) cost nothing a frame. (A first set of runs against the card's parent, with the look off in both because the test harness boots with `?shiplook=0`, drew boulders on both sides and is not the comparison.)
 
+## The new world look, W4: mission objects, ore and the beams (card `space-game-world-w4-objects`, 25 Nov 2026)
+
+`src/campworldobjects.js`: a cache, a cloaked or found cache (the anomaly), the relic, a scan ring, ore, the mining laser and a turret's beam in the world look. Two baked pictures (`wlook-cache` 40 by 40 for the caches of level 2, `wlook-ore` 32 by 32), painted once, lazily, the first time the Campaign scene asks for one; everything else is drawn with the scene's own Graphics every frame, only where there is something to draw (a relic on level 2, scan points on level 3, an anomaly within 1,500 px, a beam while one is up). `node tools/perfcampaign.mjs frames busy1` (600 stepped frames of level 1's busiest fight: rocks, ore from the dead, turret beams; no relic, scan or anomaly on level 1), the world look off (the harness boots with `?worldlook=0`) against on (`PERF_PATCH` turns it on and makes the ore sprites again), four runs each, alternating, on a quiet Mac (load 4 to 6). Mean of a frame, median of four (range):
+
+| Mean of a frame (ms) | Look off | Look on |
+|---|---|---|
+| Frame | 1.39 (1.37 to 1.55) | 1.44 (1.36 to 1.52) |
+| Update | 1.09 (1.07 to 1.22) | 1.14 (1.06 to 1.20) |
+| Render (the drawing) | 0.19 | 0.19 |
+| Sprite sync | 0.05 | 0.06 |
+| Display list / textures / heap | 269 / 191 / 11.05 MB | 269 / 192 / 11.06 MB |
+
+The two ranges overlap: no change is claimed. The one added texture is the ore's (the fight has no cache). The mining laser and the turret's beam are one line and one dot each (the soft wide line and the bright core they replace were three draw calls a beam). The objects of the other levels were not in this fight; each draws a few short polylines (a dashed ring of 28 dashes is 28 strokes of about six points) only while it is on the level, and the rings are not drawn at all once a point is scanned or a cache found.
+
 ## Measuring again
 
 ```

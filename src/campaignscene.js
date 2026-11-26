@@ -95,12 +95,12 @@ class Campaign extends Phaser.Scene {
     const pl = campPlaces(this.level); this.farObjs = {}; this.farAt = 0; Object.keys(pl).forEach(id => { if (!pl[id].hidden && !pl[id].far) this.drawPlace(pl[id], id); }); // the far bodies of the system (Sol's planets) are made when the carrier comes near (syncFar)
     this.osp = {}; this.rsp = {}; this.beams = []; // the ore lying about (chunks and wrecks), one sprite each; the rocks of the belt, one each; the beams on this frame
     this.beamG = this.add.graphics().setDepth(3.5); // the cracks and the beams
-    this.csp = this.camp.caches.map(k => this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected
+    this.csp = this.camp.caches.map(k => (typeof campWorldCacheImage === 'function' && campWorldCacheImage(this, k)) || this.add.image(k.x, k.y, 'pod').setScale(1.8).setDepth(3).setTint(0xffd37a)); // resource caches (level 2): gold pods that go when collected (the world look: a gold diamond in a thin gold ring, src/campworldobjects.js)
     this.anomG = this.add.graphics().setDepth(1.5); // the haze of the anomalies and the decloaked caches (src/campanomalydraw.js)
     this.squadG = this.add.graphics().setDepth(4.5); // the square marks on the fighters of a squad in focus (cards space-game-fighter-squads, space-game-friendly-display)
     this.relicG = this.add.graphics().setDepth(2); // the relic's ring (level 2), and how far the hold has got
     this.cachel = this.camp.caches.map(k => label(this, k.x, k.y + 34, uiText('camp.nav.cachelabel'), '#ffd37a', 12)); // a word under each cache: gold pods were easy to miss (docs/night/graphics.md finding 3)
-    if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), '#7fe9ff', 14);
+    if (this.camp.relic) label(this, this.camp.relic.x, this.camp.relic.y - this.camp.L.relic.radius - 24, uiText('camp.nav.relicmark'), typeof campWorldOn === 'function' && campWorldOn() ? '#e9b872' : '#7fe9ff', 14); // gold with the world look on: the relic is the goal
     this.sync();
     this.cameras.main.startFollow(this.sp[this.camp.carrier.id], true, 0.12, 0.12);
     this.k = this.input.keyboard.addKeys('UP,DOWN,LEFT,RIGHT,SPACE');
@@ -136,7 +136,7 @@ class Campaign extends Phaser.Scene {
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
   get camzoomHold() { return !!this.mp; } // with the map open the wheel is the map's (camzoomCanWheel, src/camzoom.js)
-  beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, until: performance.now() + ms }); } // (the beam hum is the sound card's: it reads C.lasers)
+  beam(e, ms) { if (!this.beams) this.beams = []; this.beams.push({ x: e.x, y: e.y, tx: e.tx, ty: e.ty, mine: e.type === 'laser', until: performance.now() + ms }); } // mine: a laser at a rock (the mining laser); a turret's shot at an alien is the other beam (the world look draws them in two colours) // (the beam hum is the sound card's: it reads C.lasers)
   makeCamp() { // a new battle of this level: arrived by the chain (or a retry), the ore and the extra ships of the refit come with the cruiser; a level started by itself (an address, a skip) has its own
     const carried = this.P.level === this.level || this.replay === true; // a replay flies with the pilot's CURRENT ore, extra ships, techs and rank, whatever level it is of
     this.P.promo = null; // the promotion of the last debrief is told once
@@ -148,9 +148,13 @@ class Campaign extends Phaser.Scene {
       ? this.add.image(p.x, p.y, starTexture(this, p.star || 'G')).setScale(r / 48).setDepth(1).setBlendMode(Phaser.BlendModes.ADD) // a star: the corona and the hot core (src/art_world.js), its disc r px across
       : this.add.image(p.x, p.y, planetTexture(this, p.kind || 'rock', p.seed || 1)).setScale(r / 300).setDepth(1); if (p.tint && !D) im.setTint(p.tint); // the place's own colour (CAMP.places tint): Mars is not grey like Luna
     const nm = label(this, p.x, p.y - r - 36, String(p.name).toUpperCase(), '#ffb454', 16), pb = p.base ? label(this, p.x + 70, p.y - 100, String(p.base).toUpperCase(), '#38e1ff', 13) : null; made.push(im, nm); (this.placeLabels = this.placeLabels || []).push(nm); // (the page HUD hides the labels of the places and draws a pill: src/camppagehud.js)
-    (this.placeSets = this.placeSets || []).push({ p, nm, pb }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js)
+    (this.placeSets = this.placeSets || []).push({ p, nm, pb, im, r, base: im.scaleX }); // the pair's places follow the labels' scale, so that they never stand on each other (src/campplacelabels.js); (im, r, base: the picture of the world, its radius and its own scale: syncWorldLeast draws it up when the view is out)
     if (p.base) { const ST = D && typeof campStationTexture === 'function' ? campStationTexture(this, p) : null; made.push(this.add.image(p.x + 70, p.y - 60, ST ? ST.key : 'station').setScale(ST ? CAMPSTATION.world / ST.R : 0.16).setDepth(2), pb); this.placeLabels.push(pb); } // the world look (card space-game-world-w3-stations): a flat-cut steel ring or hexagon (src/campworldstation.js), the same place and about the same size as Long Haul's station picture
     return made;
+  }
+  syncWorldLeast() { // a world keeps a size you can see when the view is out (src/campzoom.js campZoomWorldScale): its picture is drawn up so its radius is not under CAMPZOOM.view.worldLeast px on the screen; the flat discs of the world look and the old pictures alike
+    const z = this.cameras && this.cameras.main && this.cameras.main.zoom > 0 ? this.cameras.main.zoom : 1; if (typeof campZoomWorldScale !== 'function') return;
+    (this.placeSets || []).forEach(e => { const im = e.im; if (!im || im.active === false || !(e.base > 0)) return; const k = campZoomWorldScale(z, e.r); if (im._wk !== k) { im._wk = k; im.setScale(e.base * k); } });
   }
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
   syncFar(time) {
@@ -532,12 +536,13 @@ class Campaign extends Phaser.Scene {
       if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, typeof campZoomHull === 'function' ? campZoomHull(u.kind, sp.width * (sp._ls || look.scale)) : sp.width * (sp._ls || look.scale)); if (sp._k !== k) { sp._k = k; sp.setScale((sp._ls || look.scale) * k); } } // zoomed far out a ship is drawn no smaller than its least size (CAMPZOOM.view.leastSmall and leastBig, src/campzoom.js; the hull's length, campZoomHull)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
+    this.syncWorldLeast();
     this.squadMarks();
     this.camp.caches.forEach((k, i) => { this.csp[i].setVisible(!k.got); if (this.cachel && this.cachel[i]) this.cachel[i].setVisible(!k.got); });
     if (!this.osp) this.osp = {}; const seenOre = {}; // (made in create; a stand-in scene in a test has none)
     C.pickups.forEach(o => { // rocks are asteroids, a wreck's ore glows; a wreck blinks in its last seconds
       let im = this.osp[o.id];
-      if (!im) { im = this.osp[o.id] = o.kind === 'rock' ? this.add.image(o.x, o.y, (typeof slookRockKey === 'function' && slookRockKey(this, o.id)) || ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(o.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(o.x) : this.add.image(o.x, o.y, 'ore').setDepth(3).setBlendMode('ADD').setScale(1.4); }
+      if (!im) { im = this.osp[o.id] = o.kind === 'rock' ? this.add.image(o.x, o.y, (typeof slookRockKey === 'function' && slookRockKey(this, o.id)) || ['asteroid', 'asteroid2', 'asteroid3'][parseInt(String(o.id).split('-')[1], 10) % 3]).setDepth(2).setRotation(o.x) : (typeof campWorldOreImage === 'function' && campWorldOreImage(this, o)) || this.add.image(o.x, o.y, 'ore').setDepth(3).setBlendMode('ADD').setScale(1.4); } // ore: three pale shards with the world look on
       if (o.kind === 'wreck') im.setAlpha(C.t - o.born > CAMP.ore.wreckLife - 6000 && Math.sin(C.t / 90) < 0 ? 0.3 : 1);
       seenOre[o.id] = true;
     });
@@ -553,11 +558,14 @@ class Campaign extends Phaser.Scene {
     });
     Object.keys(this.rsp).forEach(id => { if (!seenRock[id]) { this.rsp[id].destroy(); delete this.rsp[id]; } });
     if (bg && this.beams) { this.beams = this.beams.filter(b => b.until > performance.now()); this.beams.forEach(b => { // a beam: a soft wide line, a bright core, a hot spot where it lands. The same for a rock and an alien
+      if (typeof campWorldBeamDraw === 'function' && typeof campWorldOn === 'function' && campWorldOn()) return campWorldBeamDraw(bg, b, campWorldZoom(this)); // the world look: one thin line and a dot, pale blue at a rock, mint at an alien (src/campworldobjects.js)
       bg.lineStyle(7, 0x7fe9ff, 0.22).lineBetween(b.x, b.y, b.tx, b.ty); bg.lineStyle(2.5, 0xe8fbff, 0.95).lineBetween(b.x, b.y, b.tx, b.ty); bg.fillStyle(0xbff6ff, 0.8).fillCircle(b.tx, b.ty, 5); }); }
-    if (this.anomG && typeof campAnomDraw === 'function') { this.anomG.clear(); campAnomDraw(this.anomG, C, this.cameras.main.worldView, performance.now()); }
+    if (this.anomG && typeof campAnomDraw === 'function') { this.anomG.clear(); if (typeof campWorldAnomDraw === 'function' && typeof campWorldOn === 'function' && campWorldOn()) campWorldAnomDraw(this.anomG, C, this.cameras.main.worldView, performance.now(), campWorldZoom(this)); else campAnomDraw(this.anomG, C, this.cameras.main.worldView, performance.now()); } // the world look: a white dashed ring and an empty diamond, a gold cache once found
     const rg = this.relicG, R = C.relic, L = C.L;
     rg.clear();
-    if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
+    if (R && typeof campWorldRelicDraw === 'function' && typeof campWorldOn === 'function' && campWorldOn()) campWorldRelicDraw(rg, R, L, campWorldZoom(this)); // the world look: a gold hexagon, a dim ring, the hold as a gold arc
+    else if (R) { rg.lineStyle(2, 0x7fe9ff, 0.45).strokeCircle(R.x, R.y, L.relic.radius); if (R.hold > 0) { rg.lineStyle(6, 0x7fe9ff, 0.95).beginPath().arc(R.x, R.y, L.relic.radius, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * R.hold / L.relic.hold).strokePath(); } }
+    if (typeof campWorldScanSync === 'function') campWorldScanSync(this); // the world look: the scan points of the level as dashed gold rings with a solid arc for the part scanned (src/campworldobjects.js)
     if (typeof campDockMarkSync === 'function') campDockMarkSync(this); // the world look: a dashed gold ring round the market station while selling ore is the goal (src/campworldstation.js)
     while (this.bsp.length < C.bullets.length) this.bsp.push(this.add.image(0, 0, 'bullet').setDepth(4));
     this.bsp.forEach((im, i) => {
@@ -572,6 +580,7 @@ class Campaign extends Phaser.Scene {
     const C = this.camp, c = C.carrier, B = CAMP_BAY;
     if (!this.bayG || (this.bayG.active === false && !this.bayG.scene)) { this.bayG = this.add.graphics().setDepth(5.2); this.bayGlow = this.add.graphics().setDepth(5.3).setBlendMode('ADD'); }
     const g = this.bayG, h = this.bayGlow; g.clear(); h.clear();
+    const csp = this.sp && this.sp[c.id]; if (csp && csp._sg === true) return; // the cruiser is its sign at the far zoom: a sign has no bays (the lit boxes and their glow blew up with the picture)
     if (!this.bayAt) this.bayAt = { launch: -1e9, land: -1e9 };
     const L = campBayLight(C, this.bayAt), bays = typeof slookOn === 'function' && slookOn() ? slookBays() : campArtBays('cruiser'), cs = Math.cos(c.rot), sn = Math.sin(c.rot), d = bays.half[0], w = bays.half[1];
     const kc = campShipK(this, c.id); // the picture drawn up by the far view: the boxes and the halo go out with it (card space-game-ships-bigger)
@@ -607,9 +616,10 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.msp).forEach(id => { if (!seen[id]) { this.msp[id].body.destroy(); this.msp[id].flame.destroy(); delete this.msp[id]; } });
     const g = this.reachG, mg = this.mountG, tone = typeof slookGunTone === 'function' ? slookGunTone : c => c; g.clear(); mg.clear(); // tone: the new look's blue for the reach ring and the mounts' gold (src/shiplookfx.js), as it was with the switch off
     if (c.hp > 0) {
-      g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha * (CAMP_REACH.rest + (1 - CAMP_REACH.rest) * campReachGlow(this, C))).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further)
+      const csp = this.sp && this.sp[c.id], sign = !!csp && csp._sg === true; // the cruiser is drawn as its sign (the far zoom, src/shiplookglyph.js): a sign has no turrets, no bays and no resting ring round it (card space-game-far-zoom-ugly: a dark base a dozen times its size under every mount was mud round the ship)
+      g.lineStyle(CAMP_REACH.w, tone(CAMP_REACH.color), CAMP_REACH.alpha * ((sign ? 0 : CAMP_REACH.rest) + (1 - (sign ? 0 : CAMP_REACH.rest)) * campReachGlow(this, C))).strokeCircle(c.x, c.y, campReach(C)); // how far a turret reaches (the beam tech reaches further); a sign shows it only while Space is held
       const kc = campShipK(this, c.id); // the picture drawn up by the far view (card space-game-ships-bigger): the mounts sit where the picture's turrets are, and are drawn as much bigger
-      C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
+      if (!sign) C.turrets.forEach(tu => { // the eight turrets, where the sim put them (carried out with the picture): a dark base and an amber dot; a barrel toward the alien each has picked (it aims even when Space is not held); a bright flash and a longer barrel on the shot
         const hot = C.t - tu.shotAt < 120, tx = c.x + (tu.x - c.x) * kc, ty = c.y + (tu.y - c.y) * kc;
         const M = CAMP_MOUNT;
         mg.fillStyle(0x04101c, 0.9).fillCircle(tx, ty, M.base * kc); mg.fillStyle(hot ? 0xffffff : tone(0xffd37a), 1).fillCircle(tx, ty, (hot ? M.hot : M.dot) * kc);

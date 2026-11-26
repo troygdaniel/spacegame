@@ -52,6 +52,7 @@ function campKeysHeight(col) { const K = CAMPKEYS; return K.top + col.reduce((y,
 
 function campKeysOpen(s, ids) { // ids: the groups to list (the ready room's); the Campaign and the title list its own
   if (!s || campKeysIsOpen(s) || !s.add) return false;
+  if (typeof scrOn === 'function' && scrOn() && typeof scrKeysOpen === 'function' && scrKeysOpen(s, ids)) return true; // the new look of the screens (src/scrkeys.js, card space-game-screens-e-keys-settings): three groups in a panel of the page; with the switch off, or no page to put it on, the page below
   const K = CAMPKEYS, P = K.panel, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(K.depth + (d || 0)); objs.push(o); return o; };
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.88).setInteractive(), 0);       // a veil that takes the clicks: the game under it is not clicked
   const g = put(s.add.graphics(), 1); hudPanel(g, P.x, P.y, P.w, P.h, 20, 0.97, CYAN);
@@ -80,6 +81,7 @@ const campKeysIsOpen = s => !!s && !!s.ck && s.ck.open === true;
 function campKeysClose(s) {
   if (!campKeysIsOpen(s)) return false;
   s.ck.objs.forEach(o => { try { o.destroy(); } catch (e) { /* gone with the scene */ } });
+  if (s.ck.scr && typeof scrKeysClose === 'function') scrKeysClose(s); // the new look's panel (src/scrkeys.js)
   s.ck = null; return true;
 }
 function campKeysToggle(s) { return campKeysIsOpen(s) ? campKeysClose(s) : campKeysOpen(s); }
