@@ -3,7 +3,8 @@
 // The plan is the scope report on card space-game-fill-window-scope: FIT is kept and the GAME'S OWN SIZE takes the window's shape, one side always 1280 or 720 and the other longer, so a game pixel is the same
 // size on the glass as before and a 16:9 window is today's game, number for number. The world and the stars are drawn on the whole size (the cruiser in the middle); everything still drawn on the canvas HUD
 // stays where its numbers put it, in a 1280 by 720 SAFE AREA in the middle (the HUD camera's viewport); the page HUD goes to the window's true corners. Only the Campaign's flight scene does this: when it
-// pauses (the ready room at a dock, Settings) or ends, the game is 1280 by 720 again, so the Long Haul and every other screen are as they were.
+// pauses (the ready room at a dock, Settings) or ends, and while its Tab map is open (the map covers the view and is laid out for 1280 by 720), the game is 1280 by 720 again, so the Long Haul and every
+// other screen are as they were.
 // Behind one switch, OFF at first: CAMP.flags.fill (src/campaign.js), a row of Settings > CONTENT (kept in the browser), and the address ?fill=1 / ?fill=0 (the tests' way).
 // The one idea the other files need: the old maths of "where is this world point on the screen" are all written for a 1280 by 720 view, and they stay TRUE in the safe area if the camera's scroll is read
 // through fillSX / fillSY (the scroll the view would have at 1280 by 720: the real one plus the safe area's offset) and a pointer through fillPX / fillPY (its place in the safe area). With the switch off the
@@ -47,7 +48,7 @@ function fillSize(winW, winH) {
   const W0 = FILL.W, H0 = FILL.H, ww = +winW, wh = +winH;
   if (!(ww > 0) || !(wh > 0)) return { w: W0, h: H0, ox: 0, oy: 0, k: 1 };
   const a = Math.max(FILL.tall, Math.min(FILL.wide, ww / wh)), base = W0 / H0;
-  const w = a > base ? Math.round(H0 * a) : W0, h = a < base ? Math.round(W0 / a) : H0; // the short side is today's, the long side grows
+  const even = v => 2 * Math.round(v / 2), w = a > base ? even(H0 * a) : W0, h = a < base ? even(W0 / a) : H0; // the short side is today's, the long side grows (to an even number of px: the safe area then starts on a whole pixel and the middle of the view is the middle of the safe area exactly)
   return { w, h, ox: Math.round((w - W0) / 2), oy: Math.round((h - H0) / 2), k: Math.min(ww / w, wh / h) };
 }
 const fillW = () => FILL.now.w, fillH = () => FILL.now.h, fillOx = () => FILL.now.ox, fillOy = () => FILL.now.oy;
@@ -68,7 +69,7 @@ function fillGame(game, w, h) { // the game's own size (FIT then fits it to the 
 }
 function fillSync(s) {
   if (!s || !s.game || typeof window === 'undefined') return false;
-  const want = fillOn(), ww = want ? window.innerWidth : 0, wh = want ? window.innerHeight : 0, sig = (want ? 1 : 0) + ':' + ww + 'x' + wh;
+  const want = fillOn() && !s.mp, ww = want ? window.innerWidth : 0, wh = want ? window.innerHeight : 0, sig = (want ? 1 : 0) + ':' + ww + 'x' + wh;
   if (s.fillSig === sig) return want;
   s.fillSig = sig;
   const z = want ? fillSize(ww, wh) : { w: FILL.W, h: FILL.H, ox: 0, oy: 0 };
