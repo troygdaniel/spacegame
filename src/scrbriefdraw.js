@@ -10,8 +10,9 @@ function scrBriefOpen(s) {
   if (!s || !s.add || campBriefIsOpen(s)) return false;
   const R = typeof scrHostMount === 'function' ? scrHostMount(s) : null; if (!R) return null;
   const t = campHubTarget(s.P, s.hub), Y = campBriefLayers(t.level, t.i); if (!Y) return false;
+  const moments = campBriefMoments(t.level, t.i); Y.moments = moments; // on the map's layers too: the view is fitted to show them (campBriefBounds)
   const K = CAMPBRIEF, F = SCRBRIEF.frame, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(130 + (d || 0)); objs.push(o); return o; }, v = campBriefView(Y, 0, 1, undefined, undefined, F);
-  const bf = s.bf = { open: true, one: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, frame: F, screen: 0, plan: null, wk: null, map: [], text: [], pics: [], route: campBriefRoute(Y), brief: campHubBrief(s.P, t.level, t.i), moments: campBriefMoments(t.level, t.i), story: [], keysFor: [], ready: { lines: [], warnings: [] }, foes: { list: [], line: '' }, steps: { goals: [], bonus: [] }, walk: { steps: [], data: false } };
+  const bf = s.bf = { open: true, one: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, frame: F, screen: 0, plan: null, wk: null, map: [], text: [], pics: [], route: campBriefRoute(Y), brief: campHubBrief(s.P, t.level, t.i), moments, story: [], keysFor: [], ready: { lines: [], warnings: [] }, foes: { list: [], line: '' }, steps: { goals: [], bonus: [] }, walk: { steps: [], data: false } };
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.97).setInteractive(), 0); // a veil that takes the clicks
   bf.g = put(s.add.graphics(), 2); bf.mg = put(s.add.graphics(), 2);
   if (s.input && typeof s.input.on === 'function') { bf.onWheel = (p, over, dx, dy) => { campBriefZoomTo(s, camzoomWheel(bf.z, dy, K.zoom.min, K.zoom.max)); }; s.input.on('wheel', bf.onWheel); }
@@ -21,6 +22,11 @@ function scrBriefOpen(s) {
   const line = scrGoalSpoken(t.level, t.i);
   if (typeof shipcompSay === 'function' && line) { try { shipcompSay(line); } catch (e) { /* the voice never stops the screen */ } } // ONE sentence a mission, the goal line; the voice's own settings (muted, off, no voice) decide if it is heard
   return true;
+}
+function scrBriefSync(s) { // the H page or the tuning panel over the briefing: its panels wait (they are in the same host as the keys page)
+  const bf = s && s.bf; if (!bf || bf.one !== true || !bf.el) return false;
+  const under = (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(s));
+  scrHostSet(bf.el, 'display', under ? 'none' : ''); return !under;
 }
 function scrBriefDrop(s) {
   const bf = s && s.bf; if (!bf || !bf.one) return false;
@@ -41,6 +47,6 @@ function scrBriefMapExtras(s, X, F, own) {
   (bf.moments || []).forEach(m => {
     const q = X(m.at.x, m.at.y); if (q.x < F.x + 12 || q.x > F.x + F.w - 12 || q.y < F.y + 12 || q.y > F.y + F.h - 12) return; // (nothing is drawn outside the map's glass)
     const c = T[m.kind] || T.mute; g.fillStyle(0x0e1626, 1).fillCircle(q.x, q.y, 11); g.lineStyle(2, c, 1).strokeCircle(q.x, q.y, 11);
-    own(s.add.text(q.x, q.y, String(m.n), uiFont(13, '#e6edf7', { fontStyle: 'bold' }))).setOrigin(0.5).setDepth(138);
+    own(s.add.text(q.x, q.y, String(m.n), uiFont(13, '#e6edf7', { fontStyle: 'bold', fontFamily: typeof CAMPMAPPANEL === 'object' ? CAMPMAPPANEL.face : 'monospace' }))).setOrigin(0.5).setDepth(138);
   });
 }

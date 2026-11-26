@@ -179,7 +179,10 @@ g.run(`
   g.run(`scrCardShow(S, scrPauseModel(C, { mission: true }));`);
   check('Settings opening over the pause card (the scene is paused) hides it at once and resume shows it again', (g.run(`S.handlers.pause()`), J('S.scrHost.root.style.display') === 'none') && (g.run(`S.handlers.resume()`), J('S.scrHost.root.style.display') === ''));
   g.run(`S.ck = { open: true }; scrCardSync(S);`);
-  check('the H page over the card hides it (and when it closes the card is back)', J('S.scrHost.root.style.display') === 'none' && (g.run(`S.ck.open = false; scrCardSync(S)`), J('S.scrHost.root.style.display') === ''));
+  check('the H page over the card hides the CARD only (the keys page of the new look is a panel in the same host: card space-game-screens-batch-fixes), and when it closes the card is back', J('S.scrCard.el.style.display') === 'none' && J('S.scrHost.root.style.display') === '' && (g.run(`S.ck.open = false; scrCardSync(S)`), J('S.scrCard.el.style.display') === ''));
+  g.run(`S.placeLabels = [{ active: true, visible: true, setVisible(v) { this.visible = v; return this; } }]; scrCardSync(S);`);
+  check('the flight\'s canvas world names (EARTH ...) are hidden while a card is up, and come back with the hideCard', J('S.placeLabels[0].visible') === false && (g.run(`S.hideCard()`), J('S.placeLabels[0].visible') === true));
+  g.run(`scrCardShow(S, scrPauseModel(C, { mission: true }));`);
   g.run(`S.game.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 640, height: 360 }); scrCardSync(S);`);
   check('a resized window moves the host with it (the em halves)', J('S.scrHost.root.style.width') === '640px' && J('S.scrHost.root.style.fontSize') === '9.6px');
   g.run(`S.handlers['once.shutdown']();`);

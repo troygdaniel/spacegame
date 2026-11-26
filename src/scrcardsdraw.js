@@ -56,17 +56,22 @@ function scrCardShow(s, model, veil) {
   const R = typeof scrHostMount === 'function' ? scrHostMount(s) : null; if (!R || !model) return false;
   const el = scrView(R, R.root, model); if (!el) return false;
   const rect = s.add && typeof s.add.rectangle === 'function' ? s.add.rectangle(W / 2, H / 2, W, H, 0x02060d, veil == null ? SCRCARD.veil : veil).setScrollFactor(0).setDepth(SCRCARD.depth) : null;
-  const handle = { destroy() { if (el.parentNode) el.parentNode.removeChild(el); if (s.scrCard && s.scrCard.el === el) s.scrCard = null; } };
+  const handle = { destroy() { if (el.parentNode) el.parentNode.removeChild(el); if (s.scrCard && s.scrCard.el === el) { s.scrCard = null; scrCardHideNames(s, false); } } };
   s.card = rect ? [rect, handle] : [handle]; s.panel = true; s.scrCard = { el, id: model.id, on: true };
   if (!s.scrCardEvents && s.events && typeof s.events.on === 'function') { s.scrCardEvents = true; s.events.on('pause', () => scrCardCover(s, true)); s.events.on('resume', () => scrCardCover(s, false)); } // Settings opens over the pause card: the scene is paused, no frame runs, so the panel hides at once
-  scrCardCover(s, false);
+  scrCardCover(s, false); scrCardHideNames(s, true);
   return true;
 }
 function scrCardCover(s, on) { if (!s) return; s.scrCovered = !!on; if (s.scrHost) scrHostSet(s.scrHost.root, 'display', on ? 'none' : ''); }
 function scrCardSync(s) {
   const R = s && s.scrHost; if (!R || !s.scrCard || s.scrCard.on !== true) return false; // (a stand-in scene of a test answers any property with a function: only a card this file made counts)
-  const cover = s.scrCovered === true || (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(s));
+  const under = (typeof campKeysIsOpen === 'function' && campKeysIsOpen(s)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(s)); // the H page or the tuning panel is over the card: only the CARD waits (the keys page of the new look is a panel in this same host: hiding the host hid it too: card space-game-screens-batch-fixes)
   const canvas = s.game && s.game.canvas;
-  if (!cover && canvas) scrHostFit(R, canvas); else scrHostSet(R.root, 'display', 'none');
-  return !cover;
+  if (s.scrCovered === true) { scrHostSet(R.root, 'display', 'none'); return false; } // the scene is paused under Settings: the whole host waits
+  if (canvas) scrHostFit(R, canvas);
+  scrHostSet(s.scrCard.el, 'display', under ? 'none' : '');
+  scrCardHideNames(s, true); // the flight's own world names stay off the canvas under a card (they showed through the veil)
+  return !under;
 }
+// the flight's canvas names of the worlds (EARTH, LUNA, in the canvas's monospace) are hidden while a card of the new look is up, and given back when it goes
+function scrCardHideNames(s, hide) { if (Array.isArray(s.placeLabels)) s.placeLabels.forEach(o => { if (o && o.active !== false && typeof o.setVisible === 'function') o.setVisible(!hide); }); }
