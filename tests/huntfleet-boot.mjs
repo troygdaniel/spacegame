@@ -125,11 +125,12 @@ let NUM = 0; // the digit of the row the last list walk went to, when its list i
   await t.run(900); note('board: ' + (await shown()).join(' | ').slice(0, 700)); await snap('1-board');
   if (!NOBRIEF) {
     await key('Enter'); await t.run(700);
-    for (let s = 0; s < 4; s++) { const b = await shown(); note((s ? 'briefing screen ' + s : 'the missions overlay') + ': ' + b.join(' | ').slice(0, 1100)); await snap('2-brief-' + s); if (s < 3) { await key('Enter'); await t.run(500); } }
-    await key('Escape'); await t.run(400); // the overlay closes back to the room (the launch is L)
+    const inHub = () => j(`game.scene.isActive('CampHub')`); // (the new screens: the briefing's last Enter may already launch the mission, so each step asks the game where it is: card space-game-boots-after-looks)
+    for (let s = 0; s < 4 && (await inHub()); s++) { const b = await shown(); note((s ? 'briefing screen ' + s : 'the missions overlay') + ': ' + b.join(' | ').slice(0, 1100)); await snap('2-brief-' + s); if (s < 3) { await key('Enter'); await t.run(500); } }
+    if (await inHub()) { await key('Escape'); await t.run(400); } // the overlay closes back to the room (the launch is L)
     note('after Esc on the briefing: scene ' + await j(`['CampHub', 'Campaign', 'Title', 'Pause'].filter(k => game.scene.isActive(k)).join()`) + ' | ' + (await shown()).join(' | ').slice(0, 300));
   }
-  await key('KeyL'); await t.run(400); await key('KeyL'); // launches the mission from the room
+  if (await j(`game.scene.isActive('CampHub')`)) { await key('KeyL'); await t.run(400); await key('KeyL'); } // launches the mission from the room (unless the briefing already did)
   if (await settle(`game.scene.isActive('CampWarp')`, 30)) { await t.run(1500); await snap('3-warp'); await key('Enter'); }
   check('the Campaign scene starts on the mission', await settle(`game.scene.isActive('Campaign') && ${S}.camp`));
   for (let i = 0; i < 4 && (await j(`${S}.mode`)) !== 'play'; i++) { note('mode ' + await j(`${S}.mode`) + ': ' + await card()); await snap('4-card-' + i); await key('Enter'); await t.run(700); }

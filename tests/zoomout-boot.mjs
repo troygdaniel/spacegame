@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { mapZoomWords } from './mapboot.mjs'; // the map's zoom and area words in either look (the panel look's pills, the glass look's canvas texts: card space-game-boots-after-looks)
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.HUNT_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
@@ -60,10 +61,10 @@ try {
   let mz = []; for (let i = 0; i < 6; i++) { await key('Minus', 40); mz.push(+(await j(`${S}.mp.zWant`)).toFixed(3)); } await t.run(1200); await snap('4-map-6-presses');
   note('map zoom targets after 6 presses: ' + mz.join(' '));
   for (let i = 0; i < 12; i++) await key('Minus', 40); await t.run(1500);
-  const mf = await j(`({ z: ${S}.mp.z, zWant: ${S}.mp.zWant, zMin: ${S}.mp.zMin, whole: ${S}.mp.whole, across: ${S}.mp.across.text })`); note('map at the end of the presses: ' + JSON.stringify(mf)); await snap('5-map-whole');
+  const mf = await j(`({ z: ${S}.mp.z, zWant: ${S}.mp.zWant, zMin: ${S}.mp.zMin, whole: ${S}.mp.whole, across: ${mapZoomWords(S)}.across })`); note('map at the end of the presses: ' + JSON.stringify(mf)); await snap('5-map-whole');
   const nm = await j(`${S}.mp.nameObjs.filter(o => o.world).map(o => (o.drop ? '-' : '') + o.text + (o.visible ? '' : '(hidden)'))`); note('names at the far end (- is left out): ' + nm.join(', '));
   check('- takes the map all the way out to the whole system (the limit the map gives), and the far bodies are on', Math.abs(mf.z - mf.zMin) < 1e-4 && mf.whole === true && /^SYSTEM/.test(mf.across), JSON.stringify(mf));
-  const places = await j(`(() => { const mp = ${S}.mp, F = CAMPMAP.frame; return campMapMarks(${S}.camp, true).filter(m => m.type === 'place').map(m => campMapPoint(mp.fit, F, m.x, m.y)).filter(p => p.x < F.x || p.x > F.x + F.w || p.y < F.y || p.y > F.y + F.h).length; })()`);
+  const places = await j(`(() => { const mp = ${S}.mp, F = campMapFrameOf(mp); return campMapMarks(${S}.camp, true).filter(m => m.type === 'place').map(m => campMapPoint(mp.fit, F, m.x, m.y)).filter(p => p.x < F.x || p.x > F.x + F.w || p.y < F.y || p.y > F.y + F.h).length; })()`);
   check('every body of the system is inside the frame at the far end', places === 0, places + ' outside');
   await wheel(-100, 8); await t.run(1200); const mw = await j(`${S}.mp.zWant`); note('after 8 wheel notches in: zoom ' + mw.toFixed(3)); check('the wheel zooms the map back in', mw > mf.zMin * 2, String(mw)); await snap('6-map-wheel-in');
   await wheel(100, 30); await t.run(1500); check('the wheel out goes to the same end and no further', Math.abs((await j(`${S}.mp.zWant`)) - mf.zMin) < 1e-6);

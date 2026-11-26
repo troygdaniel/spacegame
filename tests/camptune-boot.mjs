@@ -111,7 +111,8 @@ async function tunedWin() { // a mission won while an override is on: the level 
     for (let i = 0; i < 20 && (await j(`${SC}.mode`)) !== 'debrief'; i++) await t.run(300);
     check('the mission is won and the debrief is up', (await j(`${SC}.mode`)) === 'debrief');
     const texts = await j(`${SC}.children.list.filter(o => o.text).map(o => o.text)`);
-    check('the debrief says the run is tuned and keeps no score: "Tuned run: the score and the rank are not kept."', texts.some(x => x === 'Tuned run: the score and the rank are not kept.') || texts.some(x => /Tuned run/.test(x)), JSON.stringify(texts.slice(0, 12)));
+    const card = await j(`(() => { const r = document.querySelector('.sc-root'); return r ? r.textContent : ''; })()`); // the new screens (screens=1): the won card is a page panel, and its pill says "Tuned run: not kept" (scr.card.notkept; card space-game-boots-after-looks)
+    check('the debrief says the run is tuned and keeps no score: "Tuned run: the score and the rank are not kept." (the glass), or the won card\'s pill "Tuned run: not kept" (the new screens)', texts.some(x => x === 'Tuned run: the score and the rank are not kept.') || texts.some(x => /Tuned run/.test(x)) || /Tuned run/.test(card), JSON.stringify(texts.slice(0, 12)) + ' | ' + card.slice(0, 200));
     await snap(t, '6-tuned-debrief');
     const P = await j(`campProgressLoad()`);
     check('the level moved on (mission 2 is next) and the best score of 1.1 is zero: the save has no score from a tuned run', P.mission === 1 && P.results && P.results['1.1'] && P.results['1.1'].score === 0, JSON.stringify({ mission: P.mission, results: P.results }));

@@ -1,0 +1,15 @@
+// not in the smoke: page expressions the boot tests use to read and click the Tab map's controls in EITHER look (card space-game-boots-after-looks; plain strings, no browser here)
+// The map has two looks: the glass (the page HUD off: ?pagehud=0) draws its buttons, its destination line and its zoom words as canvas objects (mp.btnFly, mp.btnFast, mp.dest, mp.zoomText, mp.across), and the panel look (the default,
+// src/campmappanel.js: mp.dom is true) draws them as page elements (s.mpPanel: the pills mp-btn, the SET panel, the header's zoom and area pills). A boot test that reads or clicks one of them asks here, so it is the same test in both looks.
+// Every helper gives a page expression (a string) for t.ev / j: `${mapBtn(SC, 'fly')}` and so on.
+//   mapBtn(SC, id)    id fly | fast | take: { visible, text, on, gx, gy } text as the glass one reads (the word in capitals, the key as Enter or Shift+Enter, the time, ON when it is the one being followed), gx and gy the middle in the game's px (1280 by 720) for a real click
+//   mapDest(SC)       the line of the set mark: its name and how far ("Drone 1 120 km"), '' when nothing is set
+//   mapZoomWords(SC)  { zoom, across }: the zoom's words (a percentage in the panel look) and the area line (SYSTEM ... in capitals, as the glass one wrote it)
+export const mapBtn = (SC, id) => `(() => { const s = ${SC}, mp = s.mp; if (!mp) return null;
+  if (mp.dom && s.mpPanel && s.mpPanel.btns && s.mpPanel.btns[${JSON.stringify(id)}]) { const b = s.mpPanel.btns[${JSON.stringify(id)}], e = b.el; if (e.style.display === 'none' || !e.offsetWidth) return { visible: false, text: '', on: false, gx: 0, gy: 0 };
+    const r = e.getBoundingClientRect(), c = s.game.canvas.getBoundingClientRect(), on = /(^|\\s)on(\\s|$)/.test(e.className);
+    return { visible: true, text: [(b.w.textContent || '').toUpperCase(), (b.k.textContent || '').replace(/ /g, '+'), b.t.textContent || ''].filter(Boolean).join('  ') + (on ? '  ON' : ''), on, gx: (r.left + r.width / 2 - c.left) * 1280 / c.width, gy: (r.top + r.height / 2 - c.top) * 720 / c.height }; }
+  const o = mp[${JSON.stringify(id === 'fly' ? 'btnFly' : id === 'fast' ? 'btnFast' : 'btnTake')}]; if (!o) return { visible: false, text: '', on: false, gx: 0, gy: 0 };
+  return { visible: !!o.visible, text: o.text || '', on: /ON$/.test(o.text || ''), gx: o.x + 12, gy: o.y + 8 }; })()`;
+export const mapDest = SC => `(() => { const s = ${SC}, mp = s.mp; if (!mp) return ''; if (mp.dom && s.mpPanel && s.mpPanel.set) { const e = s.mpPanel.set; return e.el && e.el.style.display === 'none' ? '' : ((e.name.textContent || '') + ' ' + (e.km.textContent || '')).trim(); } return mp.dest ? mp.dest.text : ''; })()`;
+export const mapZoomWords = SC => `(() => { const s = ${SC}, mp = s.mp; if (!mp) return null; if (mp.dom && s.mpPanel) return { zoom: s.mpPanel.zpct.textContent || '', across: (s.mpPanel.area.textContent || '').toUpperCase() }; return { zoom: mp.zoomText ? mp.zoomText.text : '', across: mp.across ? mp.across.text : '' }; })()`;

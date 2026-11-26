@@ -7,6 +7,7 @@ import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { beltSource } from './fixtures/campbelt.mjs';
+import { mapBtn, mapDest } from './mapboot.mjs'; // the map's buttons and its destination line in either look (the panel look's page elements, the glass look's canvas objects: card space-game-boots-after-looks)
 // the old Level 1, the belt, as level 1 (card space-game-l1-rim-boots): this boot was written for it and pins its missions and words; the rim run is checked in tests/camprim.mjs. The address started the Campaign scene on the rim run, so it starts again.
 const belt = async t => { await t.ev(beltSource(1)); await t.ev(`(() => { game.scene.stop('Campaign'); game.scene.start('Campaign', { level: 1, techs: [], via: 'address' }); return 1; })()`); };
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,10 +34,10 @@ try {
   await t.ev(`(() => { const C = ${SC}.camp; C.ships = C.ships.filter(u => u.team !== 'alien'); const a = campSpawn(C, 'raider', -300, 1500), b = campSpawn(C, 'raider', -296, 1502), d = campSpawn(C, 'drone', 1000, 1700); [a, b, d].forEach(u => { u.nextShot = 1e9; u.hold = true; u.hp = 1e6; }); window.__ids = [a.id, b.id, d.id]; return 1; })()`);
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(600);
   check('Tab opens the map', await j(`!!${SC}.mp`));
-  const at = (x, y) => j(`(() => { const mp = ${SC}.mp, p = campMapPoint(mp.fit, CAMPMAP.frame, ${x}, ${y}); return { x: p.x, y: p.y }; })()`);
+  const at = (x, y) => j(`(() => { const mp = ${SC}.mp, p = campMapPoint(mp.fit, campMapFrameOf(mp), ${x}, ${y}); return { x: p.x, y: p.y }; })()`);
   const d = await at(1000, 1700);
   await clickAt(t, d.x, d.y); await t.run(300);
-  let st = await j(`({ set: ${SC}.mp.setId, nav: !!${SC}.camp.nav, fly: ${SC}.mp.btnFly.visible, fast: ${SC}.mp.btnFast.visible, dest: ${SC}.mp.dest.text })`);
+  let st = await j(`({ set: ${SC}.mp.setId, nav: !!${SC}.camp.nav, fly: ${mapBtn(SC, 'fly')}.visible, fast: ${mapBtn(SC, 'fast')}.visible, dest: ${mapDest(SC)} })`);
   check('a click on a drone\'s mark SETS it: marked, the two buttons by it, the line says what it is ("Drone N") and how far, no flight', /^alien:drone-/.test(st.set) && !st.nav && st.fly && st.fast && /Drone \d+/.test(st.dest), JSON.stringify(st));
   await snap(t, 'set');
   const s = await at(-300, 1500);
@@ -45,7 +46,7 @@ try {
   await clickAt(t, s.x - 1, s.y); await t.run(300);
   const second = await j(`${SC}.mp.setId`);
   check('two raiders on one spot are a stack: the first click sets one, the second on the same spot takes the other, and neither flies', /^alien:raider-/.test(first) && /^alien:raider-/.test(second) && first !== second && (await j(`!${SC}.camp.nav`)), first + ' | ' + second);
-  const b = await j(`({ x: ${SC}.mp.btnFly.x + 12, y: ${SC}.mp.btnFly.y + 8 })`);
+  const b = await j(`(() => { const o = ${mapBtn(SC, 'fly')}; return { x: o.gx, y: o.gy }; })()`);
   await clickAt(t, b.x, b.y); await t.run(300);
   check('the Fly button flies to it: the autopilot is on, regular speed, on that raider', (await j(`!!${SC}.camp.nav && ${SC}.camp.nav.fast === false && ${SC}.camp.nav.id === ${SC}.mp.setId`)) === true);
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(100); // the map closes, the flight goes on
@@ -54,7 +55,7 @@ try {
   check('about fifteen seconds on, the cruiser has come to turret range (about 400 px) of it and holds there: the trip is still on', dist > 200 && dist < 700 && (await j(`!!${SC}.camp.nav`)), dist + ' px');
   await t.ev(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab' }))`); await t.run(500);
   await snap(t, 'follow');
-  check('and with the map open the set mark is still marked with its buttons, Fly ON (it is being followed)', (await j(`${SC}.mp.btnFly.visible && /ON$/.test(${SC}.mp.btnFly.text)`)) === true, await j(`${SC}.mp.btnFly.text`));
+  check('and with the map open the set mark is still marked with its buttons, Fly ON (it is being followed)', (await j(`(() => { const o = ${mapBtn(SC, 'fly')}; return o.visible && o.on; })()`)) === true, await j(`${mapBtn(SC, 'fly')}.text`));
   await t.ev(`(() => { const C = ${SC}.camp, u = C.by[C.nav.ref]; u.hp = 0; return 1; })()`); await t.run(600);
   check('the target is killed: the trip ends (the autopilot is off)', (await j(`${SC}.camp.nav === null`)) === true);
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
