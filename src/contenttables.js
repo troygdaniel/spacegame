@@ -1304,6 +1304,7 @@ const UI_TEXT = {
   'camp.map.flyinglab': 'Flying',
   'camp.map.pillfly': 'Fly',
   'camp.map.pillfast': 'Fast',
+  'camp.map.dock': 'Docks ({n})',
   'camp.nav.gofast': 'Autopilot to {name}, full burn. Any steering key takes the wheel.',
   'camp.map.route': '{km} km, about {s} s',
   'camp.map.goalmark': 'GOAL',
