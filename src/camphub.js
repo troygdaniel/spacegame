@@ -302,14 +302,21 @@ function campHubKey(H, P, code, ctx) {
     const dir = campHubLeft(code) ? 'left' : campHubRight(code) ? 'right' : campHubUp(code) ? 'up' : campHubDown(code) ? 'down' : '';
     if (dir) { res.used = true; res.moved = campHubGridMove(P, H, dir); return res; }
   }
-  if (ov) { // an overlay is up: Left and Esc close it, Up and Down move in its list, Enter or Right does the thing on the choice, and its own keys
-    if (code === 'Escape' || campHubLeft(code)) { H.open = ''; res.used = res.moved = true; return res; }
-    if (campHubUp(code) || campHubDown(code)) { const len = ov.len(P); res.used = true; if (len > 1) { ov.set(H, (ov.get(H) + (campHubDown(code) ? 1 : len - 1)) % len); res.moved = true; } return res; }
-    if (enter || campHubRight(code)) { res.used = true; ov.go(H, P, res); return res; }
+  const sel = !dock && typeof scrOn === 'function' && scrOn(); // THE NEW SCREENS (card space-game-ready-room-arrows-select; Troy, 26 Nov 2026: "do not use arrow keys to move forward; Enter only. Arrow keys select items on the screen"): every arrow key only moves the highlight, Enter opens, does or goes on, Esc goes back
+  if (ov) { // an overlay is up: Esc closes it, Up and Down move in its list, Enter does the thing on the choice, and its own keys (the glass look: Left also closes it and Right also does the thing; the new screens: the arrows only choose)
+    if (code === 'Escape' || (!sel && campHubLeft(code))) { H.open = ''; res.used = res.moved = true; return res; }
+    if (campHubUp(code) || campHubDown(code) || (sel && (campHubLeft(code) || campHubRight(code)))) { const len = ov.len(P), fwd = campHubDown(code) || campHubRight(code); res.used = true; if (len > 1) { ov.set(H, (ov.get(H) + (fwd ? 1 : len - 1)) % len); res.moved = true; } return res; } // (Left and Right are the previous and the next item too: the refit's techs stand in a row)
+    if (enter || (!sel && campHubRight(code))) { res.used = true; ov.go(H, P, res); return res; }
+  } else if (sel && (campHubLeft(code) || campHubRight(code) || campHubUp(code) || campHubDown(code))) { // the ready room, new look: the card's Briefing is above a row of three chips (Missions, Refit, Rank): Left and Right go along the row (round the ends), Up goes to the card and Down back to the chip that was lit; none of them opens anything
+    const chips = rows.filter(r => r !== 'launch'), top = rows.indexOf('launch'), onTop = id === 'launch'; res.used = true;
+    if (campHubLeft(code) || campHubRight(code)) { if (!onTop && chips.length > 1) { H.row = rows.indexOf(chips[(chips.indexOf(id) + (campHubRight(code) ? 1 : chips.length - 1)) % chips.length]); H.chip = H.row; res.moved = true; } }
+    else if (campHubUp(code)) { if (!onTop && top >= 0) { H.chip = H.row; H.row = top; res.moved = true; } }
+    else if (onTop) { const back = H.chip != null && rows[H.chip] && rows[H.chip] !== 'launch' ? H.chip : rows.indexOf(chips[0]); if (back >= 0) { H.row = back; res.moved = true; } }
+    return res;
   } else {
     if (campHubUp(code)) { H.row = (H.row + n - 1) % n; res.used = res.moved = true; return res; }
     if (campHubDown(code)) { H.row = (H.row + 1) % n; res.used = res.moved = true; return res; }
-    if (!dock && CAMP_HUB.over[id] && (enter || campHubRight(code))) { H.open = id; res.used = res.moved = true; return res; } // Enter or Right opens the row as an overlay
+    if (!dock && CAMP_HUB.over[id] && (enter || (!sel && campHubRight(code)))) { H.open = id; res.used = res.moved = true; return res; } // Enter (the glass look: or Right) opens the row as an overlay
     if (enter) {
       res.used = true;
       const act = dock && id === 'board' ? '' : CAMP_HUB.act[id]; // (a dock's room has no mission board to open)

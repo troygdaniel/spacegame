@@ -2,7 +2,7 @@
 // Card space-game-screens-c-hub (Troy, 25 Nov 2026; the mock is docs/screens-mock.html, direction A for the ready room). Landing F built the host; piece a the cards; this piece draws the ready room's screens with them:
 //   A. the words: scr.hub.* are in the file and the table, shown and never said
 //   B. the ready room: the station and level, Esc Title, the next mission with its goal line and the L Briefing chip, three rows with one number each and a digit chip, the pilots as three rings
-//   C. the refit: credits and ore pills, the fighter row with the wing as a meter and what is missing, the tech fitted, Enter Buy, Backspace Undo, Left Back
+//   C. the refit: credits and ore pills, the fighter row with the wing as a meter and what is missing, the tech fitted, Enter Buy, Backspace Undo, Esc Back
 //   D. the rank: a ring, the name, the points to the next, six tiles with the ships each adds, the one held lit
 //   E. the mission pick: nine tiles (lit, Next, dim, dashed when skipped), the bar with the goal line and the mission's own bonus count, no Start over row
 //   F. every chip of every screen is an entry of the key table, and the word counts stay near the mock's
@@ -63,7 +63,7 @@ console.log('C. the refit');
   g.run(`__fresh(); window.__fm = scrHubRefitModel(PR, HB, {});`);
   check('Refit, credits and ore as pills with their numbers in gold, no tech yet', texts('__fm')[0] === 'Refit' && kinds('__fm', 'pill').filter(p => p.lead).map(p => p.lead + ' ' + p.text).join('|') === '0 credits|0 ore' && texts('__fm').indexOf('No tech fitted yet.') > 0);
   check('the fighter row: Wing 8 as a blue meter to 9, the cost from the table (25) and what is missing (Need 25 more)', texts('__fm').indexOf('Wing 8') > 0 && texts('__fm').indexOf('9') > 0 && kinds('__fm', 'meter')[0].tone === 'blue' && Math.abs(kinds('__fm', 'meter')[0].pct - J('Math.round(1000 * 8 / scrWingCap()) / 10')) < 0.2 && texts('__fm').indexOf('25') > 0 && texts('__fm').indexOf('Need 25 more') > 0);
-  check('the chips: Enter Buy, Backspace Undo, Left Back', chips('__fm').join() === 'pick:Enter,giveback:Backspace,left:Left' && ['Buy', 'Undo', 'Back'].every(t => texts('__fm').indexOf(t) > 0));
+  check('the chips: Enter Buy, Backspace Undo, Esc Back (the arrows only choose: card space-game-ready-room-arrows-select)', chips('__fm').join() === 'pick:Enter,giveback:Backspace,close:Esc' && ['Buy', 'Undo', 'Back'].every(t => texts('__fm').indexOf(t) > 0));
   g.run(`PR.credits = 30; window.__fm2 = scrHubRefitModel(PR, HB, {});`);
   check('with the credits it says Can buy; the row is lit', texts('__fm2').indexOf('Can buy') > 0 && kinds('__fm2', 'tile')[0].on === true);
   g.run(`PR.bonus = { fighters: 3 }; window.__fm3 = scrHubRefitModel(PR, HB, {});`);
@@ -77,7 +77,7 @@ console.log('D. the rank');
   g.run(`__fresh(); window.__km = scrHubRankModel(PR);`);
   check('Cadet at the start: a ring at nothing with the number 1, Rank 1 of 6, 1,000 points to Ensign', kinds('__km', 'ring')[0].text === '1' && kinds('__km', 'ring')[0].v === 0 && texts('__km').indexOf('Rank 1 of 6') >= 0 && texts('__km').indexOf('Cadet') > 0 && texts('__km').indexOf('1,000 points to Ensign') > 0);
   check('six tiles: each rank with the ships it adds (+0 +1 +3 +4 +6 +8), the one held lit', kinds('__km', 'tile').length === 6 && texts('__km').filter(t => /^\+\d$/.test(t)).join() === '+0,+1,+3,+4,+6,+8' && kinds('__km', 'tile').map(t => !!t.on).join() === 'true,false,false,false,false,false');
-  check('the line under them and the Left Back chip', texts('__km').indexOf('The number is wing strength.') > 0 && chips('__km').join() === 'left:Left' && texts('__km').indexOf('Back') > 0);
+  check('the line under them and the Esc Back chip', texts('__km').indexOf('The number is wing strength.') > 0 && chips('__km').join() === 'close:Esc' && texts('__km').indexOf('Back') > 0);
   g.run(`__flown(); window.__km2 = scrHubRankModel(PR);`);
   check('with 7,380 points: Commander (4 of 6), the ring part way to Captain, the fourth tile lit, the points to the next', kinds('__km2', 'ring')[0].text === '4' && kinds('__km2', 'ring')[0].v > 0 && kinds('__km2', 'ring')[0].v < 100 && kinds('__km2', 'tile').map(t => !!t.on).join() === 'false,false,false,true,false,false' && texts('__km2').some(t => /points to Captain/.test(t)));
   g.run(`PR.results['1.2'] = { score: 20000, bonuses: [], t: 1, hull: 1, lost: 0, tries: 1 }; window.__km3 = scrHubRankModel(PR);`);
@@ -186,7 +186,7 @@ g.run(`
 }
 {
   const cs = code('src/camphubscene.js'), ch = code('src/camphub.js');
-  check('the scene asks for the new look in one place (paint) and one sync in update; the only uses of the switch in the pure hub are the length of the missions list and the grid of the mission pick (campHubKey, card space-game-screens-arrows-walk)', (cs.match(/campHubNewLook\(this\)/g) || []).length === 1 && (cs.match(/scrHubSync\(this/g) || []).length === 1 && (ch.match(/\bscrOn\(/g) || []).length === 2);
+  check('the scene asks for the new look in one place (paint) and one sync in update; the only uses of the switch in the pure hub are the length of the missions list, the grid of the mission pick (campHubKey, card space-game-screens-arrows-walk) and the one `sel` of campHubKey: the arrows only choose (card space-game-ready-room-arrows-select)', (cs.match(/campHubNewLook\(this\)/g) || []).length === 1 && (cs.match(/scrHubSync\(this/g) || []).length === 1 && (ch.match(/\bscrOn\(/g) || []).length === 3);
   check('no key, rule, price or save of the hub changed: campHubKey, the refit\'s buy and give back and the saves are read, not written, by the new look (nothing in src/scrhub.js assigns to the progress or the hub state)', !/\b(PR|HB)\.[a-z]+\s*(=|\+=|-=|\+\+|--)[^=]/.test(code('src/scrhub.js')) && !/campProgressSave|campHubBuy|campHubGiveBack|campHubStartOver/.test(code('src/scrhub.js') + code('src/scrhubdraw.js')));
 }
 
