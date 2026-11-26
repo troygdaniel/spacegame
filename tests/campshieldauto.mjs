@@ -59,8 +59,8 @@ console.log('D. the words');
 const md = readFileSync(ROOT + '/content/text/campshield.md', 'utf8');
 const line = J(`uiText('camp.no.shieldauto')`);
 check('camp.no.shieldauto is in content/text/campshield.md, sealed (the game reads it), and is a curt line (12 words or fewer)', md.includes('| camp.no.shieldauto | ' + line + ' |') && line !== 'camp.no.shieldauto' && line.split(/\s+/).length <= 12, line);
-const left = readdirSync(ROOT + '/content/text').filter(f => /^camp/.test(f) && f !== 'campshield.md').filter(f => /recharg/i.test(readFileSync(ROOT + '/content/text/' + f, 'utf8')));
-check('no other text of the Campaign says recharge any more (the old lines for the carrier, Earth, "too far", "already full" are gone)', left.length === 0, left.join());
+const left = readdirSync(ROOT + '/content/text').filter(f => /^camp/.test(f) && f !== 'campshield.md').filter(f => readFileSync(ROOT + '/content/text/' + f, 'utf8').split('\n').some(l => /recharg/i.test(l) && !/^\| camp\.corner\.m\.recharging \|/.test(l))); // (the Boost row's own word, camp.corner.m.recharging, is no shield line: card space-game-boost-row-locked-colour)
+check('no other text of the Campaign says recharge any more (the old lines for the carrier, Earth, "too far", "already full" are gone; the Boost row\'s word Recharging is the one exception)', left.length === 0, left.join());
 check('the bots do not use it: tools/campaign-bot.mjs has no recharge order, and none of the ore tables is left (CAMP.recharge)', !/recharge/i.test(readFileSync(ROOT + '/tools/campaign-bot.mjs', 'utf8')) && J('typeof CAMP.recharge') === 'undefined');
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `\nfailed: ${failed}` : '\nCAMPSHIELDAUTO PASS');
