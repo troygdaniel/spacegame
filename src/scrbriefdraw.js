@@ -10,8 +10,9 @@ function scrBriefOpen(s) {
   if (!s || !s.add || campBriefIsOpen(s)) return false;
   const R = typeof scrHostMount === 'function' ? scrHostMount(s) : null; if (!R) return null;
   const t = campHubTarget(s.P, s.hub), Y = campBriefLayers(t.level, t.i); if (!Y) return false;
+  const moments = campBriefMoments(t.level, t.i); Y.moments = moments; // on the map's layers too: the view is fitted to show them (campBriefBounds)
   const K = CAMPBRIEF, F = SCRBRIEF.frame, objs = [], put = (o, d) => { o.setScrollFactor(0).setDepth(130 + (d || 0)); objs.push(o); return o; }, v = campBriefView(Y, 0, 1, undefined, undefined, F);
-  const bf = s.bf = { open: true, one: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, frame: F, screen: 0, plan: null, wk: null, map: [], text: [], pics: [], route: campBriefRoute(Y), brief: campHubBrief(s.P, t.level, t.i), moments: campBriefMoments(t.level, t.i), story: [], keysFor: [], ready: { lines: [], warnings: [] }, foes: { list: [], line: '' }, steps: { goals: [], bonus: [] }, walk: { steps: [], data: false } };
+  const bf = s.bf = { open: true, one: true, objs, t, Y, zoom: 0, z: 1, base: v.base, fit: v.fit, frame: F, screen: 0, plan: null, wk: null, map: [], text: [], pics: [], route: campBriefRoute(Y), brief: campHubBrief(s.P, t.level, t.i), moments, story: [], keysFor: [], ready: { lines: [], warnings: [] }, foes: { list: [], line: '' }, steps: { goals: [], bonus: [] }, walk: { steps: [], data: false } };
   put(s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, 0.97).setInteractive(), 0); // a veil that takes the clicks
   bf.g = put(s.add.graphics(), 2); bf.mg = put(s.add.graphics(), 2);
   if (s.input && typeof s.input.on === 'function') { bf.onWheel = (p, over, dx, dy) => { campBriefZoomTo(s, camzoomWheel(bf.z, dy, K.zoom.min, K.zoom.max)); }; s.input.on('wheel', bf.onWheel); }
