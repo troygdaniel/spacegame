@@ -118,7 +118,7 @@ function campBriefPaintMap(s) {
   const a = X(Y.start.x, Y.start.y), b = X(Y.focus.x, Y.focus.y), R = bf.route; // the start and the mission's place: their labels are placed first, the names of the places go round them
   const label = (txt, color, anchor, r, bold) => { const t = own(s.add.text(0, 0, txt, uiFont(11, color, Object.assign({}, FF, bold ? { fontStyle: 'bold' } : {})))).setOrigin(0.5).setDepth(136); texts.push(t); items.push({ x: anchor.x, y: anchor.y, r, w: t.width, h: t.height, side: 'below' }); return t; };
   const mark = Y.focus.label ? Y.focus.label.toUpperCase() : ''; // the name the mission mark carries
-  label(uiText('camp.bf.mission') + (mark ? '  ' + mark : ''), '#ffb454', b, 16, true);
+  if (!one || inF(b)) label(uiText('camp.bf.mission') + (mark ? '  ' + mark : ''), '#ffb454', b, 16, true); // (the one page's map, zoomed in on a moment, may have the mission mark off the glass: its label then is left out, not stuck to the edge: card space-game-briefing-walk-labels)
   if (inF(a)) label(uiText('camp.bf.you'), '#ffffff', a, 9, false);
   Y.places.forEach(p => {
     const q = X(p.x, p.y); if (!inF(q)) return; const r = Math.max(p.star ? 7 : 4, p.r * fit.s);
@@ -128,6 +128,8 @@ function campBriefPaintMap(s) {
     const t = own(s.add.text(0, 0, p.name.toUpperCase(), uiFont(11, p.star ? '#ffe29a' : '#ffb454', FF))).setOrigin(0.5).setDepth(134); texts.push(t); items.push({ x: q.x, y: q.y, r: r + 4, w: t.width, h: t.height });
   });
   if (one) (bf.moments || []).forEach(m => { const q = X(m.at.x, m.at.y); items.push({ x: q.x, y: q.y, r: 13, w: 0, h: 0 }); }); // the numbered moments are marks the names keep clear of (after the names: their places are the names')
+  const capT = own(s.add.text(F.x + F.w - 8, F.y + 8, uiText('camp.map.zoom', { pct: Math.round(bf.z * 100) }), uiFont(12, one ? '#8794ab' : '#7fe9ff', FF))).setOrigin(1, 0).setDepth(137); // the zoom and its keys, in the corner, as the Tab map says them (made before the names are placed: on the one page they keep clear of it)
+  if (one) for (let x = F.x + F.w - 8 - 12; x > F.x + F.w - 8 - capT.width; x -= 24) items.push({ x, y: F.y + 8 + capT.height / 2, r: 12, w: 0, h: 0 }); // (the caption's length in marks: a place's name zoomed in at the corner no longer lands on it)
   if (items.length) { const at = mapPlace(items, F); texts.forEach((t, i) => t.setPosition(at[i].x, at[i].y)); }
   // the mission's own points
   const num = (p, label, color) => { if (!inF(p)) return; own(s.add.text(p.x, p.y - 12, label, uiFont(11, color, FF))).setOrigin(0.5).setDepth(135); };
@@ -149,7 +151,6 @@ function campBriefPaintMap(s) {
   if (inF(a)) { g.fillStyle(0xffffff, 1).fillCircle(a.x, a.y, 4); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(a.x, a.y, 8); } // you: the dot and ring (the label YOU is placed with the others, above)
   if (one) g.lineStyle(1.6, 0xe9b872, 1).strokeCircle(b.x, b.y, 15); else { g.lineStyle(3, AMBER, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = b.x + sx * 14, y = b.y + sy * 14; g.beginPath(); g.moveTo(x, y - sy * 9); g.lineTo(x, y); g.lineTo(x - sx * 9, y); g.strokePath(); }); } // the mission's place: the amber brackets of the sector map (the one page: a thin gold ring, as the Tab map marks its goal)
   if (bf.one === true && typeof scrBriefMapExtras === 'function') scrBriefMapExtras(s, X, F, own); // the new look: the four numbered moments on the map
-  own(s.add.text(F.x + F.w - 8, F.y + 8, uiText('camp.map.zoom', { pct: Math.round(bf.z * 100) }), uiFont(12, one ? '#8794ab' : '#7fe9ff', FF))).setOrigin(1, 0).setDepth(137); // the zoom and its keys, in the corner, as the Tab map says them
 }
 // the zoom moves: the map is drawn again at the new view (about the mission's place); the key line and the other screens are not touched
 function campBriefZoomTo(s, z) {

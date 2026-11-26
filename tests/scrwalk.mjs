@@ -128,6 +128,26 @@ g.run(`__open(1, 0); campBriefKey(S, 'KeyL', false);`);
 check('L launches', J('__launched') === 2);
 check('a map tick when nothing moves does nothing, and with no page it is false', J('scrBriefTick(S, 1)') === false && J('scrBriefTick({}, 1)') === false && J('scrBriefStep({}, 1)') === false);
 
+console.log('F. the labels of the zoomed map (card space-game-briefing-walk-labels: a place\'s name no longer lands on the zoom caption, the mission label is left out when its mark is off the map)');
+g.run(`
+  window.__tx = []; window.__items = null; campBriefPaintMap = __paint0;
+  const textObj = new Proxy({}, { get: (t, k) => k === 'width' ? 230 : k === 'height' ? 14 : k === 'then' ? undefined : (...a) => textObj });
+  window.__stand2 = extra => Object.assign(__stand(extra), { add: new Proxy({}, { get: (t, k) => (...a) => { if (k === 'text') { __tx.push(String(a[2])); return textObj; } return chain; } }) });
+  window.__mp0 = mapPlace; mapPlace = (items, F) => { __items = items.map(i => ({ x: i.x, y: i.y, r: i.r, w: i.w, h: i.h })); return __mp0(items, F); };
+  window.__open2 = (level, i) => { __fresh(); PR.level = 3; PR.mission = 2; HB = campHubNew(PR, {}); HB.pick = { level, i }; window.S = __stand2({ P: PR, hub: HB }); return campBriefOpen(S); };
+  window.__far = () => { const bf = S.bf; bf.fit = { s: bf.base.s * 2.4, cx: bf.Y.focus.x + 60000, cy: bf.Y.focus.y + 60000 }; bf.z = 2.4; __tx.length = 0; campBriefPaintMap(S); };
+`);
+g.run(`__open2(1, 0); __tx.length = 0; campBriefPaintMap(S);`);
+const caps = J(`(() => { const F = S.bf.frame; return __items.filter(i => i.w === 0 && i.h === 0 && i.y > F.y && i.y < F.y + 24 && i.x > F.x + F.w - 8 - 230 && i.x < F.x + F.w).length; })()`);
+check('the zoom caption is an obstacle the place names keep clear of: its length is marks along the top right corner of the glass (' + caps + ' of them) in the names\' placement', caps >= 8, caps);
+check('and the caption is still written, in the corner', J(`__tx.some(t => /^ZOOM|zoom/i.test(t))`));
+check('the mission label is there with the mission mark on the map (the whole route)', J(`__tx.some(t => /^MISSION/.test(t))`));
+g.run(`__far();`);
+check('with the mission mark off the map (zoomed in on a moment far from it) the label is left out, not stuck to the edge; the places in sight keep their names', J(`__tx.some(t => /^MISSION/.test(t))`) === false && J('__tx.some(t => /^ZOOM/.test(t))'));
+g.run(`S.bf.one = false; __far(); S.bf.one = true;`);
+check('the old briefing keeps its label whatever the view (the fix is the one page\'s only)', J(`__tx.some(t => /^MISSION/.test(t))`));
+g.run(`campBriefPaintMap = (s => { __paints++; }); mapPlace = __mp0;`);
+
 console.log('E. the old briefing and the switch off');
 g.run(`CAMP.flags.screens = false; campBriefPaintMap = __paint0;`);
 check('with the switch off the new page is not made and the keys of the old briefing are as they were: scrBriefStep needs the one page (bf.one)', J(`scrBriefStep({ bf: { one: false, open: true, moments: [{ at: { x: 0, y: 0 } }] } }, 1)`) === false);
