@@ -18,7 +18,7 @@ const which = process.argv[2] || 'both';
 
 // a real click: the game's own coordinates (1280 x 720) to the page's, by where the canvas sits
 async function clickAt(t, gx, gy) {
-  const p = JSON.parse(await t.ev(`(() => { const r = game.canvas.getBoundingClientRect(); return JSON.stringify({ x: r.left + ${gx} * r.width / 1280, y: r.top + ${gy} * r.height / 720 }); })()`));
+  const p = JSON.parse(await t.ev(`(() => { const r = typeof fillSafeRect === 'function' ? fillSafeRect(game.canvas) : game.canvas.getBoundingClientRect(); return JSON.stringify({ x: r.left + ${gx} * r.width / 1280, y: r.top + ${gy} * r.height / 720 }); })() /* the safe area: with ?fill=1 the 1280 by 720 maths stand in the middle of a bigger game (card space-game-boots-fill-screens) */`));
   for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await t.send('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: type === 'mouseMoved' ? 'none' : 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
   await t.run(100);
 }
