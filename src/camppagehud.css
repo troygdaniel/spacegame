@@ -108,6 +108,24 @@
 .ph-fedge span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* the digit of the ship the pill is for (the E key's number), in a small ring in the pill's amber, as the left panel's pilots wear theirs (card space-game-b3-d-panel-cap-pill-goal: "2 Miner" read as two miners) */
 .ph-fnum { display: inline-grid; place-items: center; box-sizing: border-box; flex: none; width: 1.55em; height: 1.55em; border-radius: 50%; border: 1px solid currentColor; font-size: .8em; font-weight: 600; line-height: 1; }
+/* the open Q list (card space-game-lists-panel-look; the browser batch on main 922b7a92, item 1): the cruiser's order list as a panel under the left panel and its chips, in this look: a row is its digit in a chip, its words, and at the right what it does or why it cannot (warm); the order in force has a bar at its left,
+   the row just given is bright, a target sub-list's ship has a small hull bar; the foot says the row's state and the keys. Its top is set from the left panel's bottom. */
+.ph-list { left: 1.3em; top: 8em; width: 23em; display: flex; flex-direction: column; gap: .28em; padding: .6em .7em; }
+.ph-lh { font-size: .72em; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ph-mute); padding: 0 .3em .2em; }
+.ph-lr { display: flex; align-items: center; gap: .6em; padding: .3em .5em; border-radius: .8em; background: rgba(255, 255, 255, .04); font-size: .92em; }
+.ph-lr.at { background: rgba(191, 233, 255, .22); }
+.ph-lr.lit { background: rgba(191, 233, 255, .42); }
+.ph-lr.mark { box-shadow: inset .22em 0 0 var(--ph-shield); }
+.ph-lr.no .ph-ll { color: var(--ph-mute); }
+.ph-ll { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph-ls { flex: none; font-size: .85em; color: var(--ph-mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ph-lr.no .ph-ls { color: var(--ph-warn); }
+.ph-ln2 { opacity: .85; }
+.ph-lbar { flex: none; width: 3.2em; height: .36em; border-radius: 1em; background: rgba(255, 255, 255, .09); overflow: hidden; }
+.ph-lbar .ph-fill { display: block; height: 100%; }
+.ph-lf1 { font-size: .82em; color: var(--ph-mute); padding: .25em .3em 0; }
+.ph-lf1.why { color: var(--ph-warn); }
+.ph-lf2 { font-size: .78em; color: var(--ph-mute); padding: 0 .3em; }
 /* the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips): one dim row at the bottom centre, where the canvas's bottom key line was (it is left out while the page HUD is on); the script fades it out */
 .ph-first { left: 50%; bottom: 1.1em; transform: translateX(-50%); display: flex; align-items: center; gap: 1.2em; padding: .4em 1em; border-radius: 2em; white-space: nowrap; opacity: .72; }
 .ph-fc { display: flex; align-items: center; gap: .45em; }
