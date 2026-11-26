@@ -8,6 +8,7 @@
 //   J  a full card hides the panels (card space-game-page-hud-hide-on-cards)
 //   K  the first-minute chips of mission 1.1 (card space-game-page-hud-first-minute-chips)
 //   O  an edge pill for each ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill)
+//   T  a reload in mint: the building pip, the queued outlines, the R chip, the word MISSILES and the count (card space-game-missile-reload-mint)
 //   S  the radio panel, the goal panel's hint line and the mothership's hull row (card space-game-b3-c-radio-panel)
 //   R  the picked target's flat-cut picture in the hostiles panel (card space-game-page-hud-target-picture)
 //   Q  nothing a player needs under a page panel (card space-game-goal-panel-hides-text): the canvas column starts under the goal panel; the edge pills are put clear of the panels
@@ -606,6 +607,33 @@ check('S a canvas line that is hidden (the page HUD hid it) takes no place in th
 const cssS = src('src/camppagehud.css'), pjS = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, ''), cmS = src('src/common.js');
 check('S the style and the script: the panel is a page panel in em with the message\'s colour as its left bar (a variable), the time is TOAST\'s (no number typed in the page HUD for it), no image file or web font', /\.ph-radio \{[^}]*width: 24em/.test(cssS) && /\.ph-rad \{[^}]*border-left: \.25em solid var\(--rc\)/.test(cssS) && !/url\(|@font-face/.test(cssS) && /T0\.hold/.test(pjS) && /T0\.fade/.test(pjS) && !/\b2800\b|\b600\b/.test(pjS.slice(pjS.indexOf('function campPageHudToast'), pjS.indexOf('function campPageHudSet'))));
 check('S common.js: the hook is one line at the top of toast() (after the Tab map\'s own, which takes the message only while the map is open), asking s.toastPanel and taking only `true`', /function toast\(s, msg, color = '#ffd37a', hold = 0\) \{[^\n]*\n(  if \(s\.mp && typeof campMapToast[^\n]*\n)?  if \(typeof s\.toastPanel === 'function' && s\.toastPanel\(msg, color, hold\) === true\) return;/.test(cmS));
+g.run(`CAMP.flags.pagehud = false;`);
+
+console.log('T. a reload in mint (card space-game-missile-reload-mint; Troy, 26 Nov 2026)');
+g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.ore = 400; C.missiles = 3; C.queued = 0; C.reloadAt = 0; window.ST = __scene(); campPageHudSync(ST, 0);`);
+const pcs = () => J(`(() => { const S_ = ST.pageHud.stock; return { pips: S_.pips.map(p => p._cls), key: S_.key._cls, word: S_.missLab._cls, q: S_.queue._cls, qt: S_.queue._text, ore: S_.oreLab._cls }; })()`);
+const pipCode = c => c.pips.map(x => /build/.test(x) ? 'b' : /queued/.test(x) ? 'q' : / on/.test(x) ? 'o' : '.').join('');
+const t0 = pcs();
+check('T nothing built or queued: the pips are white (three on, three empty), the R chip, the word MISSILES and the count have no mint class: the panel is as it was; the model says it is not loading', pipCode(t0) === 'ooo...' && t0.key === 'ph-k' && t0.word === 'ph-lab ph-mw' && t0.q === 'ph-q' && J('campPageModel(C).stock.missiles.loading') === false);
+g.run(`window.__r1 = campReloadDo(C); window.__r2 = campReloadDo(C); window.__r3 = campReloadDo(C); campPageHudSync(ST, 200);`);
+const t1 = pcs();
+check('T three presses of R (the first build runs, two wait behind it): the model is loading; the pip being built is the build pip (mint, filling), the two queued builds are two empty pips outlined in mint, the three finished ones are white; the R chip, the word MISSILES and the +2 glow mint (the word Ore does not)', J('campPageModel(C).stock.missiles.loading') === true && pipCode(t1) === 'ooobqq' && t1.key === 'ph-k ph-mint' && t1.word === 'ph-lab ph-mw ph-mint' && t1.q === 'ph-q ph-mint' && t1.qt === '+2' && t1.ore === 'ph-lab ph-mw', JSON.stringify(t1));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 400);`);
+const t2 = pcs();
+check('T a build lands: its pip is white, the next build starts (its pip fills), and one outline is left (+1); everything is still mint', pipCode(t2) === 'oooobq' && t2.key === 'ph-k ph-mint' && t2.qt === '+1', JSON.stringify(t2));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 600);`);
+const t3 = pcs();
+check('T the last queued build runs with nothing behind it: still mint (a build is running), no outline, no +N', pipCode(t3) === 'ooooob' && t3.key === 'ph-k ph-mint' && t3.word === 'ph-lab ph-mw ph-mint' && t3.qt === '' && J('campPageModel(C).stock.missiles.loading') === true, JSON.stringify(t3));
+g.run(`C.t = C.reloadAt; campMissileStep(C); campPageHudSync(ST, 800);`);
+const t4 = pcs();
+check('T everything built: all six white, and the chip, the word and the count are back to white (the plain classes)', pipCode(t4) === 'oooooo' && t4.key === 'ph-k' && t4.word === 'ph-lab ph-mw' && t4.q === 'ph-q' && J('campPageModel(C).stock.missiles.loading') === false, JSON.stringify(t4));
+g.run(`C.missiles = 5; C.queued = 0; C.reloadAt = 0; window.__a = campReloadDo(C); window.__b = campReloadDo(C); window.__c = campReloadDo(C); window.__d = campReloadDo(C); campPageHudSync(ST, 1000);`);
+const t5 = pcs();
+check('T the rack has room for no more builds than it can hold (five in the rack of six: one build runs and R queues nothing more, whatever the presses), so the outlines always fit and nothing needs the +N then: the building pip is the last one, no outline, no count, still mint', pipCode(t5) === 'ooooob' && t5.qt === '' && t5.key === 'ph-k ph-mint', JSON.stringify([pipCode(t5), t5.qt]));
+g.run(`CAMP.flags.pagehud = false; campPageHudSync(ST, 2000); CAMP.flags.pagehud = true;`);
+const cssT = src('src/camppagehud.css'), pjT = src('src/camppagehud.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\/\/.*$/gm, '');
+check('T the style: the mint is ONE token (--ph-fire), the player\'s fire colour of the look table (SLOOK.C.own), and the building pip, the queued outline, the chip, the word and the count use it; no new colour typed elsewhere, no image, no web font', new RegExp('--ph-fire: ' + J('SLOOK.C.own') + ';').test(cssT) && /\.ph-pip\.build \{[^}]*var\(--ph-fire\) var\(--p/.test(cssT) && /\.ph-pip\.queued \{[^}]*box-shadow: inset 0 0 0 1px var\(--ph-fire\)/.test(cssT) && /\.ph-k\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && /\.ph-lab\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && /\.ph-q\.ph-mint \{[^}]*var\(--ph-fire\)/.test(cssT) && !/url\(|@font-face/.test(cssT) && !/7df0c0/i.test(pjT));
+check('T what R does is not touched: the model only READS the build (building, queued): no call of campReloadDo, campMissileStep or campReload with an effect in the page HUD\'s model of the stock', !/campReloadDo|campMissileStep/.test(pjT));
 g.run(`CAMP.flags.pagehud = false;`);
 
 console.log('E. the rules');

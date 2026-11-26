@@ -111,7 +111,7 @@ function campPageHudReloadFrac(C) {
 }
 function campPageHudStock(C) {
   const S = campCruiserStatus(C), M = S.missiles;
-  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full, word: uiText('camp.corner.m.ore') }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', progress: campPageHudReloadFrac(C), queued: Math.max(0, Math.floor(C.queued || 0)), key: campCruiserMissileKey(), word: uiText('camp.corner.m.missiles') } };
+  return { ore: { frac: S.ore.cap > 0 ? Math.max(0, Math.min(1, S.ore.n / S.ore.cap)) : 0, full: !!S.ore.full, word: uiText('camp.corner.m.ore') }, missiles: { n: M.n, cap: M.cap, building: M.state === 'building', loading: M.state === 'building' || Math.floor(C.queued || 0) > 0, progress: campPageHudReloadFrac(C), queued: Math.max(0, Math.floor(C.queued || 0)), key: campCruiserMissileKey(), word: uiText('camp.corner.m.missiles') } };
 }
 
 // the hostiles (landing 3): drawn ONLY when a hostile is seen: the nearest group, what it is ("3 Skiffs" or "6 hostiles", the sight's own words), where (a compass point, the sight's words) and how far
@@ -353,7 +353,8 @@ function campPageHudPaint(R, M, doc) {
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) { set(p, 'text', pl.name); set(p, 'cls', 'ph-p ph-place' + (pl.goal ? ' goal' : '')); } });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);
-  T.pips.forEach((p, i) => { const b = i === k.missiles.n && k.missiles.building; set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (b ? ' build' : '')); set(p, '--p', (b ? Math.round(k.missiles.progress * 100) : 0) + '%'); }); set(T.queue, 'text', k.missiles.queued > 0 ? '+' + k.missiles.queued : ''); set(T.queue, 'display', k.missiles.queued > 0 ? '' : 'none'); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
+  const ld = !!k.missiles.loading, q0 = k.missiles.n + (k.missiles.building ? 1 : 0); // ld: a build is running or queued (card space-game-missile-reload-mint; Troy, 26 Nov 2026): the Missiles panel is in the player's fire colour (mint) while it lasts, and white again when nothing is queued. q0: the first pip a queued build stands for (the one being built is before it)
+  T.pips.forEach((p, i) => { const b = i === k.missiles.n && k.missiles.building, q = !b && i >= q0 && i < q0 + k.missiles.queued; set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (b ? ' build' : '') + (q ? ' queued' : '')); set(p, '--p', (b ? Math.round(k.missiles.progress * 100) : 0) + '%'); }); set(T.key, 'cls', 'ph-k' + (ld ? ' ph-mint' : '')); set(T.missLab, 'cls', 'ph-lab ph-mw' + (ld ? ' ph-mint' : '')); set(T.queue, 'cls', 'ph-q' + (ld ? ' ph-mint' : '')); set(T.queue, 'text', k.missiles.queued > 0 ? '+' + k.missiles.queued : ''); set(T.queue, 'display', k.missiles.queued > 0 ? '' : 'none'); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
   set(S.key, 'text', M.ship.key);
   ['shield', 'hull'].forEach(id => campPageHudPaintMeter(S[id], M.ship[id]));
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);
