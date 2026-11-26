@@ -26,3 +26,4 @@ The words of the new keys page (card space-game-screens-e-keys-settings; Troy, 2
 | scr.keys.r.map | Map |
 | scr.keys.r.esc | Back, then pause |
 | scr.keys.r.tune | Tuning |
+| scr.keys.r.boost | Boost |

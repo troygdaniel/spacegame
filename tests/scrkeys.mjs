@@ -20,11 +20,11 @@ g.run(`CAMP.flags.screens = true;`);
 console.log('A. the model');
 const M = J('scrKeysModel()');
 check('three groups, in the mock\'s order: Fly and fire, Fleet, Cruiser', M.groups.map(x => x.title).join('|') === 'Fly and fire|Fleet|Cruiser' && M.groups.map(x => x.id).join() === 'fly,fleet,cruiser');
-check('five, six and four rows', M.groups.map(x => x.rows.length).join() === '5,6,4');
+check('five, six and four rows', M.groups.map(x => x.rows.length).join() === '5,6,5'); // (the cruiser's group has the boost row: card space-game-batch-922-small-fixes)
 const rows = x => x.rows.map(r => r.chips.map(c => c.k).join(' ') + '=' + r.t);
 check('Fly and fire: Arrows Fly, Space Turrets, Z Missile, R Build a missile, - = Zoom', rows(M.groups[0]).join('|') === 'Arrows=Fly|Space=Turrets|Z=Missile|R=Build a missile|- ==Zoom', rows(M.groups[0]).join('|'));
 check('Fleet: W, E, ], \\, Enter and F, with the mock\'s words', rows(M.groups[1]).join('|') === 'W=Who, then 1 to 4|E=Friendly, then a digit|]=Next enemy|\\=Nearest threat|Enter=Attack, guard or form up|F=Look at it', rows(M.groups[1]).join('|'));
-check('Cruiser: the list key, Tab, Esc and N', rows(M.groups[2]).join('|') === 'Q=List, then 1 to 7|Tab=Map|Esc=Back, then pause|N=Tuning', rows(M.groups[2]).join('|'));
+check('Cruiser: the list key, Tab, Esc, N and Shift (the boost)', rows(M.groups[2]).join('|') === 'Q=List, then 1 to 7|Tab=Map|Esc=Back, then pause|N=Tuning|Shift=Boost', rows(M.groups[2]).join('|'));
 check('the heading is Keys and the close chip is H (the key table\'s help key), with the word Close', M.title === 'Keys' && M.close && M.close.k === J('CAMP_KEYS.help.k') && M.closeWord === 'Close', JSON.stringify(M.close));
 
 console.log('B. the chips are the table\'s');
@@ -36,7 +36,7 @@ check('the table moves a key and the page follows: Missile is B now; a key the t
 g.run(`CAMP_KEYS.missile.k = __was.missile; CAMP_KEYS.focus.k = __was.focus;`);
 check('the words are all in the content table: none of the page\'s words is a key name left over', M.groups.every(x => !/^scr\./.test(x.title) && x.rows.every(r => !/^scr\./.test(r.t))) && !/^scr\./.test(M.title));
 const md = readFileSync(ROOT + '/content/text/scrkeys.md', 'utf8');
-check('content/text/scrkeys.md has every word of the page and holds no key name', [...md.matchAll(/^\| (scr\.keys\.[\w.]+) \| (.*) \|$/gm)].length === 20 && !/Space bar|Arrow keys/.test(md));
+check('content/text/scrkeys.md has every word of the page and holds no key name', [...md.matchAll(/^\| (scr\.keys\.[\w.]+) \| (.*) \|$/gm)].length === 21 && !/Space bar|Arrow keys/.test(md));
 
 console.log('C. the word budget');
 const shown = m => [m.title, m.closeWord, m.close ? m.close.k : ''].concat(m.groups.flatMap(x => [x.title].concat(x.rows.flatMap(r => r.chips.map(c => c.k).concat([r.t])))));
@@ -54,7 +54,7 @@ check('with the switch on the page opens (true) as a panel of the host: s.ck is 
 const txt = J('__texts(S.scrHost.root)');
 check('it reads: Keys, the H chip and Close, then the three groups with their chips and words', txt[0] === 'Keys' && txt[1] === 'H' && txt[2] === 'Close' && txt.includes('Fly and fire') && txt.includes('Look at it') && txt.includes('List, then 1 to 7') && txt.includes('Arrows') && txt.includes('- ='), txt.join('|'));
 check('what a person reads is the model\'s words, nothing more', J(`scrWords(__texts(S.scrHost.root))`) === words, J(`scrWords(__texts(S.scrHost.root))`));
-check('three columns of a group each, a heading in gold; the chips are elements of the table\'s role (the cap)', J(`__find(S.scrHost.root, e => / sc-gold/.test(e._cls)).length`) === 3 && J(`__find(S.scrHost.root, e => /(^| )sc-k( |$)/.test(e._cls)).length`) === 1 + 15);
+check('three columns of a group each, a heading in gold; the chips are elements of the table\'s role (the cap)', J(`__find(S.scrHost.root, e => / sc-gold/.test(e._cls)).length`) === 3 && J(`__find(S.scrHost.root, e => /(^| )sc-k( |$)/.test(e._cls)).length`) === 1 + 16);
 check('nothing is focusable and nothing takes a click: only div, span and body were made, no handler on the page', J('__tags.every(t => ["div", "span", "body"].indexOf(t) >= 0)') && J(`__find(S.scrHost.root, e => Object.keys(e.listeners).length).length`) === 0, J('[...new Set(__tags)]').join());
 check('a second open while it is open does nothing; every key is the page\'s; H closes it: the panel is off the page, the veil destroyed, the host dropped', J('campKeysOpen(S)') === false && J(`campKeysKey(S, 'KeyQ')`) === true && J('campKeysIsOpen(S)') === true && J(`campKeysKey(S, 'KeyH')`) === true && J('campKeysIsOpen(S)') === false && J('__veils[0].destroyed') === true && J('document.body.children.length') === 0 && J('S.scrHost') === null);
 g.run(`window.S = __keysScene(); campKeysOpen(S);`);

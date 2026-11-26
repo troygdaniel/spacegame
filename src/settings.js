@@ -470,6 +470,7 @@ class Settings extends Phaser.Scene {
   }
   fillToggle() { // the flight takes the window's shape, or the game is 1280 by 720 with its bands: kept in this browser; the flight follows at its next frame (fillSync)
     const on = fillSet(!fillOn());
+    if (this.scr) { this.say(uiText(on ? 'fill.set.said.on' : 'fill.set.said.off'), on ? '#6dff9c' : '#ffd37a'); return scrSetPaint(this, true); } // the new look draws the row itself (src/scrsettings.js scrSetContent)
     this.slots.fillOn.set(uiText(on ? 'fill.set.on' : 'fill.set.off')).mark(on); this.slots.fillOn.edge = on ? GREEN : CYAN; this.slots.fillOn.draw(false);
     this.say(uiText(on ? 'fill.set.said.on' : 'fill.set.said.off'), on ? '#6dff9c' : '#ffd37a');
   }
