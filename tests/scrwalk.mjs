@@ -146,6 +146,26 @@ g.run(`__far();`);
 check('with the mission mark off the map (zoomed in on a moment far from it) the label is left out, not stuck to the edge; the places in sight keep their names', J(`__tx.some(t => /^MISSION/.test(t))`) === false && J('__tx.some(t => /^ZOOM/.test(t))'));
 g.run(`S.bf.one = false; __far(); S.bf.one = true;`);
 check('the old briefing keeps its label whatever the view (the fix is the one page\'s only)', J(`__tx.some(t => /^MISSION/.test(t))`));
+// the mission mark's ring (card space-game-batch-922-small-fixes: with the map zoomed in on a moment, the amber ring of the mission's place floated above the frame): drawn as arcs cut to the glass, never a whole circle
+g.run(`
+  window.__gr = { color: null, circles: 0, arcs: [] };
+  const GR = new Proxy({}, { get: (t, k) => {
+    if (k === 'then') return undefined;
+    if (k === 'lineStyle') return (w, c) => { __gr.color = c; return GR; };
+    if (k === 'strokeCircle') return () => { if (__gr.color === 0xe9b872) __gr.circles++; return GR; };
+    if (k === 'beginPath') return () => { __gr.cur = []; return GR; };
+    if (k === 'moveTo' || k === 'lineTo') return (x, y) => { (__gr.cur || (__gr.cur = [])).push([x, y]); return GR; };
+    if (k === 'strokePath') return () => { if (__gr.color === 0xe9b872 && __gr.cur) __gr.arcs.push(__gr.cur); __gr.cur = null; return GR; };
+    return () => GR;
+  } });
+  const addBase = __stand2; window.__stand3 = extra => { const sc = addBase(extra); const add0 = sc.add; sc.add = new Proxy({}, { get: (t, k) => k === 'graphics' ? () => GR : add0[k] }); return sc; };
+  campBriefPaintMap = __paint0;
+  window.__ring = far => { window.S = __stand3({ P: PR, hub: HB }); campBriefOpen(S); __gr.circles = 0; __gr.arcs = []; if (far) { const bf = S.bf; bf.fit = { s: bf.base.s * 2.4, cx: bf.Y.focus.x + 60000, cy: bf.Y.focus.y + 60000 }; bf.z = 2.4; } campBriefPaintMap(S); return { circles: __gr.circles, arcs: __gr.arcs.length, inside: __gr.arcs.every(a => a.every(p => p[0] >= S.bf.frame.x - 0.5 && p[0] <= S.bf.frame.x + S.bf.frame.w + 0.5 && p[1] >= S.bf.frame.y - 0.5 && p[1] <= S.bf.frame.y + S.bf.frame.h + 0.5)) }; };
+  __fresh(); PR.level = 3; PR.mission = 2; HB = campHubNew(PR, {}); HB.pick = { level: 1, i: 0 };
+`);
+const rw = J(`__ring(false)`), rf = J(`__ring(true)`);
+check('the one page\'s mission ring is arcs cut to the glass, not a whole circle: on the whole route it is there (' + rw.arcs + ' arcs, every point inside the frame) and no whole circle is drawn', rw.circles === 0 && rw.arcs >= 1 && rw.inside === true, JSON.stringify(rw));
+check('zoomed in on a far moment (the mission mark off the map) no amber ring is drawn at all: none floats above the frame', rf.circles === 0 && rf.arcs === 0, JSON.stringify(rf));
 g.run(`campBriefPaintMap = (s => { __paints++; }); mapPlace = __mp0;`);
 
 console.log('E. the old briefing and the switch off');
