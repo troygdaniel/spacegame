@@ -149,6 +149,16 @@ const CAMP_SCREEN_KEYS = {
   buy: { k: 'F', codes: ['KeyF'], on: ['refit'], src: ['src/camphub.js'] },                                                                                                                   // the refit: buy the choice
   giveback: { k: 'Backspace', codes: ['Backspace'], on: ['refit'], src: ['src/camphub.js'] },                                                                                                 // the refit: give the last thing back
   zoomin: { same: 'zoomin', on: ['brief'], src: ['src/campzoom.js'] }, zoomout: { same: 'zoomout', on: ['brief'], src: ['src/campzoom.js'] }, zoomreset: { same: 'zoomreset', on: ['brief'], src: ['src/campzoom.js'] }, // the briefing map's zoom
+  // piece a (cards in the Campaign scene, card space-game-screens-a-cards): the digit of a technology's tile and of the fighter on the Earth refit (1 2 3, 4 buys a fighter, 6 7 8 the looted techs) and the tech pick (1 to 6), and the keys the lost card's tip names
+  d1: { k: '1', codes: ['Digit1'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d2: { k: '2', codes: ['Digit2'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d3: { k: '3', codes: ['Digit3'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d4: { k: '4', codes: ['Digit4'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d5: { k: '5', codes: ['Digit5'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d6: { k: '6', codes: ['Digit6'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d7: { k: '7', codes: ['Digit7'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  d8: { k: '8', codes: ['Digit8'], on: ['earthrefit', 'tech'], src: ['src/campaignscene.js'] },
+  tipfriendlies: { same: 'friendlies', on: ['lost'], src: ['src/camptcorner.js'] }, tiporder: { same: 'order', on: ['lost'], src: ['src/campaignscene.js'] }, tipnear: { same: 'near', on: ['lost'], src: ['src/camppanel.js'] }, tipmissile: { same: 'missile', on: ['lost'], src: ['src/campaignscene.js'] },
   door: { k: 'Arrows', codes: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], on: ['title'], src: ['src/title.js'] }                                                                           // the title: move the light to the other door (Enter does the lit one: the Campaign at first on the new title, Troy, 25 Nov 2026; Long Haul on today's)
 };
 const CAMP_VOICEROW = { t: 'Hold to speak (needs a chat key)', sub: 'THE STRIP', voice: 1 }; // the H page's row for the voice: on the page only while the voice has a key (campVoiceSet)

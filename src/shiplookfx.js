@@ -36,8 +36,9 @@ function slookShotKey(b) { // the texture a shot takes while the switch is on, n
 const slookTrailTone = side => side === 'friend' ? 'friend' : side === 'protect' ? 'protect' : side === 'neutral' ? 'neutral' : 'foe'; // the glow's colour family: the hostile and the aliens' engines are pink, a neutral's grey-blue
 function slookTrailSpec(u, dw, side) { // the one trail of a ship that moves, or null: { key, x, y, rot, len, wid, alpha }; u: the unit (x, y, rot, vx, vy, vmax, kind), dw: the ship's drawn length in the world (its sprite's displayWidth)
   const T = SLOOKFX.trail; if (!u || !(u.hp > 0) || !(dw > 0)) return null;
+  const k = SLOOK.K[u.kind]; if (k && k.still) return null; // a tower is still (the mock marks it): it has no engine trail, whatever its velocity says
   const sp = Math.hypot(u.vx || 0, u.vy || 0); if (!(sp >= T.min)) return null;
-  const k = SLOOK.K[u.kind], px = k && k.px > 0 ? k.px : T.big + 1, f = Math.min(1, T.speedK + (1 - T.speedK) * sp / Math.max(u.vmax || 0, sp)); // (the mothership and the towers have no play size: they are big ships)
+  const px = k && k.px > 0 ? k.px : T.big + 1, f = Math.min(1, T.speedK + (1 - T.speedK) * sp / Math.max(u.vmax || 0, sp)); // (a kind with no play size is a big ship)
   const len = dw * (px > T.big ? T.short : T.long) * f, c = Math.cos(u.rot || 0), s = Math.sin(u.rot || 0);
   return { key: T.key + slookTrailTone(side), x: u.x - c * dw * T.start, y: u.y - s * dw * T.start, rot: u.rot || 0, len, wid: dw * T.head * 2, alpha: T.alpha };
 }
