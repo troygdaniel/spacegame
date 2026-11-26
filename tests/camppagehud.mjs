@@ -363,6 +363,24 @@ const cssK = src('src/camppagehud.css'), pjK = src('src/camppagehud.js').split('
 check('K the words and the caps are not written in the HUD code (the key table and the text keys), and the style is plain: dim, no image, no web font', !/['"](Arrows|Space|Fly|Fire|Missile)['"]/.test(pjK) && /\.ph-first \{[^}]*opacity: \.72/.test(cssK) && !/url\(|@font-face/.test(cssK) && /camp\.corner\.chip\.fly\b/.test(src('content/text/campcorner.md')) && /camp\.corner\.chip\.missile\b/.test(src('src/contenttables.js')));
 g.run(`CAMP.flags.pagehud = false;`);
 
+console.log('K3. the Boost row: no amber while locked (card space-game-boost-row-locked-colour; Troy\'s rule, ship look decision 4: amber only for a ship you protect)');
+g.run(`CAMP.flags.pagehud = true; __m(1, 0, 1000); C.boost = campBoostNew(); window.SB = __scene(); window.__ms = 0; window.__bs = () => { campPageHudSync(SB, (__ms += 500)); const B = SB.pageHud.ship.boost; return { row: B.el._cls, fill: B.fill._cls, pct: B.pct._text, w: B.fill.style.width }; };`);
+const bs = () => J('__bs()');
+let r = bs();
+check('K3 a full store: the row is plain, the fill white (full), no number and no word', r.row === 'ph-row ph-boostrow' && r.fill === 'ph-fill ph-boost full' && r.pct === '', JSON.stringify(r));
+g.run(`C.boost.en = 60; C.boost.on = false; C.boost.locked = false;`); r = bs();
+check('K3 part of the store: plain pale blue and the percentage', r.row === 'ph-row ph-boostrow' && r.fill === 'ph-fill ph-boost' && /^60%$/.test(r.pct), JSON.stringify(r));
+g.run(`C.boost.on = true;`); r = bs();
+check('K3 boosting: the fill is bright (on)', r.fill === 'ph-fill ph-boost on' && r.row === 'ph-row ph-boostrow', JSON.stringify(r));
+g.run(`C.boost.on = false; C.boost.en = 0; C.boost.locked = true;`); r = bs();
+check('K3 locked at 0 percent: the row is dimmed (dry), the fill is the dry one (pale blue by the CSS, never amber) and the word Recharging stands where the grey 0% was', r.row === 'ph-row ph-boostrow dry' && r.fill === 'ph-fill ph-boost dry' && r.pct === 'Recharging', JSON.stringify(r));
+g.run(`C.boost.en = 20;`); r = bs();
+check('K3 locked with a fifth back: still the word, the fill longer (20 percent wide)', r.row === 'ph-row ph-boostrow dry' && r.pct === 'Recharging' && r.w === '20%', JSON.stringify(r));
+g.run(`C.boost.en = 30; C.boost.locked = false;`); r = bs();
+check('K3 unlocked (a quarter is back): the row is plain again and the number is back', r.row === 'ph-row ph-boostrow' && r.fill === 'ph-fill ph-boost' && r.pct === '30%', JSON.stringify(r));
+g.run(`C.boost.en = 0; C.boost.locked = true; __bs(); campPageHudSync(SB, (__ms += 500)); window.__w1 = __writes; campPageHudSync(SB, (__ms += 500));`);
+check('K3 locked, the same frame again writes nothing (the word is set once, not written and overwritten each frame)', J('__writes') === J('__w1'));
+
 console.log('M. the picked target\'s details in the page hostiles panel (card space-game-page-hud-target-details)');
 g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); C.fsel = ''; C.tgt = ''; window.PM = campPanelNew(); campTcornerLook(PM, 0); window.RM = campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y + 200); campTgtNearest(C); window.SMT = __scene(); campPageHudSync(SMT, 0);`);
 const tg0 = J('campPageModel(C).foes.target');

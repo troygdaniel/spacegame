@@ -61,10 +61,10 @@ function campPageHudShips(C) {
   const L = typeof campFriNumbered === 'function' ? campFriNumbered(C) : [];
   return L.map(e => Object.assign(campPageHudRing(String(e.name || ''), e.number, e.alive ? e.hull : 0, !!e.alive, !!e.picked, !!e.alive), { id: e.id }));
 }
-// the cruiser's boost store (card space-game-cruiser-boost-flames; Troy, 26 Nov 2026): a thin third meter under Shields and Hull, the same language as the other two (a ring would be taken for a ship: the rings of this panel are the pilots and the ships you protect). Pale blue, white and bright while it boosts, amber when the store ran dry and the boost is locked
+// the cruiser's boost store (card space-game-cruiser-boost-flames; Troy, 26 Nov 2026): a thin third meter under Shields and Hull, the same language as the other two (a ring would be taken for a ship: the rings of this panel are the pilots and the ships you protect). Pale blue, white and bright while it boosts, dim pale blue with the word RECHARGING when the store ran dry and the boost is locked (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour)
 function campPageHudBoost(C) {
   const b = typeof campBoostStatus === 'function' ? campBoostStatus(C) : { frac: 1, on: false, locked: false };
-  return { frac: b.frac, pct: Math.max(0, Math.min(99, Math.floor(b.frac * 100))), show: b.frac < 1, word: uiText('camp.corner.m.boost'), on: !!b.on, locked: !!b.locked };
+  return { frac: b.frac, pct: Math.max(0, Math.min(99, Math.floor(b.frac * 100))), show: b.frac < 1, word: uiText('camp.corner.m.boost'), on: !!b.on, locked: !!b.locked, full: b.frac >= 1, pctText: b.locked ? uiText('camp.corner.m.recharging') : undefined };
 }
 function campPageModel(C, view) {
   if (!C || !C.carrier) return null;
@@ -285,7 +285,7 @@ function campPageHudMeterEl(doc, parent, id) { // a meter with its word and its 
   const m = campPageHudEl(doc, 'div', 'ph-m', parent), head = campPageHudEl(doc, 'span', 'ph-lab ph-mh', m), word = campPageHudEl(doc, 'span', '', head), pct = campPageHudEl(doc, 'b', '', head), track = campPageHudEl(doc, 'div', 'ph-meter', m), fill = campPageHudEl(doc, 'i', 'ph-fill ph-' + id, track);
   return { el: m, word, pct, fill };
 }
-function campPageHudPaintMeter(Me, b) { const set = campPageHudSet; set(Me.fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(Me.word, 'text', b.word); set(Me.pct, 'text', b.show ? b.pct + '%' : ''); }
+function campPageHudPaintMeter(Me, b) { const set = campPageHudSet; set(Me.fill, 'width', Math.round(b.frac * 1000) / 10 + '%'); set(Me.word, 'text', b.word); set(Me.pct, 'text', typeof b.pctText === 'string' ? b.pctText : b.show ? b.pct + '%' : ''); } // (pctText: the text the model gives in place of the percentage: the Boost row's word while it is locked)
 function campPageHudBuild(doc) {
   // the left panel, option D of docs/hud-mock-2.html (card space-game-page-hud-3): two thin rows: the Q chip with Shields and Hull; then the W chip with a small ring for each pilot, a divider, the E chip with a small ring for each ship you protect
   const root = campPageHudEl(doc, 'div', 'ph-root'), ship = campPageHudEl(doc, 'div', 'ph-p ph-ship', root), R = { root, ship: { el: ship } };
@@ -403,7 +403,7 @@ function campPageHudPaint(R, M, doc) {
   T.pips.forEach((p, i) => { const b = i === k.missiles.n && k.missiles.building, q = !b && i >= q0 && i < q0 + k.missiles.queued; set(p, 'cls', 'ph-pip' + (i < k.missiles.n ? ' on' : '') + (b ? ' build' : '') + (q ? ' queued' : '')); set(p, '--p', (b ? Math.round(k.missiles.progress * 100) : 0) + '%'); }); set(T.key, 'cls', 'ph-k' + (ld ? ' ph-mint' : '')); set(T.missLab, 'cls', 'ph-lab ph-mw' + (ld ? ' ph-mint' : '')); set(T.queue, 'cls', 'ph-q' + (ld ? ' ph-mint' : '')); set(T.queue, 'text', k.missiles.queued > 0 ? '+' + k.missiles.queued : ''); set(T.queue, 'display', k.missiles.queued > 0 ? '' : 'none'); set(T.key, 'text', k.missiles.key); set(T.key, 'display', k.missiles.key ? '' : 'none'); set(T.oreLab, 'text', k.ore.word); set(T.missLab, 'text', k.missiles.word);
   set(S.key, 'text', M.ship.key);
   ['shield', 'hull'].forEach(id => campPageHudPaintMeter(S[id], M.ship[id]));
-  if (S.boost && M.ship.boost) { const b = M.ship.boost; campPageHudPaintMeter(S.boost, b); set(S.boost.fill, 'cls', 'ph-fill ph-boost' + (b.on ? ' on' : b.locked ? ' dry' : '')); } // the boost store: its fill is bright while it boosts and amber while it is locked
+  if (S.boost && M.ship.boost) { const b = M.ship.boost; campPageHudPaintMeter(S.boost, b); set(S.boost.fill, 'cls', 'ph-fill ph-boost' + (b.on ? ' on' : b.locked ? ' dry' : b.full ? ' full' : '')); set(S.boost.el, 'cls', 'ph-row ph-boostrow' + (b.locked ? ' dry' : '')); } // the boost store: its fill is bright white while it boosts and when it is full, and while it is locked the whole row is dim, the fill the player's pale blue at low strength and the word RECHARGING where the percentage goes (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour)
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);
   campPageHudPaintRings(doc, F2.pBox, F2.pilots, M.pilots); campPageHudPaintRings(doc, F2.sBox, F2.ships, M.friends); campPageHudPaintEnter(F2.ent, M.friends.enter);
 }

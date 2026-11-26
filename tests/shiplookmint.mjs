@@ -61,5 +61,13 @@ const unknown = [...found].filter(k => !(k in KNOWN)), gone = Object.keys(KNOWN)
 check('6 every amber of the files that draw ships, their marks and their fire is on the list with its reason: no new amber that is not a ship you protect has crept in', unknown.length === 0, 'not on the list: ' + unknown.join(' '));
 check('7 and the list has nothing that is not there any more (an amber that was removed leaves the list too, so it stays true)', gone.length === 0, 'gone: ' + gone.join(' '));
 
+// the page HUD's Boost row (card space-game-boost-row-locked-colour; Troy's rule, ship look decision 4): the row was amber while the boost was locked, and amber is only for a ship you protect. The row's CSS (the rules of .ph-boost and .ph-boostrow in src/camppagehud.css) may hold no amber-ish colour and none of the HUD's amber variables (--ph-warn, --ph-ore).
+console.log('C. the Boost row of the page HUD holds no amber');
+const css = src('src/camppagehud.css'), rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].map(m => ({ sel: m[1].replace(/\/\*.*?\*\//gs, '').trim(), body: m[2].replace(/\/\*.*?\*\//gs, '') })).filter(r => /ph-boost/.test(r.sel));
+const amberIn = body => [...body.matchAll(/#([0-9a-fA-F]{6})\b/g)].map(m => m[1]).filter(h => { const c = hsv(h.toLowerCase()); return c.h >= 28 && c.h <= 52 && c.s > 0.5 && c.v > 0.65; }).concat([...body.matchAll(/var\(--ph-(warn|ore)\)/g)].map(m => m[0]));
+const bad = rules.flatMap(r => amberIn(r.body).map(x => r.sel + ' ' + x));
+check('8 the Boost row\'s rules (' + rules.length + ' of them: the row, the fill, on, full, dry) hold no amber colour and no var(--ph-warn) or var(--ph-ore): locked is a dim pale blue, not the colour of a ship you protect', rules.length >= 5 && bad.length === 0, bad.join(' | '));
+check('9 locked is the player\'s pale blue (#cfe6ff) at low strength', rules.some(r => /\.dry/.test(r.sel) && /ph-fill/.test(r.sel) && /background: #cfe6ff/.test(r.body) && /opacity: \.[1-6]\b/.test(r.body)));
+
 console.log(failed ? `\n${failed} of ${n} FAILED` : `\nall ${n} checks passed`);
 process.exit(failed ? 1 : 0);
