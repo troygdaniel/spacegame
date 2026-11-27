@@ -161,7 +161,7 @@ class Campaign extends Phaser.Scene {
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
   syncFar(time) {
     if (!this.farObjs || time < this.farAt) return; this.farAt = time + 250;
-    const pl = campPlaces(this.level), c = this.camp.carrier, near = CAMP.world.draw;
+    const pl = campPlaces(this.level), c = campEye(this.camp), near = CAMP.world.draw; // (the far bodies come when the ship he flies comes near)
     Object.keys(pl).forEach(id => {
       const p = pl[id]; if (!p.far || p.hidden) return;
       const d = Math.hypot(p.x - c.x, p.y - c.y) - (p.r || 60) * (p.kind === 'star' ? 3 : 1), on = this.farObjs[id];
@@ -430,7 +430,7 @@ class Campaign extends Phaser.Scene {
   }
   wingShot(e) { // a fighter's shot: a quieter, farther pew, softer the farther the ship is from the carrier (CAMP_SND.far px and it is gone), at most one in CAMP_SND.wing ms
     if (this.camp.cockpit && this.camp.cockpit.id === e.id) return this.cockpitShot(e); // the player's own gun has its own sound and flash
-    const c = this.camp.carrier, near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
+    const c = campEye(this.camp), near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
   }
   battleSound(kind, name, arg) { // one of the battle's sounds, no more often than CAMP_SND[kind] ms of the battle's clock
     if (!Object.prototype.hasOwnProperty.call(this, 'sndAt')) this.sndAt = {};
@@ -523,7 +523,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
     else if (e.type === 'boom') { if (!(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
-    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e))) this.boom.explode(3, e.x, e.y); }
+    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id || e.id === campEye(this.camp).id) { if (e.id === campEye(this.camp).id) this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e))) this.boom.explode(3, e.x, e.y); } // (a hit on the ship he flies shakes the view; a hit on the cruiser he left still blinks it and sounds, so he knows)
     else if (e.type === 'earthhit') { this.boom.explode(6, e.x, e.y); this.battleSound('earth', 'earthHit'); }
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }

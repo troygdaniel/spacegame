@@ -88,8 +88,9 @@ function scrSetFlight() {
 }
 function scrSetContent() {
   const errs = typeof CONTENT_ERRORS !== 'undefined' ? CONTENT_ERRORS : [], n = errs.length, modded = typeof CONTENT_STATE !== 'undefined' && !!CONTENT_STATE.modded;
+  const packs = modded && Array.isArray(CONTENT_STATE.packs) ? CONTENT_STATE.packs.filter(r => r && r.on && r.name).map(r => String(r.name)) : []; // the packs laid over the core (src/mods.js): the old tab said "packs on: example" and a player must still see which are on (card space-game-mods-content-packs-red)
   const rows = [
-    { label: uiText('scr.sett.c.pack'), items: [scrSP(uiText(modded ? 'scr.sett.c.modded' : 'scr.sett.c.core'), { on: true }), n ? scrST(uiText(n === 1 ? 'scr.sett.c.one' : 'scr.sett.c.many', { n }), { cls: 'sm', amber: true }) : { t: 'ok', text: uiText('scr.sett.c.ok') }] }
+    { label: uiText('scr.sett.c.pack'), items: [scrSP(uiText(modded ? 'scr.sett.c.modded' : 'scr.sett.c.core'), { on: true }), packs.length ? scrST(packs.join(', '), { cls: 'sm' }) : null, n ? scrST(uiText(n === 1 ? 'scr.sett.c.one' : 'scr.sett.c.many', { n }), { cls: 'sm', amber: true }) : { t: 'ok', text: uiText('scr.sett.c.ok') }].filter(Boolean) }
   ];
   errs.slice(0, SCRSET.problems).forEach(e => rows.push({ items: [scrST(typeof contentLine === 'function' ? contentLine(e) : String(e && e.message || e), { cls: 'sm', dim: true })] }));
   return rows.filter(Boolean);
