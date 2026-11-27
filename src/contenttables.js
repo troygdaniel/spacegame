@@ -1328,6 +1328,8 @@ const UI_TEXT = {
   'camp.corner.orderline.me': 'me',
   'camp.corner.enter.doit': 'Do it',
   'camp.corner.enter.mine': 'Mine',
+  'camp.corner.enter.escort': 'Escort',
+  'camp.corner.orderline.wing': 'Wing',
   'camp.tdisp.type.field': 'Rock field',
   'camp.corner.qrow.goal': 'Goal',
   'camp.corner.qrow.target': 'Target',
