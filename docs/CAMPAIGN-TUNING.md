@@ -427,6 +427,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
 
+## Hostile fighters break when the fighter you fly is on their tail (card `space-game-chunk6-enemy-break`; Troy, 26 Nov 2026, brief 8 proposal A, first behaviour only; base main `654702eb`)
+**The rule** (`src/campbreak.js`, the table `CAMP.break`): a skiff, cutter, raider or drone (not a torpedo boat, a gunship, a brute, a tower) with **the fighter the player flies** within **300 px**, dead astern of it (within 0.9 rad) and with its nose on it (within 0.7 rad) turns hard across the chaser's nose: for **0.7 s** it heads at a right angle off the line from the chaser to it, turning at 1.6 times its own rate, and does not fire; then it steers as before and cannot break again for **3 s** (no jitter). Steering only: no hit points, damage or speed. **Which fighter:** only the one the player flies (`C.cockpit`), not "any of the player's fighters": the wing's fighters already have their own dogfight moves (`CAMP.dog`: break, flip, jink) and the flown fighter is the one that is excluded from them and was flown straight at. No pair and no extend (the later chunks).
+
+**12 seeds, the cockpit sweep, steady skill, every mission** (`node tools/campaign-bot.mjs --cockpit --seeds 12 --skills steady`; old = main `654702eb`, new = the break; won percent, win time in s, the cruiser's damage; the plain and sit bots do not fly a fighter, so they only change where the idle fighter happens to be on a tail: in 3.1):
+
+| mission | ace won | ace time | ace damage taken (old to new) | the fighter's kills a run | the fighter shot down | plain (damage) |
+|---|---|---|---|---|---|---|
+| 1.1 | 100 to 100 | 306 to 306 | 222 to **197** | 4 to 5 | 0 to 0 | 202 to 202 |
+| 1.2 | 92 to 92 | 273 to 271 | 21 to **12** | 5 to 4 | 0 to 0 | 42 to 42 |
+| 1.3 | 100 to 100 | 292 to 292 | 56 to **24** | 4 to 4 | 0 to 0 | 53 to 53 |
+| 2.1 | 100 to 100 | 32 to 32 | 6 to 6 | 1 to 1 | 0 to 0 | 0 to 0 |
+| 2.2 | 100 to 100 | 74 to 73 | 104 to **93** | 2 to 2 | 0 to 0 | 161 to 161 |
+| 2.3 | 100 to 100 | 77 to 77 | 97 to 97 | 2 to 2 | 0 to 0 | 252 to 252 |
+| 3.1 | 100 to 100 | 72 to 74 | 0 to 0 | 2 to 2 | 0 to 0 | 19 to 19 |
+| 3.2 | 100 to 100 | 44 to 44 | 54 to 54 | 0 to 0 | 0 to 0 | 162 to 162 |
+| 3.3 | 100 to 100 | 59 to 59 | 407 to 400 | 0 to 0 | 0 to 0 | 407 to 407 |
+
+**What it says:** nothing is won faster or lost more; the cruiser's win rate with the cruiser bots is **identical** to the last digit (nobody flies a fighter, nothing breaks). With a fighter out the cruiser takes **less** damage in the three level 1 missions (1.1: 11 percent less, 1.2: 43, 1.3: 57), because the hostile fighters that peel off the chaser spend those 0.7 s not shooting at the cruiser or what it guards; kills are the same (4 to 5, 5 to 4, 4 to 4) and the fighter is never shot down (the bot flies a Wren-fast fighter; a human may differ). That is the damage rule of `docs/night/cockpit-sweep.md` pushed a step further in the wrong direction for level 1 (the flown fighter makes the cruiser's fight easier): a number for Troy to weigh with the other chunks, not a bug of this one (a shorter break, `ms` 700, or a longer cool-down, `cool` 3000, is one number each).
+
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
 
@@ -644,6 +663,31 @@ Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the firs
 - Both are live rows of the group "The flown fighter (C)" on the N panel (`cockpitrate`, `cockpitdamage`, step 0.25). `CAMP.fighter` (the pilots' own guns: 8 damage, 450 to 650 ms, 700 px/s, 420 range) is untouched: the AI pilots fire as before.
 - **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
 - Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
+
+## Mission 2.2: the called groups and the patrols go for the cruiser (card `space-game-chunk16-22-fighter-gap`; ORCH, 26 Nov 2026 night: option 2; base `654702eb`)
+
+**Why.** In 2.2 the flown-fighter (ace) bot took 31 to 49 per cent less cruiser damage than the plain bot (rule: 30). I measured where it comes from (12 seeds, rough, damage by phase, plain against ace): before the fourth guard 31 against 13, after the reinforcements 24 against 9, after the sixth 122 against 78: lower in every phase, so it is not when the groups arrive (a clock floor would move it by about 5 s: the ace's first group comes at about 19 s, plain's at about 24 s) but the fighter's own gun, and a fighter that flies past or hits a group draws it off the cruiser.
+
+**What changed** (`src/campaign.js`): a wave row's or a hunt's `focus: 'carrier'` (campAlienAI): the aliens of a group so marked go for the cruiser and are not drawn off by a ship of yours that flies by or hits them. On the three wave rows and the patrol of 2.2 only (the guards, and every other mission, are as they were). No hit-point, damage, ship or timing change.
+
+**The numbers** (12 seeds; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| skill | bot | before (`654702eb`) | after |
+|---|---|---|---|
+| steady | plain | 74 / 161 | 74 / 182 |
+| steady | carrier | 88 / 193 | 88 / 193 |
+| steady | ace | 74 / 104 | 71 / 127 |
+| steady | sit | 75 / 182 | 74 / 198 |
+| rough | plain | 75 / 165 | 73 / 170 |
+| rough | carrier | 86 / 208 | 86 / 208 |
+| rough | ace | 65 / 81 | 63 / 93 |
+| rough | sit | 81 / 164 | 74 / 173 |
+
+- Ace against plain, damage: steady 35 per cent less before, **30 per cent after** (127 against 182); rough 51 per cent less before, **45 per cent after** (93 against 170). The rule (docs/night/cockpit-sweep.md) is 30. Time: ace 0 to 4 per cent faster at steady (rule 15), 14 per cent at rough (63 against 73).
+- **Not closed:** at rough the ace still takes 45 per cent less. The rest is the flown fighter's own gun (the same 12 seeds with the guards also going for the cruiser: 182 against 114, 37 per cent less): the fighter is better in 2.2, as intended; for Troy to judge in play.
+- The wing's pilots under the cruiser's orders do not change (carrier and the plain bot keep their numbers within noise).
+
+**Pins.** `tests/camplevel2calls.mjs` (22 checks): the rows carry the flag, and a raider with a fighter on its far side that has just hit it still flies at the cruiser while the same raider without the flag is drawn onto the fighter.
 
 ## Level 3 comes on what the player does (card `space-game-b7-level3`; brief 7 decisions 1, 3, 5 and 6; Troy said yes to all of it on 26 Nov 2026)
 Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK` 0.5, `hpK` 2, turrets 'auto'); old tables from main just before the card (`e0bee48d`, the level 3 sim identical), new from the card's branch. Every number of the waves is a first try, measured with the bots: 32 seeds a mission, skill steady, pace Brisk; `node tools/campaign-bot.mjs --level 3 --seeds 32 --bots idle,carrier,plain,troy --json` for the cruiser bots, `--max 900` for the idle ones, `--cockpit --level 3` for the fighter bots.

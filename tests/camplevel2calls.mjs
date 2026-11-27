@@ -76,6 +76,14 @@ check('2.2: with no guard dead nothing comes for 39 s; at 40 s a patrol of 2 dro
 check('a guard killed starts the 40 s again (the second patrol is not there 20 s after the kill, and is, two ships larger, 41 s after it); a patrol does not count as a dead guard', h2.restarted === 0 && h2.second === 5 && h2.started === '000', JSON.stringify(h2));
 check('the patrols must be dead to win, and none comes once the guards are all dead', h2.withPatrol === null && h2.noneAfterGuards === true && h2.end === 'won', JSON.stringify(h2));
 
+// ---- the called groups and the patrols go for the cruiser (card space-game-chunk16-22-fighter-gap, Troy: yes) ----
+// a wave row's or a hunt's `focus: 'carrier'` (campAlienAI): a ship of yours that flies by, or hits it, does not draw it off: a flown fighter used to drag 2.2's groups away from the cruiser
+const fo = J(`(() => { const C = T.make(1, 5); T.park(C); const car = C.carrier, f = C.ships.find(u => u.team === 'earth' && u.kind === 'fighter'); const P = campMissionPlace(C); car.x = P.x - 3000; car.y = P.y; car.vx = 0; car.vy = 0;
+  const run = focus => { const a = campSpawn(C, 'raider', car.x + 1500, car.y); a.goal = 'carrier'; a.focus = focus; a.hold = false; f.x = a.x + 250; f.y = a.y + 80; f.vx = 0; f.vy = 0; a.hitBy = f.id; a.distractedUntil = C.t + 8000; const d0 = campDist(a, car); for (let i = 0; i < 90; i++) { f.x = a.x + 250; f.y = a.y + 80; f.vx = 0; f.vy = 0; campStep(C, 1 / 30); } const d1 = campDist(a, car); a.hp = 0; campStep(C, 1 / 30); return Math.round(d0 - d1); };
+  return { rows: C.L.waves.every(w => w.focus === 'carrier') && C.L.hunt.focus === 'carrier', free: run(null), focus: run('carrier') }; })()`);
+check('2.2: every wave row and the patrol carry focus: carrier', fo.rows === true, JSON.stringify(fo));
+check('a raider with a fighter of yours 250 px away on the far side (away from the cruiser) that has just hit it still flies at the cruiser (closes at least 250 px in 3 s); the same raider without the flag is drawn onto the fighter (closes less than half of that)', fo.focus >= 250 && fo.free < fo.focus / 2, JSON.stringify(fo));
+
 // ---- the triggers themselves ----
 const tr = J(`(() => { const C = T.make(1, 2), D = T.make(0, 2); return { g0: campWaveOn(C, { guardsDead: 0 }), g1: campWaveOn(C, { guardsDead: 1 }), c0: campWaveOn(D, { caches: 0 }), c1: campWaveOn(D, { caches: 1 }), none: campWaveOn(D, { guardsDead: 1 }) }; })()`);
 check('the triggers: no guard dead and no cache taken at the start; a mission with no guards never fires the guards\' one', tr.g1 === false && tr.c0 === true && tr.c1 === false && tr.none === false, JSON.stringify(tr));
