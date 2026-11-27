@@ -725,3 +725,22 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 **Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
+
+## 3.2: a tower tracking the fighter you fly cannot fire at the cruiser (card `space-game-fighter-job-32`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base main `a3fe84f1`)
+
+**The rule** (`campTowerAI`): a tower that has the fighter the player flies inside its range (800 px) turns on it even when the cruiser is nearer; with no fighter flown, or the fighter out of range, it turns on the nearest of your ships as it always did. So while a tower tracks the fighter every shot it fires goes at the fighter, none at the cruiser: the fighter is a decoy that draws the guns of the towers it can reach, which gives the player a job for it that the cruiser's guns do not do.
+
+**The numbers** (12 seeds; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| mission, skill | bot | before | after |
+|---|---|---|---|
+| 3.2 steady | plain / carrier / ace / sit | 59 / 230, 72 / 403, 60 / 144, 62 / 249 | 59 / 230, 72 / 403, 60 / 151, 62 / 249 |
+| 3.2 rough | plain / carrier / ace / sit | 59 / 270, 72 / 443, 44 / 130, 60 / 277 | 59 / 270, 72 / 443, 44 / 126, 60 / 277 |
+| 3.3 steady | plain / carrier / ace / sit | 70 / 461, 76 / 569, 73 / 450, 77 / 536 | 70 / 461, 76 / 569, 73 / 421, 77 / 536 |
+| 3.3 rough | plain / carrier / ace / sit | 68 / 410, 76 / 504, 68 / 378, 76 / 522 | 68 / 410, 76 / 504, 68 / 403, 76 / 522 |
+
+The bots' fighter flies beside the cruiser, so the rule is noise to them (the other bots are identical). It matters when the player flies the fighter away from the cruiser.
+
+**"Hits the fighter about one pass in three": not tuned, no number changed.** A pass is the fighter inside a tower's range, in to out. Measured, towers only: a straight flyby at 480 or 800 px/s took 0 hits in 80 passes (the gun aims where the fighter is, not ahead); aiming ahead by 0.7 of the lead and firing twice as fast gave 17 per cent, at four times the rate 18 per cent. The ace bot, which hovers and strafes inside the range, took a tower hit in 71 per cent of its passes in 3.2 and 63 per cent in 3.3. One in three lies between the two and depends on how a human strafes; Brief 7 decision 5 (turn times 1.5, shot times 1.3) is in as it was.
+
+**Pins.** `tests/campfightertower.mjs` (5 checks: with no fighter flown the tower faces the nearer cruiser; with the fighter flown 600 px away it faces the fighter and every shot goes at it; the fighter out of range (900 px) is not the target; the stick given back is not either).

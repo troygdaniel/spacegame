@@ -1570,8 +1570,8 @@ function campConvoyAI(C, u, dt) {
 }
 
 // an alien: goes for its goal (Earth, or a convoy), turns on whatever hits it for a few seconds, else on the nearest ship of yours that comes close
-function campTowerAI(C, u, dt) { // a gun on a post: turns on the nearest of your ships inside its range and fires
-  const k = CAMP.tower, tgt = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, k.range); if (!tgt) return;
+function campTowerAI(C, u, dt) { // a gun on a post: turns on the nearest of your ships inside its range and fires; the fighter the player flies, when it is inside the range, is the one it turns on, whatever is nearer (card space-game-fighter-job-32, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes): a tower tracking it cannot fire at the cruiser
+  const k = CAMP.tower, fl = typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null, tgt = fl && campDist(fl, u) <= k.range ? fl : campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, k.range); if (!tgt) return;
   const aim = Math.atan2(tgt.y - u.y, tgt.x - u.x), flown = !!C.cockpit && C.cockpit.id === tgt.id; // the ship the player flies: the gun turns and the shot flies faster (brief 7 decision 5)
   u.rot = campRot(u.rot, aim, k.turn * (flown ? k.flownTurn : 1) * dt);
   if (C.t > u.nextShot && Math.abs(campWrap(aim - u.rot)) < 0.12) { u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]); campBullet(C, u, u.rot, k.bullet * (flown ? k.flownSpeed : 1), k.damage * C.dmgS, 1900, 'alien', u.r); }
