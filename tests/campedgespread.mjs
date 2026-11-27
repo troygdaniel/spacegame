@@ -129,7 +129,7 @@ console.log('D. the calls');
 {
   check('the script is in index.html before the scene half that uses it', (() => { const h = src('index.html'), a = h.indexOf('src/campedgespread.js'), b = h.indexOf('src/campsightscene.js'); return a > 0 && b > a; })());
   check('the sight scene puts its arrows through the spread and keeps the rectangles', /fillSpread\(its, \{ keep, W, H, m: CAMP\.nav\.arrow\.margin, tri: K\.tri, gap: K\.gap \}\)/.test(src('src/campsightscene.js')) && /V\.boxes = \[\]/.test(src('src/campsightscene.js')));
-  check('the arrows carry where their ship is on the screen (tx, ty), for the turn', /tx: sx, ty: sy, n: g\.n/.test(src('src/campsight.js')) && /tx: sx, ty: sy, dist: campDist\(b, C\.carrier\)/.test(src('src/campsight.js')));
+  check('the arrows carry where their ship is on the screen (tx, ty), for the turn', /tx: sx, ty: sy, n: g\.n/.test(src('src/campsight.js')) && /tx: sx, ty: sy, dist: campDist\(b, campEye\(C\)\)/.test(src('src/campsight.js')));
   check('the keep table is not changed by it (it is the corner panels\' own: cards space-game-keys5-corners and space-game-keys6-layout): the spread reads CAMP.nav.arrow.keep as it is', /K = o\.keep \|\| \[\]/.test(src('src/campedgespread.js')));
   check('PROJECT_STATUS.md says it', /edge labels/i.test(src('PROJECT_STATUS.md')) && /space-game-edge-labels-overlap/.test(src('PROJECT_STATUS.md')));
 }

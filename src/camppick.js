@@ -24,8 +24,8 @@ const campPickKind = row => (row && row.pick) || '';
 const campPickGuarded = C => (typeof campConvoyShips === 'function' ? campConvoyShips(C) : campConvoys(C)); // the ships you protect: the convoys and the neutral miners
 const campPickHull = u => Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1)));
 const campPickByNear = (list, p) => list.slice().sort((a, b) => campDist(a, p) - campDist(b, p) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-function campPickShip(C, u, name, what) { return { id: u.id, name, what, x: u.x, y: u.y, r: u.r || 20, km: campNavKm(campDist(u, C.carrier)), hp: campPickHull(u), n: 0, rock: '' }; }
-function campPickEscorts(C) { return campPickByNear(campPickGuarded(C), C.carrier).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true })); } // charge: a ship you protect, whose row wears its health bar (card space-game-protected-health)
+function campPickShip(C, u, name, what) { return { id: u.id, name, what, x: u.x, y: u.y, r: u.r || 20, km: campNavKm(campDist(u, campEye(C))), hp: campPickHull(u), n: 0, rock: '' }; }
+function campPickEscorts(C) { return campPickByNear(campPickGuarded(C), campEye(C)).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true })); } // charge: a ship you protect, whose row wears its health bar (card space-game-protected-health)
 function campPickWards(C) { // the ships you protect that are hurt and near: the nearest first, with the ore each would cost (src/campmend.js)
   return (typeof campWardsNear === 'function' ? campWardsNear(C) : []).map(u => Object.assign(campPickShip(C, u, u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u), 'ship'), { charge: true, cost: campWardQuote(C, u).cost }));
 }
@@ -33,13 +33,13 @@ function campPickFields(C) { // the rocks that are left, a field of them by the 
   const by = {}; (C.rocks || []).forEach(r => { if (r.hp > 0) (by[r.field == null ? 0 : r.field] = by[r.field == null ? 0 : r.field] || []).push(r); });
   return campPickByNear(Object.keys(by).map(k => {
     const rs = by[k], n = rs.length, x = rs.reduce((a, r) => a + r.x, 0) / n, y = rs.reduce((a, r) => a + r.y, 0) / n, c = { x, y };
-    const near = campPickByNear(rs, C.carrier)[0], r = Math.max.apply(null, rs.map(o => campDist(o, c) + (o.r || 30)));
-    return { id: 'field-' + k, name: uiText('camp.ui.cand.field', { n: (+k | 0) + 1 }), what: 'field', x, y, r, km: campNavKm(campDist(c, C.carrier)), hp: -1, n, rock: near.id };
-  }), C.carrier);
+    const near = campPickByNear(rs, campEye(C))[0], r = Math.max.apply(null, rs.map(o => campDist(o, c) + (o.r || 30)));
+    return { id: 'field-' + k, name: uiText('camp.ui.cand.field', { n: (+k | 0) + 1 }), what: 'field', x, y, r, km: campNavKm(campDist(c, campEye(C))), hp: -1, n, rock: near.id };
+  }), campEye(C));
 }
 function campPickGuardees(C) { // the ships you protect, then the outposts of the level, nearest to the cruiser first (an outpost has no hull: hp -1): [ steps through the ships of it (src/camptarget.js campFriList)
-  const posts = typeof campOutposts === 'function' ? campOutposts(C.level).map(o => ({ id: 'place:' + o.id, name: o.name, what: 'post', x: o.x, y: o.y, r: o.r || 60, km: campNavKm(campDist(o, C.carrier)), hp: -1, n: 0, rock: '' })) : [];
-  return campPickEscorts(C).concat(campPickByNear(posts, C.carrier));
+  const posts = typeof campOutposts === 'function' ? campOutposts(C.level).map(o => ({ id: 'place:' + o.id, name: o.name, what: 'post', x: o.x, y: o.y, r: o.r || 60, km: campNavKm(campDist(o, campEye(C))), hp: -1, n: 0, rock: '' })) : [];
+  return campPickEscorts(C).concat(campPickByNear(posts, campEye(C)));
 }
 function campPickItems(C, kind) {
   if (!C || !C.carrier) return [];
@@ -80,7 +80,8 @@ function campPickShown(P, C, now) {
 function campPickFit(C, it, view) {
   if (!C || !it) return Infinity;
   const V = view || { x0: CAMP_PICK.view.left, y0: CAMP_PICK.view.top, x1: W - CAMP_PICK.view.right, y1: H - CAMP_PICK.view.bottom }, cx = W / 2, cy = H / 2;
-  const dx = it.x - C.carrier.x, dy = it.y - C.carrier.y, ex = Math.abs(dx) + (it.r || 0), ey = Math.abs(dy) + (it.r || 0);
+  const eye = campEye(C), dx = it.x - eye.x, dy = it.y - eye.y, // (the middle of the view is the ship he flies)
+     ex = Math.abs(dx) + (it.r || 0), ey = Math.abs(dy) + (it.r || 0);
   const roomX = dx < 0 ? cx - V.x0 : V.x1 - cx, roomY = dy < 0 ? cy - V.y0 : V.y1 - cy; // the room between the middle and the edge of the view on the side the candidate is on
   const zx = ex > 0 ? Math.max(0.001, roomX) / ex : Infinity, zy = ey > 0 ? Math.max(0.001, roomY) / ey : Infinity;
   return Math.min(zx, zy);
