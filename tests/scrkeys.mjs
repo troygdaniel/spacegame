@@ -20,11 +20,12 @@ g.run(`CAMP.flags.screens = true;`);
 console.log('A. the model');
 const M = J('scrKeysModel()');
 check('three groups, in the mock\'s order: Fly and fire, Fleet, Cruiser', M.groups.map(x => x.title).join('|') === 'Fly and fire|Fleet|Cruiser' && M.groups.map(x => x.id).join() === 'fly,fleet,cruiser');
-check('five, six and four rows', M.groups.map(x => x.rows.length).join() === '5,6,5'); // (the cruiser's group has the boost row: card space-game-batch-922-small-fixes)
+check('six, six and four rows', M.groups.map(x => x.rows.length).join() === '6,6,4'); // (Shift, the boost, moved from the Cruiser group to Fly and fire: card space-game-chunk1-c-on-key-row; it was five, six and five)
 const rows = x => x.rows.map(r => r.chips.map(c => c.k).join(' ') + '=' + r.t);
-check('Fly and fire: Arrows Fly, Space Turrets, Z Missile, R Build a missile, - = Zoom', rows(M.groups[0]).join('|') === 'Arrows=Fly|Space=Turrets|Z=Missile|R=Build a missile|- ==Zoom', rows(M.groups[0]).join('|'));
+check('Fly and fire: Arrows Fly, Space Fire (the bottom key row says Fire too: it said Turrets here), Shift Boost, Z Missile, R Build a missile, - = Zoom, in the key row\'s order', rows(M.groups[0]).join('|') === 'Arrows=Fly|Space=Fire|Shift=Boost|Z=Missile|R=Build a missile|- ==Zoom' && J("uiText('camp.corner.chip.fire')") === 'Fire', rows(M.groups[0]).join('|'));
 check('Fleet: W, E, ], \\, Enter and F, with the mock\'s words', rows(M.groups[1]).join('|') === 'W=Who, then 1 to 4|E=Friendly, then a digit|]=Next enemy|\\=Nearest threat|Enter=Attack, guard or form up|F=Look at it', rows(M.groups[1]).join('|'));
-check('Cruiser: the list key, Tab, Esc, N and Shift (the boost)', rows(M.groups[2]).join('|') === 'Q=List, then 1 to 7|Tab=Map: Enter flies the cruiser|Esc=Back, then pause|N=Tuning|Shift=Boost', rows(M.groups[2]).join('|'));
+check('Cruiser: the list key, Tab, Esc and N (Shift, the boost, is under Fly and fire now)', rows(M.groups[2]).join('|') === 'Q=List, then 1 to 7|Tab=Map: Enter flies the cruiser|Esc=Back, then pause|N=Tuning', rows(M.groups[2]).join('|'));
+check('C, take a pilot\'s stick, is on the page and on the bottom key row only with the cockpit switch on (the page and the row are unchanged without it)', (() => { const has = () => J("scrKeysModel().groups.some(x => x.rows.some(r => r.chips.some(c => c.k === 'C')))"), row = () => J("(() => { const C = campNew(1, [], { seed: 1, mission: 0 }); const f = campPageHudFirst(C); return !!f && f.items.some(i => i.id === 'cockpit'); })()"); const off = [has(), row()]; g.run('CAMP.flags.cockpit = true;'); const on = [has(), row()]; g.run('CAMP.flags.cockpit = false;'); return off.join() === 'false,false' && on.join() === 'true,true'; })());
 check('the heading is Keys and the close chip is H (the key table\'s help key), with the word Close', M.title === 'Keys' && M.close && M.close.k === J('CAMP_KEYS.help.k') && M.closeWord === 'Close', JSON.stringify(M.close));
 
 console.log('B. the chips are the table\'s');
@@ -32,7 +33,7 @@ check('every chip of the page is one the table has (an entry of CAMP_KEYS, or a 
 check('a chip that is not the table\'s is refused (a letter typed in a screen would be)', J(`scrKeysChipOk({ id: 'missile', k: 'B' })`) === false && J(`scrKeysChipOk({ id: 'nope', k: 'X' })`) === false && J(`scrKeysChipOk(null)`) === false);
 g.run(`window.__was = { missile: CAMP_KEYS.missile.k, focus: CAMP_KEYS.focus.k }; CAMP_KEYS.missile.k = 'B'; CAMP_KEYS.focus.k = '';`);
 const M2 = J('scrKeysModel()');
-check('the table moves a key and the page follows: Missile is B now; a key the table has not (F) has no row', rows(M2.groups[0])[2] === 'B=Missile' && M2.groups[1].rows.length === 5 && !rows(M2.groups[1]).some(r => /Look at it/.test(r)));
+check('the table moves a key and the page follows: Missile is B now; a key the table has not (F) has no row', rows(M2.groups[0])[3] === 'B=Missile' && M2.groups[1].rows.length === 5 && !rows(M2.groups[1]).some(r => /Look at it/.test(r)));
 g.run(`CAMP_KEYS.missile.k = __was.missile; CAMP_KEYS.focus.k = __was.focus;`);
 check('the words are all in the content table: none of the page\'s words is a key name left over', M.groups.every(x => !/^scr\./.test(x.title) && x.rows.every(r => !/^scr\./.test(r.t))) && !/^scr\./.test(M.title));
 const md = readFileSync(ROOT + '/content/text/scrkeys.md', 'utf8');
