@@ -23,7 +23,7 @@ The words of the new keys page (card space-game-screens-e-keys-settings; Troy, 2
 | scr.keys.r.order | Attack, guard or form up |
 | scr.keys.r.look | Look at it |
 | scr.keys.r.list | List, then 1 to 7 |
-| scr.keys.r.map | Map |
+| scr.keys.r.map | Map: Enter flies the cruiser |
 | scr.keys.r.esc | Back, then pause |
 | scr.keys.r.tune | Tuning |
 | scr.keys.r.boost | Boost |
