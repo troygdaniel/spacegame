@@ -312,6 +312,17 @@ const CAMP = {
     smart: { enemy: 'attack', friend: 'escort', convoy: 'escort', place: 'guard', point: 'guard', pickup: 'fetch', cache: 'fetch', anomaly: 'guard', rock: 'mine' }, // the verb a right-click does for a kind of target
     holdAt: 60                             // px: a ship ordered to hold at a point is there when it is this near it, and stops
   },
+  break: {                                 // THE BREAK (card space-game-chunk6-enemy-break; Troy, 26 Nov 2026, brief 8 proposal A, docs/fly-and-fighter.html; src/campbreak.js): a hostile fighter with the fighter THE PLAYER FLIES on its tail turns hard across his nose for a moment, then goes on as it was. Steering only: no hit points, damage or speed. The wing's fighters have their own dogfight moves (CAMP.dog) and are not this
+    on: true,                              // false: no ship breaks (the tests' and the bots' way back to the steering of before)
+    kinds: ['skiff', 'cutter', 'raider', 'drone'], // the hostile fighters: the pirates' skiff and cutter and the aliens' raider and drone; not a torpedo boat, a gunship (the brute is one), a tower or the mothership
+    range: 300,                            // px: the flown fighter is this near or nearer
+    cone: 0.9,                             // rad: and within this of dead astern of the hostile ship (it is on its tail)
+    nose: 0.7,                             // rad: and has its nose within this of the hostile ship (it is chasing it, not passing)
+    turn: 1.5708,                          // rad: the heading it breaks to, off the line from the chaser to it (a right angle: across the chaser's nose)
+    turnK: 1.6,                            // times its own turn rate, while it breaks (a hard turn)
+    ms: 700,                               // how long it breaks
+    cool: 3000                             // ms after it, before it can break again (so it does not jitter)
+  },
   dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
     kinds: ['fighter', 'raider'],          // who flies it (and the pirates whose base is the raider: the skiff): they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
     retro: 0.45, side: 0.35,               // the share of its accel a ship has backwards and sideways (the nose is where the big engine points): to brake or to turn it has to bring the nose round first
@@ -1573,7 +1584,7 @@ function campAlienAI(C, u, dt) {
   }
   const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
-  const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y); // a raider against a fighter is a dogfight (src/campdogfight.js)
+  const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y)); // a raider against a fighter is a dogfight (src/campdogfight.js); with the player's flown fighter on its tail it breaks (src/campbreak.js)
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
     u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
