@@ -160,6 +160,7 @@ const PIECES = [
   'scrbrief.js',
   'scrbriefdraw.js',
   'campkeys.js', // e: (the keys page and Settings: card space-game-screens-e-keys-settings, whose Settings row is settings.js)
+  'scrkeyboard.js', // the keys page's keyboard picture (docs/screens-flow.html step 8, tests/scrkeyboard.mjs)
   'scrkeys.js',
   'scrsettings.js',
   'title.js' // d: the title (card space-game-screens-d-title, tests/scrtitle.mjs)

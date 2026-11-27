@@ -48,11 +48,12 @@ function scrKeysRoomAt(s) {
 }
 function scrKeysModel(ids, only) { // only: the id of the one group of SCRROOM to list (scrKeysRoomAt); none: all of them
   const room = Array.isArray(ids), groups = [];
+  const kbTone = id => typeof scrKeyboardTone === 'function' ? scrKeyboardTone(id) : '', kbCodes = (list, all) => typeof scrKeyboardCodes === 'function' ? list.reduce((l, k) => l.concat(scrKeyboardCodes(k, all)), []) : []; // the keyboard picture (src/scrkeyboard.js): each group's colour and where its keys are
   if (!room) {
     SCRKEYS.groups.forEach(g => {
       const rows = g.rows.map(([w, caps]) => { const c = scrKeysChip(caps); return c ? { chips: [c], t: uiText('scr.keys.r.' + w) } : null; }).filter(Boolean); // a key the table has not (the cruiser list when its panel is off) has no row
       if (g.id === 'fly' && typeof campCockpitOn === 'function' && campCockpitOn()) { const cc = scrKeysChip(['cockpit']); if (cc) rows.push({ chips: [cc], t: uiText('scr.keys.r.cockpit') }); } // C takes a pilot's stick (card space-game-fly-fighter-l1-scene): its line is on the page only while the switch is on
-      if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows });
+      if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows, tone: kbTone(g.id), codes: kbCodes(g.rows.reduce((l, r) => l.concat(r[1]), []).concat(g.id === 'fly' && rows.length > g.rows.length ? ['cockpit'] : []), true) });
     });
     if (typeof CAMP_DEBUG !== 'undefined' && CAMP_DEBUG.keys && CAMP_DEBUG.keys.length && typeof campDebugOn === 'function' && campDebugOn()) { // the tune kit (?debug=1): its keys are listed from its own table, as on the old page
       groups.push({ id: 'debug', title: uiText('camp.keys.debug'), rows: CAMP_DEBUG.keys.map(r => ({ chips: [{ id: 'debug:' + r.key, k: r.key }], t: r.text.charAt(0).toUpperCase() + r.text.slice(1) })) });
@@ -60,14 +61,16 @@ function scrKeysModel(ids, only) { // only: the id of the one group of SCRROOM t
   } else if (typeof scrOn === 'function' && scrOn()) { // the ready room's page with the new screens: the four groups of SCRROOM (a key the table has not has no row)
     SCRROOM.filter(g => !only || g.id === only).forEach(g => {
       const rows = g.rows.map(([w, keys]) => { const chips = keys.map(k => scrKeysChip([k])).filter(Boolean); return chips.length ? { chips, t: uiText('scr.keys.' + w) } : null; }).filter(Boolean);
-      if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows });
+      if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows, tone: kbTone(g.id), codes: kbCodes(g.rows.reduce((l, r) => l.concat(r[1]), []), false) });
     });
   } else {
     (typeof campKeysPage === 'function' ? campKeysPage(ids) : []).forEach((g, i) => groups.push({ id: 'room' + i, title: g.title, rows: g.rows.map(r => ({ chips: r.caps.map(k => ({ id: 'table:' + k, k })), t: r.t })) }));
   }
   const help = scrChip('help');
   const one = room && !!only && groups.length === 1; // one screen's keys: the plain title ("all the keys" would not be true)
-  return { title: uiText(room && !one ? 'camp.keys.roomtitle' : 'scr.keys.title'), close: help, closeWord: uiText('scr.keys.close'), groups };
+  // the keyboard picture under the rows: the keys of the page lit where they are, each group in its colour. On the flight's page, and on the page of ONE screen of the ready room; not with a fourth group (the tune kit's) or the four-screen page, which have no room for it
+  const board = typeof scrKeyboardModel === 'function' && groups.length <= SCRKB.maxGroups && (!room || one) && groups.every(x => x.codes) ? scrKeyboardModel(groups) : null;
+  return { title: uiText(room && !one ? 'camp.keys.roomtitle' : 'scr.keys.title'), close: help, closeWord: uiText('scr.keys.close'), groups, board: board && board.lit ? board : null };
 }
 
 // ---- the page on a scene (the DOM half: src/scrhost.js's elements, the style in src/scrset.css) ----
@@ -79,9 +82,10 @@ function scrKeysOpen(s, ids) {
   const hr = scrHostEl(R, 'div', 'sc-r', head); if (M.close) scrHostChip(R, hr, M.close); scrHostSet(scrHostEl(R, 'span', 'sc-lab', hr), 'text', M.closeWord);
   const cols = scrHostEl(R, 'div', 'sc-cols' + (ids ? ' two' : ''), el);
   M.groups.forEach(g => {
-    const col = scrHostEl(R, 'div', 'sc-c sc-g', cols); scrHostSet(scrHostEl(R, 'span', 'sc-lab sc-gold', col), 'text', g.title);
+    const col = scrHostEl(R, 'div', 'sc-c sc-g', cols), gh = scrHostEl(R, 'span', 'sc-lab sc-gold', col); if (M.board && g.tone) scrHostEl(R, 'span', 'sc-kdot t-' + g.tone, gh); scrHostSet(scrHostEl(R, 'span', '', gh), 'text', g.title); // the dot: the colour of this group's keys on the keyboard below
     g.rows.forEach(r => { const row = scrHostEl(R, 'div', 'sc-r', col); r.chips.forEach(c => scrHostChip(R, row, c)); scrHostSet(scrHostEl(R, 'span', 'sc-sm', row), 'text', r.t); });
   });
+  if (M.board && typeof scrKeyboardDraw === 'function') { const kb = scrKeyboardDraw(R, el, M.board); if (kb && el.scrollHeight > el.clientHeight + 1) scrHostSet(kb, 'display', 'none'); } // a window too low for it (very wide and short): the rows matter more, the picture goes
   const veil = s.add.rectangle(W / 2, H / 2, W, H, 0x02050c, SCRKEYS.veil).setScrollFactor(0).setDepth(SCRKEYS.depth).setInteractive(); // takes the clicks: the game under the page is not clicked
   s.ck = { objs: [veil], open: true, scr: el };
   return true;
