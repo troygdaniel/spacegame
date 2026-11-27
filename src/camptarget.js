@@ -236,5 +236,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     return campWingOrder(C, group, 'attack', h ? h.id : near ? near.id : null, how || 'key', dry);
   }
   if (verb === 'formup') return campWingOrder(C, 'fighters', 'guard', null, how || 'key', dry); // the Q list's last row (card space-game-keys7-trim, Troy): ALL pilots form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
-  const fr = campFriNow(C); return campWingOrder(C, group, 'guard', fr ? fr.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser
+  const fr = campFriNow(C), fl = !fr && typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; // fl: while a fighter is flown and no friend is picked, "the cruiser" is the wrong place to form up: the two other pilots form up on the fighter he flies (card space-game-chunk10-enter-forms-on-you, Troy 26 Nov 2026: yes, BRIEF 8 decision 8)
+  return campWingOrder(C, group, 'guard', fr ? fr.id : fl ? fl.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser, or the fighter flown
 }
