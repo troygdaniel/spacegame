@@ -44,8 +44,13 @@ function campBeats(C) {
 
 // the hints of the mission: plain data like src/campnudge.js's, but each is `wait`ed for until `until` (it shows when it is true, not only at its second), and its words carry keys from the key table.
 // campNudge (src/campnudge.js) asks for one when it has none of its own to give; each is shown once, in 1.1 only
+// THE OPENING HINT (card space-game-chunk2-opening-hint; Troy, 26 Nov 2026, brief 8 finding 5): "Stay with the transport: Q, Fly to the goal" was a toast, and the radio's story lines (offered as kept lines at 0.9 s, 5.4 s and 9.9 s, each held 5 s) took the one box: the hint overwrote the second line early and the third line
+// overwrote the hint 1.7 s later. It now shows in the goal panel's hint row (src/camppagehud.js campPageHudHint), a place of its own, from the moment the transport is out (4 s) until the player gives the order or 45 s are up: no story line is touched. The toast below is the page HUD's absence only.
+const campBeatGoWhen = C => !(C.nav && C.nav.on) && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) <= 2500; // the transport is out, no trip is on and no hostile is about
+const campBeatGoDue = C => !!C && !C.result && C.level === 1 && !!C.L && C.L.mid === 'escort' && C.t >= 4000 && C.t < 45000 && campBeatGoWhen(C);
+const campBeatGoHint = C => campBeatGoDue(C) ? campBeatHint(C, 'go') : ''; // the words of the opening hint while it is due, else ''
 const CAMPBEATHINTS = [
-  { id: 'b-go', at: 6, until: 45, hint: 'go', when: C => !(C.nav && C.nav.on) && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 300 && campDist(C.carrier, campConvoys(C)[0]) <= 2500 }, // the opening (while she is still near: further off, the fast-burn hint below is the one) (found by flying 1.1: "Stay with her" did not say how): the transport has left, no trip is on and she is drawing away. The row and its list's key are the key table's ({viagoal}, {rowgoal}: src/data_controls.js campKeyVar)
+  { id: 'b-go', at: 4, until: 45, hint: 'go', when: campBeatGoWhen }, // the opening (while she is still near: further off, the fast-burn hint below is the one) (found by flying 1.1: "Stay with her" did not say how): the transport has left, no trip is on and she is drawing away. The row and its list's key are the key table's ({viagoal}, {rowgoal}: src/data_controls.js campKeyVar)
   { id: 'b-fast', at: 24, until: 120, hint: 'fast', when: C => !(C.nav && C.nav.on) && campLane(C) < 0.2 && !campAliens(C).length && !!C.carrier && !!campConvoys(C)[0] && campDist(C.carrier, campConvoys(C)[0]) > 2500 }, // (the first fifth of the road only: it was "before the fork" while 1.1 had one)
   { id: 'b-tuck', at: 60, until: 400, hint: 'tuck', when: C => typeof campTorpedoBoats === 'function' && campTorpedoBoats(C).some(u => !u.running) && typeof campConvoyState === 'function' && campConvoyState(C) !== 'tuck' }, // torpedo boats about: tuck the transport in under the shield (src/campconvoy.js)
   { id: 'b-run', at: 60, until: 400, hint: 'run', when: C => !!campRivalOf(C, 'leader') && typeof campConvoyState === 'function' && campConvoyState(C) !== 'run' } // the leader is out: run the transport past it
@@ -56,7 +61,8 @@ function campBeatNudge(C, shown) {
     for (const h of CAMPBEATHINTS) {
       if (shown[h.id] || C.t < h.at * 1000) continue;
       if (!h.when(C)) { if (C.t >= h.until * 1000) shown[h.id] = true; continue; } // not true yet: it waits; its time is up, it is never shown
-      shown[h.id] = true; return campBeatHint(C, h.hint);
+      shown[h.id] = true; if (h.hint === 'go' && typeof campPageHudOn === 'function' && campPageHudOn()) continue; // the opening hint is the goal panel's hint row with the page HUD on (campBeatGoHint): no toast to collide with the story lines
+      return campBeatHint(C, h.hint);
     }
   } catch (e) { /* a hint is a nicety */ }
   return null;

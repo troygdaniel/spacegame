@@ -148,7 +148,8 @@ function campPageHudHint(C) {
   // "Q  dock at the Works" showed only within CAMP.outpost.range (280 px) of the outpost: far off, with the ore aboard, the panel said nothing); the dock's key is a chip (the key table's: campKeyVar('yardkey'))
   const sale = C.L && C.L.objectives && !C.result && !C.docked && typeof campObjectives === 'function' ? campObjectives(C).find(x => !x.done) : null;
   if (sale && sale.type === 'cashin' && sale.aboard >= 1) { const k = typeof campKeyVar === 'function' ? String(campKeyVar('yardkey') || '') : ''; return { text: uiText('camp.hud.aboard', { n: sale.aboard }), tone: 'warn', key: k.length <= 6 ? k : '' }; }
-  const nr = typeof campDockHint === 'function' ? campDockHint(C) : ''; return nr ? { text: nr, tone: 'warn' } : null;
+  const nr = typeof campDockHint === 'function' ? campDockHint(C) : ''; if (nr) return { text: nr, tone: 'warn' };
+  const go = typeof campBeatGoHint === 'function' ? campBeatGoHint(C) : ''; return go ? { text: go, tone: 'warn' } : null; // mission 1.1's opening hint ("Stay with the transport: Q, Fly to the goal"): its own place, so the radio's story lines never push it out (card space-game-chunk2-opening-hint)
 }
 function campPageHudFoes(C) {
   const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : [], t = campPageHudTarget(C); if (!gs.length && !t) return campPageHudFoesAlone(C);
