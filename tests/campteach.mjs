@@ -6,6 +6,7 @@
 //   E. (card space-game-b10-c7-teach-shift) Shift when the ship you escort is more than 150 km off: the boost chip lit "catch up" (1.1: about 30 s after she leaves), quiet once Shift is held or you are beside her, 120 s
 //   F. (card space-game-b10-c8-teach-z) Z when a torpedo boat or the pirate leader is inside missile range (2400 px) and there is a missile: the missile chip lit "in range", quiet once a missile is fired, 90 s
 //   G. (card space-game-b10-c9-teach-r) R when the missile rack is empty for the first time: the R chip is added to the row, lit "rack is empty", quiet once R is pressed, 60 s
+//   H. (card space-game-b10-c10-teach-tab) Tab when a wave arrives off the screen (the hostiles' edge pill is up): the map chip added to the row, lit "wave off screen", once, 45 s, quiet once the map is opened
 //   B. the rest: the row is as it was before 5 s and in 1.2 and 1.3; the hints switch turns the row (and the chip) off; the sim remembers the lists opened; no letter is written in the file
 // Run: node tests/campteach.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -196,6 +197,35 @@ console.log('G. R when the missile rack is empty for the first time (card space-
   check('pressing Z at the first skiffs (from about 38 s), six times, 0.8 s apart: the rack is empty and the R chip is lit "rack is empty"', J('C.missiles') === 0 && J('__n') === 6 && rLit().join() === 'R:Reload:rack is empty:true', J('[C.missiles, __n]') + ' ' + rLit().join());
   check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.reload')") === 'Reload' && J("uiText('camp.corner.chip.teachr')") === 'rack is empty' && ['reload', 'teachr'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
   check('no key is written for R: the cap is the key table\'s (campCornerCap)', !/'R'/.test(readFileSync(join(ROOT, 'src/campteach.js'), 'utf8').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\s\/\/ .*$/gm, '')));
+}
+
+console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-teach-tab; the cloud\'s BRIEF 10 chunk 10)');
+{
+  g.run(`window.__wave = (d) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = 40000; C.ships = C.ships.filter(u => u.team === 'earth'); window.__w = d == null ? null : campSpawn(C, 'skiff', C.carrier.x + d, C.carrier.y); if (__w) { __w.team = 'alien'; __w.hold = true; } window.__view = { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }; return C; };`);
+  const tLit = () => J('campTeachChips(C).filter(c => c.id === "tab").map(c => c.key + ":" + c.word + ":" + c.note + ":" + c.lit)');
+  g.run(`__wave(null); campPageModel(C, __view);`);
+  check('no hostile at all: no chip (nothing is off the screen)', tLit().length === 0 && J('!!C.edgeSeen') === false);
+  g.run(`__wave(300); campPageModel(C, __view);`);
+  check('a hostile ON the screen (300 px) is no wave off it: the edge pill is not up, no chip', J('campPageModel(C, __view).edge') === null && tLit().length === 0 && J('!!C.edgeSeen') === false);
+  g.run(`__wave(2600); campPageModel(C, __view);`);
+  check('a wave off the screen (2600 px: the hostiles\' edge pill is up) lights the Tab chip, ADDED to the row: the key table\'s key (Tab), the word Map, the note "wave off screen"', J('campPageModel(C, __view).edge') !== null && tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
+  check('it is among the added chips at the left end (after Q\'s, which is up at 40 s in 1.1), before the row\'s own, unchanged', J('campPageHudFirst(C).items.map(i => i.id).filter(x => x !== "enter").slice(0, 2).join()') === 'q,tab' && J('campPageHudFirst(C).items.filter(i => ["fly", "boost", "missile"].indexOf(i.id) >= 0).every(i => !i.lit)'), J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).join()'));
+  g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view);`);
+  check('ONCE: the wave came on the screen again, the chip is still there for its 45 s (it does not wait for the pill)', tLit().length === 1);
+  g.run(`C.t += 46000;`);
+  check('and it ends 45 s after the first time: it does not come back with the next wave', tLit().length === 0 && (g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`), tLit().length === 0));
+  g.run(`__wave(2600); campPageModel(C, __view); try { campMapOpen({ camp: C, mp: null }); } catch (e) { /* the map is drawn with Phaser: the note is made before that */ }`);
+  check('opening the map (Tab: campMapOpen) notes it (C.keysUsed.map) and the chip goes quiet', J('C.keysUsed.map') === true && tLit().length === 0);
+  g.run(`__wave(2600); campPageModel(C, __view); CAMP.flags.hints = false;`);
+  check('the hints off: the row is gone, the chip with it', J('campPageHudFirst(C) === null') === true);
+  g.run(`CAMP.flags.hints = true; __wave(2600); campPageModel(C, __view); C.result = 'won';`);
+  check('a mission that has ended lights nothing', tLit().length === 0);
+  // THE PAGE'S TEST: start 1.1, wait for the first skiffs: the Tab chip lights with "map" beside the wave's edge pill
+  g.run(`window.__first = (stay) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; window.__t1 = null; window.__view = { x: 0, y: 0, zoom: 1 }; while (C.t < 80000 && __t1 === null) { campTick(C, 0.1); __view.x = C.carrier.x - W / 2; __view.y = C.carrier.y - H / 2; campPageModel(C, __view); if (campTeachChips(C).some(c => c.id === 'tab')) __t1 = Math.round(C.t / 1000); } return C; };`);
+  g.run(`__first();`);
+  const t1 = J('__t1');
+  check('THE PAGE\'S TEST works as written: start 1.1, wait for the first skiffs (the cruiser idle, the camera on it): the Tab chip lights at about 40 s, with the hostiles\' edge pill up', t1 !== null && t1 >= 36 && t1 <= 44, t1);
+  check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.map')") === 'Map' && J("uiText('camp.corner.chip.teachtab')") === 'wave off screen' && ['map', 'teachtab'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
