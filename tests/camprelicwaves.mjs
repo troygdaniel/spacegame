@@ -1,7 +1,8 @@
-// smoke: mission 2.3's waves come on what the player does (entering the ring, 5 s held, 10 s held), each from near the relic, and its aliens hold the ring: a fast ship cannot draw them off and win (plain Node, no Chrome)
+// smoke: mission 2.3's waves come on what the player does (entering the ring; 10 s held, and the third 8 s behind it from the opposite side), each from near the relic, and its aliens hold the ring: a fast ship cannot draw them off and win (plain Node, no Chrome)
 // Card space-game-23-waves-on-entry (Troy, 26 Nov 2026; the cloud's brief 7, decision 2). Before it the waves came at 3, 24 and 42 s of the mission's clock and flew at the cruiser: a flown fighter drew the first wave
 // 2 km off the ring and the mission was won in 16 s with the cruiser untouched (docs/night/cockpit-sweep.md). Now (src/campaign.js):
 //   - a wave row's `on: { held: n }` (campWaveOn): it comes when the relic has been held n seconds at best; 0 is the cruiser's first time inside the ring. Nothing comes for the clock.
+//   - a wave row's `on: { behind: i, secs: n }`: it comes n seconds after wave i came (card space-game-23-two-sides, Troy 26 Nov 2026: waves two and three together from two sides, so the mission can be lost).
 //   - a wave row's `ring: [dx, dy]`: it comes out of the dark that far from the relic (about 1,100 px), so it is on the ring in a few seconds.
 //   - goal 'relic' (campRelicAlien): the wave flies to the relic and fights only what is within the relic row's `leash` of the relic; with nothing of yours there, or drawn outside it, it goes back to the ring.
 //   - the hold's own rule is as it was: it counts while the CRUISER is in the ring and no alien is within `clear` px of the RELIC.
@@ -23,9 +24,10 @@ g.run(`
 `);
 
 // ---- the row ----
-const row = J(`(() => { const C = T.make(1), L = C.L; return { relic: L.relic, waves: L.waves.map(w => ({ on: w.on, at: w.at == null ? null : w.at, ring: w.ring, goal: w.goal, d: Math.round(Math.hypot(w.ring[0], w.ring[1])) })), win: L.win }; })()`);
+const row = J(`(() => { const C = T.make(1), L = C.L; return { relic: L.relic, waves: L.waves.map(w => ({ on: w.on, at: w.at == null ? null : w.at, ring: w.ring, ang: Math.atan2(w.ring[1], w.ring[0]), goal: w.goal, d: Math.round(Math.hypot(w.ring[0], w.ring[1])) })), win: L.win }; })()`);
 check('2.3 is the relic mission, three waves', row.win === 'relic' && row.waves.length === 3, JSON.stringify(row));
-check('its waves come on the hold: on entering, at 5 s held, at 10 s held; none has a second of the clock', row.waves.map(w => w.on && w.on.held).join() === '0,5,10' && row.waves.every(w => w.at === null), JSON.stringify(row.waves));
+check('its waves come on the hold: on entering, and at 10 s held; the third comes 8 s behind the second; none has a second of the mission\'s clock', row.waves[0].on.held === 0 && row.waves[1].on.held === 10 && row.waves[2].on.behind === 1 && row.waves[2].on.secs === 8 && row.waves.every(w => w.at === null), JSON.stringify(row.waves));
+check('the second and the third come from opposite sides of the ring (their bearings from the relic are half a turn apart, within a tenth of a radian)', Math.abs(Math.abs(row.waves[1].ang - row.waves[2].ang) - Math.PI) < 0.1, JSON.stringify(row.waves));
 check('each comes out of the dark 1,000 to 1,300 px from the relic (outside the clear radius and the leash, a few seconds from the ring) and is sent at the relic', row.waves.every(w => w.d >= 1000 && w.d <= 1300 && w.d > row.relic.leash && w.goal === 'relic'), JSON.stringify(row.waves));
 check('the hold is longer than the last wave\'s mark, and the leash is wider than the clear radius (an alien that fights at the leash\'s edge still stops the hold when it goes back)', row.relic.hold > 10 && row.relic.leash > row.relic.clear && row.relic.stand < row.relic.clear, JSON.stringify(row.relic));
 
@@ -38,8 +40,8 @@ const flow = J(`(() => { const C = T.make(5), R = C.relic, at = [null, null, nul
   for (; i < 30 * 200 && !C.result; i++) { T.fly(C, R.x, R.y); campStep(C, 1 / 30); C.waves.forEach((w, k) => { if (w.started && at[k] == null) { at[k] = +(i / 30).toFixed(1); best[k] = +R.best.toFixed(2); } }); }
   return { at, best, result: C.result, secs: Math.round(i / 30), kills: C.kills, hull: Math.round(C.carrier.hp) }; })()`);
 check('flown onto the ring: the first wave comes as the cruiser enters', flow.at[0] != null && flow.best[0] < 0.2, JSON.stringify(flow));
-check('the second comes when the relic has been held 5 s, the third at 10 s', flow.best[1] >= 5 && flow.best[1] < 5.2 && flow.best[2] >= 10 && flow.best[2] < 10.2 && flow.at[0] < flow.at[1] && flow.at[1] < flow.at[2], JSON.stringify(flow));
-check('the mission is won, after all three waves, in 60 to 130 s', flow.result === 'won' && flow.secs >= 60 && flow.secs <= 130, JSON.stringify(flow));
+check('the second comes when the relic has been held 10 s, the third 8 s behind it', flow.best[1] >= 10 && flow.best[1] < 10.2 && flow.at[0] < flow.at[1] && flow.at[2] - flow.at[1] > 6 && flow.at[2] - flow.at[1] < 9, JSON.stringify(flow));
+check('this pilot sits on the ring and never turns his guns at them: all three waves come, and with the second and third on him together he is beaten (before card space-game-23-two-sides he won; the careful win is the plain bot\'s, pinned in tests/camppace.mjs)', flow.at[2] != null && flow.result === 'lost' && flow.secs >= 40, JSON.stringify(flow));
 
 // ---- the wave reaches the ring and stops the hold ----
 const reach = J(`(() => { const C = T.make(7), R = C.relic; let t0 = null, tIn = null, holdAtIn = null, i = 0;
@@ -67,6 +69,10 @@ check('the kite: a fighter that hits the wave and runs 2,500 px off does not win
 check('the wave is not drawn off: once it has come no alien of it goes farther than the leash and 500 px from the relic', kite.aliens > 0 && kite.maxFar <= kite.leash + 500, JSON.stringify(kite));
 check('and one of them is inside the clear radius nearly all the time (the hold cannot run): under a tenth of the steps are clear', kite.on > 0 && kite.off <= (kite.on + kite.off) * 0.1, JSON.stringify(kite));
 check('so the relic has not been held 5 s and the second wave has not come', kite.best < 5 && kite.started === '100', JSON.stringify(kite));
+
+// ---- the two waves together can beat a careless player ----
+const alone = J(`(() => { let lost = 0, won = 0; for (let seed = 1; seed <= 4; seed++) { const C = T.make(seed), R = C.relic, c = C.carrier; C.ships.forEach(u => { if (u.team === 'earth' && u !== c) u.hp = 0; }); for (let i = 0; i < 30 * 300 && !C.result; i++) { const dx = R.x - c.x, dy = R.y - c.y; C.input.thrust = Math.hypot(dx, dy) > 60 ? 1 : 0; C.input.brake = !C.input.thrust; if (C.input.thrust) c.rot = Math.atan2(dy, dx); else { const a = campNearest(campAliens(C), c); if (a) c.rot = Math.atan2(a.y - c.y, a.x - c.x); } C.input.fire = true; campStep(C, 1 / 30); } if (C.result === 'won') won++; else if (C.result === 'lost') lost++; } return { won, lost }; })()`);
+check('a cruiser that has lost its wing and fights the ring alone is beaten on most seeds (3 of 4 at least): the mission can be lost', alone.lost >= 3, JSON.stringify(alone));
 
 // ---- the mission can still be lost ----
 const lose = J(`(() => { const C = T.make(3), R = C.relic, c = C.carrier; let i = 0; C.ships.forEach(u => { if (u.team === 'earth' && u !== c) u.hp = 0; });

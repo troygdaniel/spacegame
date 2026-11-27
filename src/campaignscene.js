@@ -377,6 +377,7 @@ class Campaign extends Phaser.Scene {
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
+    if (this.mp && campKeyIs('cockpit', c)) return; // the open map has the keys: C (take or give the stick) waits until it is shut (card space-game-b7-hud-q-cockpit)
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, X clears the trip (src/campmapdraw.js)
     if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c) || campKeyIs('order', c))) { if (campKeyIs('missile', c) || campKeyIs('order', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never the order, nor M a missile, over the map
     if (!typing && campKeyIs('focus', c)) { const pk = typeof campPeekBreak === 'function' && campPeekBreak(this); if (typeof campFocusPress === 'function') campFocusPress(this); if (pk && typeof campPeekHome === 'function') campPeekHome(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
@@ -499,7 +500,7 @@ class Campaign extends Phaser.Scene {
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
     if (typeof campShieldHitPaint === 'function') campShieldHitPaint(this, this.time.now); // the shield's arcs, after the sprites are in place and the health numbers (src/campshieldhit.js)
-    if (typeof campMomentsFrame === 'function') campMomentsFrame(this); // the hit's sparks and white frames, the kill's shards and ring, the view's nudge (src/campmoments.js)
+    if (typeof campMomentsFrame === 'function') campMomentsFrame(this, dt); // the hit's sparks and white frames, the kill's shards and ring, the view's nudge (src/campmoments.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { return CAMP.nav.arrow.keep; } // the places the edge arrow's label keeps out of: the table's (the target display's corner is one of them: its box, campTdispBox, is inside it)
@@ -516,6 +517,7 @@ class Campaign extends Phaser.Scene {
   onEvent(e) {
     if (this.mp) campFireHear(this.mp.fire, this.camp, e, performance.now()); // the Tab map shows the fight too: its marks come from the events, only while it is open (src/campmapfire.js)
     chatterHear(this, e); // the wing's radio hears every sim event (src/campchatter.js)
+    if (typeof campMomentsNote === 'function') campMomentsNote(this, e); // where the last kill, loss and arrival were, and the beat when the mission ends (src/campmoments.js)
     if (e.type === 'say') this.radioShow(campSayOffer(this.sayR || (this.sayR = campSayNew()), (this.time && this.time.now) || 0, { text: uiText(e.key, e.vars), keep: campSayKeep(e.key) })); // a radio line: shown at once, or after the kept line that is up (src/campsayhold.js)
     else if (e.type === 'boost') { if (e.stage === 'dry' && typeof sfx === 'function') sfx('empty'); } // the store ran dry: the boost is locked until a quarter is back (the Long Haul's own dry click)
     else if (e.type === 'nav') { toast(this, uiText(e.key, e.vars), '#7fe9ff'); if (e.key === 'camp.nav.go' || e.key === 'camp.nav.arrived') beep(e.key === 'camp.nav.go' ? 520 : 660, 0.07, 'triangle', 0.04, 160); } // the autopilot's own lines (src/campnav.js)

@@ -7,6 +7,8 @@ const CAMP_TORP = {
   color: { pirate: 0xffa040, alien: 0xff4d6d }, hot: 0xffe0a0,        // the ring, the flame and the line of a pirate's torpedo and of an alien's; the hot centre of a flame
   ring: [15, 3, 190], width: 2, ringAlpha: 0.85,                      // the warning ring: its radius, how much it swells, the ms of a pulse; its line width and alpha
   line: { width: 1.5, alpha: 0.3, max: 1500 },                        // the thin line to its target: only when the target is this close (px), so the screen is not crossed by lines
+  dash: { on: 5, off: 5, max: 40, w: 1.2, a: 0.7 },                   // BRIEF 7, decision 10 (the new look): the line to the target is dashed, 5 px on and 5 off on the screen, at most 40 dashes (the nearest 400 px), 1.2 px wide, 0.7 strong: it shortens as the torpedo closes
+  target: { r: 0.62, min: 16, pad: 6, w: 1.6, a: 0.9, ms: 160, swell: 2 }, // the target's ring (the new look): its radius is that share of the ship's drawn length, never under `min` px, `pad` px outside it, swelling `swell` px each `ms`; amber for a ship you protect, your pale blue for the cruiser and the pilots
   flame: { back: 12, scale: 1.4 },                                   // px behind the body, and the ember's scale
   puffEvery: 45,                                                     // ms between two puffs of smoke
   arm: { ring: [10, 4, 160], glow: 9, alpha: 0.9 }                    // a boat that arms: a ring round it (px beyond its hit circle, the swell, ms of a pulse) and the glow at its nose (px radius at the full windup)
@@ -25,10 +27,19 @@ function campTorpedoTexture(scene) { // made once
   return key;
 }
 
+// a dashed line from (x0, y0) toward (x1, y1) on g, the dashes `on` and `off` screen px long (z: the camera's zoom), at most K.max of them from the start; the number drawn (the line's style is the caller's)
+function campTorpDashLine(g, x0, y0, x1, y1, z, K) {
+  const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy); if (!(len > 1)) return 0;
+  const ux = dx / len, uy = dy / len, on = K.on / z, step = (K.on + K.off) / z; let n = 0;
+  for (let d = 0; d < len && n < K.max; d += step, n++) { const e = Math.min(len, d + on); g.lineBetween(x0 + ux * d, y0 + uy * d, x0 + ux * e, y0 + uy * e); }
+  return n;
+}
+// the target's ring (pure): its radius in world px for a ship drawn `len` px long when the camera's zoom is z, `pulse` -1 to 1
+const campTorpTargetR = (len, z, pulse) => { const K = CAMP_TORP.target, zz = z > 0 ? z : 1; return Math.max(len * K.r, K.min / zz) + (K.pad + K.swell * pulse) / zz; };
 function campTorpedoSync(scene, ms) {
   const C = scene.camp, K = CAMP_TORP; if (!C || !C.torpedoes) return;
   if (!scene.hud.tp) { campTorpedoTexture(scene); scene.hud.tp = { g: scene.add.graphics().setDepth(4.6), h: scene.add.graphics().setDepth(5.4).setBlendMode('ADD'), sp: {} }; } // kept in scene.hud: a scene that starts again has a new hud, and its old graphics are gone with it (a scene object of its own would outlive them)
-  const T = scene.hud.tp, g = T.g, h = T.h, play = scene.mode === 'play', seen = {}, now = C.t; g.clear(); h.clear();
+  const T = scene.hud.tp, g = T.g, h = T.h, play = scene.mode === 'play', seen = {}, now = C.t, look = typeof slookOn === 'function' && slookOn(), z = scene.cameras && scene.cameras.main && scene.cameras.main.zoom > 0 ? scene.cameras.main.zoom : 1, still = typeof campMomentsStill === 'function' && campMomentsStill(); g.clear(); h.clear();
   C.torpedoes.forEach(t => {
     if (t.dead) return;
     const col = campTorpTone(K.color[t.fac] || K.color.pirate), ux = Math.cos(t.rot), uy = Math.sin(t.rot);
@@ -37,7 +48,14 @@ function campTorpedoSync(scene, ms) {
     r.body.setPosition(t.x, t.y).setRotation(t.rot); r.flame.setPosition(t.x - ux * K.flame.back, t.y - uy * K.flame.back).setTint(col); seen[t.id] = true;
     const pulse = Math.sin(now / K.ring[2] * Math.PI * 2); // the warning ring: it swells and fades
     g.lineStyle(K.width, col, K.ringAlpha * (0.65 + 0.35 * pulse)).strokeCircle(t.x, t.y, K.ring[0] + K.ring[1] * pulse);
-    const tg = C.by[t.target]; if (tg && tg.hp > 0 && Math.hypot(tg.x - t.x, tg.y - t.y) <= K.line.max) g.lineStyle(K.line.width, col, K.line.alpha).lineBetween(t.x, t.y, tg.x, tg.y);
+    const tg = C.by[t.target];
+    if (tg && tg.hp > 0 && Math.hypot(tg.x - t.x, tg.y - t.y) <= K.line.max) {
+      if (look) { // the new look: a dashed line to what it is going for, and a ring on that ship that pulses (still under reduced motion)
+        g.lineStyle(K.dash.w / z, col, K.dash.a); campTorpDashLine(g, t.x, t.y, tg.x, tg.y, z, K.dash);
+        const side = typeof slookSideOf === 'function' ? slookSideOf(C, tg) : 'protect', tc = slookInt(side === 'protect' ? SLOOK.C.protect : SLOOK.C.friendHi), len = typeof slookMarkLen === 'function' ? slookMarkLen(scene, tg) : 2 * (tg.r || 14);
+        g.lineStyle(K.target.w / z, tc, K.target.a).strokeCircle(tg.x, tg.y, campTorpTargetR(len, z, still ? 0 : Math.sin(now / K.target.ms * Math.PI * 2)));
+      } else g.lineStyle(K.line.width, col, K.line.alpha).lineBetween(t.x, t.y, tg.x, tg.y);
+    }
     r.puff -= ms;
     if (play && r.puff <= 0) { r.puff = K.puffEvery; const p = scene.add.image(t.x - ux * 14, t.y - uy * 14, 'smoke').setScale(0.2).setTint(0xb8c2cc).setAlpha(0.5).setDepth(4); scene.tweens.add({ targets: p, alpha: 0, scale: 0.75, duration: 650, onComplete: () => p.destroy() }); }
   });

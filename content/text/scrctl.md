@@ -66,7 +66,7 @@ The short words of the Controls tab of Settings in the new look (card space-game
 | scr.ctl.campaign.12 | Look at it |
 | scr.ctl.campaign.13 | Map |
 | scr.ctl.campaign.14 | Map marks |
-| scr.ctl.campaign.15 | Fly there |
+| scr.ctl.campaign.15 | The cruiser flies there |
 | scr.ctl.campaign.16 | Set a mark, then fly |
 | scr.ctl.campaign.17 | Clear the trip |
 | scr.ctl.campaign.18 | Type an order |
