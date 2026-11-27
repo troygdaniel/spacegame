@@ -80,6 +80,14 @@ g.run(`CAMP.flags.screens = false;`);
 const R0 = J(`scrKeysModel(CAMPKEYS.room)`);
 check('with the new screens off it keeps the table\'s own groups (THE READY ROOM, THE BRIEFING), as chips one cap each, the old page as it was', R0.groups.length === 2 && R0.groups[0].title === 'THE READY ROOM' && R0.groups[1].title === 'THE BRIEFING' && R0.groups.every(x => x.rows.every(r => r.chips.length > 0 && r.t.length > 0)) && R0.groups[0].rows.some(r => /Open the row/.test(r.t)));
 g.run(`CAMP.flags.screens = true;`);
+check('H lists the keys of the screen it was pressed on (docs/screens-flow.html step 6): the briefing while one is up, the missions on the grid, the refit on the refit, the ready room everywhere else; a dock\'s room and a scene with no hub get every group', (() => {
+  const at = x => J(`scrKeysRoomAt(${x})`);
+  return at(`{ hub: { open: '' } }`) === 'ready' && at(`{ hub: { open: 'rank' } }`) === 'ready' && at(`{ hub: { open: 'board' } }`) === 'pick' && at(`{ hub: { open: 'refit' } }`) === 'refit' && at(`{ hub: { open: 'board' }, bf: { open: true } }`) === 'brief' && at(`{ hub: { open: '' }, d: { dock: true } }`) === null && at(`{}`) === null; })());
+check('the page of one screen has that one group, in the table\'s words, under the plain title Keys (not "all the keys"); with no screen named it is the four groups under the room\'s title, as before', (() => {
+  const one = J(`scrKeysModel(CAMPKEYS.room, 'brief')`), all = J(`scrKeysModel(CAMPKEYS.room)`);
+  return one.groups.length === 1 && one.groups[0].id === 'brief' && one.groups[0].rows.length === 5 && one.title === J(`uiText('scr.keys.title')`) && JSON.stringify(one.groups[0]) === JSON.stringify(all.groups[2]) && all.groups.length === 4 && all.title === J(`uiText('camp.keys.roomtitle')`) && ['ready', 'pick', 'refit'].every(id => J(`scrKeysModel(CAMPKEYS.room, '${id}').groups.map(x => x.id).join()`) === id); })());
+g.run(`window.S5 = __keysScene(); S5.hub = { open: 'board' }; campKeysOpen(S5, CAMPKEYS.room);`);
+check('opened on the grid it shows The missions only', J('__texts(S5.scrHost.root)[0]') === J(`uiText('scr.keys.title')`) && J('__texts(S5.scrHost.root)').indexOf(J(`uiText('scr.keys.g.pick')`)) > 0 && J('__texts(S5.scrHost.root)').indexOf(J(`uiText('scr.keys.g.brief')`)) < 0 && J('__texts(S5.scrHost.root)').indexOf(J(`uiText('scr.keys.g.ready')`)) < 0);
 g.run(`window.S4 = __keysScene(); campKeysOpen(S4, CAMPKEYS.room);`);
 check('opened for the room it is the same panel in two columns, with the room\'s heading', J('!!S4.ck.scr') && J(`/two/.test(S4.ck.scr.children[1]._cls)`) && J('__texts(S4.scrHost.root)[0]') === J(`uiText('camp.keys.roomtitle')`));
 g.run(`campKeysClose(S4);`);

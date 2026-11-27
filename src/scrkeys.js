@@ -39,7 +39,14 @@ function scrKeysChipOk(chip) {
   if (!chip || typeof chip.id !== 'string' || typeof chip.k !== 'string') return false;
   const ids = chip.id.split('+'); return ids.length > 0 && ids.every(i => !!scrKeysCap(i)) && ids.map(scrKeysCap).join(' ') === chip.k;
 }
-function scrKeysModel(ids) {
+// The ready room's page lists the keys of the screen H was pressed on, not all four at once (docs/screens-flow.html step 6): the briefing's while a briefing is up, the missions' on the grid,
+// the refit's on the refit, the ready room's own everywhere else (the rank has only Esc). null for a scene that is not the hall (a dock's room, a stand-in with no hub): every group, as before.
+function scrKeysRoomAt(s) {
+  if (!s || !s.hub || (s.d && s.d.dock)) return null;
+  if (typeof campBriefIsOpen === 'function' && campBriefIsOpen(s)) return 'brief';
+  return s.hub.open === 'board' ? 'pick' : s.hub.open === 'refit' ? 'refit' : 'ready';
+}
+function scrKeysModel(ids, only) { // only: the id of the one group of SCRROOM to list (scrKeysRoomAt); none: all of them
   const room = Array.isArray(ids), groups = [];
   if (!room) {
     SCRKEYS.groups.forEach(g => {
@@ -51,7 +58,7 @@ function scrKeysModel(ids) {
       groups.push({ id: 'debug', title: uiText('camp.keys.debug'), rows: CAMP_DEBUG.keys.map(r => ({ chips: [{ id: 'debug:' + r.key, k: r.key }], t: r.text.charAt(0).toUpperCase() + r.text.slice(1) })) });
     }
   } else if (typeof scrOn === 'function' && scrOn()) { // the ready room's page with the new screens: the four groups of SCRROOM (a key the table has not has no row)
-    SCRROOM.forEach(g => {
+    SCRROOM.filter(g => !only || g.id === only).forEach(g => {
       const rows = g.rows.map(([w, keys]) => { const chips = keys.map(k => scrKeysChip([k])).filter(Boolean); return chips.length ? { chips, t: uiText('scr.keys.' + w) } : null; }).filter(Boolean);
       if (rows.length) groups.push({ id: g.id, title: uiText('scr.keys.g.' + g.id), rows });
     });
@@ -59,14 +66,15 @@ function scrKeysModel(ids) {
     (typeof campKeysPage === 'function' ? campKeysPage(ids) : []).forEach((g, i) => groups.push({ id: 'room' + i, title: g.title, rows: g.rows.map(r => ({ chips: r.caps.map(k => ({ id: 'table:' + k, k })), t: r.t })) }));
   }
   const help = scrChip('help');
-  return { title: uiText(room ? 'camp.keys.roomtitle' : 'scr.keys.title'), close: help, closeWord: uiText('scr.keys.close'), groups };
+  const one = room && !!only && groups.length === 1; // one screen's keys: the plain title ("all the keys" would not be true)
+  return { title: uiText(room && !one ? 'camp.keys.roomtitle' : 'scr.keys.title'), close: help, closeWord: uiText('scr.keys.close'), groups };
 }
 
 // ---- the page on a scene (the DOM half: src/scrhost.js's elements, the style in src/scrset.css) ----
 function scrKeysOpen(s, ids) {
   if (!s || !s.add || typeof scrHostMount !== 'function') return false;
   const R = scrHostMount(s); if (!R) return false; // no canvas or no document: the page of today is drawn
-  const M = scrKeysModel(ids), el = scrHostEl(R, 'div', 'sc-p sc-abs sc-keys');
+  const only = Array.isArray(ids) ? scrKeysRoomAt(s) : null, M = scrKeysModel(ids, only), el = scrHostEl(R, 'div', 'sc-p sc-abs sc-keys');
   const head = scrHostEl(R, 'div', 'sc-r sc-sp sc-keyhead', el); scrHostSet(scrHostEl(R, 'span', 'sc-t2', head), 'text', M.title);
   const hr = scrHostEl(R, 'div', 'sc-r', head); if (M.close) scrHostChip(R, hr, M.close); scrHostSet(scrHostEl(R, 'span', 'sc-lab', hr), 'text', M.closeWord);
   const cols = scrHostEl(R, 'div', 'sc-cols' + (ids ? ' two' : ''), el);
