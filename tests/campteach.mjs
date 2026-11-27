@@ -228,6 +228,34 @@ console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-
   check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.map')") === 'Map' && J("uiText('camp.corner.chip.teachtab')") === 'wave off screen' && ['map', 'teachtab'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
 }
 
+console.log('I. mining and Enter twice (card space-game-orders-f5-q-cruiser-only; Troy, 27 Nov 2026, mock F)');
+{
+  g.run(`window.__h = (mi, sec) => { __mk(mi, sec); CAMP.flags.cockpit = true; C.ships = C.ships.filter(u => u.team !== 'alien'); return C; };`);
+  g.run(`__h(1, 8);`);
+  check('1.2 before 10 s: no teaching chip yet', J('campTeachChips(C).length') === 0);
+  g.run(`__h(1, 12);`);
+  const c = J('campTeachChips(C)');
+  check('1.2 from 10 s the row ADDS two chips, W (Who: "a pilot") and E (Friendly: "then a rock field"), both lit, with the key table\'s keys', c.length === 2 && c[0].key === J('campKeyOpens("fleet")') && c[0].word === 'Who' && c[0].note === 'a pilot' && c[1].key === J('campKeyOpens("friends")') && c[1].word === 'Friendly' && c[1].note === 'then a rock field' && c.every(x => x.lit === true), JSON.stringify(c));
+  check('no Q chip teaches mining any more: the Q row has no Mine ore, and 1.1\'s Q chip is not there in 1.2', J('campTeachChips(C).every(x => x.id !== "q")'));
+  g.run(`C.keysUsed = { fleet: true };`);
+  check('W used (the fleet pick opened): its chip goes quiet, E stays', J('campTeachChips(C).map(x => x.id).join()') === 'e2');
+  g.run(`C.keysUsed = { fleet: true, friends: true };`);
+  check('E used too: no added chip', J('campTeachChips(C).length') === 0);
+  g.run(`__h(1, 12); C.fsel = 'field-0'; campSelPick(C, 'pilot:red', 'key');`);
+  check('a rock field held: the Enter chip reads Do it and carries the verb mine, and it is LIT "mine it"', J('campPageHudFirst(C).items.find(i => i.id === "enter").verb') === 'mine' && J('campTeachLights(C).enter') === 'mine it', JSON.stringify(J('campTeachLights(C)')));
+  g.run(`campSelOrder(C, 'engage', 'key');`);
+  check('once the order was given (Enter) that chip goes quiet', J('campTeachLights(C).enter') !== 'mine it');
+  g.run(`__h(0, 30); window.__a = campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y); __a.hold = true;`);
+  check('before any pick the Enter chip is not lit for twice', J('campTeachLights(C).enter') !== 'Enter twice: the other');
+  g.run(`campSelPick(C, 'pilot:red', 'key'); campTgtHold(C, __a.id); campTeachLights(C);`);
+  check('the first time a target is picked, in any mission (here an enemy in 1.1), the Enter chip is lit "Enter twice: the other" (20 s from the pick)', J('campTeachLights(C).enter') === 'Enter twice: the other', JSON.stringify(J('campTeachLights(C)')));
+  g.run(`C.t += 21000;`);
+  check('and it goes quiet after 20 s', J('campTeachLights(C).enter') !== 'Enter twice: the other');
+  g.run(`__h(0, 30); window.__a = campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y); __a.hold = true; campSelPick(C, 'pilot:red', 'key'); campTgtHold(C, __a.id); campTeachLights(C); campSelOrder(C, 'engage', 'key'); C.t += 300; campSelOrder(C, 'engage', 'key'); C.t += 100;`);
+  check('and once a second Enter has been given (Enter twice) it is never shown again', J('C.keysUsed.twice') === true && J('campTeachLights(C).enter') !== 'Enter twice: the other', JSON.stringify([J('C.keysUsed'), J('campTeachLights(C)')]));
+  check('the three new words (Who, a pilot, then a rock field, mine it, Enter twice: the other) are in the corner family: shown only', J(`['camp.corner.chip.who', 'camp.corner.chip.teachw', 'camp.corner.chip.teachefield', 'camp.corner.chip.teachmine', 'camp.corner.chip.teachtwice'].every(k => uiText(k) !== k)`));
+}
+
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
 console.log(`\n${n - failed}/${n} checks passed`);
 if (failed) { console.log('TEACH FAIL (' + failed + ')'); process.exit(1); } else console.log('TEACH PASS');

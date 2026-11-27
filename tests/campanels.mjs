@@ -47,8 +47,8 @@ console.log('A. the table');
 console.log('B. the list of a mission');
 {
   g.run(`window.B1 = __new('home'); window.B2 = __new(2); window.B3 = __new(3); window.B2b = __new(2, ['blink']);`);
-  check('a level with outposts (home): the dock row is in the cruiser list; the blink is not (no tech); the dock list has the repair rows its mission can use', list('B1', 'cruiser') === 'goal,target,fmine,dock,srepair,emergency,formup' && /^repairhull(,repairward)?$/.test(list('B1', 'yard')));
-  check('level 2 (no outpost near the start): the same list, and the blink row stays off even with the tech (card space-game-keys7-trim)', list('B2b', 'cruiser') === 'goal,target,fmine,dock,srepair,emergency,formup' && list('B2', 'cruiser') === 'goal,target,fmine,dock,srepair,emergency,formup');
+  check('a level with outposts (home): the dock row is in the cruiser list; the blink is not (no tech); the dock list has the repair rows its mission can use', list('B1', 'cruiser') === 'goal,target,dock,srepair,emergency,formup' && /^repairhull(,repairward)?$/.test(list('B1', 'yard')));
+  check('level 2 (no outpost near the start): the same list, and the blink row stays off even with the tech (card space-game-keys7-trim)', list('B2b', 'cruiser') === 'goal,target,dock,srepair,emergency,formup' && list('B2', 'cruiser') === 'goal,target,dock,srepair,emergency,formup');
   check('level 3 has no outpost: the dock row is left out (the hull is mended in space: Repair hull is a row), and the dock list is the repair of the hull alone (no ship to protect)', !/dock,/.test(list('B3', 'cruiser')) && list('B3', 'yard') === 'repairhull');
   check('the convoy list has its four orders in every mission (no `when` on them): where there is no convoy they are greyed, "no convoy"', ['B1', 'B2', 'B3'].every(c => list(c, 'convoy') === LISTS.convoy));
   check('a row that cannot be used NOW is not left out: it stays, greyed (ok false), with its reason (the hull whole: Repair hull says "hull sound")', (() => { g.run('B1.carrier.hp = B1.carrier.maxHp'); const r = J(`__row(B1, 'srepair')`); return r && r.ok === false && /sound/.test(r.state) && r.short === 'hull sound'; })());

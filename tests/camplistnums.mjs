@@ -15,7 +15,7 @@ import { nodeGame, ROOT } from './nodegame.mjs';
 let failed = 0, n = 0;
 const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   ' + name); else { failed++; console.log(`  FAIL ${name}${detail ? '  (' + String(detail).slice(0, 400) + ')' : ''}`); } };
 const g = nodeGame();
-g.run("CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.id === 'fmine').pick = 'field'"); // card space-game-keys6-enter: the Mine row mines the nearest ore by itself now (no pick); the sub-list engine is still there for a row that asks for it, and this suite tests it through that row
+g.run("CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.id === 'fmine').pick = 'field'; CAMP_PANELS.panels.find(p => p.id === 'cruiser').rows.find(r => r.id === 'fmine').off = 0"); // (card space-game-orders-f5-q-cruiser-only switched the row OFF in the table: this suite tests the numbered list and its sub-list engine through it, so it switches it on again) card space-game-keys6-enter: the Mine row mines the nearest ore by itself now (no pick); the sub-list engine is still there for a row that asks for it, and this suite tests it through that row
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const src = f => readFileSync(ROOT + '/' + f, 'utf8');
 g.run(`
@@ -123,7 +123,7 @@ g.run(`
 {
   const most = J(`campPanelMost('cruiser')`);
   check('the Q list has seven rows: the table has seven that are not switched off (goal, target, mine, dock, repair, emergency, form up on me), and campPanelMost says 7', most === 7 && J(`campPanelDef('cruiser').rows.filter(r => !r.off).map(r => r.id).join()`) === 'goal,target,fmine,dock,srepair,emergency,formup', most);
-  check('the H page\'s chip says 1-7 (it is read from the table, not typed in)', J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-7')`) && !J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-8')`), J(`CONTROLS.find(x => x.id === 'panels').rows.map(r => r.k.join()).join(' | ')`));
+  check('the H page\'s chip says 1-6 (it is read from the table as the game has it: six rows are on since card space-game-orders-f5-q-cruiser-only, not typed in)', J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-6')`) && !J(`CONTROLS.find(x => x.id === 'panels').rows.some(r => r.k.join() === '1-7')`), J(`CONTROLS.find(x => x.id === 'panels').rows.map(r => r.k.join()).join(' | ')`));
   check('the pause card says 1 to 7 (the {cruiserlast} placeholder), and the placeholder is the Q list\'s most rows; a list with no digits says nothing', J(`uiText('camp.ui.pausepanels')`).includes('then 1 to 7 does a row') && J(`campKeyVar('cruiserlast')`) === '7' && J(`campKeyVar('squadslast')`) === '' && J(`campKeyVar('nolast')`) === '');
   g.run(`{ const cr = campPanelDef('cruiser'); cr.rows.push({ id: 'zextra', order: 'repair', label: 'Extra', help: 'x' }); cr.rows.push({ id: 'zextra1', order: 'repair', label: 'Extra 1', help: 'x' }); }`);
   check('a ninth row moves the words with it: the chip and the pause card say 9, and the digits stop at 9 (a tenth row is not counted)', J(`campPanelMost('cruiser')`) === 9 && J(`campPanelKeyRows().some(r => r.k.join() === '1-9')`) && J(`uiText('camp.ui.pausepanels')`).includes('1 to 9 does a row'));
