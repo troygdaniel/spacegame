@@ -130,8 +130,9 @@ g.run(`window.__rk = CAMP_KEYS.reload.k; CAMP_KEYS.reload.k = 'Z';`); const rk =
 check('the reload chip follows the table', rk === 'Z');
 g.run(`CAMP.flags.pagehud = true; window.S3 = __scene(); S3.hudBack = { alpha: 0.4, setAlpha(v) { this.alpha = v; } }; campPageHudSync(S3, 0);`);
 check('the page HUD has a goal panel and a stock panel with their words and pips (one for each missile of the rack, the full ones lit), and the goal\'s meter', J('S3.pageHud.goal.label._text') === 'Transport arrived' && J('S3.pageHud.goal.value._text') === '0 / 1' && J('S3.pageHud.stock.pips.length') === J('campCruiserStatus(C).missiles.cap') && J('S3.pageHud.stock.pips.filter(p => /\\bon\\b/.test(p._cls)).length') === J('campCruiserStatus(C).missiles.n') && J('S3.pageHud.stock.key._text') === J('CAMP_KEYS.reload.k') && J('S3.pageHud.stock.oreFill.style.width') === '25%');
-g.run(`C.L.objectives = null; C.L.win = 'none'; C.L.place = null; campPageHudSync(S3, 200);`);
+g.run(`window.__nav0 = C.nav; C.nav = { on: true }; C.L.objectives = null; C.L.win = 'none'; C.L.place = null; campPageHudSync(S3, 200);`); // (a trip is on: mission 1.1's opening hint is not due, card space-game-chunk2-opening-hint)
 check('no goal: the goal panel is not drawn (display none) and no toast waits for it', J('S3.pageHud.goal.el.style.display') === 'none' && J('S3.pageHudStack') === 0);
+g.run(`C.nav = __nav0;`);
 g.run(`__out(); S3.camp = C; campPageHudSync(S3, 400);`);
 check('with a goal the toasts start under its panel (it ends at 130 canvas px here), the HOSTILES row\'s place is under the stock panel (so its details open under it), and the canvas column\'s dim plate is not drawn', J('S3.pageHudStack') === 130 && J('CAMP_CORNER_SHIFT.tr') === J('130 - CAMP.corner.title.h - CAMP.corner.at.tr.y') && J('S3.hudBack.alpha') === 0);
 check('hudStackBottom (the scene\'s, where everything at the top centre ends and a toast starts under): the page goal panel counts, and the old rule stands without it', J('Campaign.prototype.hudStackBottom.call({ hud: {}, pageHudStack: 130 }, 60)') === 130 && J('Campaign.prototype.hudStackBottom.call({ hud: {}, pageHudStack: 0 }, 60)') === 60 && J('Campaign.prototype.hudStackBottom.call({ hud: {} }, 60)') === 60);
@@ -602,8 +603,9 @@ g.run(`SS.chatUntil = 0; SS.radioToast = null; __sync(7000);`);
 check('S the canvas objects these replace are hidden while the page HUD is up (the mothership\'s word, the dock and retreat line, the chatter) and are back when it is off', J('SS.hud.mother.visible') === false && J('SS.hud.post.visible') === false && J('SS.hud.chat.visible') === false && ['mother', 'post', 'chat'].every(id => J(`campPageHudHides(${JSON.stringify(id)})`) === true) && (g.run(`CAMP.flags.pagehud = false; __sync(7200);`), J('SS.hud.mother.visible') === true && J('SS.hud.post.visible') === true && J('SS.hud.chat.visible') === true));
 g.run(`CAMP.flags.pagehud = true; SS.mp = null; __sync(7400);`);
 // the hint line of the goal panel
-g.run(`window.__dock0 = window.campDockHint; window.__ret0 = window.campRetreat; window.campDockHint = () => ''; window.campRetreat = () => null;`);
+g.run(`window.__dock0 = window.campDockHint; window.__ret0 = window.campRetreat; window.campDockHint = () => ''; window.campRetreat = () => null; window.__nav1 = C.nav; C.nav = { on: true };`); // (a trip is on: the opening hint of 1.1 is not due)
 check('S no hint: no second line in the goal panel (and the model has none)', J('campPageModel(C).hint') === null && (g.run(`__sync(7600);`), J('SS.pageHud.goal.hint.style.display') === 'none'));
+g.run(`C.nav = __nav1;`);
 g.run(`window.campDockHint = () => 'Q  dock at Occator Works';`);
 const hn = J('campPageModel(C).hint');
 g.run(`__sync(7800);`);
