@@ -67,7 +67,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.1.n1 | Welcome aboard, Commander. The transport is ours to bring to Ceres. A patrol sees her off, then she is on her own. |
 | camp.bf.1.1.n2 | Pirates lie in wait ahead, with torpedo boats. Cover the transport: pick them ({keynear}), then {keyorder}. |
 | camp.bf.1.1.n3 | The arrows fly the cruiser. {keywho} picks who, {keyorder} gives the order. |
-| camp.bf.1.2.w1 | Mine the rock fields round Ceres: W a pilot, E a rock field, then Enter. |
+| camp.bf.1.2.w1 | Mine the rock fields: W a pilot, E a field, then Enter. |
 | camp.bf.1.2.w2 | The Works pays three credits an ore. Pirates hunt the miners. |
 | camp.bf.1.2.w3 | Beat the 5 raids, then dock ({viadock}, {rowdock}). |
 | camp.bf.1.2.w4 | The Works keeps its doors shut while a pirate is near. |
