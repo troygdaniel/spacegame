@@ -111,6 +111,32 @@
 .ph-place { transform: translate(-50%, -50%); padding: .45em 1em; white-space: nowrap; border-radius: 2em; font-size: .82em; background: rgba(10, 16, 28, .96); color: #cfe3ff; transition: left .1s linear, top .1s linear; }
 .ph-edge { transform: translate(-50%, -50%); padding: .45em .8em; border-radius: 2em; display: flex; align-items: center; gap: .5em; font-size: .86em; background: rgba(58, 18, 40, .7); border-color: rgba(255, 111, 168, .45); font-variant-numeric: tabular-nums; white-space: nowrap; transition: left .1s linear, top .1s linear; }
 .ph-edgeic { --a: 0deg; transform: rotate(var(--a)); }
+/* a wave arrives (card space-game-b7-hit-kill-wave, src/campmoments.js): the edge it comes from glows pink for a third of a second, three chevrons run inward once, the hostiles' pill slides in. Still under reduced motion: the glow only fades, nothing travels */
+.ph-wave { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: none; --p: 50%; }
+.ph-wave.on { display: block; }
+.ph-wg { position: absolute; opacity: 0; }
+.ph-wave[data-e="r"] .ph-wg { right: 0; top: 0; bottom: 0; width: 5.5em; background: linear-gradient(to left, rgba(255, 111, 168, .45), rgba(255, 111, 168, 0)); }
+.ph-wave[data-e="l"] .ph-wg { left: 0; top: 0; bottom: 0; width: 5.5em; background: linear-gradient(to right, rgba(255, 111, 168, .45), rgba(255, 111, 168, 0)); }
+.ph-wave[data-e="t"] .ph-wg { top: 0; left: 0; right: 0; height: 5.5em; background: linear-gradient(to bottom, rgba(255, 111, 168, .45), rgba(255, 111, 168, 0)); }
+.ph-wave[data-e="b"] .ph-wg { bottom: 0; left: 0; right: 0; height: 5.5em; background: linear-gradient(to top, rgba(255, 111, 168, .45), rgba(255, 111, 168, 0)); }
+.ph-wc { position: absolute; width: 1em; height: 1em; opacity: 0; border-top: .2em solid #ff6fa8; border-right: .2em solid #ff6fa8; --rot: 45deg; --dx: 0em; --dy: 0em; transform: translate(-50%, -50%) rotate(var(--rot)); }
+.ph-wave[data-e="r"] .ph-wc { right: 1.4em; top: var(--p); --rot: -135deg; --dx: -5em; }
+.ph-wave[data-e="l"] .ph-wc { left: 1.4em; top: var(--p); --rot: 45deg; --dx: 5em; }
+.ph-wave[data-e="t"] .ph-wc { top: 1.4em; left: var(--p); --rot: 135deg; --dy: 5em; }
+.ph-wave[data-e="b"] .ph-wc { bottom: 1.4em; left: var(--p); --rot: -45deg; --dy: -5em; }
+.ph-wave.on .ph-wg { animation: ph-wfade .33s ease-out both; }
+@keyframes ph-wfade { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .ph-wave.on .ph-wc { animation: ph-wrun .32s ease-out both; }
+  .ph-wave.on .ph-wc:nth-of-type(3) { animation-delay: .08s; } /* (the glow is the first <i>: the chevrons are the 2nd to 4th) */
+  .ph-wave.on .ph-wc:nth-of-type(4) { animation-delay: .16s; }
+  @keyframes ph-wrun { 0% { opacity: 0; translate: 0 0; } 20% { opacity: 1; } 100% { opacity: 0; translate: var(--dx) var(--dy); } }
+  .ph-edge.ph-slide { animation: ph-slide .25s ease-out both; }
+  @keyframes ph-slide { from { opacity: 0; translate: var(--sx) var(--sy); } to { opacity: 1; translate: 0 0; } }
+  .ph-g.kill .ph-ring { animation: ph-killring .45s ease-out; }
+  @keyframes ph-killring { 0% { transform: scale(1); filter: none; } 35% { transform: scale(1.35); filter: brightness(1.9); } 100% { transform: scale(1); filter: none; } }
+}
+@media (prefers-reduced-motion: reduce) { .ph-g.kill .ph-ring { box-shadow: 0 0 0 .14em rgba(255, 255, 255, .85); } } /* a pilot's kill: the ring is lit (no movement) while the class stays */
 .ph-arrow { width: .9em; height: .9em; }
 /* the pill of a ship you protect that is off the screen (card space-game-page-hud-friend-edge-pill): the hostiles' pill in the convoy's amber (the canvas's amber arrow of such a ship); the one in trouble (hot) is brighter; a long name is cut, not wrapped */
 .ph-fedge { background: rgba(52, 36, 8, .7); border-color: rgba(255, 180, 84, .45); color: #ffd37a; max-width: 22em; overflow: hidden; }

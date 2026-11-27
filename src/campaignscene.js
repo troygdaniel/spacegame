@@ -491,6 +491,7 @@ class Campaign extends Phaser.Scene {
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
     if (typeof campShieldHitPaint === 'function') campShieldHitPaint(this, this.time.now); // the shield's arcs, after the sprites are in place and the health numbers (src/campshieldhit.js)
+    if (typeof campMomentsFrame === 'function') campMomentsFrame(this); // the hit's sparks and white frames, the kill's shards and ring, the view's nudge (src/campmoments.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { return CAMP.nav.arrow.keep; } // the places the edge arrow's label keeps out of: the table's (the target display's corner is one of them: its box, campTdispBox, is inside it)
@@ -515,8 +516,9 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
-    else if (e.type === 'boom') { if (!(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
-    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e))) this.boom.explode(3, e.x, e.y); }
+    else if (e.type === 'boom') { if (!(typeof campMomentsKill === 'function' && campMomentsKill(this, e)) && !(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
+    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e)) && !(typeof campMomentsHit === 'function' && campMomentsHit(this, e))) this.boom.explode(3, e.x, e.y); } // (a hit the shield took whole is its arc and nothing else; any other: the new look's white frames, three sparks and the arc's notch, src/campmoments.js, else the puff)
+    else if (e.type === 'wave') { if (typeof campMomentsWave === 'function') campMomentsWave(this, e); } // a wave came out of the dark: the edge it comes from glows, three chevrons run in, the pill slides (src/campmoments.js, the page HUD)
     else if (e.type === 'earthhit') { this.boom.explode(6, e.x, e.y); this.battleSound('earth', 'earthHit'); }
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }

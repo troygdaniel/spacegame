@@ -10,6 +10,7 @@
 //   slookMarkR(Ls)                  the arc's radius in screen px for a ship Ls px long on the screen: slookRingR, and not under the least size of the bracket less the ring's gap
 //   slookHurt(u)                    does the unit get an arc when it is not picked: a ship of the look table, alive, with a hull under 1
 //   slookArcPoints(x, y, r, frac)   the corners of an arc from twelve o'clock clockwise, a share frac of the turn, [{ x, y }] in a list that the next call uses again (read it at once)
+//   slookArcSpan(x, y, r, f0, f1)   the same for the part of the turn from the share f0 to f1 (a hit's notch, src/campmoments.js)
 //   slookMarksBegin(s)              the frame's start (campTgtPaint): a new count, so a ship's arc is drawn once however many marks name it
 //   slookArcDraw(g, s, u, z)        one ship's track and arc on a Graphics (z: the camera's zoom); once a frame for a ship
 //   slookPickMark(g, v, col, z, al, drawn, s)   the bright ring of a picked ship (and its arc, when nothing drew that yet this frame): what campTgtCorners drew; al is the strength the fade and the pulse give
@@ -30,6 +31,11 @@ function slookArcPoints(x, y, r, frac) { // a closed turn is the same corners as
   for (let i = 0; i <= m; i++) { const p = K.pool[i] || (K.pool[i] = { x: 0, y: 0 }), a = -Math.PI / 2 + Math.PI * 2 * Math.max(0, Math.min(1, frac)) * i / m; p.x = x + Math.cos(a) * r; p.y = y + Math.sin(a) * r; out[i] = p; }
   return out;
 }
+function slookArcSpan(x, y, r, f0, f1) { // the corners of the part of the turn from the share f0 to f1 (from twelve o'clock, clockwise), [{ x, y }] in the same list slookArcPoints uses (read it at once): the notch of a hit (src/campmoments.js)
+  const K = SLOOKMARK, a = Math.max(0, Math.min(1, f0)), b = Math.max(a, Math.min(1, f1)), n = campCircleSides(r), m = Math.max(2, Math.ceil(n * (b - a))), out = K.out; out.length = m + 1;
+  for (let i = 0; i <= m; i++) { const p = K.pool[i] || (K.pool[i] = { x: 0, y: 0 }), t = -Math.PI / 2 + Math.PI * 2 * (a + (b - a) * i / m); p.x = x + Math.cos(t) * r; p.y = y + Math.sin(t) * r; out[i] = p; }
+  return out;
+}
 function slookMarksBegin(s) { if (s) { s.slookGen = (s.slookGen || 0) + 1; s.slookRings = []; } } // (slookRings: where the arcs of this frame are on the screen: { x, y, R })
 function slookArcDraw(g, s, u, z) {
   if (!g || !u) return false;
@@ -39,6 +45,7 @@ function slookArcDraw(g, s, u, z) {
   g.lineStyle(w, 0xffffff, 0.13); campRing(g, u.x, u.y, R); // the faint full ring behind the arc
   g.lineStyle(w, slookHullColor(f), 1);
   if (f >= 1) campRing(g, u.x, u.y, R); else if (f > 0) g.strokePoints(slookArcPoints(u.x, u.y, R, f), false, false);
+  if (f < 1 && typeof campMomentsNotch === 'function') campMomentsNotch(g, s, u, R, w, f); // a hit's bright notch where the hull just fell to, fading (src/campmoments.js)
   return true;
 }
 function slookPickMark(g, v, col, z, al, drawn, s) {
