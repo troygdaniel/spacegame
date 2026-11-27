@@ -1059,3 +1059,45 @@ The old range, before the two guard groups and the reinforcements around the cru
 - **Words:** nothing untrue. "More aliens join when the fourth guard dies, from two sides", "A second group, coming in from the far side" and "A third group, from the other side" say nothing of a count; "Seven guards" is the guards, not the reinforcements. Nothing voiced. One shown line changes by itself, because the briefing builds it from the table: 2.2's "Expect 4 raiders, 7 drones, 3 gunships, 7 guards." (`camp.bf.expect`, filled in by `campBriefEnemies`) now reads "Expect 6 raiders, 10 drones, 5 gunships, 7 guards." (no new key, no voicepack rule; it is not voiced).
 
 **Pins.** `tests/campbrief.mjs` (71 checks; the 2.2 "Expect" line above), `tests/campreinforcecruiser.mjs` (5 checks; the groups are 11 and 10 ships now) and `tests/camplevel2calls.mjs` (22 checks; 6 drones and 5 gunships split in two, 6 raiders and 4 drones, "11 ships" for the fourth dead guard's call). `tests/campguardgroups.mjs`, `tests/campfighterrunner.mjs`, `tests/campaign.mjs`, `tests/camppace.mjs`, `tests/campgoalcount.mjs`, `tests/camphunt.mjs`, `tests/camplevel2words.mjs`, `tests/campoutpost.mjs`, `tests/camprunnertell.mjs` and `tests/campfighterjobs.mjs` pass as they were.
+
+
+## Mission 2.2: farther out (card `space-game-22-farther-ring`; Troy, 27 Nov 2026 after playing: 2.2 is too short at about 58 s, more ships buy only 1 s each; base main `12f51ebc`)
+
+**The change.** The three wave rows of 2.2 come out about **3,800 px from the cruiser** (their `ring` offsets, `src/campaign.js`), not 1,700, so they take longer to arrive: the two reinforcement groups of the fourth dead guard at [2900, -2450] and [-2900, 2450] (still opposite sides of her, north-east and south-west, 3,797 px each), the runner's group at [-3500, -1500] (west-north-west, 3,808 px). Nothing else moved: ships, hit points, damage, calls and the `from` points (the Tab map's extent) are as they were; they still go for the cruiser (the focus).
+
+**Distances tried** (32 seeds, plain bot, seconds / cruiser damage, then the ace bot's cruiser damage against the plain bot's at rough = the sweep's rule 2, which needs the ace to take at least 70 per cent of plain's; the `ring` set on all three rows by `--set levels[2].missions[1].waves[i].ring[0|1]`):
+
+| px from her | plain sharp | plain steady | plain rough | ace steady | rule 2 at rough (ace / plain) |
+|---|---|---|---|---|---|
+| 1,700 (today) | 58 / 190 | 58 / 190 | 58 / 182 | 57 / 156 | 153 / 182 = 84 per cent, pass |
+| 2,400 | 62 / 210 | 62 / 216 | 63 / 188 | 61 / 173 | 153 / 188 = 81, pass |
+| 2,800 | 64 / 216 | 64 / 227 | 64 / 190 | 63 / 179 | 136 / 190 = 72, pass |
+| 3,200 | 66 / 202 | 67 / 227 | 67 / 202 | 65 / 184 | 127 / 202 = 63, **fail** |
+| 3,600 | 68 / 216 | 69 / 227 | 69 / 190 | 67 / 173 | 136 / 190 = 72 (64 seeds: 127 / 219 = 58, fail) |
+| **3,800 (taken)** | 69 / 213 | 70 / 227 | 71 / 204 | 68 / 179 | 115 / 204 = 56, **fail** |
+| 4,000 | 70 / 222 | 71 / 222 | 71 / 216 | 69 / 181 | 127 / 216 = 59, fail |
+| 4,400 | 73 / 222 | 73 / 222 | 73 / 213 | 72 / 167 | 127 / 213 = 60, fail |
+
+Also tried, no better: one group nearer and the other farther (3,000 and 4,400, either way round) gives 68 to 70 s and more damage (plain 219 to 254), because the fighter meets whichever is farther. The runner's row alone changes nothing at all in 32 seeds (the same numbers as today to the digit): the bots always catch the runner, so his group never comes (as `src/campaign.js` has it: killed first, no group comes); a player who lets him go gets that group from 3,800 px too (`tests/campreinforcecruiser.mjs`).
+
+**The numbers at 3,800** (32 seeds, 2.2, the real edit; won 100 per cent for every bot and skill; seconds / cruiser damage; before = main `12f51ebc`):
+
+| skill | bot | before | after |
+|---|---|---|---|
+| sharp | plain | 58 / 190 | 69 / 213 |
+| steady | plain | 58 / 190 | 70 / 227 |
+| rough | plain | 58 / 182 | 71 / 204 |
+| sharp | ace | 60 / 181 | 70 / 199 |
+| steady | ace | 57 / 156 | 68 / 179 |
+| rough | ace | 53 / 153 | 66 / 115 |
+| sharp | sit | 60 / 204 | 71 / 222 |
+| steady | sit | 60 / 208 | 71 / 245 |
+| rough | sit | 61 / 219 | 71 / 237 |
+| sharp, steady, rough | carrier (the cruiser alone) | 71 / 299, 71 / 285, 71 / 303 | 78 / 294, 77 / 279, 77 / 279 |
+
+- **Time met:** plain 69 to 71 s (target 70 to 80; was 58), the carrier bot 77 to 78. A careful player still wins every seed.
+- **Not met: the old damage range.** The plain bot's cruiser damage is 204 to 227, against 182 to 190 today: 12 to 20 per cent more. It steps up at 2,400 px and then stays flat (210 to 227 at every distance up to 4,400), so a shorter distance would not buy it back.
+- **Not met: the fighter's advantage at rough.** The ace bot's fighter now meets a group on the way (at 3,800 px it flies out to it; 5 kills a run, was 4) and the cruiser takes 44 per cent less damage than the plain bot's, against 16 per cent today: the sweep's rule 2 fails at rough (it passed at all three skills before; sharp 7 per cent less and steady 21 pass). It was the 2,700 px worry on the old card and it is real from about 3,200 px up: at 2,800 px it still passes (72 per cent) but plain is then 64 s. Rule 3 (the hands-off bot) passes; rule 4 passes (the ace bot loses 17 to 30 per cent of a hull a run); rule 5 fails at sharp and steady as it did.
+- **Words:** nothing untrue and nothing voiced. "More aliens join when the fourth guard dies, from two sides", "A second group, coming in from the far side" and "A third group, from the other side" say nothing of a distance. The comment in `src/campaign.js` that said 1,700 px now says 3,800.
+
+**Pins.** `tests/campreinforcecruiser.mjs` (5 checks; the rows 3,500 to 4,100 px from her, the groups 3,400 to 4,200 px from the cruiser and farther than 2,000 from a fighter flown 4,300 px off, the runner's group 3,300 to 4,200).
