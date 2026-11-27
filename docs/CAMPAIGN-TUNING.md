@@ -664,3 +664,58 @@ Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the firs
 - **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
 - Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
 
+## Level 3 comes on what the player does (card `space-game-b7-level3`; brief 7 decisions 1, 3, 5 and 6; Troy said yes to all of it on 26 Nov 2026)
+Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK` 0.5, `hpK` 2, turrets 'auto'); old tables from main just before the card (`e0bee48d`, the level 3 sim identical), new from the card's branch. Every number of the waves is a first try, measured with the bots: 32 seeds a mission, skill steady, pace Brisk; `node tools/campaign-bot.mjs --level 3 --seeds 32 --bots idle,carrier,plain,troy --json` for the cruiser bots, `--max 900` for the idle ones, `--cockpit --level 3` for the fighter bots.
+
+**What changed (the table, `src/campaign.js`):**
+- 3.1 *Approach*: three waves, one for each scan (`on: { scanning: k }`: a ship of ours is in the ring): 2 raiders; 2 raiders, a drone and a gunship; the same again. A scan stands still while the cruiser is hit and goes on 2 s after (`pause: 2` on the scan objective; the points stay 7 s: the briefing says 7). The mission wants every wave beaten (`clear`).
+- 3.2 *Outer ring*: three groups, one for each of the first three towers to fall (`on: { towers: k }`), each born 700 px behind the tower nearest the cruiser (`nearTower`): 2 drones; 2 drones and a gunship; 2 raiders and a gunship. `clear` too. (The wave of 25 s is gone.)
+- 3.3 *Inner ring*: two waves together at the fourth tower (`on: { towers: 4 }`): 2 raiders and 2 gunships from the north-west, 2 drones and 2 gunships from the south-east; `clear`; par and the swift bonus 150 to 180 s. (The waves of 20 s and 75 s are gone.)
+- `CAMP.tower.flownTurn` 1.5 and `flownSpeed` 1.3: a tower turns and shoots faster at the ship the player flies (`campTowerAI`); the cruiser's own game is as it was.
+- The idle threats (3.1 the picket, 3.2 the reserve), below.
+
+**The cruiser bots** (won% / win time s / hull left / damage taken; median of 32): the plain bot and the carrier bot (the carrier bot never launches the wing).
+
+| mission | bot | old | new |
+|---|---|---|---|
+| 3.1 | plain | 100 / 69 / 900 / 19 | 100 / 80 / 900 / 65 |
+| 3.1 | carrier | 100 / 70 / 900 / 59 | 100 / 85 / 900 / 81 |
+| 3.2 | plain | 100 / 44 / 900 / 162 | 100 / 59 / 870 / 230 |
+| 3.2 | carrier | 100 / 82 / 670 / 461 | 100 / 72 / 695 / 407 |
+| 3.3 | plain | 100 / 61 / 667 / 436 | 100 / 71 / 623 / 486 |
+| 3.3 | carrier | 100 / 56 / 626 / 461 | 100 / 78 / 508 / 608 |
+
+3.1 is about four times as hard in damage (the brief: "three scans with almost no opposition: 12 damage in the whole mission"), 3.2 about 40 percent, 3.3 about 10 percent; every mission is still won by every cruiser bot, every seed. 3.2's carrier bot is a little easier and quicker (72 s against 82); I did not find out why (probably the groups come to it by the tower it is shooting at).
+
+**The idle player** (the idle bot gives no order at all; the passive bot is Troy's first try: it launches the wing at 45 s, escorts at 81 s and never attacks; 900 seconds of play; won% / lost% / timed out%):
+
+| mission | bot | old | new |
+|---|---|---|---|
+| 3.1 | idle (does nothing) | 0 / 0 / 100 | 0 / 78 / 22 |
+| 3.1 | passive (launches, never attacks) | 0 / 0 / 100 | 0 / 0 / 100 |
+| 3.2 | idle (does nothing) | 0 / 0 / 100 | 0 / 9 / 91 |
+| 3.2 | passive (launches, never attacks) | 0 / 0 / 100 | 0 / 0 / 100 |
+| 3.3 | idle (does nothing) | 0 / 6 / 94 | 0 / 0 / 100 |
+| 3.3 | passive (launches, never attacks) | 63 / 0 / 38 | 0 / 0 / 100 |
+
+3.1 and 3.2 can be lost by an idle player now: **the picket** (no scan begun 60 s after arrival: 3 raiders and a gunship come for the cruiser, another every 40 s until a scan begins, four at most) and **the reserve** (no tower fallen 45 s after arrival: 2 drones and 2 gunships, same rhythm). The idle bot loses 78 percent of 3.1 in fifteen minutes (66 percent in seven) and 9 percent of 3.2; the passive bot, who launches the wing, is hurt (113 damage in 3.1, 396 in 3.2) and neither wins nor loses. The reserve is weaker against the pilots; to make 3.2 lose more often, give it a third gunship or a fifth group. **3.3 has the old problem the other way round:** its waves now wait for the fourth tower, so an idle player is never found (the old clock lost 6 percent of the idle runs) and the passive bot no longer wins (63 percent before: the waves used to come to it). A third idle threat there would be the same mechanism (`on: { idle: s, until: 'tower' }`).
+
+**The fighter bots** (`--cockpit`, `hpK` 2, `damageK` 0.5, `rateK` 3; win time s / cruiser damage; the rule is `docs/night/cockpit-sweep.md`'s): old = main before the card, new = the card's branch.
+
+| mission | skill | plain old | plain new | ace old | ace new (and kills) | sit new won% | rule |
+|---|---|---|---|---|---|---|---|
+| 3.1 | sharp | 69 / 31 | 79 / 78 | 74 / 9 | 82 / 47 / 1 | 100 | FAIL -> FAIL |
+| 3.1 | steady | 69 / 19 | 80 / 65 | 71 / 9 | 76 / 47 / 2 | 100 | PASS -> PASS |
+| 3.1 | rough | 69 / 21 | 81 / 68 | 66 / 0 | 67 / 12 / 5 | 100 | PASS -> FAIL |
+| 3.2 | sharp | 44 / 144 | 59 / 245 | 44 / 54 | 60 / 173 / 1 | 100 | FAIL -> PASS |
+| 3.2 | steady | 44 / 162 | 59 / 230 | 44 / 54 | 60 / 166 / 1 | 100 | FAIL -> PASS |
+| 3.2 | rough | 44 / 144 | 60 / 238 | 30 / 36 | 46 / 151 / 3 | 100 | FAIL -> FAIL |
+| 3.3 | sharp | 55 / 468 | 70 / 544 | 60 / 353 | 79 / 522 / 1 | 100 | PASS -> PASS |
+| 3.3 | steady | 61 / 436 | 71 / 486 | 59 / 378 | 74 / 468 / 2 | 100 | PASS -> PASS |
+| 3.3 | rough | 60 / 436 | 70 / 443 | 51 / 270 | 68 / 396 / 3 | 100 | FAIL -> PASS |
+
+**6 of 9 mission-skills pass the rule (was 4).** Fixed: 3.2 sharp and steady (the ace took a third of the plain bot's damage because a tower could not track a fast fighter: now 166 against 230) and 3.3 rough. Still failing: 3.1 sharp (ace 47 damage against plain's 78: probably the fighter meets each wave before it reaches the cruiser), 3.1 rough (67 s against 81, and 12 damage against 68: probably with no hit the scan never stands still, so the fighter's cover makes the scans quicker), 3.2 rough (46 s against 60: probably three times the rate shoots a tower down quickly). The rough skill is the ace's widest cone; at sharp and steady the rule holds in 3.2 and 3.3 and in 3.1 steady. What might move the rest (not tried): a second 3.1 wave that comes to the cruiser from the far side (a fighter cannot meet both), or fewer scan pauses. Not done: Troy agrees the rule before any retune.
+
+**Briefing lines made untrue (listed, not reworded; Troy to word them):** 3.1 "Aliens answer your first scan." (each scan is answered now), 3.2 "More aliens arrive after 25 seconds, from the north-east." (a group comes when a tower falls), 3.3 "Two waves come: at 20 seconds and at 75." (both come at the fourth tower). `tests/campbrief.mjs` lets those two numbers stand (`STALE`) until they are worded.
+
+Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
