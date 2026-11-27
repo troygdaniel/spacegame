@@ -1668,7 +1668,7 @@ const UI_TEXT = {
   'camp.ui.out': 'OUT',
   'camp.ui.wave': 'WAVE {n} OF {total}',
   'camp.nudge.attack': 'Enemies. Pick one with {keynear}, then {keyorder}: the pilots attack.',
-  'camp.nudge.cockpit': '{keycockpit} takes a pilot\'s stick: fly a fighter. {keycockpit} again hands it back.',
+  'camp.nudge.cockpit': '{keycockpit} flies a pilot\'s fighter. {keycockpit} again hands it back.',
   'camp.ui.mother': 'MOTHERSHIP',
   'camp.ui.pausehelp': 'Hold Space: the turrets fire at ships close by. {keymissile} fires a homing missile at the target.',
   'camp.tech.shield.name': 'Shield grid',

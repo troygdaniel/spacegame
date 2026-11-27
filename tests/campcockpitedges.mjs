@@ -90,14 +90,14 @@ console.log('F. the first-minute tip');
 {
   g.run(`__mk(); C.t = 50000; window.__sh = {};`);
   const t1 = J('campNudge(C, __sh)');
-  check('level 1, 50 seconds in, the switch on, a pilot out: the tip says the key from the table and how to hand back (one line)', typeof t1 === 'string' && t1 === "C takes a pilot's stick: fly a fighter. C again hands it back." && J('__sh.cockpit') === true, t1);
+  check('level 1, 50 seconds in, the switch on, a pilot out: the tip says the key from the table and how to hand back (one line)', typeof t1 === 'string' && t1 === "C flies a pilot's fighter. C again hands it back." && J('__sh.cockpit') === true, t1);
   check('shown once', J('campNudge(C, __sh)') === null);
   g.run(`__mk(); C.t = 50000; window.__sh = { attack: true }; CAMP.flags.cockpit = false;`);
   check('the switch off: no tip, and none later', J('campNudge(C, __sh)') === null && J('(() => { CAMP.flags.cockpit = true; return campNudge(C, __sh); })()') === null);
   g.run(`__mk(); C.t = 50000; window.__sh = { attack: true }; campCockpitTake(C); campCockpitGive(C, 'hand');`);
   check('once the stick was taken, never hinted', J('campNudge(C, __sh)') === null);
   g.run(`__mk(); C.t = 10000; window.__sh = {};`);
-  check('not before 45 seconds (another hint may show: the beats\' own; this one does not)', J('campNudge(C, __sh)') !== "C takes a pilot's stick: fly a fighter. C again hands it back." && J('__sh.cockpit') === null);
+  check('not before 45 seconds (another hint may show: the beats\' own; this one does not)', J('campNudge(C, __sh)') !== "C flies a pilot's fighter. C again hands it back." && J('__sh.cockpit') === null);
   check('the words are the content table\'s with the voice-pack family (not spoken)', J(`uiText('camp.nudge.cockpit', { keycockpit: 'C' })`) !== 'camp.nudge.cockpit' && J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.nudge.cockpit'))`) === true);
 }
 
