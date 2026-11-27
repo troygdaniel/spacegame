@@ -22,7 +22,7 @@ const SCRKEYS = {
 const SCRROOM = [
   { id: 'ready', rows: [['rr.choose', ['left', 'right']], ['rr.card', ['up', 'down']], ['rr.jump', ['d1', 'd2', 'd3']], ['rr.enter', ['pick']], ['rr.launch', ['launch']], ['rr.title', ['close', 'title']], ['r.tune', ['tune']]] },
   { id: 'pick', rows: [['rp.choose', ['up', 'down', 'left', 'right']], ['rp.enter', ['pick']], ['rp.replay', ['open']], ['rp.clear', ['clear']], ['rp.back', ['close']]] },
-  { id: 'brief', rows: [['rb.step', ['left', 'right']], ['rb.launch', ['launch']], ['rb.zoom', ['zoomout', 'zoomin', 'zoomreset']], ['rb.map', ['briefmap']], ['rb.back', ['close']]] },
+  { id: 'brief', rows: [['rb.step', ['left', 'right']], ['rb.launch', ['pick', 'launch']], ['rb.zoom', ['zoomout', 'zoomin', 'zoomreset']], ['rb.map', ['briefmap']], ['rb.back', ['close']]] },
   { id: 'refit', rows: [['rf.choose', ['up', 'down', 'left', 'right']], ['rf.buy', ['pick', 'buy']], ['rf.undo', ['giveback']], ['rf.back', ['close']]] }
 ];
 
