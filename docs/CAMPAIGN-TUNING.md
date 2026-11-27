@@ -953,3 +953,29 @@ No number changed. While the last guard of 2.2 runs to call the second group (`C
 - **Words:** nothing becomes untrue ("Seven guards", "Reinforcements", "Missiles help", "Clear them all"); nothing voiced changed.
 
 **Pins.** `tests/campguardgroups.mjs` (7 checks: the same seven guards in groups of four and three; the centres 1,400 to 1,650 px apart and each within 400 px; each group over 1,200 px from the arrival; none wakes with the cruiser at the place and a ship 450 px from the first wakes that group only; two dead in each group call the reinforcements; six dead across both make the last guard (in the second group) the runner; the patrol comes at 40 s with all seven there).
+
+## Mission 2.1: the second cache is guarded from the start (card `space-game-b10-c5-21-guarded-cache`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 5; base main `042bc059`)
+
+**Why.** 2.1 had become a 33 s mission with no fight in it (it was 42): the first cache taken calls a group, but the player could fly the whole route unopposed. **The rule** (the mission row's `guards`, no new code): a guard group waits at the second cache (the one the cruiser reaches second; caches `[800, 1600]`) from the start: 3 gunships, 3 raiders and 2 drones within 450 px of it, held until a ship of yours comes within reach, then fighting as any alien. **Two caches stay** (Troy): the objective, "Gather two resource caches", the first cache calling its group and the hunting party for a player who takes none are as built. A player can take the first and third cache and never wake them (the guards are not a condition of the win); that is the choice of who goes where, and costs the longer flight (3,490 px between those two against 2,400 to the second).
+
+**Sizes tried** (plain bot, 12 seeds, steady, seconds / cruiser damage): 3 ships 34 / 24; 5 ships 43 / 49 (the sit bot 37, ace 36); 6 ships 40 / 67; **8 ships 43 / 80 (taken)**. The eight keep the flown fighter within the sweep's rule better than five did (ace 9 per cent faster than plain, against 16 for the five), at a cruiser damage of 61 to 140, no hull lost (600 of 600).
+
+**The numbers** (12 seeds, 2.1; won per cent / seconds / cruiser damage / kills (median); 100 per cent won everywhere):
+
+| skill | bot | before (`042bc059`) | after |
+|---|---|---|---|
+| steady | plain | 33 / 0 / 7 | 43 / 80 / 14 |
+| steady | carrier | 32 / 15 / 7 | 42 / 140 / 13 |
+| steady | ace | 32 / 6 / 7 | 39 / 61 / 15 |
+| steady | sit | 34 / 13 / 7 | 42 / 93 / 14 |
+| rough | plain | 32 / 13 / 7 | 40 / 78 / 14 |
+| rough | carrier | 36 / 9 / 7 | 47 / 114 / 15 |
+| rough | ace | 31 / 9 / 7 | 36 / 44 / 13 |
+| rough | sit | 33 / 15 / 7 | 42 / 91 / 13 |
+
+- Plain bot 43 s at steady and 40 s at rough: back to the old 42 s with some cruiser damage. Ace against plain: steady 9 per cent faster and 24 per cent less damage; rough 10 per cent faster and 44 per cent less damage (over the sweep's 30 per cent rule at rough, as the pilots clear the group as it comes).
+- The idle bot is as it was (it never reaches the place).
+
+**Words.** Nothing voiced changed; "Gather two resource caches.", "Find 2 of the 3 resource pods ..." and the four moments stay true. **One new shown-only line**, because `tests/campbrief.mjs` requires every number of the mission's data to be in its walkthrough: `camp.bf.2.1.w5` "8 guards wait at the second pod: a hard fight." (the file's silent family; no voice).
+
+**Pins.** `tests/campguardedcache.mjs` (6 checks: eight guards of the right kinds at the second cache and asleep, clear of the other two; they stay put for 20 s and wake when a ship comes within 400 px; the first cache calls its group and does not wake them; the hunting party still comes at 45 s; two caches without the guarded one still win). `tests/campaign.mjs` (the row has eight guards; the called group is counted by its wave), `tests/camplevel2calls.mjs` (the party's own ships), `tests/campbrief.mjs` passes with the fifth step.
