@@ -239,7 +239,7 @@ function campPageHudPanelRects(R, r, k) {
   els.forEach(el => {
     const cls = String(el.className || ''); if (!/(^|\s)ph-p(\s|$)/.test(cls) || /(^|\s)ph-(edge|place)(\s|$)/.test(cls) || (el.style && el.style.display === 'none') || typeof el.getBoundingClientRect !== 'function') return;
     const rc = el.getBoundingClientRect(), x0 = (rc.left - r.left) / k, y0 = (rc.top - r.top) / k, w = rc.width / k, h = rc.height / k;
-    if (!(w > 0) || !(h > 0) || w > W * 0.9 || h > H * 0.6) return; // (0.9, not 0.6: the bottom key row is a panel too and is wide when its teaching chips are lit, 824 of 1280 px with three, and the pills must keep clear of it: card space-game-b10-c9-teach-r)
+    if (!(w > 0) || !(h > 0) || w > W * 0.98 || h > H * 0.6) return; // (0.98, not 0.6: the bottom key row is a panel too and is wide when its teaching chips are lit, 824 of 1280 px with three and about 1220 with the most that can be up at once, and the pills must keep clear of it; only a rectangle as wide as the screen is no panel: cards space-game-b10-c9-teach-r and -c10-teach-tab)
     out.push({ x: x0 + w / 2, y: y0 + h / 2, w, h });
   });
   return out;
