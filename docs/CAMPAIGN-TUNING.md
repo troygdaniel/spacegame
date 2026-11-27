@@ -789,3 +789,25 @@ Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the grou
 - **Not changed, for Troy:** the run has no tell on the screen (no new line: the group's own line "A third group, from the other side." is said when the call is made). A shown line when the last guard starts to run, and a tag on it, would help a player find it; that is new words and for Troy.
 
 **Pins.** `tests/campfighterrunner.mjs` (6 checks: the row; the runner is chosen, runs away and is awake; left alone it calls within 23 s and the group comes; killed first, no group ever comes and the mission is still won; all seven dead at once; no guard dead and nothing comes by the clock). `tests/camplevel2calls.mjs`: the third wave row is `{ runner: true }`, and the sixth dead guard no longer calls the group.
+## Mission 2.3: an alien held outside the ring by a fighter does not stop the hold (card `space-game-fighter-job-23`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base: main `52b6eeaa` plus the pod chunk `57ee0654`)
+
+**The rule** (`campRelicHeld`, the relic row's `held: 450`): an alien that is OUTSIDE the ring (more than the ring's 240 px from the relic) and within 450 px of the fighter the player FLIES does not count for the hold's "no alien within 650 px of the relic": the nearest one, one alien. The wing's own pilots hold nothing off: a first version let every fighter do it, and the careless pilot of `tests/camprelicwaves.mjs` (the cruiser sits on the ring and never fires) then won with 44 hull left on the wing's work alone, which is the two-sides card's loss undone; it is the player's job. Everything else about the hold is as it was: the cruiser must be in the ring, an alien inside the ring or a second alien at the edge still stops it, and it falls twice as fast otherwise.
+
+**Why it is not the old kite** (the 16 s win of `docs/night/cockpit-sweep.md`): the waves now hold the ring (leash 800 px; `campRelicAlien`), so a fighter cannot draw a wave 2 km off, and one ship frees one alien, not twelve.
+
+**The numbers** (12 seeds, 2.3; won per cent / seconds / cruiser damage; unchanged to the digit: the bots' fighters kill what they fight before it has stood at the ring's edge for long, so the rule does not fire in their runs):
+
+| skill | bot | before = after |
+|---|---|---|
+| steady | plain | 100 / 81 / 252 |
+| steady | carrier | 100 / 79 / 162 |
+| steady | ace | 100 / 77 / 97 |
+| steady | sit | 100 / 85 / 151 |
+| rough | plain | 100 / 78 / 144 |
+| rough | carrier | 100 / 80 / 155 |
+| rough | ace | 100 / 72 / 94 |
+| rough | sit | 100 / 82 / 148 |
+
+- Ace against plain is as it was before this card: 5 per cent faster and 61 per cent less cruiser damage at steady on these 12 seeds (97 against 252), 8 per cent faster and 35 per cent less at rough (94 against 144): the damage is over the sweep's 30 per cent rule at both, a gap this card neither made nor closes (the plain bot's 12 seeds carry a bad one at steady). The new rule is a tool for a player who flies a fighter to the ring's edge on purpose; the bots do not. For Troy to try in play.
+
+**Pins.** `tests/campfighterring.mjs` (7 checks: the row; an alien at the edge with no fighter near stops the hold; with the fighter he flies 215 px off it does not; the flown fighter 700 px off holds nothing; an alien inside the ring is never held off; the flown fighter holds one alien of two; a wing pilot's fighter holds nothing).

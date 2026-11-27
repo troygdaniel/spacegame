@@ -756,7 +756,7 @@ const CAMP = {
           hunt: { every: 40, from: [2600, -2200], ships: { drone: 2, gunship: 1 }, more: { drone: 1, gunship: 1 }, until: { guardsDead: 7 }, restart: 'guard', focus: 'carrier' },  // the threat that comes to a player who kills no guard (campHunt): a patrol from the north-east when no guard has died for 40 s, each two ships larger, until the guards are all dead
           waves: [{ on: { guardsDead: 4 }, from: [2600, -2200], ships: { drone: 2, gunship: 2 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2' }, { on: { guardsDead: 4 }, from: [-2500, 2000], ships: { drone: 2, gunship: 1 }, goal: 'carrier', focus: 'carrier' }, { on: { runner: true }, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves come on what the player does (card space-game-b7-level2): the reinforcements (the old first wave, split in two) when the fourth guard dies, from two sides at once; a second group (the old second wave) when the sixth dies: the last guard calls it. They came at 18 and 40 s of the clock
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
-          start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 20, caches: 0, clear: 650, leash: 800, stand: 200 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
+          start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 20, caches: 0, clear: 650, leash: 800, stand: 200, held: 450 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { held: 0 }, ring: [447, -1005], from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 10 }, ring: [-1062, 287], from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { behind: 1, secs: 8 }, ring: [1062, -287], from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'relic', say: 'camp.say.l2wave3' }] }  // the waves: on what (the hold), where they come out (ring: from the relic), how many of each kind. `from` is no longer where they come from (ring wins): it is kept so the Tab map's extent and its zoom limit are what they were (campMapBounds)
       ]
@@ -1493,7 +1493,7 @@ function campCaches(C) {
 // the relic (level 2): with enough caches collected, the carrier holds within its ring, with no alien near it, until it answers; leave or let an alien close and it loses ground twice as fast
 function campRelic(C, dt) {
   const L = C.L, r = L.relic; if (!r || !C.relic || C.carrier.hp <= 0) return;
-  const R = C.relic, ready = C.cachesGot >= r.caches, near = campDist(C.carrier, R) <= r.radius, clear = !campAliens(C).some(u => campDist(u, R) <= r.clear);
+  const R = C.relic, ready = C.cachesGot >= r.caches, near = campDist(C.carrier, R) <= r.radius, held = r.held ? campRelicHeld(C, R, r) : null, clear = !campAliens(C).some(u => campDist(u, R) <= r.clear && !(held && held.has(u.id)));
   if (near && !R.entered) R.entered = true; // the cruiser has been in the ring (a wave waiting for that comes now: campWaveOn, on.held)
   if (ready && near && clear) {
     if (R.hold === 0) campSay(C, 'camp.say.relicon');
@@ -1502,6 +1502,14 @@ function campRelic(C, dt) {
   } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
 }
 
+// THE ALIEN THE FIGHTER HE FLIES HOLDS OFF THE RING (the relic row's `held`; card space-game-fighter-job-23, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes): an alien that is OUTSIDE the ring and within `held` px of the fighter the player flies
+// does not stop the hold: the nearest one, ONE alien. It is the player's job, not the wing's: the pilots' own fighters hold nothing off (a wing that did it by itself would win the mission for a cruiser that sits and never fires). It is not the
+// old kite either: the wave holds the ring (campRelicAlien), so the aliens cannot be drawn off it, and one ship cannot hold off twelve. Returns the Set of the ids it frees.
+function campRelicHeld(C, R, r) {
+  const out = new Set(), f = typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; if (!f || f.kind !== 'fighter') return out;
+  const a = campNearest(campAliens(C).filter(u => campDist(u, R) > r.radius), f, r.held); if (a) out.add(a.id);
+  return out;
+}
 // C.lasers from this tick's beams: a beam stays on the list for 250 ms after its last pulse (a turret fires every 0.7 s, eight of them: it reads as one beam), and its since is when it began
 function campLasers(C) {
   C.laserNow.forEach(b => { const key = b.from + '>' + b.to, old = C.laserLog[key]; C.laserLog[key] = { from: b.from, to: b.to, kind: b.kind, since: old && C.t - old.last <= 250 ? old.since : C.t, last: C.t }; });
