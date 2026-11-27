@@ -197,3 +197,10 @@
 .ct-live .ct-f { display: flex; gap: .6em; }
 .ct-live .ct-b { flex: 1; padding: .45em .6em; border-radius: .6em; border: 1px solid rgba(207, 230, 255, .35); background: transparent; color: #dbe7f5; font: inherit; cursor: pointer; }
 .ct-live .ct-b:hover { background: rgba(207, 230, 255, .12); }
+/* the order as a sentence (card space-game-orders-f1-sentence; src/camporderline.js): one line right under the left panel, left to right: WHO in the ink, the verb in the player's fire mint, the target in the ink; a word that is only the game's default is grey; a check after Enter */
+.ph-sent { left: 1.3em; top: 8em; display: flex; align-items: center; gap: .6em; padding: .4em .95em; border-radius: 2em; font-size: .85em; font-weight: 600; white-space: nowrap; }
+.ph-sw, .ph-st { color: var(--ph-ink); }
+.ph-sv { color: var(--ph-fire); }
+.ph-sv.no { color: var(--ph-warn); font-weight: 400; }
+.ph-sent .ghost { color: var(--ph-mute); font-weight: 400; }
+.ph-sd { color: var(--ph-fire); }

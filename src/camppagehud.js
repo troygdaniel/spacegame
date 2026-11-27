@@ -323,6 +323,7 @@ function campPageHudBuild(doc) {
   const m1 = campPageHudEl(doc, 'div', 'ph-row', stock), mic = campPageHudEl(doc, 'span', 'ph-icw', m1), mlab = campPageHudEl(doc, 'span', 'ph-lab ph-mw', m1); mic.innerHTML = CAMP_PAGEHUD_ICON.missile;
   const foes = campPageHudEl(doc, 'div', 'ph-p ph-foes', root), f1 = campPageHudEl(doc, 'div', 'ph-row', foes);
   R.foes = { el: foes, key: campPageHudEl(doc, 'span', 'ph-k', f1), label: campPageHudEl(doc, 'span', 'ph-lab', f1), what: campPageHudEl(doc, 'div', 'ph-big', foes), sub: campPageHudEl(doc, 'div', 'ph-sub', foes) }; R.foes.ent = campPageHudEnterRow(doc, foes); R.foes.mother = campPageHudMeterEl(doc, foes, 'hull'); R.foes.mother.el.className = 'ph-m ph-mothr'; R.foes.mother.fill.className = 'ph-fill ph-alien'; const tg = campPageHudEl(doc, 'div', 'ph-tg', foes), tgm = campPageHudEl(doc, 'div', 'ph-row ph-tgm', tg); R.foes.tg = { el: tg, hull: campPageHudMeterEl(doc, tgm, 'hull'), shield: campPageHudMeterEl(doc, tgm, 'shield'), none: campPageHudEl(doc, 'span', 'ph-lab ph-none', tgm), act: campPageHudEl(doc, 'div', 'ph-act', tg), pic: campPageHudEl(doc, 'span', 'ph-tpic', foes) }; // the picked target's meters and what it does (only while one is picked)
+  const snt = campPageHudEl(doc, 'div', 'ph-p ph-sent', root); campPageHudSet(snt, 'display', 'none'); R.sent = { el: snt, who: campPageHudEl(doc, 'span', 'ph-sw', snt), verb: campPageHudEl(doc, 'span', 'ph-sv', snt), target: campPageHudEl(doc, 'span', 'ph-st', snt), check: campPageHudEl(doc, 'span', 'ph-sd', snt) }; // the order as a sentence under the left panel (card space-game-orders-f1-sentence, src/camporderline.js): who, the verb Enter will do, the target, a check after Enter
   R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = []; R.fedges = []; // the pills of the ships you protect: made when they are first needed
@@ -347,6 +348,15 @@ function campPageHudListModel(P, C, now) {
   return { id, key: def.key, pick: !!V.pick, title: V.pick ? String(V.title || '') : id === 'cruiser' && C.cockpit && typeof campCockpitFlown === 'function' && campCockpitFlown(C) ? uiText('camp.corner.cruiserauto') : '', below: V.below | 0, // (the cruiser's list is headed Cruiser (auto) while he flies a fighter: card space-game-b7-hud-q-cockpit)
     rows: V.rows.map((st, i) => ({ id: st.id, num: V.numbers ? (st.num ? String(st.num) : '') : String(st.key || ''), key2: V.numbers && st.key ? String(st.key) : '', label: String(st.label || '') + (st.more ? '  >' : ''), short: String(st.short || ''), ok: !!st.ok, marked: !!st.marked, at: V.at >= 0 && i === V.at, lit: !!(P.lit && P.lit[st.id] != null && now - P.lit[st.id] >= 0 && now - P.lit[st.id] < flash), hull: st.hull >= 0 ? st.hull : -1, band: st.band || '' })),
     foot: cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : ''), why: !!cur && !cur.ok, keys: uiText(V.keys, { key: def.key, last: V.last }) };
+}
+// the sentence line (card space-game-orders-f1-sentence; src/camporderline.js campOrderLineNow): "Wedge  attack  Raider 3  ✓", the words of today's real Enter; a word that is only the game's default (All pilots, the cruiser) is grey; it fades with the pick squares. L: the sentence now, or null (hidden)
+function campPageHudSentPaint(R, L) {
+  const set = campPageHudSet, S = R.sent; if (!S) return; set(S.el, 'display', L ? '' : 'none'); if (!L) return;
+  set(S.el, 'opacity', String(Math.round(Math.max(0, Math.min(1, L.a)) * 100) / 100)); set(S.el, 'cls', 'ph-p ph-sent' + (L.ok ? '' : ' no'));
+  set(S.who, 'text', L.who.t); set(S.who, 'cls', 'ph-sw' + (L.who.ghost ? ' ghost' : ''));
+  set(S.verb, 'text', L.ok ? L.verb.t : L.why || L.verb.t); set(S.verb, 'cls', 'ph-sv' + (L.ok ? '' : ' no'));
+  set(S.target, 'text', L.ok ? L.target.t : ''); set(S.target, 'display', L.ok && L.target.t ? '' : 'none'); set(S.target, 'cls', 'ph-st' + (L.target.ghost ? ' ghost' : ''));
+  set(S.check, 'text', '\u2713'); set(S.check, 'display', L.check ? '' : 'none');
 }
 function campPageHudListPaint(R, LM, fa) {
   const set = campPageHudSet, L = R.list; set(L.el, 'display', LM ? '' : 'none'); if (!LM) return;
@@ -495,6 +505,8 @@ function campPageHudSync(s, now) {
   const Pn = s.pn, fa = Pn && typeof campPanelFade === 'function' && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPanelFade(Pn, t) : 1, LM = Pn && fa >= 0 && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPageHudListModel(Pn, C, t) : null; // the open Q list (the fade first: a list that nothing touches closes)
   campPageHudListPaint(R, LM, fa);
   campPageHudHideLines(s, true);
+  const OL = !LM && typeof campOrderLineNow === 'function' ? campOrderLineNow(C) : null; // the sentence line stands right under the left panel; the open Q list stands there too, so while it is open the line is not shown
+  campPageHudSentPaint(R, OL);
   if (R.ship.el.getBoundingClientRect && r.width > 0 && typeof CAMP_CORNER_SHIFT === 'object') {
     const k = gk, A = CAMP.corner.at, th = CAMP.corner.title.h, gap = CAMP.corner.stack, bot = el => (el.getBoundingClientRect().bottom - r.top) / k, shown = el => el.style.display !== 'none';
     const shipB = bot(R.ship.el), dyF = (s.cornerDy && s.cornerDy.friendlies) || 0;
@@ -503,6 +515,7 @@ function campPageHudSync(s, now) {
       const lc = R.list.el.getBoundingClientRect(), sox = typeof fillOx === 'function' ? fillOx() : 0;
       s.pageListGeo = { x: (lc.left - r.left) / k - sox, y: (lc.top - r.top) / k - soy, w: lc.width / k, h: lc.height / k, rows: LM.rows.map((_, i) => { const b = R.list.rows[i].el.getBoundingClientRect(); return { y0: (b.top - r.top) / k - soy, y1: (b.bottom - r.top) / k - soy }; }) };
     } else s.pageListGeo = null;
+    if (OL) { const sb = R.ship.el.getBoundingClientRect(); set(R.sent.el, 'left', Math.round(sb.left - r.left) + 'px'); set(R.sent.el, 'top', Math.round((shipB + gap) * k * 10) / 10 + 'px'); }
     // the rows of the canvas that the panels replace keep their PLACE (the lists and the details open under it): the Q CRUISER row's under the ship panel; the FRIENDLIES row's under the friend panel (which slides down with the Q list); the HOSTILES row's under the lowest of the stock and hostiles panels
     CAMP_CORNER_SHIFT.tl = Math.round(shipB - soy - th - A.tl.y); // (the canvas rows are in the safe area: its top is soy below the canvas's)
     if (typeof CAMP_CORNER_SHIFTX === 'object') { const sox = typeof fillOx === 'function' ? fillOx() : 0; CAMP_CORNER_SHIFTX.tl = -sox; CAMP_CORNER_SHIFTX.bl = -sox; CAMP_CORNER_SHIFTX.tr = sox; } // and its left edge sox right of the canvas's: the rows go out to the panels at the window's corners
