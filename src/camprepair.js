@@ -54,6 +54,8 @@ function campRepairTick(C) {
   });
 }
 
+// how far a pilot's mend has come, 0 to 1, for the ring of the page HUD that refills while he is away (a hurt pilot, and the pod's: card space-game-chunk5-pod-eject); -1 when that squad has nobody in the bay
+const campRepairProgress = (C, squad) => { const r = (C.repairs || []).filter(x => x.squad === squad).sort((a, b) => a.until - b.until)[0]; if (!r) return -1; const total = Math.max(1, CAMP.repair.time * 1000 * (r.paid === false ? CAMP.repair.slow : 1)); return Math.max(0, Math.min(1, 1 - (r.until - C.t) / total)); };
 function campRepairState(C) {
   const rs = C.repairs || [];
   return { n: rs.length, next: rs.length ? Math.max(0, Math.ceil((Math.min(...rs.map(r => r.until)) - C.t) / 1000)) : 0 };

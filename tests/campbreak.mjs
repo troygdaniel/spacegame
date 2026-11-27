@@ -46,7 +46,7 @@ console.log('B. who and when');
 
 console.log('C. steering only');
 {
-  check('no hit points, damage or speed are in the table: the break has range, cone, nose, turn, turnK, ms, cool and kinds, and nothing else', J('Object.keys(CAMP.break).sort().join()') === 'cone,cool,kinds,ms,nose,on,range,turn,turnK');
+  check('no hit points, damage or speed are in the table: the break has range, cone, nose, turn, turnK, ms, cool, kinds, the pair and the extend, and nothing else', J('Object.keys(CAMP.break).sort().join()') === 'cone,cool,extend,kinds,ms,nose,on,pair,range,turn,turnK'); // (the pair of card space-game-chunk7-enemy-pair and the extend of card space-game-chunk8-enemy-extend: their numbers are in CAMP.break.pair and CAMP.break.extend)
   const run = on => J(`(() => { CAMP.break.on = ${on}; const C = campNew(1, [], { seed: 5, mission: 0 }); C.god = true; campOrder(C, 'launch', '', 'key'); for (let i = 0; i < 30 * 70; i++) { C.input.thrust = i % 90 < 60 ? 1 : 0; campStep(C, 1 / 30); } CAMP.break.on = true; return { x: C.carrier.x, y: C.carrier.y, hp: C.carrier.hp, ships: C.ships.length, kills: C.kills, breaks: C.breaks | 0 }; })()`);
   const a = run(true), b = run(false);
   check('with nobody flying a fighter a battle of 70 s is the same to the last digit with the break on or off (the cruiser bots do not change), and nothing broke', JSON.stringify(a) === JSON.stringify(b) && a.breaks === 0, JSON.stringify([a, b]));
