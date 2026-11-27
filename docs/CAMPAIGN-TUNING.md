@@ -952,6 +952,8 @@ Plain (97, 94, 97 won; damage 212, 227, 222; conv 38, 40, 40) and the hands-off 
 
 **Other pirate missions** (12 seeds, steady, baitR 0 to 500): 1.2 the ace is as it was (won 100, hull lost 73 to 71, cruiser damage 19 to 16), the hands-off bot wins more (83 to 92: a parked fighter among the raiders draws fire off the miners); 1.3 the ace wins 100 as before, takes less (48 to 33) and is handed back for a low hull 5.8 times a run (was 2.9), never shot down; plain and the hands-off bot unchanged. The fighter is shot at more where pirates are, which is what the card asked; nobody is shot down.
 
+One pin moved: `tests/campminerguard.mjs` compared the 1.2 run with the miner-guard row taken away (the skiffs go for a miner) to the run with it; with the bait on, the skiffs near the flown fighter pick it even without the row (14 of 44 picks), so that "as it was" run now sets `baitR` 0, and a new check says the bait takes some of the picks (a quarter at least) when the row is off.
+
 `tests/campcockpitbait.mjs` (21 checks): the choice at 499 and 500 px, the kinds, nobody flying / baitR 0 / docked / dead / not the flown one / a torpedo boat, the fighter hit with it on and not with it off, the pirates' hit points and damage as they were, rule 4's numbers. `tests/campcockpitbot.mjs` re-pinned for rule 4 (23 checks).
 
 ## Mission 2.2: the guards stand in two groups (card `space-game-b10-c6-22-two-guard-groups`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 6; base main `571624b9`; agreed with 4-GEN's chunk 2: theirs lands first, this touches only the guards' positions)
