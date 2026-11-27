@@ -8,6 +8,7 @@
 //            is wanted over the cruiser. 'miners' is the neutral miners AND your own ships that are on a Mine order. `goal: 'convoy:h1'` (a named hauler) still wins over prey. When the prey the row names is not
 //            there, the pirate takes what is.
 //   breaks:  seconds after the wave came that the wave breaks off and runs;  breakOn: '<cue>' the same, on a named cue;  breakAt: the share of its hull a pirate runs at (CAMP.pirate.breakHp)
+//   stayUntilHit: true  its pirates do not run for a hurt hull until the fighter the player flies has hit one of the wave's ships (campPirateStays); a wave the player never flies at is cleared where it is, not run off (1.1's probe of two skiffs)
 //   A runner flies away from your ships at full speed; once it is CAMP.pirate.gone px from every ship of yours it is gone: out of the battle, not killed (C.piratesEscaped++), and its wave counts as cleared.
 // CUES are names a script fires: campCue(C, 'name'). A wave starts on one (on: { cue: 'name' }), a wave breaks on one (breakOn), and a mission row fires them itself from its own `cues`:
 //   cues: [{ name: 'contact', on: { delivered: 2 } }]   on: any condition of a wave (scanned, delivered, t, cue, cleared: 'wave:0')
@@ -76,6 +77,12 @@ function campPirateTarget(C, u) {
   return best;
 }
 
+// a pirate of a wave row with `stayUntilHit` keeps fighting a hurt hull until the fighter the player flies has hit one of the wave's ships (C.waves[i].flownHit, set in campHurt): 1.1's first two skiffs stay for the player's fighter instead of running from the turrets and the wing (card space-game-b12-c4-11-skiffs-stay)
+function campPirateStays(C, u) {
+  const W = u.wave != null && C.L && C.L.waves ? C.L.waves[u.wave] : null;
+  return !!(W && W.stayUntilHit && C.waves && C.waves[u.wave] && !C.waves[u.wave].flownHit);
+}
+
 function campPirateAI(C, u, dt) {
   const K = CAMP.pirate;
   if (u.running) return campPirateRun(C, u, dt);
@@ -83,7 +90,7 @@ function campPirateAI(C, u, dt) {
     if (!campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, u.def.engage * 0.9)) { const keep = Math.pow(0.5, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; return; }
     u.hold = false;
   }
-  if (u.hp < u.maxHp * (u.breakAt != null ? u.breakAt : K.breakHp)) { campPirateBreakOne(C, u, 'hurt'); return campPirateRun(C, u, dt); }
+  if (u.hp < u.maxHp * (u.breakAt != null ? u.breakAt : K.breakHp) && !campPirateStays(C, u)) { campPirateBreakOne(C, u, 'hurt'); return campPirateRun(C, u, dt); }
   const def = u.def, tgt0 = campPirateTarget(C, u) || C.carrier, tgt = tgt0 && campDogFoe(C, u, tgt0); // a skiff that picked one of your fighters flies at its partner (src/campdogfight.js)
   if (u.wave != null && tgt0 && C.waves[u.wave] && !C.waves[u.wave].told) { // THE ALONE LINES (card space-game-13-alone-lines-guarded; Troy, 26 Nov 2026: yes): 1.3's two rear raids' VOICED lines ("Pirates on the last hauler. She is alone back there." and "More of them, on the last hauler again.") play only when a pirate of the raid really goes for her: it has picked the hauler the row names (`along`), and that happens only while no fighter of yours is within `guard` px of her (campPirateGuarded). A raid that finds her guarded says nothing (no new line, no rewording); one that comes on her later, when the fighter has left, says it then, once.
     const W = C.L.waves[u.wave]; if (W && W.say && W.guard > 0 && W.along && tgt0.id === 'freighter-' + W.along) { C.waves[u.wave].told = true; campSay(C, W.say, { n: u.wave + 1 }); }

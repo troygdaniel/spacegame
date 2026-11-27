@@ -40,7 +40,7 @@ const CAMP_TUNE = {
     { id: 'cockpitdrain', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.drain', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
     { id: 'cockpitregen', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.regen', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
     { id: 'cockpithull', group: 'cockpit', root: 'CAMP', path: 'cockpit.hpK', min: 0.25, max: 8, step: 0.05, unit: 'x', when: 'now' },
-    { id: 'cockpitdamage', group: 'cockpit', root: 'CAMP', path: 'cockpit.damageK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
+    { id: 'cockpitdamage', group: 'cockpit', root: 'CAMP', path: 'cockpit.damageK', min: 0.25, max: 8, step: 0.025, unit: 'x', when: 'now' },
     { id: 'cockpitrate', group: 'cockpit', root: 'CAMP', path: 'cockpit.rateK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
     { id: 'cockpitaim', group: 'cockpit', root: 'CAMP', path: 'cockpit.aimCone', min: 0, max: 30, step: 1, unit: 'deg', when: 'now' },       // card space-game-fly-fighter-aim-help: the auto-target's cone, the slider: 0 is no help (the nose is the aim), 20 is the default, 30 the widest (src/campcockpitaim.js)
     { id: 'cockpitaimk', group: 'cockpit', root: 'CAMP', path: 'cockpit.aimK', min: 0.05, max: 2, step: 0.01, unit: 'x', when: 'now' },     // and the damage of a shot the help sent, times the flown gun's own (0.32: it hits about three times as many of its shots)

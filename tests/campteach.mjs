@@ -211,8 +211,10 @@ console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-
   check('a wave off the screen (2600 px: the hostiles\' edge pill is up) lights the Tab chip, ADDED to the row: the key table\'s key (Tab), the word Map, the note "wave off screen"', J('campPageModel(C, __view).edge') !== null && tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
   check('it is among the added chips at the left end (after Q\'s, which is up at 40 s in 1.1), before the row\'s own, unchanged', J('campPageHudFirst(C).items.map(i => i.id).filter(x => x !== "enter").slice(0, 2).join()') === 'q,tab' && J('campPageHudFirst(C).items.filter(i => ["fly", "boost", "missile"].indexOf(i.id) >= 0).every(i => !i.lit)'), J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).join()'));
   g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view);`);
-  check('ONCE: the wave came on the screen again, the chip is still there for its 45 s (it does not wait for the pill)', tLit().length === 1);
-  g.run(`C.t += 46000;`);
+  check('the wave comes onto the screen (300 px: the pill is down): the chip goes dark at once, though its 45 s have not run (card space-game-b12-c1-tab-chip-dark)', J('C.edgeNow') === false && J('!!C.edgeSeen') === true && tLit().length === 0, tLit().join());
+  g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`);
+  check('ONCE, 45 s: the wave off the screen again inside the 45 s lights the same chip again (it is the one lesson, not a second)', tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
+  g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view); C.t += 46000;`);
   check('and it ends 45 s after the first time: it does not come back with the next wave', tLit().length === 0 && (g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`), tLit().length === 0));
   g.run(`__wave(2600); campPageModel(C, __view); try { campMapOpen({ camp: C, mp: null }); } catch (e) { /* the map is drawn with Phaser: the note is made before that */ }`);
   check('opening the map (Tab: campMapOpen) notes it (C.keysUsed.map) and the chip goes quiet', J('C.keysUsed.map') === true && tLit().length === 0);
@@ -225,7 +227,37 @@ console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-
   g.run(`__first();`);
   const t1 = J('__t1');
   check('THE PAGE\'S TEST works as written: start 1.1, wait for the first skiffs (the cruiser idle, the camera on it): the Tab chip lights at about 40 s, with the hostiles\' edge pill up', t1 !== null && t1 >= 36 && t1 <= 44, t1);
+  g.run(`window.__tab = () => campTeachChips(C).filter(c => c.id === 'tab').length; window.__a = campAliens(C).filter(u => u.hp > 0); window.__lit0 = __tab(); const m = __a.reduce((s, u) => ({ x: s.x + u.x / __a.length, y: s.y + u.y / __a.length }), { x: 0, y: 0 }); __view.x = m.x - W / 2; __view.y = m.y - H / 2; campPageModel(C, __view);`);
+  check('THE PAGE\'S TEST, its second half: fly until the skiffs are on the screen (the camera on them): the green words go, with 45 s not yet run (card space-game-b12-c1-tab-chip-dark)', J('__lit0') === 1 && J('__tab()') === 0 && J('C.edgeNow') === false, J('[__lit0, __tab(), C.edgeNow, __a.length, Math.round(C.t / 1000)].join()'));
   check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.map')") === 'Map' && J("uiText('camp.corner.chip.teachtab')") === 'wave off screen' && ['map', 'teachtab'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
+}
+
+console.log('I. mining and Enter twice (card space-game-orders-f5-q-cruiser-only; Troy, 27 Nov 2026, mock F)');
+{
+  g.run(`window.__h = (mi, sec) => { __mk(mi, sec); CAMP.flags.cockpit = true; C.ships = C.ships.filter(u => u.team !== 'alien'); return C; };`);
+  g.run(`__h(1, 8);`);
+  check('1.2 before 10 s: no teaching chip yet', J('campTeachChips(C).length') === 0);
+  g.run(`__h(1, 12);`);
+  const c = J('campTeachChips(C)');
+  check('1.2 from 10 s the row ADDS two chips, W (Who: "a pilot") and E (Friendly: "then a rock field"), both lit, with the key table\'s keys', c.length === 2 && c[0].key === J('campKeyOpens("fleet")') && c[0].word === 'Who' && c[0].note === 'a pilot' && c[1].key === J('campKeyOpens("friends")') && c[1].word === 'Friendly' && c[1].note === 'then a rock field' && c.every(x => x.lit === true), JSON.stringify(c));
+  check('no Q chip teaches mining any more: the Q row has no Mine ore, and 1.1\'s Q chip is not there in 1.2', J('campTeachChips(C).every(x => x.id !== "q")'));
+  g.run(`C.keysUsed = { fleet: true };`);
+  check('W used (the fleet pick opened): its chip goes quiet, E stays', J('campTeachChips(C).map(x => x.id).join()') === 'e2');
+  g.run(`C.keysUsed = { fleet: true, friends: true };`);
+  check('E used too: no added chip', J('campTeachChips(C).length') === 0);
+  g.run(`__h(1, 12); C.fsel = 'field-0'; campSelPick(C, 'pilot:red', 'key');`);
+  check('a rock field held: the Enter chip reads Do it and carries the verb mine, and it is LIT "mine it"', J('campPageHudFirst(C).items.find(i => i.id === "enter").verb') === 'mine' && J('campTeachLights(C).enter') === 'mine it', JSON.stringify(J('campTeachLights(C)')));
+  g.run(`campSelOrder(C, 'engage', 'key');`);
+  check('once the order was given (Enter) that chip goes quiet', J('campTeachLights(C).enter') !== 'mine it');
+  g.run(`__h(0, 30); window.__a = campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y); __a.hold = true;`);
+  check('before any pick the Enter chip is not lit for twice', J('campTeachLights(C).enter') !== 'Enter twice: the other');
+  g.run(`campSelPick(C, 'pilot:red', 'key'); campTgtHold(C, __a.id); campTeachLights(C);`);
+  check('the first time a target is picked, in any mission (here an enemy in 1.1), the Enter chip is lit "Enter twice: the other" (20 s from the pick)', J('campTeachLights(C).enter') === 'Enter twice: the other', JSON.stringify(J('campTeachLights(C)')));
+  g.run(`C.t += 21000;`);
+  check('and it goes quiet after 20 s', J('campTeachLights(C).enter') !== 'Enter twice: the other');
+  g.run(`__h(0, 30); window.__a = campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y); __a.hold = true; campSelPick(C, 'pilot:red', 'key'); campTgtHold(C, __a.id); campTeachLights(C); campSelOrder(C, 'engage', 'key'); C.t += 300; campSelOrder(C, 'engage', 'key'); C.t += 100;`);
+  check('and once a second Enter has been given (Enter twice) it is never shown again', J('C.keysUsed.twice') === true && J('campTeachLights(C).enter') !== 'Enter twice: the other', JSON.stringify([J('C.keysUsed'), J('campTeachLights(C)')]));
+  check('the three new words (Who, a pilot, then a rock field, mine it, Enter twice: the other) are in the corner family: shown only', J(`['camp.corner.chip.who', 'camp.corner.chip.teachw', 'camp.corner.chip.teachefield', 'camp.corner.chip.teachmine', 'camp.corner.chip.teachtwice'].every(k => uiText(k) !== k)`));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));

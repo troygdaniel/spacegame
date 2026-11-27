@@ -13,6 +13,11 @@ The words of the key row that teaches (card space-game-chunk12-teach-q; Troy, 26
 | camp.corner.chip.friendly | Friendly |
 | camp.corner.chip.teache | then 2: the miner |
 | camp.corner.chip.teachenter | send a pilot |
+| camp.corner.chip.who | Who |
+| camp.corner.chip.teachw | a pilot |
+| camp.corner.chip.teachefield | then a rock field |
+| camp.corner.chip.teachmine | mine it |
+| camp.corner.chip.teachtwice | Enter twice: the other |
 | camp.corner.chip.teachboost | catch up |
 | camp.corner.chip.teachmissile | in range |
 | camp.corner.chip.reload | Reload |
