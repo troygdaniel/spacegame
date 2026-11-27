@@ -2,6 +2,7 @@
 // Card space-game-chunk12-teach-q (Troy, 26 Nov 2026; brief 8 proposal E, decision 5, first chip only). src/campteach.js is the mechanism (CAMP_TEACH, campTeachChips); the next chips are one more row each.
 //   A. the chip: not before 5 s, lit from 5 s in 1.1 only, at the left end of the row, its key the key table's, its words two or three; gone when the cruiser's list has been opened; gone after 120 s
 //   C. (card space-game-chunk13-teach-space-c) Space and C at the first hostiles: the row's own chips lit where they stand with a note, quiet once used, 45 s, C only with the cockpit switch on
+//   D. (card space-game-chunk14-teach-e-enter) E and Enter at the 1.1 miner's call: E added lit "then 2: the miner", Enter lit "send a pilot" once it reads Guard (the miner picked), quiet once the friends' list is opened / an order is given, 90 s, gone when the call is over
 //   B. the rest: the row is as it was before 5 s and in 1.2 and 1.3; the hints switch turns the row (and the chip) off; the sim remembers the lists opened; no letter is written in the file
 // Run: node tests/campteach.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -67,6 +68,33 @@ console.log('C. Space and C at the first hostiles (card space-game-chunk13-teach
   check('and a tick with Space up notes nothing', J('!!(C.keysUsed && C.keysUsed.fire)') === false);
   g.run(`CAMP.flags.cockpit = false;`);
   check('the two new words are in the table, shown never said', J("uiText('camp.corner.chip.teachfire')") === 'hold to fire' && J("uiText('camp.corner.chip.teachc')") === 'take a fighter' && J("VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.teachc') && r.why && !r.spoken)") === true);
+}
+
+console.log('D. E and Enter at the miner\'s call (card space-game-chunk14-teach-e-enter)');
+{
+  g.run(`window.__call = (sec) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = (sec == null ? 100 : sec) * 1000; C.ships = C.ships.filter(u => u.team === 'earth' || u.tid === 'dm'); C.waves[0].started = true; window.__p = campSpawn(C, 'skiff', C.carrier.x + 900, C.carrier.y); __p.team = 'alien'; __p.wave = 0; __p.hold = true; return C; };`);
+  g.run(`__mk(0, 100);`);
+  check('before the call (the distress wave not started) nothing of the call is taught', J('campMinerCall(C)') === null && J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") < 0'));
+  g.run(`__call(100);`);
+  check('at the call the miner is the one whose call is live', J('!!campMinerCall(C) && campMinerCall(C).tid') === 'dm');
+  const e = J('campTeachChips(C).find(c => c.id === "e")');
+  check('the E chip is added, lit: the key table\'s key for the friends\' list, the word Friendly, the note "then 2: the miner"', !!e && e.key === J('campKeyOpens("friends")') && e.key === 'E' && e.word === 'Friendly' && e.note === 'then 2: the miner' && e.lit === true, JSON.stringify(e));
+  const en = J('campPageHudFirst(C).items.filter(i => i.id === "enter").map(i => (i.lit ? "lit " : "") + i.word + (i.note ? " [" + i.note + "]" : ""))');
+  check('the Enter chip reads Form up until something is picked: it is NOT lit then (the note would contradict the word)', en.length === 1 && en[0] === 'Form up', JSON.stringify(en));
+  g.run(`window.__was = campPageHudEnterNow; campPageHudEnterNow = () => ({ key: 'Enter', word: 'Guard', verb: 'guard' });`);
+  const picked = J('campPageHudFirst(C).items.filter(i => i.id === "enter").map(i => (i.lit ? "lit " : "") + i.word + " [" + i.note + "]")');
+  check('once the miner is picked (Enter reads Guard) the chip is lit with "send a pilot": E, then 2, then Enter, in the order the key row shows them', picked.length === 1 && picked[0] === 'lit Guard [send a pilot]', JSON.stringify(picked));
+  g.run(`campPanelGo({ open: null, at: 0, top: 0, pick: null, trail: [] }, C, 'friends');`);
+  check('opening the friends\' list (E) quiets the E chip; Enter stays lit (it reads Guard)', J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") >= 0'));
+  g.run(`C.orders.guard++;`);
+  check('an order given (Enter) quiets the Enter chip', J('Object.keys(campTeachLights(C)).indexOf("enter") < 0') && J('campPageHudFirst(C).items.every(i => !(i.id === "enter" && i.lit))'));
+  g.run(`campPageHudEnterNow = __was;`);
+  g.run(`__call(100); campTeachChips(C); campPageHudFirst(C); C.t += 91000;`);
+  check('it lasts 90 s from the call', J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") < 0'));
+  g.run(`__call(100); campTeachChips(C); __p.hp = 0;`);
+  check('and ends with the call: the pirates dead, no chip and no light', J('campMinerCall(C)') === null && J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") < 0'));
+  check('the miner\'s price rule did not change: campMinerAway is as it was (the same call, the pilots away)', J(`(() => { __call(100); const f = campWing(C).filter(u => u.pilot)[0]; const m = campMinerCall(C); f.x = m.x + 100; f.y = m.y; return campMinerAway(C).length; })()`) === 1);
+  check('the three new words are in the table, shown never said', J("uiText('camp.corner.chip.friendly')") === 'Friendly' && J("uiText('camp.corner.chip.teache')") === 'then 2: the miner' && J("uiText('camp.corner.chip.teachenter')") === 'send a pilot' && ['friendly', 'teache', 'teachenter'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));

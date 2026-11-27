@@ -6,11 +6,15 @@
 //   campMinerAway(C)          the pilots that are away at the miner now: [] when the call is not live (not begun, the miner lost or saved)
 //   campMinerTick(C)          once a tick (from campBeats): the price line, CAMPMINER.wait s after the first pilot is seen away, counted then. State: C.beats.away = { since, said }
 const CAMPMINER = { gone: 1200, near: 1300, wait: 1.5 }; // px: a pilot this far from the cruiser and within `near` px of the miner is away at the miner (half the 2,600 px he works off the road: a pilot chasing something near the transport is not); s: the line waits this long, so that three pilots sent together are counted together
+function campMinerCall(C) { // the miner whose call is live (the distress wave has started, he lives and his pirates live), else null: the key row teaches E and Enter while it is (src/campteach.js, card space-game-chunk14-teach-e-enter)
+  if (!C || C.result || !C.L || !C.waves || !C.carrier) return null;
+  const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return null;
+  const m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === C.L.waves[w].victim); if (!m) return null;
+  if (!C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w)) return null; // his pirates are dead: the call is over
+  return m;
+}
 function campMinerAway(C) {
-  if (!C || C.result || !C.L || !C.waves || !C.carrier) return [];
-  const w = C.L.waves.findIndex(x => x.beat === 'distress'); if (w < 0 || !C.waves[w] || !C.waves[w].started) return [];
-  const m = C.ships.find(u => u.team === 'neutral' && u.hp > 0 && u.tid === C.L.waves[w].victim); if (!m) return [];
-  if (!C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w)) return []; // his pirates are dead: the call is over
+  const m = campMinerCall(C); if (!m) return [];
   return campWing(C).filter(u => u.pilot && campDist(u, C.carrier) > CAMPMINER.gone && campDist(u, m) < CAMPMINER.near);
 }
 function campMinerTick(C) {
