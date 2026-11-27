@@ -215,3 +215,32 @@ ace, before and after: win time / cruiser damage / the fighter's kills (median o
 | 3.3 | sharp | 55 / 468 | 60 / 353 / 1 | 60 / 353 / 0 | PASS -> PASS |
 | 3.3 | steady | 61 / 436 | 62 / 378 / 1 | 59 / 378 / 1 | PASS -> PASS |
 | 3.3 | rough | 60 / 436 | 54 / 317 / 2 | 51 / 270 / 2 | PASS -> FAIL |
+
+## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`; brief 8 finding 1 and decision 3)
+The finding: with `hpK` 2 the ace bot was never shot down in any mission (0 deaths in every run of the 27 mission-skills), so flying a fighter was safe and changed little. What I found in the code: **nothing makes the aliens ignore the flown fighter.** It is an ordinary ship of Earth's: an alien picks the nearest of them within its reach (`campAlienAI`), so it is chosen as readily as any pilot; the leash that ties a chase to the cruiser (`campPursuit`) only applies to an alien whose target is the cruiser; a tower takes the nearest too (and, since level 3's card, turns and shoots faster at it). Two things keep it safe: its speed (480 to 800 px/s: an alien shoots where the target is, with no lead, so shots miss a crossing fighter) and that the raiders' dogfight steering does not include it (`campDogRole` skips `u.cockpit`: the flown fighter is not a partner of a dogfight). I changed none of that: the card says the number.
+
+So the lever is `hpK`: **`CAMP.cockpit.hpK` 2 -> 0.65.** The pilots' hull is 36 times the mission's strength; a tower hit in 3.2 and 3.3 is 30. At 0.65 the ace survives three tower hits and dies at the fourth; at 0.6 it dies at the third, which is a cliff: below 0.7 the fighter that hovers in a tower's reach is lost; a fighter that keeps out of it never is.
+
+The ace's (steady skill, `--cockpit --cbots plain,ace`, 32 seeds a mission; the share of runs in which the fighter was shot down at least once, percent; the column `shot%` of the sweep now prints it; the ace won 100 percent of every cell except 3.3 at 0.5, 13 percent):
+
+| mission | hpK 0.7 | 0.6 | 0.55 | 0.5 | ace won% at 0.55 / 0.5 |
+|---|---|---|---|---|---|
+| 2.1 | 0 | 0 | 0 | 0 | 100 / 100 |
+| 2.2 | 0 | 3 | 3 | 13 | 100 / 100 |
+| 2.3 | 0 | 3 | 3 | 13 | 100 / 100 |
+| 3.1 | 0 | 0 | 0 | 3 | 100 / 100 |
+| 3.2 | 0 | 100 | 38 | 19 | 100 / 100 |
+| 3.3 | 0 | 81 | 13 | 100 | 100 / 13 |
+
+The two missions with towers, in finer steps (32 seeds; shot down %):
+
+| mission | 0.675 | 0.65 | 0.625 |
+|---|---|---|---|
+| 3.2 | 3 | 3 | 100 |
+| 3.3 | 0 | 9 | 44 |
+
+Level 1 (12 seeds): shot down in none of the runs at hpK 1 or 0.5 (at 0.25: 1 run in 12 of 1.1 and 1.2, 2 of 1.3).
+
+**Why 0.65:** it is the highest value at which the ace is shot down at all, in 3 percent of 3.2 and 9 percent of 3.3, "now and then" and still winning every run; 0.625 shreds (3.2: every run, 2.8 times a run; 3.3: 44 percent) and 0.7 shields it entirely. The brief's example, one run in five in the busier missions, is not reachable with this bot: its chance goes from none to nearly all within 0.05 of hpK, because it parks in the towers' reach. A human flies differently, so the number is to be tested by hand: **Troy tests it:** fly Wedge up to a tower (3.2 or 3.3) and sit in its reach: three hits and he is gone. The hull is a live slider (`The flown fighter (C)`, "Flown hull", steps of 0.05).
+
+What happens to a shot-down pilot (lost for the mission today, a pod and back in 20 s in the brief) is Troy's separate call and is not touched here.
