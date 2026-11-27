@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens flow: the walk, the problems, the steps</title>
+<style>
+  :root { --bg: #070b14; --panel: #0d1422; --line: #22304a; --ink: #e8f1fb; --dim: #8fa3bb; --key: #bfe9ff; --gold: #e9b872; --good: #52e0a4; --foe: #ff6fa8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1060px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 21px; margin: 40px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; }
+  p, li { color: var(--ink); } .dim { color: var(--dim); }
+  kbd { display: inline-block; background: var(--key); color: #04101c; border-radius: 5px; padding: 0 6px; font: 600 13px/1.5 system-ui, sans-serif; white-space: nowrap; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 14px; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 9px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  .tag { display: inline-block; border-radius: 4px; padding: 0 7px; font: 700 12px/1.6 system-ui, sans-serif; letter-spacing: .05em; white-space: nowrap; }
+  .build { background: var(--good); color: #04101c; } .ask { background: var(--gold); color: #04101c; } .later { background: #2a3a55; color: var(--ink); }
+  .bad { color: var(--foe); } .ok { color: var(--good); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  svg text { font-family: system-ui, sans-serif; }
+  code { background: #111a2b; border-radius: 4px; padding: 0 4px; font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Screens flow</h1>
+<p class="dim">The screens around the flying: the walk, the problems, the steps. Written for PROMPT 21 (BRIEF 12), 27 Nov 2026, from the live build at <code>main</code> ed51f8f, walked in headless Chrome at 1600 by 900 with the real keys. The flight screen itself is out of scope. Word counts are every word, number and key cap on the screen.</p>
+
+<div class="card">
+<b>In one paragraph.</b> The look is right and most screens are already short. The cost to the player is in three places. One key shows a blank screen (<kbd>H</kbd> on the title). Trying again after a loss puts one or two old-look cards and up to 95 words back in the way. And the fastest way to fly is not the one the lit key leads to: following <kbd>Enter</kbd> takes four presses and passes the mission grid, while <kbd>L</kbd> <kbd>L</kbd> takes three and nobody is told. Seven small steps are built in this PR; nine choices are left for Troy.
+</div>
+
+<h2>1. The map</h2>
+<p class="dim">Every screen, every key that moves between them. Pink marks a dead end or a surprise found on the walk; the number is the problem in section 3.</p>
+<div class="wrap">
+<svg viewBox="0 0 1040 640" width="1040" height="640" role="img" aria-label="Flow map of the screens">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8fa3bb"/></marker>
+    <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff6fa8"/></marker>
+  </defs>
+  <g fill="#0d1422" stroke="#22304a" stroke-width="1.5">
+    <rect x="20" y="40" width="150" height="60" rx="10"/>
+    <rect x="20" y="170" width="150" height="50" rx="10"/>
+    <rect x="20" y="250" width="150" height="50" rx="10"/>
+    <rect x="260" y="40" width="170" height="60" rx="10"/>
+    <rect x="250" y="170" width="90" height="50" rx="10"/>
+    <rect x="350" y="170" width="90" height="50" rx="10"/>
+    <rect x="530" y="40" width="160" height="60" rx="10"/>
+    <rect x="530" y="170" width="160" height="60" rx="10"/>
+    <rect x="800" y="170" width="200" height="60" rx="10" stroke="#38e1ff"/>
+    <rect x="800" y="40" width="200" height="60" rx="10"/>
+    <rect x="800" y="330" width="200" height="60" rx="10"/>
+    <rect x="530" y="330" width="160" height="60" rx="10"/>
+    <rect x="530" y="450" width="160" height="60" rx="10"/>
+    <rect x="260" y="450" width="170" height="60" rx="10"/>
+    <rect x="530" y="560" width="160" height="50" rx="10" stroke="#ff6fa8"/>
+    <rect x="800" y="560" width="200" height="50" rx="10" stroke="#ff6fa8"/>
+    <rect x="20" y="450" width="150" height="60" rx="10"/>
+  </g>
+  <g fill="#e8f1fb" font-size="15" font-weight="600" text-anchor="middle">
+    <text x="95" y="66">Title</text><text x="95" y="200">Settings</text><text x="95" y="280">Keys page</text>
+    <text x="345" y="66">Ready room</text><text x="295" y="200">Refit</text><text x="395" y="200">Rank</text>
+    <text x="610" y="66">Mission grid</text><text x="610" y="197">Briefing</text>
+    <text x="900" y="197">FLYING</text><text x="900" y="66">Pause</text>
+    <text x="900" y="357">Lost card</text><text x="610" y="357">Won card</text>
+    <text x="610" y="477">Level won</text><text x="345" y="477">Earth refit</text>
+    <text x="610" y="590">Story card (old)</text><text x="900" y="590">Mission card (old)</text>
+    <text x="95" y="477">Long Haul</text>
+  </g>
+  <g fill="#8fa3bb" font-size="12" text-anchor="middle">
+    <text x="95" y="86">40 words</text><text x="345" y="86">70 words</text><text x="610" y="86">100 words</text><text x="610" y="216">78 words</text>
+    <text x="900" y="86">28 words</text><text x="900" y="377">24 to 45 words</text><text x="610" y="377">59 words</text><text x="610" y="497">43 words</text><text x="345" y="497">63 words</text>
+    <text x="95" y="497">out of scope</text>
+  </g>
+  <g stroke="#8fa3bb" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M170 60H258"/><path d="M258 82H172"/>
+    <path d="M430 60H528"/><path d="M528 82H432"/>
+    <path d="M610 100V168"/><path d="M590 168V102"/>
+    <path d="M430 96L528 180"/>
+    <path d="M690 200H798"/>
+    <path d="M430 50C600 5 820 110 880 168"/>
+    <path d="M900 170V102"/><path d="M920 102V168"/>
+    <path d="M900 230V328"/>
+    <path d="M800 215L692 335"/>
+    <path d="M530 345C440 300 370 200 350 102"/>
+    <path d="M610 390V448"/><path d="M530 480H432"/>
+    <path d="M300 450C290 330 320 200 335 102"/>
+    <path d="M295 168V102"/><path d="M395 168V102"/>
+    <path d="M95 100V168"/><path d="M60 100V248" stroke-dasharray="4 3"/>
+    <path d="M130 100C150 300 140 400 110 448"/>
+    <path d="M800 50C600 -10 300 0 172 46" stroke-dasharray="4 3"/>
+  </g>
+  <g stroke="#ff6fa8" stroke-width="1.5" fill="none" marker-end="url(#p)">
+    <path d="M850 390C800 480 700 540 660 558"/>
+    <path d="M690 585H798"/>
+    <path d="M940 558C990 450 990 300 950 232"/>
+    <path d="M1000 60C1040,200 1040,480 1000 572" stroke-dasharray="4 3"/>
+  </g>
+  <g fill="#bfe9ff" font-size="12" font-weight="600">
+    <text x="182" y="54">Enter, K</text><text x="196" y="97">Esc, T</text>
+    <text x="446" y="54">Enter, 1</text><text x="462" y="97">Esc</text>
+    <text x="616" y="140">Enter</text><text x="556" y="140">Esc</text>
+    <text x="440" y="150">L</text>
+    <text x="700" y="194">Enter, L</text>
+    <text x="640" y="30">Up then Enter (no briefing)</text>
+    <text x="862" y="140">Esc</text><text x="926" y="140">Esc</text>
+    <text x="906" y="285">lose</text><text x="716" y="285">win</text>
+    <text x="398" y="300">Enter</text>
+    <text x="616" y="424">Enter (third mission)</text><text x="462" y="474">Enter</text>
+    <text x="238" y="330">Enter</text>
+    <text x="262" y="150">2</text><text x="402" y="150">3</text>
+    <text x="100" y="140">S</text><text x="30" y="150">H</text><text x="150" y="330">Enter</text>
+    <text x="360" y="18">T (pause, lost card)</text>
+  </g>
+  <g fill="#ff6fa8" font-size="12" font-weight="600">
+    <text x="20" y="320">H on the title: blank (1)</text>
+    <text x="700" y="470">Enter "again" on the first</text><text x="700" y="486">mission of a level (2)</text>
+    <text x="716" y="578">Enter</text>
+    <text x="940" y="470">Enter</text>
+    <text x="870" y="632">every retry and restart (2)</text>
+    <text x="800" y="420">Esc: nothing (5)</text>
+    <text x="700" y="330">Esc: nothing (5)</text>
+    <text x="760" y="22">Enter: nothing (9)</text>
+  </g>
+</svg>
+</div>
+<p class="dim">Not drawn: <kbd>H</kbd> opens a keys page from the ready room, grid, briefing, refit, pause and flight, and <kbd>H</kbd> or <kbd>Esc</kbd> closes it back to where it was. <kbd>S</kbd> opens Settings from the title and the pause card. In the briefing <kbd>Left</kbd> <kbd>Right</kbd> walk the map, <kbd>M</kbd> changes the map, <kbd>-</kbd> <kbd>=</kbd> <kbd>Q</kbd> zoom. <kbd>Esc</kbd> from a briefing goes back to where it was opened (ready room or grid).</p>
+
+<h3>The walk, press by press</h3>
+<div class="wrap"><table>
+<tr><th>Journey</th><th>Keys the lit chips lead you to</th><th class="n">Presses</th><th class="n">Words passed</th><th>Shortest that exists</th></tr>
+<tr><td>Boot to flying, first time</td><td><kbd>Enter</kbd> title, <kbd>Enter</kbd> Missions, <kbd>Enter</kbd> the one live box, <kbd>Enter</kbd> launch</td><td class="n">4</td><td class="n">288</td><td><kbd>Enter</kbd> <kbd>L</kbd> <kbd>L</kbd> (3, 188 words), or <kbd>Enter</kbd> <kbd>Up</kbd> <kbd>Enter</kbd> (3, no briefing)</td></tr>
+<tr><td>Won, to the next mission</td><td><kbd>Enter</kbd> ready room, then the same three</td><td class="n">4</td><td class="n">307</td><td><kbd>Enter</kbd> <kbd>L</kbd> <kbd>L</kbd> (3)</td></tr>
+<tr><td>Lost, to flying again</td><td><kbd>Enter</kbd> again, <kbd>Enter</kbd> story card (first mission of a level), <kbd>Enter</kbd> old mission card</td><td class="n">2 or 3</td><td class="n bad">62 to 95, old look</td><td>none: this is the only way</td></tr>
+<tr><td>Pause, restart</td><td><kbd>Esc</kbd> <kbd>Backspace</kbd>, then the same one or two old cards</td><td class="n">3 or 4</td><td class="n bad">90 to 123</td><td>none</td></tr>
+<tr><td>Level won, to the next level</td><td><kbd>Enter</kbd> level won, pick, <kbd>Enter</kbd> Earth refit, then the ready room</td><td class="n">2 + pick</td><td class="n">165</td><td>as is</td></tr>
+</table></div>
+
+<h2>2. Screen by screen</h2>
+<div class="wrap"><table>
+<tr><th>Screen</th><th>What the player needs, in order</th><th>What is there and not needed</th><th class="n">Words</th><th class="n">Presses to flying</th></tr>
+<tr><td><b>Title</b></td><td>1 the name. 2 which door is lit. 3 Enter.</td><td>Two key caps on the lit door (<kbd>K</kbd> and <kbd>Enter</kbd>) for one act. An <kbd>Arrows</kbd> cap on the other door. "Mission 1 of 9" is useful only after the first mission.</td><td class="n">40</td><td class="n">3 to 4</td></tr>
+<tr><td><b>Ready room</b></td><td>1 the next mission and its one-line goal. 2 how to fly it. 3 that Refit has something to buy (only when it has).</td><td>"0 of 9" and "0 credits" on a first visit. "Pilots ready: Wedge, Kara, Apollo" with three rings repeats on the briefing. Station name and level name at the top. Rank is rarely the next act but has a chip of equal weight.</td><td class="n">70</td><td class="n">2 to 3</td></tr>
+<tr><td><b>Mission grid</b></td><td>1 where am I in nine. 2 which box is next. 3 scores of the ones flown.</td><td>On a first visit eight boxes cannot be chosen, so the screen is one choice. The bottom panel repeats the title and goal of the lit box (they are on the ready room and again on the briefing). "+250 each".</td><td class="n">100</td><td class="n">2</td></tr>
+<tr><td><b>Briefing</b></td><td>1 the goal. 2 the route and its moments. 3 how to launch.</td><td>The key cap for Launch is <kbd>L</kbd>, the one screen where the forward key shown is not <kbd>Enter</kbd> (Enter works, unsaid). "Par 6:40" and "Under 6:40" say the same time twice. Three pilot rings with no words.</td><td class="n">78</td><td class="n">1</td></tr>
+<tr><td><b>Refit</b></td><td>1 what I have. 2 what it buys. 3 buy or leave.</td><td>With 0 credits: <kbd>Enter</kbd> BUY is offered, and pressing it adds "Not enough: 25 needed, 0 in credits and ore" under a tile that already says "Need 25 more".</td><td class="n">39 to 49</td><td class="n">Esc, then 2 to 3</td></tr>
+<tr><td><b>Rank</b></td><td>1 my rank. 2 how far to the next.</td><td>Nothing to cut. The ladder is six tiles and one line.</td><td class="n">47</td><td class="n">Esc, then 2 to 3</td></tr>
+<tr><td><b>Pause</b></td><td>1 that it is paused. 2 the goal. 3 resume.</td><td>Nothing to cut: 28 words. <kbd>Enter</kbd> does nothing. The only way out of the mission is <kbd>T</kbd> to the title; the ready room is two screens past it.</td><td class="n">28</td><td class="n">1</td></tr>
+<tr><td><b>Keys page (flight)</b></td><td>The one key I forgot.</td><td>Three groups, 16 rows: fine. Opened from the title it is <span class="bad">blank</span>.</td><td class="n">113</td><td class="n">1</td></tr>
+<tr><td><b>Keys page (ready room)</b></td><td>The keys of the screen I am on.</td><td>Lists four screens at once whichever one you asked from: 22 rows, of which 4 to 7 apply. Its Esc row for the briefing says "Back to the missions", which is not true when the briefing was opened from the ready room.</td><td class="n">188</td><td class="n">+1</td></tr>
+<tr><td><b>Settings</b></td><td>1 the tab. 2 the row. 3 change it.</td><td>Sound (the first tab) is right. On the Keys tab the first <kbd>Enter</kbd> drops into a text box. The footer says <kbd>Enter</kbd> CHANGE on the tab list, where Enter means "go in"; <kbd>Esc</kbd> then takes two presses to leave.</td><td class="n">76 to 122</td><td class="n">1 to 2</td></tr>
+<tr><td><b>Won card</b></td><td>1 won. 2 the score. 3 on.</td><td>Good as it is. <kbd>Esc</kbd> does nothing.</td><td class="n">59</td><td class="n">3 to 4</td></tr>
+<tr><td><b>Lost card</b></td><td>1 why. 2 one tip. 3 again.</td><td>Good as it is. <kbd>Esc</kbd> does nothing; the only other way out is <kbd>T</kbd> to the title. What follows <kbd>Enter</kbd> is the problem (the old cards).</td><td class="n">24 to 45</td><td class="n bad">2 to 3</td></tr>
+<tr><td><b>Level won, Earth refit</b></td><td>1 the level is won. 2 choose one technology.</td><td>Fine. Seen three times in a campaign.</td><td class="n">43, 63</td><td class="n">n/a</td></tr>
+</table></div>
+
+<h2>3. The problems, ranked by what they cost the player</h2>
+<div class="wrap"><table>
+<tr><th class="n">#</th><th>Kind</th><th>Problem</th><th>Seen in the live build</th></tr>
+<tr><td class="n">1</td><td class="bad">Confusion</td><td><kbd>H</kbd> on the title shows a blank screen.</td><td>Title, press H: the doors vanish, the backdrop dims, no keys page. The page is put inside the title's own panel root, which the title hides while the page is open. H or Esc brings the title back.</td></tr>
+<tr><td class="n">2</td><td class="bad">Confusion, presses</td><td>"Again" does not fly again. It shows the old-look mission card, and before it, on the first mission of a level, the old-look story card.</td><td>Lose (or Esc, Backspace), press Enter: "LEVEL 1: The rim run… Enter begin", then "MISSION 1: Rim escort… +250 Finish in 400 seconds… Enter fly". 62 to 95 words in the old monospace box, already read in the briefing, on the moment the player most wants to be back in the seat.</td></tr>
+<tr><td class="n">3</td><td class="bad">Confusion</td><td><kbd>L</kbd> means two things, and the briefing is the one screen whose forward key is not shown as <kbd>Enter</kbd>.</td><td>Ready room card: "L BRIEFING". Briefing: "L Launch". Enter also launches from the briefing but no chip says so.</td></tr>
+<tr><td class="n">4</td><td class="bad">Confusion, presses</td><td>The lit key leads the long way. The ready room opens with the light on Missions, so Enter goes to the grid; the next mission is the big card above it, reached with <kbd>Up</kbd>, where Enter launches with no briefing.</td><td>Enter Enter Enter Enter (4 presses, 288 words) against L L (3, 188). On a first visit the grid has one box that can be chosen.</td></tr>
+<tr><td class="n">5</td><td>Confusion</td><td><kbd>Esc</kbd> does nothing on the won and lost cards, and nothing on any screen leads from a mission back to the ready room except winning.</td><td>Lost card: Esc is dead; T goes to the title, from where it is Enter to the ready room.</td></tr>
+<tr><td class="n">6</td><td>Clutter</td><td>The ready room's keys page lists four screens at once.</td><td>H in a briefing: 188 words, 22 rows, 5 of them about the briefing.</td></tr>
+<tr><td class="n">7</td><td>Clutter (untrue word)</td><td>The keys page says Esc in the briefing goes "Back to the missions".</td><td>Ready room, L, Esc: back in the ready room, not the missions.</td></tr>
+<tr><td class="n">8</td><td>Confusion (small)</td><td>On the grid, an arrow toward a box that cannot be chosen does nothing and says nothing.</td><td>First visit: all four arrows are dead.</td></tr>
+<tr><td class="n">9</td><td>Presses (small)</td><td><kbd>Enter</kbd> is dead on the pause card.</td><td>Esc, Enter: still paused.</td></tr>
+<tr><td class="n">10</td><td>Clutter</td><td>Refit with nothing to spend offers BUY and then says "Not enough" twice.</td><td>Ready room, 2, Enter, Enter.</td></tr>
+<tr><td class="n">11</td><td>Clutter</td><td>The title's lit door has two key caps; the grid's bottom panel and the briefing's par repeat what is already on the screen.</td><td>See section 2.</td></tr>
+<tr><td class="n">12</td><td>Looks</td><td>Settings: Enter on a tab means "go in" but the footer says CHANGE; on the Keys tab it lands in a text box.</td><td>Title, S, Down, Enter.</td></tr>
+</table></div>
+
+<h2>4. The steps</h2>
+<p class="dim">Each is one change a person can test in under a minute. BUILD steps are in this PR, one commit each, in this order. ASK TROY steps are design choices and are not built.</p>
+<div class="wrap"><table>
+<tr><th class="n">Step</th><th></th><th>Change</th><th>The one-line test</th><th class="n">Fixes</th></tr>
+<tr><td class="n">1</td><td><span class="tag build">BUILD</span></td><td>H on the title shows the keys page.</td><td>On the title press H: the Keys page shows over the dimmed title; H or Esc closes it and the two doors are back.</td><td class="n">1</td></tr>
+<tr><td class="n">2</td><td><span class="tag build">BUILD</span></td><td>Again and Restart go straight to flying: no story card, no old mission card.</td><td>Start mission 1, press Esc then Backspace: you are flying again at once, with no card to press Enter on. The same after Enter on the lost card.</td><td class="n">2</td></tr>
+<tr><td class="n">3</td><td><span class="tag build">BUILD</span></td><td>The briefing shows Enter as the launch key (L still launches).</td><td>Ready room, press L: the cap beside Launch reads Enter. Press Enter: you launch.</td><td class="n">3</td></tr>
+<tr><td class="n">4</td><td><span class="tag build">BUILD</span></td><td>Esc on the lost card goes back to the ready room, and the card says so.</td><td>Lose a mission: the card reads Enter AGAIN, Esc READY ROOM, T TITLE. Press Esc: the ready room, the same mission next.</td><td class="n">5</td></tr>
+<tr><td class="n">5</td><td><span class="tag build">BUILD</span></td><td>Esc on the won card does what Enter does.</td><td>Win a mission, press Esc: the ready room opens with the next mission.</td><td class="n">5</td></tr>
+<tr><td class="n">6</td><td><span class="tag build">BUILD</span></td><td>H in the ready room lists the keys of the screen you are on, not all four.</td><td>Open a briefing, press H: one group, THE BRIEFING, five rows. On the grid, H: THE MISSIONS only.</td><td class="n">6</td></tr>
+<tr><td class="n">7</td><td><span class="tag build">BUILD</span></td><td>The briefing's Esc row on the keys page reads "Back".</td><td>Ready room, L, H: the Esc row reads Back. Esc, Esc: you are in the ready room, as it said.</td><td class="n">7</td></tr>
+<tr><td class="n">A1</td><td><span class="tag ask">ASK TROY</span></td><td>Open the ready room with the light on the next-mission card, and make Enter there open the briefing (today: light on Missions; Enter on the card launches with no briefing). Then Enter, Enter, Enter flies with the briefing seen, and the grid is only for replays.</td><td>Title, Enter, Enter: the briefing. Enter: flying.</td><td class="n">4</td></tr>
+<tr><td class="n">A2</td><td><span class="tag ask">ASK TROY</span></td><td>Won card: Enter goes to the next mission's briefing, not the ready room (Esc for the ready room).</td><td>Win, Enter: the next briefing.</td><td class="n">4</td></tr>
+<tr><td class="n">A3</td><td><span class="tag ask">ASK TROY</span></td><td>Pause card: a way to the ready room (today only T, to the title), and Enter resumes.</td><td>Esc, then the new key: the ready room.</td><td class="n">5, 9</td></tr>
+<tr><td class="n">A4</td><td><span class="tag ask">ASK TROY</span></td><td>Grid: say why a box cannot be chosen (new words, for example "Fly Rim escort first"), or dim the arrow caps that have nowhere to go.</td><td>Grid, Right onto a dim box: a line says why.</td><td class="n">8</td></tr>
+<tr><td class="n">A5</td><td><span class="tag ask">ASK TROY</span></td><td>Title: one key cap on the lit door (Enter); K keeps working, unshown. Drop the Arrows cap from the other door.</td><td>Title: one cap on each door at most.</td><td class="n">11</td></tr>
+<tr><td class="n">A6</td><td><span class="tag ask">ASK TROY</span></td><td>Refit with nothing to spend: no BUY cap, no second "Not enough" line.</td><td>Ready room, 2, Enter with 0 credits: only Esc BACK is offered.</td><td class="n">10</td></tr>
+<tr><td class="n">A7</td><td><span class="tag ask">ASK TROY</span></td><td>Ready room, first visit: hide "0 of 9" and "0 credits"; drop the pilots strip (it is on the briefing).</td><td>New game, ready room: about 50 words, not 70.</td><td class="n">11</td></tr>
+<tr><td class="n">A8</td><td><span class="tag ask">ASK TROY</span></td><td>Grid and briefing repeats: drop the grid's bottom panel title (keep the goal line), and "Par 6:40" from the briefing's head (the bonus pill says it).</td><td>Grid: the mission name is on the screen once.</td><td class="n">11</td></tr>
+<tr><td class="n">A9</td><td><span class="tag ask">ASK TROY</span></td><td>Settings: the footer says Enter OPEN on the tab list, and Enter on the Keys tab lands on the first button, not in a text box.</td><td>Title, S, Down, Enter: no text cursor.</td><td class="n">12</td></tr>
+</table></div>
+
+<h3>Voiced lines</h3>
+<p>No voiced line's words are changed. The words of these screens are shown, never spoken (the one spoken family, the mission's goal line the ship says when a briefing opens, is untouched). Step 2 changes <i>when</i> lines are heard, not their words: on a retry the level's story lines are no longer read out again with the story card. There is no voiced line I would ask to change.</p>
+
+<h3>What I was unsure of</h3>
+<ul>
+<li><b>Step 2 and the old look.</b> With <code>?screens=0</code> (the tests' switch) a retry still shows the old cards, as before; only the new look skips them. A retry started from the address bar is untouched.</li>
+<li><b>Step 4 adds one screen to the Esc role's list</b> in <code>src/data_controls.js</code> (the lost card). No key is moved.</li>
+<li><b>Step 6's page title.</b> With one group on the page, "READY ROOM - ALL THE KEYS" would be untrue, so the one-group page uses the flight page's title, "Keys". The old title key is left in place for the old look.</li>
+<li><b>Lost-card word counts</b> were read with the debug lose key, which has no tip line; a real loss adds a tip of about 20 words.</li>
+<li>The walk was at one window size. Fill-the-window was not changed by any step.</li>
+</ul>
+</main>
+</body>
+</html>
