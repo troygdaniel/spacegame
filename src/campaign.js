@@ -780,7 +780,10 @@ const CAMP = {
           start: 'home', startAt: [-2400, 1300], towers: [{ place: 'home', r: 1000, n: 8, phase: 0.2 }], objectives: [{ type: 'kill', what: 'towers' }, { type: 'clear' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'core' }, { id: 'swift', type: 'time', secs: 180 }, { id: 'hull', type: 'hull', pct: 50 }, { id: 'clean', type: 'lost', n: 2 }],  // bonus objectives: each met earns CAMP.score.bonus
           waves: [{ on: { towers: 4 }, from: [-3000, -2300], ships: { raider: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' },    // the two waves come together, from opposite sides of the world, when the fourth tower falls (brief 7 decision 3; par 180 s; a first try)
-                  { on: { towers: 4 }, from: [3000, 2300], ships: { drone: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }] }  // the waves: when, from where, how many of each kind
+                  { on: { towers: 4 }, from: [3000, 2300], ships: { drone: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' },  // (the second of the two that come together)
+                  // the reserve finds an idle player here too (Troy's standing yes, 26 Nov; card space-game-33-idle-threat): no tower fallen 45 s after arrival and 2 raiders and 2 gunships leave the nearest tower for the cruiser, another every 40 s until one falls, four at most; optional
+                  { on: { idle: 45, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { raider: 2, gunship: 2 }, goal: 'carrier' }, { on: { idle: 85, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { raider: 2, gunship: 2 }, goal: 'carrier' },  // (idle groups 1 and 2)
+                  { on: { idle: 125, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { raider: 2, gunship: 2 }, goal: 'carrier' }, { on: { idle: 165, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { raider: 2, gunship: 2 }, goal: 'carrier' }] }  // (idle groups 3 and 4)  the waves: when, from where, how many of each kind
       ]
     }
   }
