@@ -446,6 +446,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 
 **What it says:** nothing is won faster or lost more; the cruiser's win rate with the cruiser bots is **identical** to the last digit (nobody flies a fighter, nothing breaks). With a fighter out the cruiser takes **less** damage in the three level 1 missions (1.1: 11 percent less, 1.2: 43, 1.3: 57), because the hostile fighters that peel off the chaser spend those 0.7 s not shooting at the cruiser or what it guards; kills are the same (4 to 5, 5 to 4, 4 to 4) and the fighter is never shot down (the bot flies a Wren-fast fighter; a human may differ). That is the damage rule of `docs/night/cockpit-sweep.md` pushed a step further in the wrong direction for level 1 (the flown fighter makes the cruiser's fight easier): a number for Troy to weigh with the other chunks, not a bug of this one (a shorter break, `ms` 700, or a longer cool-down, `cool` 3000, is one number each).
 
+## Hostile fighters pair up: when one breaks, its partner comes round behind you (card `space-game-chunk7-enemy-pair`; Troy, 26 Nov 2026, brief 8 proposal A, second behaviour; base: the break, chunk 6 tip `3c5a4216`)
+**The rule** (`src/campbreak.js`, `CAMP.break.pair`): when a skiff, cutter, raider or drone breaks off the nose of the fighter the player flies, the nearest other one within **500 px** (not breaking itself, not sent round in the last 4 s; a gunship, a brute and a torpedo boat are no partners) flies to a point **220 px dead astern** of the chaser for up to **2.5 s** and does not fire; within 140 px of the point, or when the time is up, it goes on as it was, which is at the chaser. Steering only. Nothing changes with nobody flying a fighter (the cruiser bots do not change).
+
+**12 seeds, the cockpit sweep, steady skill, every mission** (old = the break alone, chunk 6; new = the break and the pair; the ace bot flies the fighter; plain and sit change only where the idle fighter happens to be on a tail, and none did):
+
+| mission | ace won | ace time | ace damage taken (old to new) | kills a run | fighter shot down | plain damage |
+|---|---|---|---|---|---|---|
+| 1.1 | 100 to 100 | 306 to 306 | 197 to 202 | 5 to 5 | 0 to 0 | 202 |
+| 1.2 | 92 to **100** | 271 to 270 | 12 to **40** | 4 to 5 | 0 to 0 | 42 |
+| 1.3 | 100 to 100 | 292 to 292 | 24 to **34** | 4 to 4 | 0 to 0 | 53 |
+| 2.1 | 100 to 100 | 32 to 32 | 6 to 6 | 1 to 1 | 0 to 0 | 0 |
+| 2.2 | 100 to 100 | 73 to 73 | 93 to 90 | 2 to 2 | 0 to 0 | 161 |
+| 2.3 | 100 to 100 | 77 to 77 | 97 to 97 | 2 to 2 | 0 to 0 | 252 |
+| 3.1 | 100 to 100 | 77 to 75 | 47 to 40 | 2 to 2 | 0 to 0 | 65 |
+| 3.2 | 100 to 100 | 60 to 61 | 144 to 144 | 1 to 1 | 0 to 0 | 230 |
+| 3.3 | 100 to 100 | 73 to 73 | 450 to 450 | 3 to 3 | 0 to 0 | 461 |
+
+**What it says:** the pair gives back what the break took: in 1.2 the cruiser's damage with the fighter out goes from 12 back to **40** (plain 42) and the ace wins every seed; in 1.3 from 24 to 34 (plain 53); the others move a few points. Nothing is won faster, the fighter is never shot down by this bot, kills are the same. The partner rarely reaches the point behind a fighter at full thrust inside 2.5 s (it gives up and attacks from where it is: seen in a muted look, it closed 270 to 160 px in the 2 s); a slower chaser is caught. `pair.ms`, `pair.behind` and `pair.range` are one number each.
+
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
 
