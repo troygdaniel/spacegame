@@ -91,7 +91,7 @@ try {
   const sv2 = await save();
   check('lost: the lose card is up, and the save is untouched (score, tries, replays)', await j(`${CAMPS}.mode === 'lost'`) && sv2.results['1.1'].score === 900 && sv2.results['1.1'].tries === 2 && !sv2.results['1.1'].replays && sv2.mission === 2, JSON.stringify(sv2.results['1.1']));
   await key('Enter');
-  check('Enter flies it again as a replay: the briefing card first, as any lost mission does (via retry), then the flight', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.replay === true && ${CAMPS}.via === 'retry' && ${CAMPS}.mode === 'brief'`) && (await key('Enter'), await settle(`${CAMPS}.mode === 'play'`)));
+  check('Enter flies it again as a replay, at once: no card first (via retry; re-pinned with docs/screens-flow.html step 2: it showed the mission card first)', await settle(`game.scene.isActive('Campaign') && ${CAMPS}.replay === true && ${CAMPS}.via === 'retry' && ${CAMPS}.mode === 'play'`));
   check('the game logged no error', t.errors.length === 0, t.errors.join(' | '));
 } catch (e) { console.log('  FAIL the boot stopped: ' + (e && e.message)); bad++; }
 finally { await t.close(); }

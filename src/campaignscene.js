@@ -56,6 +56,9 @@ const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + 
 // radio instead, in order, about four seconds apart and before anything else of the flight: each is offered to the radio's hold (src/campsayhold.js) as a kept line, so a line that is up is never overwritten and none is dropped; spaced like this
 // the voice (a queue of two, six seconds: src/voice.js) says each in full. Only a level started from the ready room (via 'hub'), and not a replay: the others keep the card.
 const CAMP_OPENERS = { first: 900, gap: 4500 }; // ms from the start of the flight to the first line, and between the lines
+// Again (the lost card's Enter) and Restart (the pause card's Backspace) start the mission as 'retry': with the new screens it goes straight to the flight, with no story card and no mission card
+// (both are the old look, and both were read before the first try: docs/screens-flow.html step 2). With the screens switch off the cards show as before.
+const campRetryFlies = sc => !!sc && sc.via === 'retry' && typeof scrOn === 'function' && scrOn();
 function campOpeners(sc) { // the number of lines that will be said
   const lines = typeof campStory === 'function' ? campStory(sc.level, 'before', !!(sc.P && sc.P.revealed)) : []; if (!lines.length || !sc.time || typeof sc.time.delayedCall !== 'function') return 0;
   lines.forEach((l, i) => sc.time.delayedCall(CAMP_OPENERS.first + i * CAMP_OPENERS.gap, () => { if (!sc.leaving && sc.camp && !sc.camp.result && typeof sc.radioShow === 'function') sc.radioShow(campSayOffer(sc.sayR || (sc.sayR = campSayNew()), (sc.time && sc.time.now) || 0, { text: l, keep: true })); }));
@@ -258,9 +261,10 @@ class Campaign extends Phaser.Scene {
   }
   undock(hub) { campUndock(this.camp); this.docked = false; if (hub && hub.scene) hub.scene.stop(); this.scene.resume(); toast(this, uiText('camp.say.undock'), '#9fe9ff'); }
   nextMission() { go(this, 'CampHub', {}); } // after a debrief: the ready room (src/camphubscene.js), where the next mission's board, briefing and refit are and Launch flies it (no warp: only a level's first mission warps)
-  afterIntro() { if (this.via === 'hub') { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
+  afterIntro() { if (this.via === 'hub' || campRetryFlies(this)) { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
   showIntro() {
-    if (this.replay === true || this.mi > 0) { this.afterIntro(); return; } // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
+    if (this.replay === true || this.mi > 0) { this.afterIntro(); return; }
+    if (campRetryFlies(this)) { this.afterIntro(); return; } // Again and Restart: the story was told and the mission briefed before the first try (docs/screens-flow.html step 2) // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
     if (this.via === 'hub' && typeof scrOn === 'function' && scrOn() && campOpeners(this) > 0) { this.afterIntro(); return; } // the new look: no card, the lines are on the radio (campOpeners)
     this.mode = 'intro'; const lines = campStory(this.level, 'before', !!(this.P && this.P.revealed));
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
