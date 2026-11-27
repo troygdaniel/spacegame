@@ -5,7 +5,7 @@
 //   campBoostNew()             the state: { en (the store), locked, on (boosting now), until (ms: the refill waits for it), top (the top speed's multiplier now: 1 to CAMP.boost.speed), th (the thrust, smoothed), flare (0 to 1, a brief flare when thrust starts), fx (0 to 1, the boost's flame, smoothed) }
 //   campBoostStep(C, th, dt)   once a frame from campCarrier: C.input.boost is the key; th the thrust 0 to 1; dt seconds; -> { top, acc } multipliers of the top speed and the thrust
 //   campBoostStatus(C)         what the page HUD shows: { frac (the store 0 to 1), on, locked }
-//   campFlameState(C)          what the engine flames show: { th (0 to 1), boost (0 to 1), flare (0 to 1) }
+//   campFlameState(C, u)       what the engine flames show: { th (0 to 1), boost (0 to 1), flare (0 to 1) }: the ship he flies (the fighter's while he holds its stick, campBoostHolder), or the cruiser's own when u is the cruiser
 const campBoostNew = () => ({ en: CAMP.boost.max, locked: false, on: false, until: 0, top: 1, th: 0, flare: 0, fx: 0 });
 function campBoostStep(C, th, dt) {
   const B = CAMP.boost, S = C.boost || (C.boost = campBoostNew());
@@ -26,4 +26,4 @@ function campBoostStep(C, th, dt) {
 }
 const campBoostHolder = C => (C && C.cockpit && C.cockpit.boost) || (C && C.boost) || null; // the store of the ship he flies: the fighter's while he holds its stick (card space-game-fly-fighter-l1, src/campcockpit.js), else the cruiser's
 const campBoostStatus = C => { const S = campBoostHolder(C), B = C && C.cockpit && C.cockpit.boost ? CAMP.cockpit.store : CAMP.boost; return { frac: S ? Math.max(0, Math.min(1, S.en / B.max)) : 1, on: !!(S && S.on), locked: !!(S && S.locked) }; };
-const campFlameState = C => { const S = campBoostHolder(C); return { th: S ? S.th : 0, boost: S ? S.fx : 0, flare: S ? S.flare : 0 }; };
+const campFlameState = (C, u) => { const S = u && C && u === C.carrier ? C.boost : campBoostHolder(C); return { th: S ? S.th : 0, boost: S ? S.fx : 0, flare: S ? S.flare : 0 }; }; // u: the ship asked about, when it is the cruiser it has its own state even while he flies a fighter (the cruiser he left keeps its engines lit as the autopilot drives it: card space-game-fly-fighter-l2); with no ship, the one he flies

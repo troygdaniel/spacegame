@@ -316,3 +316,7 @@ Same measure as the card before: `PERF_ADDR='&pagehud=1&shiplook=1'` with `PERF_
 | effects on | 0.63 and 0.66 ms | 0.5 and 0.5 ms | 1.2 and 1.4 ms | 0.37 and 0.39 ms | 0.20 and 0.20 ms |
 
 No difference outside the noise of a shared Mac: the busiest fight stays smooth. (The first version of this file did not clear its light layer every frame and the drawing grew with every frame: tests/campfeelfx.mjs now pins that it is cleared.)
+
+## The fighter he flies gets the same feel (card `space-game-fly-fighter-l2`, 26 Nov 2026)
+Nothing is added per frame that the two cards before did not: the ribbons, the layered flames and the effects are drawn for ONE ship, now the fighter whose stick he holds (two nozzles, as the cruiser has) instead of the cruiser, so the work is the same. Two small differences: the cruiser he left keeps its own two plain flame pictures (two images, hidden or shown, no new object after the first frame), and a take or a hand-back makes the effects' lists begin again (the dots, puffs and streaks of the ship he left are dropped). The closer view is one multiplication of the camera's base zoom in `campFeelCamera`; there is no new camera or layer.
+**Not measured in Chrome**: this card was made while Troy might be flying, and `tools/perfcampaign.mjs` needs the browser. The work is the same ship's worth of drawing as the card before (0.63 and 0.66 ms a frame in the busiest fight, effects on), so no change is expected; a measure under the lock is the one thing owed.

@@ -599,6 +599,7 @@ const UI_TEXT = {
   'camp.ui.tune.row.turretdamage': 'Turret damage a shot',
   'camp.ui.tune.row.orerock': 'Ore in a rock',
   'camp.ui.tune.row.cruiserturn': 'Cruiser turn rate',
+  'camp.ui.tune.row.cockpitzoom': 'Cockpit zoom',
   'camp.ui.tune.row.shieldsize': 'Shield size',
   'camp.ui.tune.row.turretdelay': 'Time between a turret\'s shots',
   'camp.ui.tune.row.turretreach': 'Turret reach',
