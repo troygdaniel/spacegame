@@ -25,6 +25,8 @@ export function canvasHudAddr(h = '') {
 // With the page HUD on the open Q / W list is a panel of the page (.ph-list, card space-game-lists-panel-look): its head, rows (the label and the word or two of state) and the two foot lines are read from the page; otherwise from the canvas list's text objects (src/campanelsdraw.js).
 export function canvasListExpr(scene) {
   return `(() => { const vis = e => !!(e && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden'), tx = (e, q) => { const x = e.querySelector(q); return x ? x.textContent : ''; }, el = document.querySelector('.ph-list');
+    const qr = document.querySelector('.ph-qrow'); // the cruiser's orders as ONE ROW beside the left panel (card space-game-orders-f2-q-row): its chips are the rows, the hidden spans hold the full label and the state
+    if (vis(qr)) return { page: true, head: vis(qr.querySelector('.ph-qh')) ? tx(qr, '.ph-qh') : '', keys: '', foot: '', row: true, rows: [...qr.querySelectorAll('.ph-qc')].filter(vis).map(r => ({ name: tx(r, '.ph-qf'), suffix: tx(r, '.ph-qs'), short: tx(r, '.ph-ql'), digit: tx(r, '.ph-qk') })) };
     if (vis(el)) return { page: true, head: vis(el.querySelector('.ph-lh')) ? tx(el, '.ph-lh') : '', keys: tx(el, '.ph-lf2'), foot: tx(el, '.ph-lf1'), rows: [...el.querySelectorAll('.ph-lr')].filter(vis).map(r => ({ name: tx(r, '.ph-ll'), suffix: tx(r, '.ph-ls') })) };
     const p = ${scene}.pnl; return { page: false, head: p.title.visible ? p.title.text : '', keys: p.keys.text, foot: '', rows: p.rows.filter(r => r.name.visible).map(r => ({ name: r.name.text, suffix: r.suffix.text })) }; })()`;
 }

@@ -204,3 +204,11 @@
 .ph-sv.no { color: var(--ph-warn); font-weight: 400; }
 .ph-sent .ghost { color: var(--ph-mute); font-weight: 400; }
 .ph-sd { color: var(--ph-fire); }
+/* the cruiser's orders as ONE ROW (card space-game-orders-f2-q-row; mock F): to the right of the left panel, level with its top, "1 Goal  2 Target  3 Mine ..." in the page's chips; a row that cannot be done now is dim, the one just given is bright; the hidden spans carry the full label and the state for the Chrome boots (tests/canvashud.mjs) */
+.ph-qrow { left: 17em; top: 1.1em; display: flex; flex-wrap: wrap; align-items: center; gap: .3em .8em; padding: .5em 1em; border-radius: 1.4em; font-size: .92em; background: rgba(14, 22, 36, .9); }
+.ph-qh { margin-right: .2em; }
+.ph-qc { display: inline-flex; align-items: center; gap: .45em; white-space: nowrap; color: var(--ph-ink); }
+.ph-qc.no { color: var(--ph-mute); }
+.ph-qc.lit { color: var(--ph-fire); font-weight: 600; }
+.ph-qc.lit .ph-k { background: var(--ph-fire); }
+.ph-qf, .ph-qs { display: none; }

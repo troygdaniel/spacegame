@@ -327,6 +327,8 @@ function campPageHudBuild(doc) {
   R.first = { el: campPageHudEl(doc, 'div', 'ph-p ph-first', root), items: [] }; // the first-minute chips: the pairs are made when they are first shown
   const edge = campPageHudEl(doc, 'div', 'ph-p ph-edge', root); R.edge = { el: edge, ic: campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', edge), text: campPageHudEl(doc, 'span', '', edge) }; R.edge.ic.innerHTML = CAMP_PAGEHUD_ICON.arrow;
   R.pills = []; R.fedges = []; // the pills of the ships you protect: made when they are first needed
+  const qr = campPageHudEl(doc, 'div', 'ph-p ph-qrow', root); campPageHudSet(qr, 'display', 'none'); R.qrow = { el: qr, head: campPageHudEl(doc, 'span', 'ph-lab ph-qh', qr), chips: [] }; // the cruiser's orders as ONE ROW to the right of the left panel (card space-game-orders-f2-q-row, mock F): a digit cap and a word each; the full label and the state are in hidden spans (the Chrome boots read them)
+  for (let i = 0, n = Math.max(1, CAMP_PANELS.show | 0); i < n; i++) { const el = campPageHudEl(doc, 'div', 'ph-qc', qr); R.qrow.chips.push({ el, cap: campPageHudEl(doc, 'b', 'ph-k ph-qk', el), label: campPageHudEl(doc, 'span', 'ph-ql', el), full: campPageHudEl(doc, 'span', 'ph-qf', el), state: campPageHudEl(doc, 'span', 'ph-qs', el) }); }
   const lst = campPageHudEl(doc, 'div', 'ph-p ph-list', root); R.list = { el: lst, head: campPageHudEl(doc, 'div', 'ph-lh', lst), rows: [], foot1: null, foot2: null }; // the open Q list as a panel under the left panel (card space-game-lists-panel-look): its rows are made here, shown as the list needs them
   for (let i = 0, n = Math.max(1, CAMP_PANELS.show | 0); i < n; i++) { const el = campPageHudEl(doc, 'div', 'ph-lr', lst), num = campPageHudEl(doc, 'b', 'ph-k ph-ln', el), label = campPageHudEl(doc, 'span', 'ph-ll', el), key2 = campPageHudEl(doc, 'b', 'ph-k ph-ln2', el), bar = campPageHudEl(doc, 'i', 'ph-lbar', el), fill = campPageHudEl(doc, 'i', 'ph-fill', bar), suffix = campPageHudEl(doc, 'span', 'ph-ls', el); R.list.rows.push({ el, num, label, key2, bar, fill, suffix }); }
   R.list.foot1 = campPageHudEl(doc, 'div', 'ph-lf1', lst); R.list.foot2 = campPageHudEl(doc, 'div', 'ph-lf2', lst);
@@ -357,6 +359,17 @@ function campPageHudSentPaint(R, L) {
   set(S.verb, 'text', L.ok ? L.verb.t : L.why || L.verb.t); set(S.verb, 'cls', 'ph-sv' + (L.ok ? '' : ' no'));
   set(S.target, 'text', L.ok ? L.target.t : ''); set(S.target, 'display', L.ok && L.target.t ? '' : 'none'); set(S.target, 'cls', 'ph-st' + (L.target.ghost ? ' ghost' : ''));
   set(S.check, 'text', '\u2713'); set(S.check, 'display', L.check ? '' : 'none');
+}
+// the row of the cruiser's orders (card space-game-orders-f2-q-row; Troy chose mock F, 27 Nov 2026): Q opens "1 Goal  2 Target  3 Mine ..." in one row to the right of the left panel, so W, E, Q and a digit read left to right; a digit acts at once. The rows are the list's own (campPanelView), the words
+// are their short words (campOrderRowShort); a row that cannot be done now is dim, the one just given bright. QR: the list model (campPageHudListModel) of the open cruiser list, or null; fa: its fade; flown: a fighter is flown (the last row is Come here).
+function campPageHudQrowPaint(R, QR, fa, flown) {
+  const set = campPageHudSet, Q = R.qrow; if (!Q) return; set(Q.el, 'display', QR ? '' : 'none'); if (!QR) return;
+  set(Q.el, 'opacity', String(Math.round(Math.max(0, Math.min(1, fa)) * 100) / 100)); set(Q.head, 'text', QR.title); set(Q.head, 'display', QR.title ? '' : 'none');
+  Q.chips.forEach((o, i) => {
+    const st = QR.rows[i]; set(o.el, 'display', st ? '' : 'none'); if (!st) return;
+    set(o.el, 'cls', 'ph-qc' + (st.ok ? '' : ' no') + (st.lit ? ' lit' : '')); set(o.cap, 'text', st.num);
+    set(o.label, 'text', (typeof campOrderRowShort === 'function' ? campOrderRowShort(st.id, flown) : '') || st.label); set(o.full, 'text', st.label); set(o.state, 'text', st.short);
+  });
 }
 function campPageHudListPaint(R, LM, fa) {
   const set = campPageHudSet, L = R.list; set(L.el, 'display', LM ? '' : 'none'); if (!LM) return;
@@ -468,7 +481,7 @@ function campPageHudSlide(el, dir) { // the pill slides in from the edge (angle 
 }
 function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and lists are where they were
   const R = s && s.pageHud; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
-  if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; s.pageListGeo = null; }
+  if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; s.pageListGeo = null; s.pageQrowGeo = null; }
   if (typeof CAMP_CORNER_SHIFT === 'object') { CAMP_CORNER_SHIFT.tl = 0; CAMP_CORNER_SHIFT.bl = 0; CAMP_CORNER_SHIFT.tr = 0; }
   if (typeof CAMP_CORNER_SHIFTX === 'object') { CAMP_CORNER_SHIFTX.tl = 0; CAMP_CORNER_SHIFTX.bl = 0; CAMP_CORNER_SHIFTX.tr = 0; }
   if (s) { s.pageHudStack = 0; campPageHudHideLines(s, false); if (R && R.backAlpha !== undefined && s.hudBack && s.hudBack.setAlpha) s.hudBack.setAlpha(R.backAlpha); }
@@ -503,18 +516,25 @@ function campPageHudSync(s, now) {
   const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom, was: R.was || {}, pulse: s.momPulse || null, now: typeof performance !== 'undefined' ? performance.now() : 0 } : null; // was: which edge pills showed at the last look (a pill stays until its ship is well inside the screen)
   campPageHudPaint(R, campPageModel(C, view), document);
   const Pn = s.pn, fa = Pn && typeof campPanelFade === 'function' && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPanelFade(Pn, t) : 1, LM = Pn && fa >= 0 && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPageHudListModel(Pn, C, t) : null; // the open Q list (the fade first: a list that nothing touches closes)
-  campPageHudListPaint(R, LM, fa);
+  const QR = LM && LM.id === 'cruiser' && !LM.pick && CAMP.orderLine && CAMP.orderLine.row ? LM : null, LMV = QR ? null : LM, flown = !!(C.cockpit && typeof campCockpitFlown === 'function' && campCockpitFlown(C)); // the top level of the cruiser's list is a ROW beside the left panel (card space-game-orders-f2-q-row); a target sub-list is still the panel under it
+  campPageHudListPaint(R, LMV, fa); campPageHudQrowPaint(R, QR, fa, flown);
   campPageHudHideLines(s, true);
-  const OL = !LM && typeof campOrderLineNow === 'function' ? campOrderLineNow(C) : null; // the sentence line stands right under the left panel; the open Q list stands there too, so while it is open the line is not shown
+  const OL = !LMV && typeof campOrderLineNow === 'function' ? campOrderLineNow(C, Pn) : null; // the sentence line stands right under the left panel; the open Q list stands there too, so while it is open the line is not shown
   campPageHudSentPaint(R, OL);
   if (R.ship.el.getBoundingClientRect && r.width > 0 && typeof CAMP_CORNER_SHIFT === 'object') {
     const k = gk, A = CAMP.corner.at, th = CAMP.corner.title.h, gap = CAMP.corner.stack, bot = el => (el.getBoundingClientRect().bottom - r.top) / k, shown = el => el.style.display !== 'none';
     const shipB = bot(R.ship.el), dyF = (s.cornerDy && s.cornerDy.friendlies) || 0;
-    if (LM) { // the open Q list stands under the left panel (its chips), and the page says where its rows are, in the safe area's numbers, for a click
+    if (LMV) { // the open Q list stands under the left panel (its chips), and the page says where its rows are, in the safe area's numbers, for a click
       set(R.list.el, 'top', Math.round((shipB + gap) * k * 10) / 10 + 'px');
       const lc = R.list.el.getBoundingClientRect(), sox = typeof fillOx === 'function' ? fillOx() : 0;
       s.pageListGeo = { x: (lc.left - r.left) / k - sox, y: (lc.top - r.top) / k - soy, w: lc.width / k, h: lc.height / k, rows: LM.rows.map((_, i) => { const b = R.list.rows[i].el.getBoundingClientRect(); return { y0: (b.top - r.top) / k - soy, y1: (b.bottom - r.top) / k - soy }; }) };
     } else s.pageListGeo = null;
+    if (QR) { // the row's place: right of the left panel, level with its top (the Q badge's row), not wider than the room before the stock panel; the page says where its chips are, in the safe area's numbers, for a click (src/campanelsdraw.js)
+      const rr = b => b.right != null ? b.right : b.left + b.width, sb = R.ship.el.getBoundingClientRect(), tb = R.stock && R.stock.el.getBoundingClientRect ? R.stock.el.getBoundingClientRect() : null, left = Math.round(rr(sb) - r.left + 0.7 * fs), room = tb && tb.left > rr(sb) ? tb.left - r.left - left - 0.7 * fs : r.width - left - 0.7 * fs;
+      set(R.qrow.el, 'left', left + 'px'); set(R.qrow.el, 'top', Math.round(sb.top - r.top) + 'px'); set(R.qrow.el, 'maxWidth', Math.max(200, Math.round(room)) + 'px');
+      const rc = R.qrow.el.getBoundingClientRect(), sox = typeof fillOx === 'function' ? fillOx() : 0, chips = R.qrow.chips.slice(0, QR.rows.length).map(o => { const b = o.el.getBoundingClientRect(); return { x0: (b.left - r.left) / k - sox, x1: (rr(b) - r.left) / k - sox, y0: (b.top - r.top) / k - soy, y1: ((b.bottom != null ? b.bottom : b.top + b.height) - r.top) / k - soy }; });
+      s.pageQrowGeo = { x: (rc.left - r.left) / k - sox, y: (rc.top - r.top) / k - soy, w: rc.width / k, h: rc.height / k, chips };
+    } else s.pageQrowGeo = null;
     if (OL) { const sb = R.ship.el.getBoundingClientRect(); set(R.sent.el, 'left', Math.round(sb.left - r.left) + 'px'); set(R.sent.el, 'top', Math.round((shipB + gap) * k * 10) / 10 + 'px'); }
     // the rows of the canvas that the panels replace keep their PLACE (the lists and the details open under it): the Q CRUISER row's under the ship panel; the FRIENDLIES row's under the friend panel (which slides down with the Q list); the HOSTILES row's under the lowest of the stock and hostiles panels
     CAMP_CORNER_SHIFT.tl = Math.round(shipB - soy - th - A.tl.y); // (the canvas rows are in the safe area: its top is soy below the canvas's)

@@ -78,7 +78,7 @@ function campPanelChoose(P, C, now, how, def) {
   const pk = P.pick, items = campPickSync(C, pk), it = items[pk.at], row = campKeyRow(pk.row), out = { ran: false, ok: false, say: '', row: pk.row };
   if (!it || !row) return out;
   const r = campPanelRun(C, row, how, it);
-  out.ran = true; out.ok = !!(r && r.ok); out.say = (r && r.say) || ''; out.fleet = !def || def.side === 'left'; P.lit[row.id] = now;
+  out.ran = true; out.ok = !!(r && r.ok); out.say = (r && r.say) || ''; out.fleet = !def || def.side === 'left'; P.lit[row.id] = now; if (out.ok) P.did = { id: row.id, at: now }; // (P.did: the last order a list ran that was taken: the line under the left panel reads it back, src/camporderline.js)
   if (out.ok) { P.seen = { kind: pk.kind, id: it.id, until: now + CAMP_PICK.seen }; campPanelClose(P); }
   out.open = campPanelOpen(P); return out;
 }
@@ -121,7 +121,7 @@ function campPanelKey(P, C, code, now) {
         if (plan.how === 'auto') item = plan.item;
       }
       const r = campPanelRun(C, row, 'key', item);
-      res.ran = (!row.who && !row.fri) || !(r && r.ok); res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now; // (a pick of who is no order: it says nothing unless it is refused)
+      res.ran = (!row.who && !row.fri) || !(r && r.ok); res.ok = !!(r && r.ok); res.say = (r && r.say) || ''; res.row = row.id; res.fleet = def.side === 'left'; P.lit[row.id] = now; if (res.ok) P.did = { id: row.id, at: now }; // (a pick of who is no order: it says nothing unless it is refused)
       if (res.ok && item) P.seen = { kind: campPickKind(row), id: item.id, until: now + CAMP_PICK.seen }; // the one that was taken keeps its bracket for a moment
       if (res.ok) campPanelClose(P); // the order is given: the keys go back to the ship. A refusal leaves the list open, with its reason said
       res.open = campPanelOpen(P); return res;
