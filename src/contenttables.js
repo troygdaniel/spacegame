@@ -1323,6 +1323,7 @@ const UI_TEXT = {
   'camp.corner.attack': 'Attack {name}',
   'camp.corner.guard': 'Guard {name}',
   'camp.corner.formup': 'Form up',
+  'camp.corner.orderline.tip': '{who} will {verb}',
   'camp.corner.blocked': '{what}, {why}',
   'camp.corner.why.nofighters': 'none out',
   'camp.corner.why.launching': 'launching',
