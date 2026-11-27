@@ -39,7 +39,7 @@ const CAMP_TUNE = {
     { id: 'cockpitstore', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.max', min: 10, max: 400, step: 10, unit: 'units', when: 'now' },
     { id: 'cockpitdrain', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.drain', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
     { id: 'cockpitregen', group: 'cockpit', root: 'CAMP', path: 'cockpit.store.regen', min: 1, max: 100, step: 1, unit: '/s', when: 'now' },
-    { id: 'cockpithull', group: 'cockpit', root: 'CAMP', path: 'cockpit.hpK', min: 0.5, max: 8, step: 0.25, unit: 'x', when: 'now' },
+    { id: 'cockpithull', group: 'cockpit', root: 'CAMP', path: 'cockpit.hpK', min: 0.25, max: 8, step: 0.05, unit: 'x', when: 'now' },
     { id: 'cockpitdamage', group: 'cockpit', root: 'CAMP', path: 'cockpit.damageK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
     { id: 'cockpitrate', group: 'cockpit', root: 'CAMP', path: 'cockpit.rateK', min: 0.25, max: 8, step: 0.25, unit: 'x', when: 'now' },
     { id: 'cockpitturrets', group: 'cockpit', root: 'CAMP', path: 'cockpit.turrets', derive: 'cockpitturrets', min: 0, max: 1, step: 1, unit: '', when: 'now' },

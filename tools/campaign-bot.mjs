@@ -283,6 +283,7 @@ export function summarise(rs) {
   return { n: rs.length, won: pct(rs, r => r.result === 'won'), lost: pct(rs, r => r.result === 'lost'), timeout: pct(rs, r => r.result === 'timeout'), tWin: med(won.map(r => r.t)), tAll: med(rs.map(r => r.t)),
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
+    shotRuns: pct(rs, r => (r.cockDeaths || 0) > 0), // the share of the runs (percent) in which the flown fighter was shot down at least once (card space-game-chunk4-fighter-shot-down: the ace used to be shot down in none)
     cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), // the cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
@@ -329,7 +330,7 @@ export function cockpitVerdict(p, a, s) { // p, a, s: the summaries of plain, ac
 }
 if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.argv.includes('--cockpit')) {
   if (JSON.parse(g.run("typeof campCockpitTake === 'function'")) !== true) { console.log('src/campcockpit.js is not in this game yet (card space-game-fly-fighter-l1): nothing to sweep'); process.exit(2); }
-  const skills = String(arg('skills', 'sharp,steady,rough')).split(','), botList = ['plain', 'ace', 'ace1', 'sit', 'sitoff'];
+  const skills = String(arg('skills', 'sharp,steady,rough')).split(','), botList = String(arg('cbots', 'plain,ace,ace1,sit,sitoff')).split(','); // --cbots plain,ace: only those (the rule then has nothing to judge; the numbers do)
   const out = {}, tab = [];
   const missionsOf = level => MISSION ? [Number(MISSION) - 1] : Array.from({ length: g.run(`campMissions(${level}).length`) }, (_, i) => i);
   for (const level of LEVELS) {
@@ -337,18 +338,18 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.a
     for (const m of missionsOf(level)) for (const skill of skills) {
       const key = level + '.' + (m + 1) + ' ' + skill, S = {}; out[key] = S;
       for (const b of botList) { const rs = []; for (let seed = 1; seed <= SEEDS; seed++) rs.push(run(level, seed, b, skill, techs, MAXSEC, m)); S[b] = summarise(rs); }
-      S.verdict = cockpitVerdict(S.plain, S.ace, S.sit); tab.push(key);
+      S.verdict = S.plain && S.ace && S.sit ? cockpitVerdict(S.plain, S.ace, S.sit) : { time: 'n/a', taken: 'n/a', sit: 'n/a', ok: true }; tab.push(key);
     }
   }
   if (arg('save', false) && arg('save') !== true) writeFileSync(String(arg('save')), JSON.stringify(out, null, 1)); // --save FILE: the numbers too, whatever is printed
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
   else {
     console.log(`\nTHE COCKPIT SWEEP  ${SEEDS} seeds a mission, pace ${PACE}, cockpit table ${g.run('JSON.stringify({ hpK: CAMP.cockpit.hpK, damageK: CAMP.cockpit.damageK, rateK: CAMP.cockpit.rateK, turrets: CAMP.cockpit.turrets })')}${SETS.length ? ', set ' + SETS.join(' ') : ''}`);
-    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths   rule: time  taken  sit');
+    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%   rule: time  taken  sit');
     for (const key of tab) {
       const S = out[key], [mk, skill] = key.split(' ');
-      botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths], v = S.verdict;
-        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
+      botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths, x.shotRuns], v = S.verdict;
+        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
     }
     const fails = tab.filter(k => !out[k].verdict.ok);
     console.log(`\n${tab.length - fails.length} of ${tab.length} mission-skills pass the rule${fails.length ? '; fail: ' + fails.join(', ') : ''}`);
