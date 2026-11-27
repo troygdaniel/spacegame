@@ -74,7 +74,7 @@ function campCamPaint(s, X, C, cam, z, d) {
     if (!r) { X.ring = null; if (X.g) X.g.clear(); }
     else if (s.add) { const g = X.g || (X.g = s.add.graphics().setDepth(K.ring.depth)); g.clear(); g.setVisible(!map); g.lineStyle(K.ring.w / z, K.ring.color, r.a); g.strokeCircle(R.x, R.y, r.r / z); }
   }
-  const want = !!C.cockpit && (typeof campCockpitOn !== 'function' || campCockpitOn()) && C.carrier.hp > 0 && !map && s.mode === 'play'; // the pill
+  const want = !!C.cockpit && (typeof campCockpitOn !== 'function' || campCockpitOn()) && C.carrier.hp > 0 && !map && s.mode === 'play' && !(typeof campPageHudHasPill === 'function' && campPageHudHasPill(s, 'carrier')); // the pill (not while she is off the screen and the page has her edge pill, "Cruiser \u00b7 3.2 km": card space-game-b12-c2-3-pills; on the screen it stays under her, and where the page HUD is off it is pinned at the edge as before)
   X.tagA = Math.max(0, Math.min(1, X.tagA + (want ? 1 : -1) * d / K.tag.fade));
   if (X.tagA > 0 && s.add && !map) {
     const T = K.tag, tag = X.tag || (X.tag = s.add.text(0, 0, uiText('camp.hud.cruiserauto'), { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontSize: T.size + 'px', fontStyle: '600', color: T.color, backgroundColor: T.fill, padding: { x: 7, y: 3 }, resolution: 2 }).setOrigin(0.5).setDepth(T.depth));
