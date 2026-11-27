@@ -211,8 +211,10 @@ console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-
   check('a wave off the screen (2600 px: the hostiles\' edge pill is up) lights the Tab chip, ADDED to the row: the key table\'s key (Tab), the word Map, the note "wave off screen"', J('campPageModel(C, __view).edge') !== null && tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
   check('it is among the added chips at the left end (after Q\'s, which is up at 40 s in 1.1), before the row\'s own, unchanged', J('campPageHudFirst(C).items.map(i => i.id).filter(x => x !== "enter").slice(0, 2).join()') === 'q,tab' && J('campPageHudFirst(C).items.filter(i => ["fly", "boost", "missile"].indexOf(i.id) >= 0).every(i => !i.lit)'), J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).join()'));
   g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view);`);
-  check('ONCE: the wave came on the screen again, the chip is still there for its 45 s (it does not wait for the pill)', tLit().length === 1);
-  g.run(`C.t += 46000;`);
+  check('the wave comes onto the screen (300 px: the pill is down): the chip goes dark at once, though its 45 s have not run (card space-game-b12-c1-tab-chip-dark)', J('C.edgeNow') === false && J('!!C.edgeSeen') === true && tLit().length === 0, tLit().join());
+  g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`);
+  check('ONCE, 45 s: the wave off the screen again inside the 45 s lights the same chip again (it is the one lesson, not a second)', tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
+  g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view); C.t += 46000;`);
   check('and it ends 45 s after the first time: it does not come back with the next wave', tLit().length === 0 && (g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`), tLit().length === 0));
   g.run(`__wave(2600); campPageModel(C, __view); try { campMapOpen({ camp: C, mp: null }); } catch (e) { /* the map is drawn with Phaser: the note is made before that */ }`);
   check('opening the map (Tab: campMapOpen) notes it (C.keysUsed.map) and the chip goes quiet', J('C.keysUsed.map') === true && tLit().length === 0);
@@ -225,6 +227,8 @@ console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-
   g.run(`__first();`);
   const t1 = J('__t1');
   check('THE PAGE\'S TEST works as written: start 1.1, wait for the first skiffs (the cruiser idle, the camera on it): the Tab chip lights at about 40 s, with the hostiles\' edge pill up', t1 !== null && t1 >= 36 && t1 <= 44, t1);
+  g.run(`window.__tab = () => campTeachChips(C).filter(c => c.id === 'tab').length; window.__a = campAliens(C).filter(u => u.hp > 0); window.__lit0 = __tab(); const m = __a.reduce((s, u) => ({ x: s.x + u.x / __a.length, y: s.y + u.y / __a.length }), { x: 0, y: 0 }); __view.x = m.x - W / 2; __view.y = m.y - H / 2; campPageModel(C, __view);`);
+  check('THE PAGE\'S TEST, its second half: fly until the skiffs are on the screen (the camera on them): the green words go, with 45 s not yet run (card space-game-b12-c1-tab-chip-dark)', J('__lit0') === 1 && J('__tab()') === 0 && J('C.edgeNow') === false, J('[__lit0, __tab(), C.edgeNow, __a.length, Math.round(C.t / 1000)].join()'));
   check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.map')") === 'Map' && J("uiText('camp.corner.chip.teachtab')") === 'wave off screen' && ['map', 'teachtab'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
 }
 
