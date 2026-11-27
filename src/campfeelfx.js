@@ -7,12 +7,13 @@
 //   GLOW     the engine that builds (feelBurn: slower on the heavy ship): a soft disc at each nozzle that rises with the burn: campFxBurn
 //   LINE     a long faint line ahead of the ship with a dot at its end, 0.35 s of travel (feel.js feelSpace): campFxVelLine
 //   STREAKS  while boosting (and on the map's Fast burn) the screen is crossed by faint lines sliding against the flight, stronger with speed (title.js installLookFx, 46 lines): campFxStreaksStep
+// THE SHIP HE FLIES: the cruiser, or the fighter whose stick he holds (card space-game-fly-fighter-l2: campFeelShip, campFeelInput, campFeelLook in src/campfeel.js): nothing here is the cruiser's by name.
 //   PUNCH    a launch punch: the view starts a little closer and eases out (feel.js feelLaunch: 1.6 to 1 in 900 ms; here 1.3, in the camera's base zoom with the boost's): campFxPunchK
 // The state is one object (campFxNew), the step pure (campFxStep: tests/campfeelfx.mjs flies it in plain Node, from the clock, no Math.random); campFxDraw puts it on three Graphics: the light (ADD), the soft puffs (normal blend, under the
 // cruiser) and the streaks (screen space, behind the world: the bg camera of src/camzoom.js, like the Long Haul's).
 const CAMPFX = {
   dots: { life: 520, rate: 30, boostRate: 48, speed: [4, 20], r: 0.012, minPx: 1, cap: 70, color: 0x6fd6ff, hot: 0xb8ecff, a: 0.85, back: 0.04 }, // life ms (380 in the Long Haul, the ribbon's 600 here); rate: dots a second for each engine at full thrust, boostRate on boost; speed: world px/s they drift off in a random direction (the Long Haul's 20 to 70 for a smaller ship); r: the first radius as a share of the cruiser's length, shrinking to nothing; minPx: never smaller than this on the screen; back: how far behind the nozzle they start, as a share of the length
-  puff: { life: 380, every: 50, turnMin: 0.3, turnFull: 2.4, out: 70, r: 0.02, grow: 1.2, cap: 60, color: 0xdff6ff, a: 0.42, nose: 0.46, tail: 0.5, side: 0.07, brakeMin: 45, brakeFull: 450, brakeJet: 140 }, // every: ms between two puffs (feelBurn's puffEvery 50); turnMin and turnFull: rad/s under which a turn shows nothing and over which it is a full puff (BURN.turnMin 0.3, turnFull 2.4); out: px/s the puffs leave sideways; r: a puff's radius as a share of the length, growing to 1 + grow times; nose and tail: where the turn puffs are, along the ship from the middle; brakeMin, brakeFull: px/s of speed under which there is nothing to brake and at which the jets are full; brakeJet: px/s the jets go forward
+  puff: { minPx: 1, life: 380, every: 50, turnMin: 0.3, turnFull: 2.4, out: 70, r: 0.02, grow: 1.2, cap: 60, color: 0xdff6ff, a: 0.42, nose: 0.46, tail: 0.5, side: 0.07, brakeMin: 45, brakeFull: 450, brakeJet: 140 }, // minPx: never smaller than this on the screen (a fighter's puffs at its own size are under a pixel); every: ms between two puffs (feelBurn's puffEvery 50); turnMin and turnFull: rad/s under which a turn shows nothing and over which it is a full puff (BURN.turnMin 0.3, turnFull 2.4); out: px/s the puffs leave sideways; r: a puff's radius as a share of the length, growing to 1 + grow times; nose and tail: where the turn puffs are, along the ship from the middle; brakeMin, brakeFull: px/s of speed under which there is nothing to brake and at which the jets are full; brakeJet: px/s the jets go forward
   smoke: { hull: 0.6, heavy: 0.3, rate: 0.12, heavyRate: 0.5, life: 800, r: 0.035, grow: 1.6, color: 0x9fb3c8, a: 0.4, rise: 12 }, // the damage smoke from an engine under 60 percent hull (ships.js): a chance each frame (0.12, and 0.5 under 30 percent), a soft grey-blue puff that grows and fades
   glow: { rise: 850, fall: 200, r: 0.17, a: 0.3, color: 0x6fd6ff, hot: 0xcfe6ff },   // the engine that builds from nothing to full in 850 ms (the heavy ship's, BURN.rise.heavy) and drops in 200; the disc's radius as a share of the length, and its opacity at full burn
   vel: { s: 0.35, min: 30, w: 1.5, a: 0.45, dot: 2.5, dotA: 0.75, color: 0x6fd6ff },  // the line: 0.35 s of travel ahead, over 30 px/s, 1.5 px wide on the screen, the dot 2.5 px at its end (feelSpace)
@@ -52,25 +53,26 @@ function campFxDotsAt(F, t, z) {
 const campFxMix = (a, b, k) => typeof campFeelMix === 'function' ? campFeelMix(a, b, k) : a; // the pale blue part of the way to the white (src/campfeel.js)
 
 // the puffs: the turn's, the brake's and the hull's smoke, for one frame. u: { x, y, rot, vx, vy, hp, maxHp }; inp: { turn, brake }; the turn rate is read from the heading itself, as feelBurn reads it (nothing asks who is flying)
-function campFxEmitPuffs(F, u, inp, dw, t, dt) {
-  const K = CAMPFX.puff, S = CAMPFX.smoke, rot = u.rot || 0, c = Math.cos(rot), s = Math.sin(rot); if (!(dw > 0) || !(dt > 0) || dt > 250) { F.rotPrev = rot; return 0; } // a frame longer than 250 ms is a hitch, not a manoeuvre
+// z the zoom and sk the ship's own size multiplier (campFeelLook's wid: 1 for the cruiser) are optional: with them a puff is never under CAMPFX.puff.minPx on the screen and a small ship's are bigger
+function campFxEmitPuffs(F, u, inp, dw, t, dt, z, sk) {
+  const K = CAMPFX.puff, S = CAMPFX.smoke, rot = u.rot || 0, c = Math.cos(rot), s = Math.sin(rot), kk = sk > 0 ? sk : 1, flo = z > 0 ? K.minPx / z : 0; if (!(dw > 0) || !(dt > 0) || dt > 250) { F.rotPrev = rot; return 0; } // a frame longer than 250 ms is a hitch, not a manoeuvre
   let d = F.rotPrev === null ? 0 : Math.atan2(Math.sin(rot - F.rotPrev), Math.cos(rot - F.rotPrev)); F.rotPrev = rot;
   F.turn += (d / (dt / 1000) - F.turn) * Math.min(1, dt / 70); // smoothed rad/s (feelBurn's turnEase 70 ms)
   const turn = campFxClamp((Math.abs(F.turn) - K.turnMin) / (K.turnFull - K.turnMin), 0, 1), side = F.turn >= 0 ? 1 : -1, sp = Math.hypot(u.vx || 0, u.vy || 0); let n = 0;
   if (turn > 0 && t >= F.puffAt) { // the nose and the tail push apart, so the ship swings: puffs go off the nose one way and off the tail the other
-    F.puffAt = t + K.every; const r0 = dw * K.r * (1 + turn), px = -s, py = c;
+    F.puffAt = t + K.every; const r0 = Math.max(dw * K.r * kk * (1 + turn), flo), px = -s, py = c;
     campFxPush(F.puffs, K.cap, { x: u.x + c * dw * K.nose, y: u.y + s * dw * K.nose, vx: (u.vx || 0) * 0.6 + px * side * K.out, vy: (u.vy || 0) * 0.6 + py * side * K.out, t0: t, r0, life: K.life, a: K.a, color: K.color, grow: K.grow }); n++;
     campFxPush(F.puffs, K.cap, { x: u.x - c * dw * K.tail, y: u.y - s * dw * K.tail, vx: (u.vx || 0) * 0.6 - px * side * K.out, vy: (u.vy || 0) * 0.6 - py * side * K.out, t0: t, r0, life: K.life, a: K.a, color: K.color, grow: K.grow }); n++;
   }
   const brake = inp && inp.brake && sp > K.brakeMin ? campFxClamp((sp - K.brakeMin) / (K.brakeFull - K.brakeMin), 0, 1) : 0;
   if (brake > 0 && t >= (F.brakeAt || 0)) { // two jets forward, one off each side of the nose, against the way it is going
-    F.brakeAt = t + K.every; const r0 = dw * K.r * (1 + brake), px = -s, py = c;
+    F.brakeAt = t + K.every; const r0 = Math.max(dw * K.r * kk * (1 + brake), flo), px = -s, py = c;
     [-1, 1].forEach(sd => { campFxPush(F.puffs, K.cap, { x: u.x + c * dw * K.nose + px * sd * dw * K.side, y: u.y + s * dw * K.nose + py * sd * dw * K.side, vx: (u.vx || 0) + c * K.brakeJet, vy: (u.vy || 0) + s * K.brakeJet, t0: t, r0, life: K.life, a: K.a, color: K.color, grow: K.grow }); n++; });
   }
   const frac = u.maxHp > 0 ? u.hp / u.maxHp : 1;
   if (frac < S.hull && frac > 0) { // the smoke of a hurt ship, from an engine
     const heavy = frac < S.heavy, rate = (heavy ? S.heavyRate : S.rate) * Math.min(1, dt / 16.7);
-    if (campFxRnd(F) < rate) { const sd = campFxRnd(F) < 0.5 ? 1 : -1; campFxPush(F.puffs, K.cap, { x: u.x - c * dw * 0.4 - s * sd * dw * 0.07, y: u.y - s * dw * 0.4 + c * sd * dw * 0.07, vx: (u.vx || 0) * 0.3 - c * S.rise, vy: (u.vy || 0) * 0.3 - s * S.rise, t0: t, r0: dw * S.r, life: S.life, a: S.a, color: S.color, grow: S.grow }); n++; }
+    if (campFxRnd(F) < rate) { const sd = campFxRnd(F) < 0.5 ? 1 : -1; campFxPush(F.puffs, K.cap, { x: u.x - c * dw * 0.4 - s * sd * dw * 0.07, y: u.y - s * dw * 0.4 + c * sd * dw * 0.07, vx: (u.vx || 0) * 0.3 - c * S.rise, vy: (u.vy || 0) * 0.3 - s * S.rise, t0: t, r0: Math.max(dw * S.r * kk, flo), life: S.life, a: S.a, color: S.color, grow: S.grow }); n++; }
   }
   return n;
 }
@@ -132,17 +134,17 @@ function campFxGraphics(scene, S) {
   return S;
 }
 // once a frame, from campFeelDraw (src/campfeel.js) after the ribbons and the flames: noz the nozzles, f the boost's flame state, dw the drawn length, z the zoom, t the clock in ms, dt the frame in ms, C the sim
-function campFxDraw(scene, S, u, noz, f, dw, z, t, dt, C) {
-  campFxGraphics(scene, S); const F = S.fxs || (S.fxs = campFxNew()), g = S.fxG, p = S.fxP, st = S.fxS, inp = C.input || {}, map = !!scene.mp, sp = Math.hypot(u.vx || 0, u.vy || 0), K = CAMPFX;
+function campFxDraw(scene, S, u, noz, f, dw, z, t, dt, C, look) {
+  campFxGraphics(scene, S); const F = S.fxs || (S.fxs = campFxNew()), g = S.fxG, p = S.fxP, st = S.fxS, inp = typeof campFeelInput === 'function' ? campFeelInput(C) : C.input || {}, map = !!scene.mp, sp = Math.hypot(u.vx || 0, u.vy || 0), K = CAMPFX; // inp: the stick of the ship he flies (the fighter's while he holds it)
   g.setVisible(!map); p.setVisible(!map); g.clear(); p.clear(); // (both are drawn again each frame: a Graphics that is not cleared keeps every frame it ever drew)
-  campFxEmitDots(F, noz, u.rot || 0, f.th, f.boost, dw, t, dt); campFxEmitPuffs(F, { x: u.x, y: u.y, rot: u.rot, vx: u.vx, vy: u.vy, hp: u.hp, maxHp: u.maxHp }, inp, dw, t, dt);
+  campFxEmitDots(F, noz, u.rot || 0, f.th, f.boost, dw, t, dt); campFxEmitPuffs(F, { x: u.x, y: u.y, rot: u.rot, vx: u.vx, vy: u.vy, hp: u.hp, maxHp: u.maxHp }, inp, dw, t, dt, z, look && look.wid);
   const burn = campFxBurn(F, f.th, f.boost, dt), glow = campFxGlow(burn, dw, f.boost), vel = campFxVelLine(u, z);
   noz.forEach(n => { if (glow) { g.fillStyle(glow.color, glow.a); g.fillCircle(n.x, n.y, glow.r); } });
   campFxDotsAt(F, t, z).forEach(d => { g.fillStyle(d.color, d.a); g.fillCircle(d.x, d.y, d.r); });
   campFxPuffsAt(F, t).forEach(q => { p.fillStyle(q.color, q.a); p.fillCircle(q.x, q.y, q.r); });
   if (vel) { g.lineStyle(vel.w, vel.color, vel.a); g.lineBetween(vel.x0, vel.y0, vel.x1, vel.y1); g.fillStyle(vel.color, vel.dot.a); g.fillCircle(vel.x1, vel.y1, vel.dot.r); }
   // the streaks: strength eased to its target, drawn in screen space behind the world
-  const top = typeof campFeelTop === 'function' ? campFeelTop(C, u) : 0, fast = !!(C.nav && C.nav.on && C.nav.fast);
+  const top = typeof campFeelTop === 'function' ? campFeelTop(C, u) : 0, fast = !C.cockpit && !!(C.nav && C.nav.on && C.nav.fast); // (the map's Fast burn is the cruiser's: with a fighter flown it is not his speed)
   F.k += (campFxStreakTarget(f.boost, fast, sp, top) - F.k) * (1 - Math.exp(-dt / 1000 * K.streak.rate)); if (F.k < 0.002) F.k = 0;
   st.clear(); st.setVisible(!map && F.k > 0.02);
   if (F.k > 0.02 && sp > 1) {
