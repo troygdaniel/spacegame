@@ -1376,6 +1376,8 @@ const UI_TEXT = {
   'camp.sight.dir.north-west': 'north-west',
   'camp.map.convoy': 'Convoys ({n}), course drawn',
   'camp.map.alien': 'Aliens ({n})',
+  'camp.map.scouted': 'Scouted ({n})',
+  'camp.hud.scouted': 'Scouted',
   'camp.map.mother': 'The alien mothership',
   'camp.map.tower': 'Defence towers ({n})',
   'camp.map.cache': 'Caches left ({n})',
