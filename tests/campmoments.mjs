@@ -124,8 +124,8 @@ check('a ship with no picture on the screen is a white disc where it died', J('S
 g.run(`__new(); __scene(1); campMomentsKill(S, { type: 'boom', x: 0, y: 0, big: true, kind: 'carrier', id: 'x', team: 'earth' });`);
 check('the cruiser and the mothership keep the ship look\'s big end (not taken here)', J('S.made.length') === 0 && J(`(() => { __scene(1); return campMomentsKill(S, { type: 'boom', x: 0, y: 0, kind: 'mother', id: 'y', team: 'alien', fac: 'alien' }); })()`) === false);
 g.run(`__new(); __scene(1); window.AL3 = campSpawn(C, 'raider', CA.x + 600, CA.y - 100); AL3.hp = 1; campHurt(C, AL3, 5, CA.id); campMomentsKill(S, __ev('boom')[0]); window.NU = S.hud.mom.nudge; campMomentsFrame(S);`);
-const o0 = J('S.cameras.main.offs[0]');
-check('the view nudges toward the kill (a unit vector from the middle of the view, east and a little north), and the follow offset is the other way, 2 px times the gain 2 at the start of the half sine (nothing yet)', J('NU') && J('NU.x > 0.9 && NU.y < 0') && o0 && near(o0[0], 0, 1e-9));
+const o0 = J('S.cameras.main.offs.length');
+check('the view nudges toward the kill (a unit vector from the middle of the view, east and a little north); at the start of the half sine the offset is nothing, and a nothing is not written to the camera', J('NU') && J('NU.x > 0.9 && NU.y < 0') && o0 === 0);
 g.run(`C.t += 90; campMomentsFrame(S);`);
 const o1 = J('S.cameras.main.offs[S.cameras.main.offs.length - 1]');
 check('half way (90 ms) the offset is at its largest: 4 world px against the kill at zoom 1 (2 px on the screen, and the follow\'s lag takes about half)', o1 && o1[0] < -3.5 && Math.hypot(o1[0], o1[1]) > 3.99 && Math.hypot(o1[0], o1[1]) < 4.01 && o1[1] > 0, JSON.stringify(o1));
@@ -186,7 +186,7 @@ const mj = src('src/campmoments.js'), code = mj.split('\n').filter(l => !/^\s*\/
 check('no image file, no web request, no library, no particle emitter: everything is baked in code and drawn with pooled images; no Phaser tween or timer', !/new Image|fetch\(|XMLHttpRequest|\.png|\.jpg|particles\.|createEmitter|add\.particles|tweens\.add|delayedCall|time\.addEvent/.test(code));
 check('nothing of the sim is read back or written: this file never touches C.ships\' hp, positions, speeds or the sim\'s clock (it reads C.t and the carrier only)', !/\.hp\s*[-+*]?=[^=]|\.vx\s*=[^=]|\.vy\s*=[^=]|C\.t\s*[-+]?=[^=]|C\.shield\s*=[^=]/.test(code));
 const sc = src('src/campaignscene.js'), html = src('index.html');
-check('the scene asks for the moments in four places, each as "if the function exists": the hit (after the shield\'s own say), the kill (before the ship look\'s), the wave, and the frame after the sprites are in place', /campShieldHitSkip\(this, e\)\) && !\(typeof campMomentsHit === 'function' && campMomentsHit\(this, e\)\)/.test(sc) && /campMomentsKill\(this, e\)\)\s*&&\s*!\(typeof slookKill/.test(sc) && /e\.type === 'wave'\) \{ if \(typeof campMomentsWave === 'function'\) campMomentsWave\(this, e\)/.test(sc) && sc.indexOf('campMomentsFrame(this)') > sc.indexOf('campShieldHitPaint(this'));
+check('the scene asks for the moments in four places, each as "if the function exists": the hit (after the shield\'s own say), the kill (before the ship look\'s), the wave, and the frame after the sprites are in place', /campShieldHitSkip\(this, e\)\) && !\(typeof campMomentsHit === 'function' && campMomentsHit\(this, e\)\)/.test(sc) && /campMomentsKill\(this, e\)\)\s*&&\s*!\(typeof slookKill/.test(sc) && /e\.type === 'wave'\) \{ if \(typeof campMomentsWave === 'function'\) campMomentsWave\(this, e\)/.test(sc) && sc.indexOf('campMomentsFrame(this, dt)') > sc.indexOf('campShieldHitPaint(this'));
 check('the file has its own script tag, after the shield hit\'s', html.indexOf('src/campmoments.js') > html.indexOf('src/campshieldhit.js') && html.split('src/campmoments.js').length === 2);
 
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);

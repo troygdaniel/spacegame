@@ -329,3 +329,19 @@ What it adds: at a hit, three pooled sprites (30 at most), a white fill on the s
 
 Counting the Phaser setters the busiest case makes (about 480 calls of `setPosition`, `setScale`, `setAlpha`, `setRotation` and `setVisible` a frame), the drawing side is a few hundred microseconds at the worst, and that worst is a fight with thirty hits and six kills inside a fifth of a second; the busiest fight the tools can build has far fewer. The Chrome frame series (and a picture of each moment, and of the kill's nudge, which the follow's lag takes about half of) is for the batch.
 
+## The torpedo, the boost and the end of a mission (card `space-game-b7-torpedo-boost-beat`, 26 Nov 2026)
+What it adds: for each live torpedo a dashed line (at most 40 `lineBetween` calls on the Graphics that is cleared and drawn every frame already) and one more `strokeCircle` for the target's ring; while boosting two more lines on the streaks' Graphics; the ribbon's segments, fewer of them when the store runs low (the dashes leave some out); for 0.8 s at a mission's end, one pooled image (the ring) and a camera follow offset written when it changes. The torpedo's burst is a kill's pooled record (five shards visible of the six).
+
+**What was measured, and what was not.** As the card before: the Chrome frame series was NOT taken (ORCH has not cleared Chrome); this is the cost of the JavaScript of each piece in plain Node with stand-in graphics, so the Phaser calls are free in it and the numbers are the arithmetic and the bookkeeping only (two runs each):
+
+| piece | one call |
+|---|---|
+| the dashed line of one torpedo, 40 dashes (the most) | 5.8 and 6.2 microseconds (plus its 40 `lineBetween` calls) |
+| the target ring's radius | 0.15 microseconds |
+| the two edge lines of the boost | 0.35 and 0.37 microseconds |
+| the ribbon's segments (the store full, 40 points) | 31.7 and 32.1 microseconds (the same as before this card) |
+| the ribbon's segments (the store empty: dashed) | 12.8 and 12.6 microseconds (fewer segments are made, and drawn) |
+| the beat's shape, once a frame for 0.8 s | 0.5 microseconds |
+
+So the new dashes make the ribbon cheaper when the store is low, and the torpedo's line is the one real addition: a handful of torpedoes, 40 short lines each. Nothing here is allocated per frame except the segments the ribbon already made. The Chrome series and the pictures are for the batch.
+

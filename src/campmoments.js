@@ -24,7 +24,7 @@
 //   campMomentsHit(s, e)             the scene's 'hit' handler, for a hit the shield did not take whole (src/campshieldhit.js campShieldHitSkip): the flash, the sparks, the notch; true when drawn (the scene's puff is left out)
 //   campMomentsKill(s, e)            the scene's 'boom' handler: true when the new kill is drawn (false: the scene draws the ship look's or the old puffs)
 //   campMomentsWave(s, e)            the scene's 'wave' handler: asks the page HUD for the glow and the slide; true when it did
-//   campMomentsFrame(s)              once a frame, after the ships' sprites are in place: the sparks, the kills, the flashes, the view's nudge
+//   campMomentsFrame(s, dt)         once a frame, after the ships' sprites are in place (dt: the frame's real ms): the sparks, the kills, the flashes, the beat, the view's offset
 //   campMomentsReset(s)              from the scene's create: the notes of the last battle (a scene that starts again is the same object) are gone
 //   campMomentsNotch(g, s, u, R, w, f)   the hull arc's notch of a ship hit a moment ago, on the arc's Graphics (src/shiplookmarks.js slookArcDraw)
 //   campMomentsOffset(s, out)        the camera's follow offset in world px now: the nudge, the beat's ease onto what decided it and s.camLead (the view's lead, which another card sets), in the sign Phaser takes
@@ -200,9 +200,6 @@ function campMomentsBeat(s, e) { // the mission has ended: the beat starts (once
   S.beatRing.setTint(e.result === 'won' ? CAMPMOM.beat.gold : campMomentsInt(typeof SLOOK === 'object' && SLOOK.C ? SLOOK.C.foe : '#ff6fa8'));
   return true;
 }
-function campMomentsReset(s) { // from the scene's create (a scene that starts again is the same object): the notes of the last battle are gone
-  if (!s) return; s.beat = null; s.momHitAt = {}; s.momPulse = {}; s.momLast = null; s.momWaveAt = 0;
-}
 const CAMPMOM_BA = { p: 0, T: 0, ease: 0, ring: { r: 0, a: 0 } };
 function campMomentsBeatStep(s, S, B, dt) { // the beat's clock and its ring, once a frame (dt: the real ms of the frame)
   B.real += dt; const A = campMomentsBeatAt(B.real, B.result, B.still, CAMPMOM_BA); B.T = A.T; B.ease = A.ease;
@@ -237,7 +234,7 @@ function campMomentsFrame(s, dt) { // once a frame, after the ships' sprites are
   }
 }
 function campMomentsReset(s) { // from the scene's create (a scene that starts again is the same object, so its notes would live on): the notes of the last battle are gone
-  if (!s) return; s.momHitAt = {}; s.momPulse = {}; s.momWaveAt = 0;
+  if (!s) return; s.momHitAt = {}; s.momPulse = {}; s.momWaveAt = 0; s.beat = null; s.momLast = null; // (the beat of the last mission's end, and where its last kill and loss were)
 }
 function campMomentsNotch(g, s, u, R, w, f) { // on the hull arc's Graphics, the part the hull just lost: a short bright white run from the end of the arc that fades; true when drawn
   const t0 = s && s.momHitAt && u ? s.momHitAt[u.id] : undefined, C = s && s.camp; if (t0 === undefined || !C || !g) return false;

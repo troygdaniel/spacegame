@@ -14,7 +14,8 @@
 const CAMPFEEL = {
   addr: 'feel',                  // the address's name for the switch: ?feel=0 is off whatever the flag says, ?feel (=1) on
   memo: { s: null, v: null },    // the page's address, read again only when it changed
-  ribbon: { ms: 600, jump: 240, speedK: 1800, min: 25, thr: 0.05, w: 0.02, wTh: 0.015, wBoost: 0.5, minPx: 1.4, a: 0.32, aBoost: 0.5, cap: 72, color: 0x6fd6ff, hot: 0xb4e8ff }, // ms of history (420 in the Long Haul; the cruiser is slower, so a little more); jump: px a nozzle may move between two frames before it is a teleport (speedK px/s times the frame's time, at least jump); min: px/s under which a ship with no thrust leaves none; w: the ribbon's width as a share of the cruiser's drawn length, plus wTh for full thrust and wBoost more on boost; minPx: never thinner than this on the screen; a, aBoost: the opacity at the head; cap: points kept at most; color, hot: the pale blue, and the white it goes to on boost
+  ribbon: { ms: 600, jump: 240, speedK: 1800, min: 25, thr: 0.05, w: 0.02, wTh: 0.015, wBoost: 1.5, minPx: 1.4, a: 0.32, aBoost: 0.5, cap: 72, color: 0x6fd6ff, hot: 0xb4e8ff }, // ms of history (420 in the Long Haul; the cruiser is slower, so a little more); jump: px a nozzle may move between two frames before it is a teleport (speedK px/s times the frame's time, at least jump); min: px/s under which a ship with no thrust leaves none; w: the ribbon's width as a share of the cruiser's drawn length, plus wTh for full thrust and wBoost more on boost; minPx: never thinner than this on the screen; a, aBoost: the opacity at the head; cap: points kept at most; color, hot: the pale blue, and the white it goes to on boost
+  dash: { low: 0.3, period: 80, gap: 0.7 }, // the ribbon breaks into dashes as the boost's store runs low (BRIEF 7, decision 10): under `low` of the store (and boosting) a share of each `period` ms is left out, up to `gap` of it when the store is empty
   nozzles: { carrier: [[-0.5, 0.07], [-0.5, -0.07]], default: [[-0.5, 0]] },   // where the engines are, by the kind of ship, as shares of its drawn length (back, side): the cruiser's two; any other ship the player may fly (a pilot's fighter) has one in the middle of its tail until its own are written here
   flame: { min: 0.04, thrust: 0.5, boost: 0.6, flare: 0.35, wid: 0.1, boostWid: 0.01, flareWid: 0.006, flick: [0.85, 0.3], glow: [1.6, 1.25, 0.14], plume: 0.65, core: [0.45, 0.55, 0.85], disc: [0.7, 0.45], color: 0x6fd6ff, hot: 0x9fe4ff, depth: 4.4 }, // the lengths and widths are the steady streaks' (src/shiplookfx.js SLOOKFX.flame, as a share of the cruiser's length); the Long Haul's layers: glow (width x1.6, length x1.25, opacity 0.16), plume (width x1, length x1, 0.8), core (width x0.45, length x0.55, 0.9), a disc at the nozzle (radius x0.7, 0.5); the flicker is 0.85 to 1.15 each frame
   cam: { lag: 0.12, boostLag: 0.07, boostZoom: 0.9, rateIn: 2.2, rateOut: 1.4 }  // the follow's lerp (the Long Haul's 0.12; the scene's own), the lerp at full boost (the cruiser pulls ahead), the zoom's multiplier at full boost (a slight zoom-out), and how fast the boost's share comes (per second: about half a second) and goes (a little under a second)
@@ -72,7 +73,7 @@ function campFeelFlameSize(dw, f) {
 // ---- the ribbons (pure) ----
 const campFeelRibbonNew = (n = 2) => ({ rib: Array.from({ length: n }, () => []), cut: 0 }); // cut: how many times a ribbon was cut by a guard (a test reads it)
 // one nozzle's new position this frame: the guards, then the point (when the engine is on), then the old points go. th the thrust 0 to 1, b the boost 0 to 1, speed the ship's own px/s, dw its drawn length, t the clock in ms
-function campFeelRibbonPush(R, i, x, y, t, th, b, speed, dw) {
+function campFeelRibbonPush(R, i, x, y, t, th, b, speed, dw, lo) { // lo: how low the boost's store is while boosting, 0 to 1 (the ribbon's dashes: campFeelDashLo), left out for none
   const K = CAMPFEEL.ribbon, rib = R.rib[i] || (R.rib[i] = []);
   if (!isFinite(x) || !isFinite(y) || !isFinite(t)) { rib.length = 0; R.cut++; return rib; }
   const last = rib[rib.length - 1];
@@ -80,17 +81,22 @@ function campFeelRibbonPush(R, i, x, y, t, th, b, speed, dw) {
   while (rib.length && rib[rib.length - 1].t > t) { rib.pop(); R.cut++; } // the clock never runs backwards for a ribbon
   if (th > K.thr || speed > K.min) {
     const w = dw * (K.w + K.wTh * Math.max(0, Math.min(1, th)) + K.wBoost * K.w * Math.max(0, Math.min(1, b)));
-    rib.push({ x, y, t, w, b: Math.max(0, Math.min(1, b)) });
+    rib.push({ x, y, t, w, b: Math.max(0, Math.min(1, b)), lo: lo > 0 ? Math.min(1, lo) : 0 });
     if (rib.length > K.cap) rib.shift();
   }
   while (rib.length && t - rib[0].t > K.ms) rib.shift();
   return rib;
 }
+// how low the boost's store is while boosting, 0 (enough, or not boosting) to 1 (empty): the share of the way under CAMPFEEL.dash.low; and whether the point made at clock t is in a gap of the dashes: the gaps are fixed in time (so they stay
+// put along the ribbon as the ship flies on), a share lo times `gap` of each `period` ms
+const campFeelDashLo = (frac, boost) => boost > 0.05 ? Math.max(0, Math.min(1, (CAMPFEEL.dash.low - frac) / CAMPFEEL.dash.low)) : 0;
+const campFeelDashGap = (t, lo) => lo > 0 && (t % CAMPFEEL.dash.period) / CAMPFEEL.dash.period < lo * CAMPFEEL.dash.gap;
 // the segments to draw for one ribbon at clock t, zoom z: [{ x0, y0, x1, y1, w, a, color }]: older points fade and thin toward the tail (k above 0 and at most 1), never thinner than minPx on the screen
 function campFeelRibbonSegs(rib, t, z) {
   const K = CAMPFEEL.ribbon, out = [], zz = z > 0 ? z : 1;
   for (let j = 1; j < rib.length; j++) {
     const p = rib[j], k = 1 - (t - p.t) / K.ms; if (!(k > 0 && k <= 1)) continue;
+    if (p.lo > 0 && campFeelDashGap(p.t, p.lo)) continue; // a dash is a stretch of the ribbon that is left out: the ribbon breaks up before the store is empty
     out.push({ x0: rib[j - 1].x, y0: rib[j - 1].y, x1: p.x, y1: p.y, w: Math.max(p.w * k, K.minPx / zz * k), a: (K.a + (K.aBoost - K.a) * p.b) * k, color: campFeelMix(K.color, K.hot, p.b) });
   }
   return out;
@@ -106,7 +112,8 @@ function campFeelDraw(scene, S, u, sp, C) {
   const eng = campFeelEngines(u); if (!S.feelR || S.feelId !== u.id || S.feelR.rib.length !== eng.length) { S.feelR = campFeelRibbonNew(eng.length); S.feelId = u.id; if (S.fxs) { S.fxs.dots.length = 0; S.fxs.puffs.length = 0; S.fxs.rotPrev = null; } } // (another ship, or another number of engines: a new history)
   const R = S.feelR, f = typeof campFlameState === 'function' ? campFlameState(C) : { th: 0, boost: 0, flare: 0 };
   const t = C.t || 0, z = scene.cameras && scene.cameras.main && scene.cameras.main.zoom > 0 ? scene.cameras.main.zoom : 1, speed = Math.hypot(u.vx || 0, u.vy || 0), noz = campFeelNozzles(u, dw), size = campFeelFlameSize(dw, f);
-  noz.forEach((p, i) => campFeelRibbonPush(R, i, p.x, p.y, t, f.th, f.boost, speed, dw));
+  const lo = campFeelDashLo(typeof campBoostStatus === 'function' ? campBoostStatus(C).frac : 1, f.boost); // the store of the ship he flies: low, and the ribbon breaks into dashes
+  noz.forEach((p, i) => campFeelRibbonPush(R, i, p.x, p.y, t, f.th, f.boost, speed, dw, lo));
   R.rib.forEach(rib => campFeelRibbonSegs(rib, t, z).forEach(s => { g.lineStyle(s.w, s.color, s.a); g.lineBetween(s.x0, s.y0, s.x1, s.y1); }));
   if (size) noz.forEach((p, i) => campFeelFlameParts(p.x, p.y, u.rot || 0, size.len, size.wid, campFeelFlick(t, i), f.boost).forEach(o => {
     g.fillStyle(o.color, o.a);
