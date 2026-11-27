@@ -285,6 +285,7 @@ const CAMP = {
     brakeDrag: 0.12,                       // the same with the brake held (the Wren's)
     fall: 900,                             // px/s each second the top speed comes down after the boost (the Wren's BOOST.fall): a fade, not a wall
     store: { max: 100, drain: 25, pause: 1000, regen: 17, back: 0.25 }, // the boost store (the Wren's src/boost.js BOOST and its first booster tier): units, units a second while boosting, ms before it refills, units a second refilling, the share that unlocks it after it ran dry
+    towerK: 3,                             // times the damage the fighter's shots deal to a TOWER (card space-game-fighter-job-33, BRIEF 8 proposal C: the fighter clears the towers on one side so the cruiser comes in there; at 1 one tower took 30 s and 150 of its hull, so it could never)
     hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72, so he is not shot down in seconds while he learns; brief 8 asked for it to be lower so the fighter is shot down now and then: the bot is too evasive to show when a human is, so Troy judges it in play; 0.65 is where the ace bot starts to die in 3.2 and 3.3, 3 and 9 percent of the runs: docs/night/cockpit-sweep.md); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
     damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
     rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
@@ -1827,7 +1828,7 @@ function campBullets(C, dt) {
       if (u.hp <= 0) continue;
       if (campSegHit(px, py, b.x, b.y, u.x, u.y, u.r + 2)) {
         if (b.beam) { b.hit = b.hit || {}; if (b.hit[u.id]) continue; b.hit[u.id] = true; } // a beam goes through every ship in its line, but hurts each one once (it hurt a big one every step it was inside: 21 times as much on the mothership)
-        campHurt(C, u, b.dmg, b.from, Math.atan2(-b.vy, -b.vx)); if (!b.beam) { b.dead = true; return; } // (the angle: the way the shot came from, for the shield's arc)
+        campHurt(C, u, u.kind === 'tower' && C.cockpit && b.from === C.cockpit.id && CAMP.cockpit.towerK ? b.dmg * CAMP.cockpit.towerK : b.dmg, b.from, Math.atan2(-b.vy, -b.vx)); if (!b.beam) { b.dead = true; return; } // (the angle: the way the shot came from, for the shield's arc) // (the fighter the player flies cuts a tower down `towerK` times as fast: card space-game-fighter-job-33)
       }
     }
     if (C.torpedoes && C.torpedoes.length && (b.team === 'earth' || b.team === 'neutral') && campTorpedoShot(C, b, px, py)) return; // a torpedo in the way (src/camptorpedo.js)
