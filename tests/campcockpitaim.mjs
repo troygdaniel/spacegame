@@ -1,5 +1,5 @@
 // smoke: the flown fighter's AUTO-TARGET (card space-game-fly-fighter-aim-help; Troy, 26 Nov 2026 evening): the gun finds a hostile within the cone and in reach and sends each shot along the lead point to it, a helped shot does aimK of the damage, the cone 0 is the gun of before, the cone is an N-panel row, and the ace bot gets the same help a human would (plain Node, no Chrome)
-// The rule is src/campcockpitaim.js (campCockpitLead, campCockpitAimPick, campCockpitAim), called every tick by campCockpitStep (src/campcockpit.js); its numbers are CAMP.cockpit aimCone (20 degrees), aimReach, aimLead, aimK (0.3), aimOn, aimMark.
+// The rule is src/campcockpitaim.js (campCockpitLead, campCockpitAimPick, campCockpitAim), called every tick by campCockpitStep (src/campcockpit.js); its numbers are CAMP.cockpit aimCone (20 degrees), aimReach, aimLead, aimK (0.32), aimOn, aimMark.
 //   A  the table and the N panel's rows: the cone slider 0 to 30 degrees, the price row; they read and write the table
 //   B  the lead: where a moving ship and the shot meet (a shot flown to the end meets it), the fighter's own speed counts, too far or no root: where the ship is
 //   C  the pick: in the cone and in reach; the picked target first, then the one the guns hold, else the nearest; nothing outside the cone, out of reach, dead or unseen; the cone 0 looks (aimMark) but sends nothing
@@ -17,7 +17,7 @@ const g = nodeGame({ store: new Map() });
 const J = e => JSON.parse(g.run(`{ (() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })() }`));
 
 g.run(`{
-  window.__reset = () => { Object.assign(CAMP.cockpit, { hpK: 2, damageK: 0.5, rateK: 3, turrets: 'auto', aimCone: 20, aimReach: 0.85, aimLead: 1, aimK: 0.3, aimOn: 4, aimMark: 30 }); };
+  window.__reset = () => { Object.assign(CAMP.cockpit, { hpK: 2, damageK: 0.5, rateK: 3, turrets: 'auto', aimCone: 20, aimReach: 0.85, aimLead: 1, aimK: 0.32, aimOn: 4, aimMark: 30 }); };
   // a flown fighter alone with the hostiles it is given: the others of the wing are put far away, the aliens of the mission removed, the cruiser's turrets off
   window.__mk = () => { __reset(); const C = window.C = campNew(1, [], { seed: 3 }); CAMP.flags.cockpit = true; CAMP.cockpit.turrets = 'off'; for (let i = 0; i < 90; i++) campStep(C, 1 / 30); C.events.length = 0; C.ships = C.ships.filter(u => u.team !== 'alien'); C.by = {}; C.ships.forEach(u => { C.by[u.id] = u; }); C.waves.forEach(w => { w.started = true; });
     const f = C.ships.find(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked); campCockpitTake(C, f.id); f.x = 0; f.y = 0; f.vx = 0; f.vy = 0; f.rot = 0; C.carrier.x = -9000; C.carrier.y = 0; window.__f = f; return C; };
@@ -30,7 +30,7 @@ g.run(`{
 console.log('A. the table and the N panel');
 {
   g.run(`__reset();`);
-  check('the cone is 20 degrees, the price aimK 0.3, the reach 0.85 of a shot\'s flight, the lead 1, the lit nose 4 degrees, the marker looks 30 degrees when the cone is 0', J('[CAMP.cockpit.aimCone, CAMP.cockpit.aimK, CAMP.cockpit.aimReach, CAMP.cockpit.aimLead, CAMP.cockpit.aimOn, CAMP.cockpit.aimMark]').join() === '20,0.3,0.85,1,4,30');
+  check('the cone is 20 degrees, the price aimK 0.32, the reach 0.85 of a shot\'s flight, the lead 1, the lit nose 4 degrees, the marker looks 30 degrees when the cone is 0', J('[CAMP.cockpit.aimCone, CAMP.cockpit.aimK, CAMP.cockpit.aimReach, CAMP.cockpit.aimLead, CAMP.cockpit.aimOn, CAMP.cockpit.aimMark]').join() === '20,0.32,0.85,1,4,30');
   check('the gun\'s own numbers are as they were: damageK 0.5, rateK 3 (the price is on top of them, not instead)', J('[CAMP.cockpit.damageK, CAMP.cockpit.rateK]').join() === '0.5,3');
   const row = J('campTuneRow("cockpitaim")'), rowk = J('campTuneRow("cockpitaimk")');
   check('the N panel has the cone row: the group of the flown fighter, CAMP.cockpit.aimCone, 0 to 30 in steps of 1, in degrees, felt at once', row && row.group === 'cockpit' && row.path === 'cockpit.aimCone' && row.min === 0 && row.max === 30 && row.step === 1 && row.unit === 'deg' && row.when === 'now', JSON.stringify(row));
@@ -100,7 +100,7 @@ console.log('D. the shot');
   const s = J('(() => { const b = __shots()[0]; const L = campCockpitLead(C, __f, __a); return b && { rot: b.rot, dmg: b.dmg, lead: L.rot, nose: __f.rot }; })()');
   check('the nose is straight and the hostile crosses: the first shot leaves along the lead point (not along the nose)', s && s.nose === 0 && s.rot > 0.15 && near(s.rot, s.lead, 0.03), JSON.stringify(s));
   const F = J('CAMP.fighter.damage'), str = J('__f.str || 1');
-  check('and its damage is the pilot\'s times damageK times aimK: 8 * 0.5 * 0.3 = 1.2 (times his strength)', near(s.dmg, F * 0.5 * 0.3 * str, 1e-9), s.dmg);
+  check('and its damage is the pilot\'s times damageK times aimK: 8 * 0.5 * 0.32 = 1.28 (times his strength)', near(s.dmg, F * 0.5 * 0.32 * str, 1e-9), s.dmg);
   g.run(`__mk(); __sees(); CAMP.cockpit.aimCone = 0; window.__a = __foe(600, 0, 0, 300); C.cockpit.input.fire = true; __tick(1);`);
   const s0 = J('(() => { const b = __shots()[0]; return b && { rot: b.rot, dmg: b.dmg }; })()');
   check('the cone 0 is the gun of before: straight along the nose and the plain damage (8 * 0.5)', s0 && near(s0.rot, 0, 1e-9) && near(s0.dmg, F * 0.5 * str, 1e-9), JSON.stringify(s0));
@@ -180,7 +180,7 @@ console.log('F. the ace bot');
   check('and the price holds its damage for a second of fire near what it was (within 35 percent here, 6 seeds of one mission; the 32-seed table of every mission is in PROJECT_STATUS.md)', a20.dpf >= a0.dpf * 0.65 && a20.dpf <= a0.dpf * 1.35, JSON.stringify([a0.dpf, a20.dpf]));
   check('the ace still wins what it won', a20.won >= a0.won, JSON.stringify([a0.won, a20.won]));
   g.run('__reset();');
-check('the table is as it was after the runs (the cone is 20 in the bot\'s game and in this one, aimK 0.3)', J('CAMP.cockpit.aimCone') === 20 && botGame.run('CAMP.cockpit.aimCone') === 20 && botGame.run('CAMP.cockpit.aimK') === 0.3, botGame.run('CAMP.cockpit.aimCone'));
+check('the table is as it was after the runs (the cone is 20 in the bot\'s game and in this one, aimK 0.32)', J('CAMP.cockpit.aimCone') === 20 && botGame.run('CAMP.cockpit.aimCone') === 20 && botGame.run('CAMP.cockpit.aimK') === 0.32, botGame.run('CAMP.cockpit.aimCone'));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
