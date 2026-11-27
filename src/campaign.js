@@ -757,9 +757,9 @@ const CAMP = {
         { id: 'approach', kind: 'recon', par: 120, hpScale: 2.2, dmgScale: 2.6, place: 'kolga', dock: 'tyr',  // M1 at Kolga, a moon of the alien home world (a trip of about 10 s by Fast)                // M1: three points on the way in; defenders come when the first is scanned
           objectives: [{ type: 'scan', pause: 2, points: [{ at: [-1500, 800], r: 420, secs: 7 }, { at: [100, 1400], r: 420, secs: 7 }, { at: [1500, -500], r: 420, secs: 7 }] }, { type: 'clear' }],  // what the mission asks (scan points: where, how close, how many seconds; a scan stops while the cruiser is hit and goes on 2 s after, brief 7 decision 1), all of it: every wave comes and none is left
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'nest' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { scanning: 0 }, from: [-2500, 1800], ships: { raider: 2, drone: 1 }, goal: 'carrier', say: 'camp.say.l3wave1' },    // a scan's wave arrives when that scan starts, at its ring (brief 7 decision 1; the numbers are a first try)
-                  { on: { scanning: 1 }, from: [-700, 2900], ships: { raider: 2, drone: 2, gunship: 1 }, goal: 'carrier' },
-                  { on: { scanning: 2 }, from: [2900, -1500], ships: { raider: 3, drone: 1, gunship: 1 }, goal: 'carrier', say: 'camp.say.l3wave3' }] },  // the waves: when, from where, how many of each kind
+          waves: [{ on: { scanning: 0 }, from: [-2500, 1800], ships: { raider: 2, drone: 0 }, goal: 'carrier', say: 'camp.say.l3wave1' },    // a scan's wave arrives when that scan starts, at its ring (brief 7 decision 1; the numbers are a first try)
+                  { on: { scanning: 1 }, from: [-700, 2900], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier' },
+                  { on: { scanning: 2 }, from: [2900, -1500], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier', say: 'camp.say.l3wave3' }] },  // the waves: when, from where, how many of each kind
         { id: 'outer', kind: 'attack', par: 120, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'ran', dock: 'tyr',  // M2 at Ran, the second moon (a trip of about 8 s by Fast): the four tougher towers round it;   // M2: the four outer towers (they are the tougher ones)
           start: 'home', startAt: [-3300, 1900], towers: [{ place: 'ran', r: 1100, n: 4, phase: 0.7, hp: 260 }], objectives: [{ type: 'kill', what: 'towers' }, { type: 'clear' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'vault' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'hull', type: 'hull', pct: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
@@ -769,8 +769,8 @@ const CAMP = {
         { id: 'inner', kind: 'attack', par: 180, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'home', dock: 'tyr',  // M3 at the alien world itself (the cruiser starts there): the eight inner towers, the last reserves;   // M3: the eight inner towers, with the last reserves
           start: 'home', startAt: [-2400, 1300], towers: [{ place: 'home', r: 1000, n: 8, phase: 0.2 }], objectives: [{ type: 'kill', what: 'towers' }, { type: 'clear' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'core' }, { id: 'swift', type: 'time', secs: 180 }, { id: 'hull', type: 'hull', pct: 50 }, { id: 'clean', type: 'lost', n: 2 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { towers: 4 }, from: [-3000, -2300], ships: { raider: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' },    // the two waves come together, from opposite sides of the world, when the fourth tower falls (brief 7 decision 3; par 180 s; a first try)
-                  { on: { towers: 4 }, from: [3000, 2300], ships: { drone: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ on: { towers: 4 }, from: [-3000, -2300], ships: { raider: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' },    // the two waves come together, from opposite sides of the world, when the fourth tower falls (brief 7 decision 3; par 180 s; a first try)
+                  { on: { towers: 4 }, from: [3000, 2300], ships: { drone: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     }
   }
