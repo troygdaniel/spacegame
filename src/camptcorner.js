@@ -34,7 +34,8 @@ function campFriRows(C) {
   if (typeof campPanelDef !== 'function' || typeof campPanelRows !== 'function' || !campPanelDef('friends')) return [];
   const view = campPanelRows(C, 'friends'), rows = campPanelList(C, 'friends'), list = campFriNumbered(C);
   return view.map((r, i) => ({ r, row: rows[i] || {} })).filter(x => list.some(e => e.number === x.row.fri)).map(({ r, row }) => { // (only the numbers whose ship has been seen: a hauler that has not come has no line, yet its digit keeps its place)
-    const e = list.find(x => x.number === row.fri) || null, up = !!e && e.alive, h = up ? campTdispHull(e.unit) : null;
+    const e = list.find(x => x.number === row.fri) || null, up = !!e && e.alive, h = up && !e.field ? campTdispHull(e.unit) : null;
+    if (e && e.field) return { kind: 'bar', id: r.id, cap: String(row.fri), capOk: up, name: r.label, num: up ? uiText(e.n === 1 ? 'camp.ui.cand.rock1' : 'camp.ui.cand.rocks', { n: e.n }) : uiText('camp.corner.lost'), share: 0, color: 0x16293d, sel: !!r.marked, ok: up }; // a rock field (card space-game-orders-f3-enter-fits): the rocks left, no hull bar
     return { kind: 'bar', id: r.id, cap: String(row.fri), capOk: up, name: r.label, num: h ? h.now + ' / ' + h.max : uiText('camp.corner.lost'), share: h ? h.share : 0, color: h ? CAMP.charge.color[campChargeBand(h.share)] : 0x16293d, sel: !!r.marked, ok: up };
   });
 }

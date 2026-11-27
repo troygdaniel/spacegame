@@ -31,7 +31,7 @@ check('W, 2, E, 2, Enter sends ONE pilot (Kara) to guard the miner, and nobody e
 g.run(`campPanelClose(P); C.fsel = ''; C.sel = 'all';`);
 mission(0, 20);
 mission(1, 20);
-check('1.2: the miners are 1 and 2', nums() === '1:Miner 1 | 2:Miner 2', nums());
+check('1.2: the miners are 1 and 2, then the four rock fields 3 to 6 (card space-game-orders-f3-enter-fits: a rock field is an E target, numbered after every ship)', nums() === '1:Miner 1 | 2:Miner 2 | 3:Rock field 1 | 4:Rock field 2 | 5:Rock field 3 | 6:Rock field 4', nums());
 mission(2, 1);
 check('1.3: no hauler has come yet, so no line in the corner (a number is listed from the moment its ship is first seen), yet the pick has its nine places', nums() === '' && J(`campFriRows(C).length`) === 0 && J(`campPanelList(C, 'friends').length`) === 9);
 mission(2, 25);
@@ -62,7 +62,7 @@ check('E and W are two picks of one left hand: W opens the fleet and closes the 
 check('the friend and the enemy are one target: E then a digit lets the enemy go, and ] lets the friend go', (() => { g.run(`campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y);`); k('BracketRight'); const hostile = J('C.tgt') !== '' && fsel() === ''; k('KeyE'); const e = k('Digit3'); return hostile && e.ok && J('C.tgt') === '' && fsel() === idOf(3); })());
 check('a tap of E past the live ones goes round with no empty stop: four taps are always on a ship', (() => { g.run(`campPanelClose(P); C.fsel = '';`); const seen = [1, 2, 3, 4].map(() => (k('KeyE'), fsel())); return seen.every(f => f !== ''); })());
 check('Enter then guards the ship picked (all three squads), as it always did: the pick is open and Enter is still the order', (() => { g.run(`campPanelClose(P);`); k('KeyE'); k('Digit2'); const f = fsel(); g.run(`C.sel = 'all'`); const r = k('Enter'); return r.ran && r.ok && J(`['red', 'green', 'yellow'].every(q => campWingShips(C, q).every(u => u.order && u.order.type === 'guard' && u.order.at && u.order.at.id === '${f}'))`); })());
-check('a mission with no ship to protect: E opens nothing and holds nothing', (() => { g.run(`window.C = campNew('home', [], { seed: 1, god: true }); window.P = campPanelNew(); C.ships = C.ships.filter(u => u.team !== 'neutral' && u.kind !== 'freighter');`); const r = k('KeyE'); return r.used && r.open === '' && fsel() === ''; })());
+check('a mission with no ship to protect and no rock field: E opens nothing and holds nothing', (() => { g.run(`window.C = campNew('home', [], { seed: 1, god: true }); window.P = campPanelNew(); C.ships = C.ships.filter(u => u.team !== 'neutral' && u.kind !== 'freighter'); C.rocks = [];`); const r = k('KeyE'); return r.used && r.open === '' && fsel() === ''; })());
 
 // ---- B2. item 5: W works the same way (the first tap picks all pilots) ----
 g.run(`campPanelClose(P); C.sel = 'pilot:green';`);

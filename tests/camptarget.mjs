@@ -17,7 +17,7 @@ const g = nodeGame();
 g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the pilots begin in the bay (the game starts them out beside the cruiser: card space-game-keys-orders; tests/campkeysorders.mjs has the new start)');
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
-  window.__mk = () => { const C = campNew('home', [], { seed: 4 }); C.ships = C.ships.filter(u => u.team !== 'alien'); window.C = C; return C; };
+  window.__mk = () => { const C = campNew('home', [], { seed: 4 }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.rocks = []; /* (a rock field is an E target since card space-game-orders-f3-enter-fits; these checks are about the ships) */ window.C = C; return C; };
   window.__foe = (kind, dx, dy) => campSpawn(C, kind, C.carrier.x + dx, C.carrier.y + dy);
   window.__run = (s) => { for (let i = 0; i < s * 30 && !C.result; i++) campStep(C, 1 / 30); C.events.length = 0; };
   // press through the lists as the player does: the key of the list the row is in (campKeyVia; a part with no key of its own is reached through its parent: the parent's key, Down to the part's row, Enter), Down to the row, Enter.
