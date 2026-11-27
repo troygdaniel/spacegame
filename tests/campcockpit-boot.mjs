@@ -1,6 +1,6 @@
 // not in the smoke: flying a pilot's fighter in the real game, with the default address (one Chrome, muted, through the test lock; card space-game-cockpit-default-on)
 // The cockpit is ON for every player (CAMP.flags.cockpit true, ?cockpit=0 is only the tests' way back). This boots mission 1.1 with NO address switch (a boot is run with what a player has) and, with real key events, checks what only a browser shows:
-//   A  the switch is on with no ?cockpit in the address; the page HUD's bottom key row names C (Cockpit, then Hand back while it is flown) and the H keys page has its line
+//   A  the switch is on with no ?cockpit in the address; the page HUD's bottom key row names C (Cockpit, then Hand back while it is flown) and the H keys page has its line (Pilot's stick: take, give back)
 //   B  the first hostiles seen light the C chip (the teaching note) where it stands in the key row
 //   C  TAKING THE STICK, the glide (card space-game-b7-camera-lead-stick): C moves the camera from the cruiser to the fighter over about 0.4 s (eased, the view closing in to the cockpit's 3 times), the pale ring shrinks onto the fighter and goes, the CRUISER AUTO pill fades in
 //   D  THE AUTO-TARGET (card space-game-fly-fighter-aim-help): a hostile crossing ahead and off the nose: the guns track it (a mint ring on the screen at the lead point), Space held sends the shots along the lead point and not along the nose
@@ -40,7 +40,7 @@ try {
   const row0 = await keyRow();
   check('the bottom key row names C: "C" then "Cockpit"', /(^|\n)C\nCOCKPIT/i.test(row0), JSON.stringify(row0));
   await key('KeyH'); await t.run(500);
-  check('the H keys page has the line for C: "Take a pilot\'s stick; again hands it back"', (await j(`campKeysIsOpen(${S})`)) === true && (await j(`/Take a pilot/i.test(document.body.innerText)`)) === true);
+  check('the H keys page has the line for C: "Pilot\'s stick: take, give back"', (await j(`campKeysIsOpen(${S})`)) === true && (await j(`/Pilot.s stick: take, give back/i.test(document.body.innerText)`)) === true);
   await key('KeyH'); await t.run(400);
   check('H closes the page', (await j(`campKeysIsOpen(${S})`)) === false);
 
