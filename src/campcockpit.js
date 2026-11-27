@@ -56,6 +56,7 @@ function campCockpitTake(C, id) {
   C.flights = null; C.cockpitTaken = true; // the flights of the tick are made again without this ship; cockpitTaken: once taken, the first-minute tip is not shown
   u.cockpit = true; u.hp *= k; u.maxHp = (u.maxHp || u.hp / k) * k; // the hull is the pilot's times hpK, from where it is
   const m = u.mate && C.by[u.mate]; if (m && m.mate === u.id) m.mate = null; u.mate = null; u.run = null; // out of any duel: nobody is paired with a ship the pilot's own AI is not flying
+  if (typeof campMinerPilots === 'function') campMinerPilots(C); // 1.2 only (the row's pilotsGuardMiners): the other two pilots each guard a miner, unless he has given a pilot an order (card space-game-b12-c10-12-pilots-guard-miners, src/campminerpilots.js)
   const ev = { type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y };
   if (C.level === 1 && C.L && C.L.mid === 'mine' && !C.pricePaid) { C.pricePaid = true; ev.price = 'camp.price.stick'; } // 1.2 only: taking a pilot has a price here (a miner is lost when a pilot leaves the wing) and nothing said so: the first time, once a mission, the scene shows one line (card space-game-chunk11-12-price-line; BRIEF 8 decision 10); shown only, never voiced
   C.events.push(ev);
@@ -96,6 +97,7 @@ function campCockpitStep(C, dt) {
   const keep = Math.pow(inp.brake ? K.brakeDrag : K.drag, dt); u.vx *= keep; u.vy *= keep;
   const sp = Math.hypot(u.vx, u.vy); if (sp > S.vmax) { u.vx *= S.vmax / sp; u.vy *= S.vmax / sp; }
   u.x += u.vx * dt; u.y += u.vy * dt;
+  if (typeof campCockpitMendTick === 'function') campCockpitMendTick(C, dt); // the cruiser slowly mends him while he is beside her (src/campcockpitmend.js)
   const A = typeof campCockpitAim === 'function' ? campCockpitAim(C) : null; // the hostile the guns track now, if the auto-target finds one in its cone (src/campcockpitaim.js; the cone 0: none steers)
   if (inp.fire && C.t >= S.nextShot) { // the pilot's own gun: his damage and rate (times damageK, rateK), one shot a mean delay, along the nose, or along the lead point to the hostile the auto-target tracks
     const F = CAMP.fighter, helped = !!(A && A.steer);

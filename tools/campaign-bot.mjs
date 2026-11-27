@@ -63,6 +63,7 @@ const BOTS = {
   ace1: { name: 'ace1', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace', hpK: 1 },
   sit: { name: 'sit', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit' },
   sitoff: { name: 'sitoff', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit', turrets: 'off' },
+  sitg: { name: 'sitg', launch: false, cockpit: 'sit' },                                                       // sit, and no order of any kind (no launch, no mine, no attack): the stick taken at 1 s and nothing else, the player the 1.2 rule is for: the other two pilots guard a miner each when he takes the stick (card space-game-b12-c10-12-pilots-guard-miners)
   sitm: { name: 'sitm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sitm' }                // sit, beside a miner (card space-game-b10-c11-12-miner-guard): the stick taken, flown to the nearest neutral miner and parked there, no gun; only a mission with miners (1.2) means anything
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
@@ -219,6 +220,7 @@ g.run(`(() => {
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
       if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      { const R = C.runner, rn = R && R.id && !R.called && !R.off ? C.by[R.id] : null; if (rn && rn.hp > 0 && campDist(rn, c) <= 3200) a = rn; } // the guard that runs (2.2, card space-game-b12-c6-22-runner-stake): a player sees its pink ring and the edge pill and goes for it first; only the fighter he flies can stop it
       let goal = a, lead = 0;
       if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
       K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;

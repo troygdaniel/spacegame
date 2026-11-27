@@ -418,6 +418,12 @@ class Campaign extends Phaser.Scene {
   }
   closeTune() { campTuneClose(this); if (this.tunePaused) { this.tunePaused = false; this.mode = 'play'; } }
 
+  // a tower turned on the fighter you fly (src/campaign.js campTowerAI says it with a 'towertell' event; card space-game-b12-c9-tower-delay, the cloud's BRIEF 12 chunk 9: its first shot comes CAMP.tower.flownDelay ms later): a thin pink ring (the look's hostile pink) closes on the tower for that long, steadily and brighter as it closes, and is gone as the shot leaves, so the shot is seen coming. A picture only: the rule is the sim's
+  towerTell(e) {
+    if (!this.textures || !this.textures.exists('ring')) return;
+    const f = this.add.image(e.x, e.y, 'ring').setBlendMode('ADD').setTint(0xff6fa8).setDepth(7).setScale(1.3).setAlpha(0.3); // the hostile pink of the look (SLOOK.C.foe: every hostile mark is pink, red is retired; tests/shiplookpink.mjs)
+    this.tweens.add({ targets: f, scale: 0.42, alpha: 0.95, duration: Math.max(60, e.ms || 1000), ease: 'Linear', onComplete: () => f.destroy() });
+  }
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and its pew (src/audio.js, SFX.turret), never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
     const C = this.camp, B = CAMP_BLIP, f = this.add.image(e.x + Math.cos(e.aim) * CAMP_MOUNT.flash, e.y + Math.sin(e.aim) * CAMP_MOUNT.flash, 'ember').setBlendMode('ADD').setTint(typeof slookGunTone === 'function' ? slookGunTone(0xffe9a0) : 0xffe9a0).setScale(CAMP_MOUNT.flashScale).setDepth(7);
@@ -525,6 +531,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'wingshot') this.wingShot(e);
     else if (e.type === 'rival') campRivalEvent(this, e); // a rival's phases: the warning, the broadside, the ram (src/camprivaldraw.js)
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
+    else if (e.type === 'towertell') this.towerTell(e); // a tower turned on the fighter you fly: a ring closes on it until its first shot
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
     else if (e.type === 'boom') { if (!(typeof campMomentsKill === 'function' && campMomentsKill(this, e)) && !(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
@@ -594,6 +601,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
     if (typeof campOrderLineTipSync === 'function') campOrderLineTipSync(this); // the tip on the picked target: "Wedge will attack" (src/camporderline.js)
     if (typeof campCockpitAimSync === 'function') campCockpitAimSync(this); // the thin mint ring at the lead point of the hostile the flown fighter's guns track (src/campcockpitaim.js)
+    if (typeof campCockpitMendSync === 'function') campCockpitMendSync(this); // the thin pale-blue tether from the cruiser to the fighter he flies while she mends it (src/campcockpitmend.js)
     if (typeof campWingTagSync === 'function') campWingTagSync(this); // the tag under the fighter he flies: what the other two pilots are doing (src/campwingtag.js)
     this.syncWorldLeast();
     this.squadMarks();
