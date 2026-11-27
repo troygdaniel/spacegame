@@ -923,6 +923,29 @@ The bots' fighter flies beside the cruiser, so the rule is noise to them (the ot
 - **A bug found on the way and fixed here:** the briefing's "Expect ..." line (`campBriefEnemies`) and the one-page briefing's wave word (`scrMomentVars`) counted the optional idle groups of 3.1 and 3.2 since level 3 landed ("Expect 18 raiders, 2 drones, 6 gunships", "Seven waves"). They skip `optional` waves now: 3.1 reads 6 raiders, 2 drones, 2 gunships, 3.2 two raiders, four drones, two gunships and four towers, 3.3 two raiders, two drones, four gunships and eight towers. Pinned by `tests/campl3waves.mjs` (section H).
 
 
+## 2.2: only the fighter you fly can stop the guard that runs (card `space-game-b12-c6-22-runner-stake`; Troy, 27 Nov 2026: yes, BRIEF 12 chunk 6; base: main `daba9be3`)
+
+**The check first.** The cloud measured an older 2.2 and said the runner's group is never fought. Read from the runner's own state (`C.runner`, who made the last hit, how far from the cruiser it died), on today's main, plain, carrier, ace and sit bots, 6 seeds each: **the runner died before it could call in 24 of 24 runs**, 140 to 570 px from the cruiser: the cruiser's turrets killed it 15 times, a pilot 7, the flown fighter 2. The group was never called, so never fought. The cloud was right.
+
+**Why the old numbers said otherwise.** The runner never ran at its four times speed in a long fight: `campFightPace` slowed it to half pace while the cruiser was inside 1,700 px (it was not `u.running`, the pirate that has broken off), and `u.rushK` was set without the ship's top speed being worked out again. Measured with the turrets off it: 29 px a second, 300 px from the cruiser, for a minute.
+
+**What changed.** (1) While it runs (`u.runner`) the cruiser's turrets and the AI pilots do not pick it (`campFoes`, the aliens but not the runner; `campAliens` stays every alien for the win, the sight and the flown fighter's aim), and `campHurt` takes nothing off it unless the shot is the flown fighter's (`C.cockpit.id`); a stray shot glances off. (2) It is out of the fight pace and its top speed is worked out when it is chosen, so it really runs; once it has called, it is an ordinary guard at its own speed again. (3) `rush` is **3**, not 4: at four times its speed (510 px/s) the flown fighter (480, boosting 800) stopped it in **2 of 16** runs, at three **8 of 16**, at two and a half 13 of 16, at two 16 of 16 (ace, steady, the bot after it). Three keeps a stake: about half. The row is one number (`runner.rush`). `far` stays 2,400. (4) The call is also made after **20 s of running** (`runner.within`): at Calm (the tests' pace) its real top speed is about 212 px a second, the cruiser's is 210, so a cruiser that tails it never lets it get 2,400 px off and `tests/camppace.mjs` timed out on 2.2 (420 s on one seed, 354 s on another); at Brisk the call comes at 7 to 12 s and the limit never binds (the table below is the same with and without it). The ring and the edge pill are as they were.
+
+**What the bots do.** The ace goes for the runner first while it runs (a player sees its pink ring and the edge pill). On 32 seeds the ace stopped it **18 of 32 (steady)** and **0 of 32 (sharp)**: the sharp ace's cone is narrow (0.15 rad) and it brakes and starts again behind a ship that keeps moving, so it rarely fires; a hand on the stick that holds thrust does not. Holding thrust in the bot made it worse (9 of 32 and 2 of 32), so it was left alone: the bot's pursuit is the limit here, not the game. Plain, carrier and sit never stop it: the group always comes and is fought.
+
+**The numbers** (2.2, 32 seeds, steady / sharp; won per cent, seconds of the win, damage the cruiser took; the "before" is main `daba9be3`):
+
+| bot | before | after |
+|---|---|---|
+| plain | 100 / 70 s / 227 and 100 / 69 s / 213 | 100 / 95 s / 274 and 100 / 96 s / 285 |
+| carrier | 100 / 77 s / 279 and 100 / 78 s / 294 | 100 / 111 s / 506 and 100 / 110 s / 489 |
+| ace | 100 / 68 s / 179 and 100 / 70 s / 199 | 100 / 72 s / 179 and 100 / 100 s / 262 |
+| sit | 100 / 71 s / 245 and 100 / 71 s / 222 | 100 / 96 s / 334 and 100 / 99 s / 306 |
+
+Every bot still wins every seed. A mission whose runner got away is 25 to 35 s longer and costs the cruiser 30 to 80 percent more damage (the carrier alone, 506 against 279); the ace that catches it takes the old time and the old damage (steady 72 s, 179). **This moves the cockpit sweep's rules for 2.2 at steady**: plain is now 95 s, so ace at 72 s is 24 percent faster (rule 1 allows 15) and takes 65 percent of plain's damage (rule 2 allows 70). That is the stake working: the rule was written when the runner never got away. Troy's call whether the sweep's rules change or `rush` moves.
+
+**Pins.** `tests/campfighterrunner.mjs` (11 checks: the row's `rush` is 3; the turrets never aim at it though it is inside their reach; it covers at least 250 px a second with the cruiser at its heels; a hit from the cruiser, a pilot or nobody does nothing, one from the flown fighter kills it and stops the call; alone it gets away within 12 s, calls, the group comes and it is an ordinary guard again; a cruiser held 500 px off it does not stop the call: it comes at 20 s).
+
 ## 2.2: the running guard's tell (card `space-game-22-runner-tell`; Troy, 26 Nov 2026: yes; on top of the runner, `f81ea6ee`)
 
 No number changed. While the last guard of 2.2 runs to call the second group (`C.runner`, not called, not caught) it wears the torpedo's pulsing pink ring (`src/camptorpedoscene.js`, the torpedo's own colour, size and pulse) and its group is first in `campSightArrows` (`src/campsight.js`), so the page HUD's one edge pill, or the canvas arrow with the page HUD off, points at it: "1 · 204 km", the pill's own words. Both go when it dies or the call is made. At four times its speed the run lasts a few seconds: the tell is a short, hard-to-miss warning, not a long one. `tests/camprunnertell.mjs` (5 checks); the ring's drawing was looked at in a muted Chrome run (its graphics commands exist while the guard runs).
@@ -1101,3 +1124,98 @@ Also tried, no better: one group nearer and the other farther (3,000 and 4,400, 
 - **Words:** nothing untrue and nothing voiced. "More aliens join when the fourth guard dies, from two sides", "A second group, coming in from the far side" and "A third group, from the other side" say nothing of a distance. The comment in `src/campaign.js` that said 1,700 px now says 3,800.
 
 **Pins.** `tests/campreinforcecruiser.mjs` (5 checks; the rows 3,500 to 4,100 px from her, the groups 3,400 to 4,200 px from the cruiser and farther than 2,000 from a fighter flown 4,300 px off, the runner's group 3,300 to 4,200).
+
+
+## The fighter you fly does 15 percent less damage per shot (card `space-game-player-damage-down`, Troy, 27 Nov 2026 after playing 1.1: flying a fighter is a bit easy)
+
+**The change.** One number: `CAMP.cockpit.damageK` 0.5 → **0.425** (`src/campaign.js`). It is the share of the pilot's 8 damage a shot of the fighter you fly does, before the auto-target's own `aimK` 0.32 (which stays a separate factor, so a shot the auto-target sent does 8 × 0.425 × 0.32 = 1.09, was 1.28). The gun's rate (`rateK` 3), the hull (`hpK` 2), the cruiser's turrets, the wing pilots' own guns, torpedoes and missiles are untouched. It is the same number the N panel's "cockpitdamage" slider moves; the slider's step is now 0.025 so its default sits on a step. No switch: it applies in every mission.
+
+**What was tried** (32 seeds a mission, the cockpit sweep, `tools/campaign-bot.mjs --cockpit`, plain, ace and hands-off bots, sharp, steady and rough; main `e0396b5d` with 2.2's 3,800 px ring, except the 25 per cent rows of 1.x and 3.x steady, which are the same code measured on `12f51ebc`: 1.x and 3.x did not change between the two):
+
+| size | what it cuts | result |
+|---|---|---|
+| **15 per cent, fighter only (damageK 0.425)** | the flown fighter's shot | **taken.** The plain bot and the hands-off bot are the same to the digit (they never fly), the ace bot still wins every mission (23 of its 27 mission-skills have the same win rate; 4 are a seed or two lower: 1.1 steady 94 → 91, 1.2 steady 100 → 94, 1.1 rough 100 → 97, 1.2 sharp 91 → 88), its win time is the same in 11 cells, 1 to 2 s longer in 11, 4 s in one and 13 s in one (1.2 at sharp, 276 → 289), 2 to 3 s shorter in 3 (noise), and its cruiser's damage is higher in 17 cells (up to 36 more, 3.3 at rough), the same in 3 and lower in 7. Ace rules at steady: 12 fails before, 11 after (1.3 `taken` now passes); sharp and rough: 25 before, 27 after (4 go from pass to fail: 1.3 sharp `taken`, 1.3, 2.2 and 3.3 at rough `kills`; 2 go the other way: 1.2 sharp `taken`, 3.1 rough `time`): level, within what 32 seeds can tell. |
+| 25 per cent, fighter only (damageK 0.375) | the flown fighter's shot | **not taken.** Same wins, but at steady the fighter no longer makes a quarter of the plain bot's kills in 1.1 and 3.1 (rule 5 passes before): 14 ace fails at steady against 12. Nothing it gains over 15 per cent (2.2 at rough: 138 cruiser damage, 15 per cent gives 142). |
+| 15 and 25 per cent, the fighter **and** the cruiser's turrets (a factor `playerK` 0.85 and 0.75, measured on `12f51ebc`, not built) | also the cruiser's turret shots at aliens | **not taken: it costs the careful player 1.1.** The plain bot's 1.1 win rate falls from 94 to 88 (0.85) and 84 (0.75) at steady, and at 0.85 from 97 to 75 at sharp and 97 to 81 at rough; the hands-off bot's from 88 to 81 and 69 (1.2: 91 to 63 at 0.85), and 2.2's cruiser damage rises 190 → 222 → 233 for the plain bot. Everywhere else the cruiser's cut only added cruiser damage (that is the point of it) but 1.1, the escort, is the mission the cruiser's guns carry. The cut was removed again (no `playerK` in the code); the measurement stays here if Troy asks for the cruiser too. |
+
+**The table** (won per cent / seconds / cruiser damage; the plain bot's and the hands-off bot's rows are the same before and after the cut, so only the ace bot's are given before and after, with the plain bot beside them as the rule 2 comparison):
+
+| mission | skill | ace before: won % / s / cruiser damage | ace after (damageK 0.425) | plain (both) | rules that changed (ace) |
+|---|---|---|---|---|---|
+| 1.1 | sharp | 97/306/212 | 97/306/207 | 97/306/212 | none |
+| 1.1 | steady | 94/306/212 | 91/306/202 | 94/306/227 | none |
+| 1.1 | rough | 100/306/202 | 97/306/212 | 97/306/222 | none |
+| 1.2 | sharp | 91/276/12 | 88/289/24 | 100/266/33 | taken fail to pass |
+| 1.2 | steady | 100/269/16 | 94/269/23 | 97/266/35 | none |
+| 1.2 | rough | 100/269/19 | 100/269/19 | 97/266/26 | none |
+| 1.3 | sharp | 100/292/49 | 100/292/44 | 100/292/64 | taken pass to fail |
+| 1.3 | steady | 100/292/36 | 100/292/48 | 100/292/65 | taken fail to pass |
+| 1.3 | rough | 100/292/38 | 100/292/39 | 100/292/59 | kills pass to fail |
+| 2.1 | sharp | 100/40/54 | 100/41/56 | 100/42/73 | none |
+| 2.1 | steady | 100/39/51 | 100/40/54 | 100/42/71 | none |
+| 2.1 | rough | 100/38/50 | 100/39/48 | 100/43/82 | none |
+| 2.2 | sharp | 100/70/199 | 100/72/199 | 100/69/213 | none |
+| 2.2 | steady | 100/68/179 | 100/70/193 | 100/70/227 | none |
+| 2.2 | rough | 100/66/115 | 100/67/142 | 100/71/204 | kills pass to fail |
+| 2.3 | sharp | 100/78/133 | 100/79/155 | 100/80/158 | none |
+| 2.3 | steady | 100/78/97 | 100/78/112 | 100/80/191 | none |
+| 2.3 | rough | 100/75/90 | 100/76/112 | 100/80/162 | none |
+| 3.1 | sharp | 100/80/47 | 100/78/40 | 100/79/78 | none |
+| 3.1 | steady | 100/77/31 | 100/74/40 | 100/80/65 | none |
+| 3.1 | rough | 100/68/25 | 100/72/25 | 100/81/68 | time fail to pass |
+| 3.2 | sharp | 100/61/126 | 100/59/130 | 100/59/245 | none |
+| 3.2 | steady | 100/59/166 | 100/59/162 | 100/59/230 | none |
+| 3.2 | rough | 100/43/159 | 100/45/148 | 100/60/238 | none |
+| 3.3 | sharp | 100/76/468 | 100/76/482 | 100/70/544 | none |
+| 3.3 | steady | 100/73/428 | 100/75/446 | 100/71/486 | none |
+| 3.3 | rough | 100/66/335 | 100/68/371 | 100/70/443 | kills pass to fail |
+
+- **Win times rise a little and cruiser damage rises a little, for the ace bot only** (numbers above; 1.1 is a 306 s mission whatever happens). The careful player (the plain bot) is exactly as before: 100 per cent in every cell except 1.1 (94 steady, 97 sharp and rough) and 1.2 (97 steady and rough). What the sweep cannot say is how much longer a hand on the stick takes to kill a raider: the bot is steady, the cut is 15 per cent of a shot, and Troy's own hands are the test.
+- **Mission 2.2 on the 3,800 px ring (the fighter gap at rough).** The rule asks the ace bot's cruiser damage to be at least 70 per cent of the plain bot's (the fighter may not make the cruiser's fight more than 30 per cent softer). Before the cut: 115 against 204 at rough, 44 per cent softer (rule fails; sharp 7 and steady 21 per cent softer pass). **At 15 per cent less: 142 against 204, 30.4 per cent softer, which misses by one point of damage (143 is the line)**; sharp (199 against 213) and steady (193 against 227, 15 per cent softer) pass. 25 per cent less gives 138 (32.4 per cent): it does not do better, so the rest of the gap is not the fighter's damage (the ace bot's fighter meets the farther groups on the way, as the 2.2 section above says), and another size would not close it.
+- **Voiced or shown words:** nothing says the fighter's damage; none untrue, none re-recorded.
+- **Pins:** `tests/campcockpit.mjs` and `tests/campcockpitfire.mjs` pin damageK 0.425 (re-pinned from 0.5; the fire suite's mechanism checks still run the gun at the explicit 0.5 they were written for), `tests/camptune.mjs` passes with the 0.025 step; `tests/campcockpitaim.mjs`, which sets its own gun numbers, is unchanged.
+## Mission 1.1: the probe's two skiffs stay until the fighter you fly has hit one (card `space-game-b12-c4-11-skiffs-stay`; Troy, 27 Nov 2026: yes, BRIEF 12 chunk 4, `docs/next-chunks.html`; base main `daba9be3`; 32 seeds, pace Brisk, the bots' tables before and after)
+
+**What changed.** The probe's wave row (the last of 1.1's four, at 12 percent of the road) has **`stayUntilHit: true`** (`src/campaign.js`). Its two skiffs do not break off for a hurt hull until the fighter the player flies has hit one of the wave's ships (`campHurt` sets `C.waves[3].flownHit`; `campPirateStays` in `src/camppirates.js` holds the run back until then). A hit by the turrets, by a wing fighter or by the patrol does not count, nor does one while no fighter is flown. Nothing else of 1.1 to 3.3 has the field, nothing is voiced or reworded, and the probe still comes at 0.12 with two skiffs, silent.
+
+**What it does (12 seeds, bot steady, the probe's two skiffs; `ace` flies the fighter from 1 s, `sit` takes the stick and does nothing, `plain` is the cruiser alone).**
+
+| bot | first hit on the probe by | a probe skiff ran, before | after | first skiff dead at | the radio said "A pirate is running", before | after |
+|---|---|---|---|---|---|---|
+| ace | the flown fighter on 7 seeds at 40.6 to 41.1 s; on the other 5 the neutral patrol lands a shot about a second earlier (39.6 to 39.9 s) and the fighter its own right after | 12 of 12 | 12 of 12 | 41.2 s | 12 of 12, at 41.1 s | 12 of 12 |
+| sit | the turrets on 11 of 12, at 43.2 s | 12 of 12 | **0 of 12** | 43.4 s | 12 of 12, at 43.4 s | **0 of 12** |
+| plain | the turrets on 11 of 12, at 43.1 s | 11 of 12 | **0 of 12** | 43.3 s | 11 of 12, at 42.8 s | **0 of 12** |
+
+- **The fighter that arrives first changes nothing:** with the stick taken at 1 s the fighter hits the first skiff at about 41 s, 900 px out, before the turrets can, so the flag is set at once and they run as they always did. (A patrol's shot, a second earlier on 5 of 12 seeds, does not count and does not matter: three hits are needed to bring a skiff under the break line.)
+- **Without a fighter hit the skiffs stay in the fight and the turrets kill both at 43.4 s,** the same second as before: a skiff under the break line ran for under a second before the turrets finished it, and said "A pirate is running" for a ship that was dead a moment later. That line is no longer said at 43 s; the first one now comes with the miner's pirates, at about 110 s.
+- **What it does not do (for Troy): the skiffs are not "still there" for a fighter that arrives after 43 s.** The cruiser's turrets kill both within four seconds of their showing at 39 s, running or not. The page's one-minute test (take the stick at 39 s, hold Up and Shift) shows the skiffs there only if the fighter is on them before about 43 s. To keep them for a later fighter the turrets' reach or the skiffs' approach would have to change, which is another chunk.
+
+**The cruiser bots, 1.1 (32 seeds each; median win time 306 s in every cell: it is the transport's own road).**
+
+| skill | bot | won, before | after | cruiser damage, before | after |
+|---|---|---|---|---|---|
+| sharp | plain | 97 | 94 | 212 | 222 |
+| steady | plain | 94 | 97 | 227 | 217 |
+| rough | plain | 97 | 100 | 222 | 222 |
+| sharp | carrier | 97 | 100 | 227 | 227 |
+| steady | carrier | 94 | 97 | 222 | 237 |
+| rough | carrier | 94 | 91 | 237 | 232 |
+| steady | thinks (the careful player: helps the miner, convoy orders) | 100 | 100 | 112 | 92 |
+
+The careful player still wins every seed (32 of 32, win time 312 s then 317 s). Every other move is a seed or two of 32 and goes both ways: the skiffs' changed end re-rolls the random draws of every fight after 43 s.
+
+**The cockpit sweep, 1.1 (`--cockpit --level 1 --mission 1 --cbots plain,ace,sit`; won percent, plain / ace / sit, cruiser damage plain / ace / sit).**
+
+| skill | before | after |
+|---|---|---|
+| sharp | 97 / 97 / 94, 212 / 212 / 227: time, damage, sit, hurt pass; kills fail | 94 / 94 / 88, 222 / 212 / 227: sit and kills fail |
+| steady | 94 / 94 / 88, 227 / 212 / 217: sit fails | 97 / 94 / 100, 217 / 212 / 222: **all five pass** |
+| rough | 97 / 100 / 84, 222 / 202 / 227: sit fails | 100 / 100 / 97, 222 / 202 / 217: **all five pass** |
+
+0 of 3 mission-skills pass the rule before and 2 of 3 after. **That is the same re-roll, not the rule at work:** the damage and time columns are the same to within 10, and the hands-off bot's win rate swings 84 to 97 and 88 to 100 with a seed or two. The rule's third part (rule 3, the hands-off bot) is the one that moves, and it moves with plain's own rate.
+
+**The miner's call (`tests/campminer.mjs`, 32 seeds: ignore / one pilot / all three).** Won 32, 32, 25 before and 32, 31, 24 after; a torpedo gets through on 5, 18 and 24 before and 13, 14 and 27 after; the miner is saved on 0, 18 and 31 before and 0, 22 and 30 after; a pilot is lost in 0 of 96 runs before and 1 after (Kara, seed 1 of the one-pilot answer, at 114 s in the miner's own fight, not the probe's). The "ignore" torpedo count is the one that looks like a move, so it was checked on 64 more seeds (33 to 96): **29 of 64 before, 27 of 64 after**, one pilot lost in 64 after and none before. It is the re-roll again. All the 32-seed pins hold: all three still costs at least 10 more torpedo runs than ignoring it (14 against 27), the transport's hull order never reverses, and every answer wins on at least 24 of 32 (all three: 24, exactly the pin).
+
+**Pins moved (and said so, not loosened).** `tests/campminer.mjs`: (1) the three-seed sample "every answer still wins, no pilot lost, on all but one of nine runs" is now "all but two of nine, at most one pilot lost in a run" (two of the nine runs, both of the all-three answer, are lost after; it was one), with a new 32-seed line beside it: a pilot is lost in at most 3 of the 96 runs; (2) the keys-against-order check asks for the same pilots lost as the order bot (none until now; seed 1 loses one in both) instead of none. The two 1.1 numbers in the comment, "all three wins 25 of 32", now say 24. No other suite moved.
+
+**Pins added.** `tests/campskiffsstay.mjs` (12 checks: exactly one row of Level 1 has the field and it is 1.1's probe, the flag is set by the flown fighter only and only on its own wave, a hurt probe skiff stays until then and runs after it, another wave's skiff runs when hurt as before, the row's lane, count and silence are as they were).

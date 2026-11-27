@@ -237,13 +237,37 @@ function campMarkNow(C) { // the strength of the squares now: what changed since
   const k = at => { const age = t - at; return age < K.show ? 1 : age < K.show + K.fade ? 1 - (age - K.show) / K.fade : 0; };
   return { who: k(m.who), held: k(m.held) };
 }
+// ENTER TWICE (card space-game-orders-f4-enter-twice; Troy, 27 Nov 2026, mock F; ORCH's answers): a second Enter within CAMP.orderLine.twice ms of an Enter that was TAKEN, for the same picks, switches the order just given to its SECONDARY:
+// a ship you protect: guard first, ESCORT second; a rock field: mine first, GUARD it second (a point: the pilots hold the field); an enemy: the picked pilot attacks first, THE WHOLE WING attacks second (only when one pilot is picked: with All pilots they already all do);
+// nothing picked, your own ship (me), an outpost: no second. CAMP_ENTER holds, per game, { key (who|enemy|friendly), at (the sim clock of the last Enter taken), twice (the second was given) }. Returns { key, second: { verb, who, run(how, dry) } | null, armed, given 0 | 1 | 2 }.
+const CAMP_ENTER = new WeakMap();
+function campEnterTwice(C, h, fr) {
+  const key = String(C.sel || '') + '|' + String(C.tgt || '') + '|' + String(C.fsel || ''), t = campMarkClock(C), last = CAMP_ENTER.get(C), same = !!last && last.key === key && t - last.at >= 0;
+  const grp = () => { const f = campSelNow(C); return f && f.kind === 'pilot' ? f.squad : 'fighters'; };
+  let second = null;
+  if (h) { if (grp() !== 'fighters') second = { verb: 'attack', who: 'wing', run: (how, dry) => campWingOrder(C, 'fighters', 'attack', h.id, how || 'key', dry) }; } // the whole wing attacks it
+  else if (fr && fr.field) second = { verb: 'guard', who: '', run: (how, dry) => campWingOrder(C, grp(), 'guard', { x: fr.x, y: fr.y, r: fr.r, name: fr.name }, how || 'key', dry) }; // the field is a point to hold
+  else if (fr && !fr.me && fr.kind === 'ward') second = { verb: 'escort', who: '', run: (how, dry) => campWingOrder(C, grp(), 'escort', fr.id, how || 'key', dry) };
+  return { key, second, armed: !!second && same && !last.twice && t - last.at <= CAMP.orderLine.twice, given: same ? (last.twice ? 2 : 1) : 0 };
+}
 function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (card space-game-keys2-orders): an enemy picked, attack it; a friendly picked, guard it; nothing picked, form up on the cruiser. 'attack' and 'guard' are its two halves (the target boxes' dry runs ask them); there is no recall (the pilots stay out; the Fast burn recalls them itself)
   if (!C) return campNo('what');
   if (verb === 'engage') {
-    const h = campTgtNow(C), fr = h ? null : campFriNow(C);
-    if (fr && fr.field) return Object.assign({}, campSelOrder(C, 'mine', how, dry), { verb: 'mine', formup: false }); // a rock field picked (E, then its digit; card space-game-orders-f3-enter-fits): Enter sends the pilots to MINE it: they are the miners
-    const r = campSelOrder(C, h ? 'attack' : 'guard', how, dry);
-    return Object.assign({}, r, { verb: h ? 'attack' : 'guard', formup: !h && !fr }); // formup: nothing was picked, the pilots guard the cruiser
+    const h = campTgtNow(C), fr = h ? null : campFriNow(C), E = campEnterTwice(C, h, fr), t = campMarkClock(C);
+    const give = () => { // the first Enter: what fits the target (card space-game-orders-f1-sentence, f3)
+      if (fr && fr.field) return Object.assign({}, campSelOrder(C, 'mine', how, dry), { verb: 'mine', formup: false }); // a rock field picked (E, then its digit; card space-game-orders-f3-enter-fits): Enter sends the pilots to MINE it: they are the miners
+      const r = campSelOrder(C, h ? 'attack' : 'guard', how, dry);
+      return Object.assign({}, r, { verb: h ? 'attack' : 'guard', formup: !h && !fr }); // formup: nothing was picked, the pilots guard the cruiser
+    };
+    const info = { second: E.second ? E.second.verb : null, secondWho: E.second ? E.second.who : '', given: E.given }; // for the sentence line: what Enter twice would do (or did)
+    if (E.second && E.armed) { // THE SECOND ENTER, within CAMP.orderLine.twice ms of one that was taken (card space-game-orders-f4-enter-twice, Troy, 27 Nov 2026, mock F): the just-given order is switched to its secondary
+      const r = E.second.run(how, dry);
+      if (!dry && r && r.ok) { CAMP_ENTER.set(C, { key: E.key, at: t, twice: true }); (C.keysUsed || (C.keysUsed = {})).twice = true; } // (the one-time chip that teaches Enter twice goes quiet, src/campteach.js)
+      return Object.assign({}, r, { verb: E.second.verb, formup: false, second: E.second.verb, secondWho: E.second.who, given: dry ? E.given : 2, twice: true });
+    }
+    const r = give();
+    if (!dry && r && r.ok) CAMP_ENTER.set(C, { key: E.key, at: t, twice: false }); // a refused Enter arms nothing
+    return Object.assign({}, r, info);
   }
   const f = campSelNow(C), group = f && f.kind === 'pilot' ? f.squad : 'fighters';
   if (verb !== 'attack' && verb !== 'guard' && verb !== 'formup' && verb !== 'mine') return campNo('what');

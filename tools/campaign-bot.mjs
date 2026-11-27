@@ -96,7 +96,7 @@ g.run(`(() => {
   const aim = (C, id) => { if (id) C.tgt = id; else campTgtClear(C); };
   // an order to ONE pilot with the keys (card space-game-bracket-select-orders): W steps who till it is the pilot's squad (card space-game-keys3-select: Q W pick who), then the order key (E: attack the enemy picked, guard the friendly picked, form up with none); the selection is let go after
   const pilotKey = (C, sq, key) => { const P = campPanelNew(); C.sel = ''; window.__KEYN = (window.__KEYN | 0) + 1; campPanelKey(P, C, campKeyCodes('who')[0], 0); campPanelKey(P, C, 'Digit' + (['red', 'green', 'yellow'].indexOf(sq) + 1), 0); /* W opens the fleet pick, its digit picks the pilot (card space-game-keys5-qwe) */ const r = C.sel === 'pilot:' + sq ? campPanelKey(P, C, key, 0) : { ok: false, ran: false, say: 'no such pilot out: ' + sq }; C.sel = ''; return r; };
-  const ROW = { mine: 'fmine' }; // the one whole-wing order that is a row of a list (the cruiser list's Mine ore); Launch is the order key to each pilot in the bay (card space-game-delete-off-lists: the all-squads list is deleted), Recall is the strip's (there is no recall key: the pilots stay out)
+  const ROW = {}; // (no whole-wing order is a row of a list now: the cruiser list's Mine ore row is OFF since card space-game-orders-f5-q-cruiser-only; the bots mine through the wing order itself, below); Launch is the order key to each pilot in the bay (card space-game-delete-off-lists: the all-squads list is deleted), Recall is the strip's (there is no recall key: the pilots stay out)
   // the wing is split as a player splits it (card space-game-cut-escorts: there is no escort ship): the Yellow squad (two ships) is the escort, going to the convoy; Red and Green (six) are the fighters that Attack goes to
   // while the pirates of the miner's call live, the pilots an answer sent to him stay on it: the bot's attack order every few seconds leaves them be ('guard': Kara; 'all': everyone; 'ignore': nobody goes, and
   // the attack order is not given at those pirates at all). callHeld is the groups held now; callOnly is true while the only pirates alive are the call's
@@ -119,6 +119,7 @@ g.run(`(() => {
     if (!window.__KEYS) return name === 'escort' ? wingEscort(C, arg) : name === 'attack' ? wingAttack(C, arg) : campOrder(C, name, arg);
     if (name === 'escort') return wingEscort(C, arg); // the escort of the old wing is the Yellow squad now (card space-game-cut-escorts: no escort ship): the one squad that goes to the convoy while Red and Green fight; no key sends ONE squad to a convoy (the lists of the squads went, card space-game-bracket-select-orders), so this is the wing order
     if (name === 'launch') { ['red', 'green', 'yellow'].forEach(k => pilotKey(C, k, campKeyCodes('order')[0])); return { ok: true, say: '' }; } // the order key (E) to a pilot in the bay launches it (nothing picked: form up on the cruiser)
+    if (name === 'mine') return campWingOrder(C, 'fighters', 'mine', null, 'key'); // the whole wing mines (the order the Q list's Mine ore row gave: campPanelRun 'wing')
     if (ROW[name]) return give(C, ROW[name]);
     if (name === 'reload') return campPanelKey(campPanelNew(), C, 'KeyR', 0); // R builds the rack (card space-game-missiles-cost-ore): a key, not a row of a list
     if (name === 'convoy') return give(C, arg === 'tuck in' ? 'ctuck' : arg === 'carry on' ? 'ccarry' : arg === 'run for it' ? 'crun' : 'chold');
@@ -217,6 +218,7 @@ g.run(`(() => {
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
       if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      { const R = C.runner, rn = R && R.id && !R.called && !R.off ? C.by[R.id] : null; if (rn && rn.hp > 0 && campDist(rn, c) <= 3200) a = rn; } // the guard that runs (2.2, card space-game-b12-c6-22-runner-stake): a player sees its pink ring and the edge pill and goes for it first; only the fighter he flies can stop it
       let goal = a, lead = 0;
       if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
       K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
