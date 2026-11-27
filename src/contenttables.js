@@ -656,7 +656,7 @@ const UI_TEXT = {
   'scr.keys.g.fleet': 'Fleet',
   'scr.keys.g.cruiser': 'Cruiser',
   'scr.keys.r.fly': 'Fly',
-  'scr.keys.r.fire': 'Turrets',
+  'scr.keys.r.fire': 'Fire',
   'scr.keys.r.missile': 'Missile',
   'scr.keys.r.reload': 'Build a missile',
   'scr.keys.r.zoom': 'Zoom',
