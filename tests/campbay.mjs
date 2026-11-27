@@ -48,8 +48,9 @@ console.log('D. the bots');
 {
   const bot = await import('../tools/campaign-bot.mjs');
   bot.setPace('normal');
-  const rs = [1, 2].map(seed => bot.run(1, seed, 'plain', 'steady', bot.techsFor(1), 420, 1));
-  check('the plain bot still wins 1.2 (' + rs.map(r => r.result + ' ' + r.t + ' s').join(', ') + ') and sells more than the old cap of 200 once the bay allows it (' + rs.map(r => r.sold).join(', ') + ' sold)', rs.every(r => r.result === 'won' && r.t >= 240 && r.t <= 420) && rs.every(r => r.sold > 200), JSON.stringify(rs.map(r => [r.result, r.t, r.sold])));
+  const rs = [1, 2, 3, 4, 5, 6, 7, 8].map(seed => bot.run(1, seed, 'plain', 'steady', bot.techsFor(1), 420, 1)); // eight seeds, not two (card space-game-b7-level1: the two raids of 1.2 arrive together and seed 1 is lost to the miners now; on 32 seeds at Normal the plain bot wins 94 percent before and after)
+  const won = rs.filter(r => r.result === 'won');
+  check('the plain bot still wins 1.2 on at least six of eight seeds (' + rs.map(r => r.result[0] + r.t).join(' ') + ') and each win sells more than the old cap of 200 once the bay allows it (' + won.map(r => r.sold).join(', ') + ' sold)', won.length >= 6 && won.every(r => r.t >= 240 && r.t <= 420 && r.sold > 200), JSON.stringify(rs.map(r => [r.result, r.t, r.sold])));
 }
 
 console.log('\nthe game made ' + (g.errors.length ? 'errors: ' + g.errors.join(' | ') : 'no errors'));

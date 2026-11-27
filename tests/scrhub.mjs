@@ -100,7 +100,7 @@ console.log('E. the mission pick');
   g.run(`HB.cur = 0; window.__pm3 = scrHubPickModel(PR, HB, {});`);
   check('the cursor on a mission flown: its tile is lit and the bar counts its bonuses against the mission\'s own (3 of 5 bonuses)', kinds('__pm3', 'tile')[0].on === true && texts('__pm3').indexOf('3 of 5 bonuses') > 0);
   g.run(`HB.cur = 1; window.__pm4 = scrHubPickModel(PR, HB, {});`);
-  check('on the skipped one the bar has 4 bonuses (1.2\'s own), not 5', texts('__pm4').indexOf('4 bonuses') > 0 && texts('__pm4').indexOf('Par 5:00') > 0);
+  check('on the skipped one the bar has 4 bonuses (1.2\'s own), not 5', texts('__pm4').indexOf('4 bonuses') > 0 && texts('__pm4').indexOf('Par 4:30') > 0); // (4:30 = the 1.2 par of 270 s since card space-game-b7-level1; it read Par 5:00, 300 s)
   g.run(`HB.cur = 2; window.__pm5 = scrHubPickModel(PR, HB, {});`);
   check('1.3 has 3 bonuses (its own), and a mission with a single one says 1 bonus', texts('__pm5').indexOf('3 of 3 bonuses') > 0 || texts('__pm5').indexOf('1 of 3 bonuses') > 0 || texts('__pm5').some(t => /of 3 bonuses/.test(t)));
   g.run(`HB.cur = 0; HB.pick = { level: 1, i: 2 }; window.__pm6 = scrHubPickModel(PR, HB, { msg: { text: 'Replay: Haulers home. X: back.', ok: true } });`);
