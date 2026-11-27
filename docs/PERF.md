@@ -320,3 +320,15 @@ No difference outside the noise of a shared Mac: the busiest fight stays smooth.
 ## The fighter he flies gets the same feel (card `space-game-fly-fighter-l2`, 26 Nov 2026)
 Nothing is added per frame that the two cards before did not: the ribbons, the layered flames and the effects are drawn for ONE ship, now the fighter whose stick he holds (two nozzles, as the cruiser has) instead of the cruiser, so the work is the same. Two small differences: the cruiser he left keeps its own two plain flame pictures (two images, hidden or shown, no new object after the first frame), and a take or a hand-back makes the effects' lists begin again (the dots, puffs and streaks of the ship he left are dropped). The closer view is one multiplication of the camera's base zoom in `campFeelCamera`; there is no new camera or layer.
 **Not measured in Chrome**: this card was made while Troy might be flying, and `tools/perfcampaign.mjs` needs the browser. The work is the same ship's worth of drawing as the card before (0.63 and 0.66 ms a frame in the busiest fight, effects on), so no change is expected; a measure under the lock is the one thing owed.
+## The moments of a fight: the hit, the kill, the wave (card `space-game-b7-hit-kill-wave`, 26 Nov 2026)
+What it adds: at a hit, three pooled sprites (30 at most), a white fill on the ship's sprite for 34 ms and a note for the hull arc; at a kill, one pooled record of eight sprites for 0.6 s (six records at most: 48 sprites, made once, at the first kill that needs them) and a camera follow offset for 180 ms; at a wave, a few class and style writes on four page elements and CSS keyframes (nothing runs while no wave comes). A quiet frame does one early return and three `for in` loops over empty books: nothing is allocated (the shard and spark poses are written into two results the file keeps).
+
+**What was measured, and what was not.** The Chrome series (`node tools/perfcampaign.mjs frames busy1` with the effects off and on, as the cards before) was NOT taken: Chrome waits for ORCH's word while Troy may be flying. What is here is the cost of this file's own JavaScript in plain Node with stand-in sprites (every Phaser setter is a free call there, so these numbers are the arithmetic and the bookkeeping only, not the drawing). `tests/campmoments.mjs` pins the caps.
+
+| | per frame | per event |
+|---|---|---|
+| a quiet frame (nothing up) | 0.2 to 0.3 microseconds | |
+| the busiest case: 30 sparks and 6 kills up at once (refilled every 6 frames) | 39 to 40 microseconds (50 before the poses were written into kept results) | a hit: 1.2 to 1.4 microseconds |
+
+Counting the Phaser setters the busiest case makes (about 480 calls of `setPosition`, `setScale`, `setAlpha`, `setRotation` and `setVisible` a frame), the drawing side is a few hundred microseconds at the worst, and that worst is a fight with thirty hits and six kills inside a fifth of a second; the busiest fight the tools can build has far fewer. The Chrome frame series (and a picture of each moment, and of the kill's nudge, which the follow's lag takes about half of) is for the batch.
+

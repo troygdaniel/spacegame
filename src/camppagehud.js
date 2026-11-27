@@ -79,7 +79,7 @@ function campPageModel(C, view) {
   const rows = typeof campPanelDef === 'function' && campPanelDef('fleet') ? campPanelList(C, 'fleet').filter(r => r.who && r.who !== 'all') : [], stops = typeof campSelList === 'function' ? campSelList(C) : [], now = typeof campSelNow === 'function' ? campSelNow(C) : null;
   const items = rows.map((r, i) => {
     const e = stops.find(x => x.id === r.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, name = e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), frac = up ? campTdispHull(u).share : 0;
-    return Object.assign(campPageHudRing(name, i + 1, frac, up, !!now && (now.kind === 'all' || now.id === r.who), true), { id: r.who }); // pick: the ring has its outline and the digit is lit (All pilots outlines every one: card space-game-w4-all-lit); on: out in space (dim is resting, in the bay)
+    return Object.assign(campPageHudRing(name, i + 1, frac, up, !!now && (now.kind === 'all' || now.id === r.who), true), { id: r.who, pulse: !!(view && view.pulse && u && view.pulse[u.id] > (view.now || 0)) }); // pulse: this pilot's shot ended a ship a moment ago (the kill's picture, src/campmoments.js: the ring brightens, 0.45 s); pick: the ring has its outline and the digit is lit (All pilots outlines every one: card space-game-w4-all-lit); on: out in space (dim is resting, in the bay)
   });
   const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C), edge = campPageHudEdge(C, view), fedges = campPageHudFriendEdges(C, view, edge); // open: the pick that is open now, '' none (the rings of that group grow in place)
   const was = {}; if (edge) was.hostiles = true; fedges.forEach(f => { was[f.id] = true; }); // the pills that show now: the next look at the ships (view.was) keeps them a little longer (campEdgeOffscreen: no flicker at the edge)
@@ -383,7 +383,7 @@ function campPageHudRings(doc, box, list, n) { // the rings of a group: made whe
 }
 function campPageHudPaintRings(doc, box, list, G) { // one group: the class says picked, dim (resting) or dark (lost); the ring is the hull share in its colour; under it, only while the group is open, the digit and the name
   const set = campPageHudSet; campPageHudRings(doc, box, list, G.items.length); set(box, 'cls', 'ph-grp' + (G.open ? ' open' : ''));
-  G.items.forEach((p, i) => { const e = list[i]; set(e.el, 'cls', 'ph-g' + (G.open ? ' open' : '') + (p.pick ? ' pick' : '') + (!p.alive ? ' dead' : !p.on ? ' dim' : '')); set(e.ring, '--v', String(Math.round(p.frac * 100))); set(e.ring, '--c', 'var(--ph-' + p.color + ')'); set(e.text, 'text', p.text); set(e.under, 'text', G.open ? p.under : ''); });
+  G.items.forEach((p, i) => { const e = list[i]; set(e.el, 'cls', 'ph-g' + (G.open ? ' open' : '') + (p.pick ? ' pick' : '') + (!p.alive ? ' dead' : !p.on ? ' dim' : '') + (p.pulse ? ' kill' : '')); set(e.ring, '--v', String(Math.round(p.frac * 100))); set(e.ring, '--c', 'var(--ph-' + p.color + ')'); set(e.text, 'text', p.text); set(e.under, 'text', G.open ? p.under : ''); });
 }
 function campPageHudPips(doc, R, n) { // one pip for each missile the rack holds
   const S = R.stock; if (S.pips.length === n) return;
@@ -400,6 +400,8 @@ function campPageHudPaint(R, M, doc) {
   if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); const tm = M.foes.target, T = F.tg; set(T.el, 'display', tm ? '' : 'none'); if (tm) { campPageHudPaintMeter(T.hull, tm.hull); set(T.shield.el, 'display', tm.shield ? '' : 'none'); if (tm.shield) campPageHudPaintMeter(T.shield, tm.shield); set(T.none, 'display', tm.shield ? 'none' : ''); set(T.none, 'text', tm.noshield); set(T.act, 'text', tm.doing); }
     const pc = tm && tm.pic, pk = pc ? pc.kind + '|' + pc.side : ''; set(T.pic, 'display', pc ? '' : 'none'); set(F.el, 'cls', 'ph-p ph-foes' + (pc ? ' pic' : '')); if (T.pic._pk !== pk) { T.pic._pk = pk; T.pic.innerHTML = pc ? slookPicSvg(pc.kind, pc.side) : ''; } } // the picture: written only when the ship's kind or side changes
   const E = R.edge; set(E.el, 'display', M.edge ? '' : 'none');
+  if (M.edge && !R.edgeShown && R.waveAt && typeof performance !== 'undefined' && performance.now() - R.waveAt < (typeof CAMPMOM === 'object' ? CAMPMOM.wave.hold : 0)) campPageHudSlide(E.el, R.waveDir); // the hostiles' pill first shows within a moment of a wave: it slides in from the edge the wave came from
+  R.edgeShown = !!M.edge;
   if (M.edge) { set(E.text, 'text', M.edge.n + ' \u00b7 ' + M.edge.km); set(E.ic, '--a', String(Math.round(M.edge.angle * 180 / Math.PI)) + 'deg'); }
   while (R.fedges.length < M.fedges.length) { const el = campPageHudEl(doc, 'div', 'ph-p ph-edge ph-fedge', R.root), ic = campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', el); ic.innerHTML = CAMP_PAGEHUD_ICON.arrowF; const num = campPageHudEl(doc, 'span', 'ph-fnum', el); R.fedges.push({ el, ic, num, text: campPageHudEl(doc, 'span', '', el) }); }
   R.fedges.forEach((p, i) => { const f = M.fedges[i]; set(p.el, 'display', f ? '' : 'none'); if (f) { set(p.el, 'cls', 'ph-p ph-edge ph-fedge' + (f.hot ? ' hot' : '')); set(p.num, 'text', String(f.n)); set(p.text, 'text', f.label); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
@@ -422,6 +424,28 @@ function campPageHudPaint(R, M, doc) {
 }
 
 // ---- the scene's call ----
+// the wave that arrives (card space-game-b7-hit-kill-wave, src/campmoments.js): the edge it comes from glows pink for a third of a second, three chevrons run inward once, and the hostiles' pill slides in. Page elements with CSS keyframes (the
+// stylesheet holds still under reduced motion): made when the first wave comes, restarted by each. at: { edge: 'l' | 'r' | 't' | 'b', p: how far along that edge, 0 to 1 }; true when it was started
+function campPageHudWaveEdge(s, x, y) { // where a point of the world is seen from the middle of the page, as { edge, p } (src/campmoments.js campMomentsEdge); the page's own geometry as the pills use it: the camera's scroll and zoom over the whole page. null with no camera or at the middle
+  const cam = s && s.cameras && s.cameras.main; if (!cam || typeof campMomentsEdge !== 'function') return null;
+  const W_ = campPageW(), H_ = campPageH(), z = cam.zoom > 0 ? cam.zoom : 1;
+  return campMomentsEdge((x - cam.scrollX - W_ / 2) * z + W_ / 2, (y - cam.scrollY - H_ / 2) * z + H_ / 2, W_, H_);
+}
+function campPageHudWave(s, at, still) {
+  const R = s && s.pageHud; if (!R || !R.root || !at || typeof R.root.ownerDocument !== 'object') return false;
+  const doc = R.root.ownerDocument; if (!R.wave) { const el = campPageHudEl(doc, 'div', 'ph-wave', R.root); R.wave = { el, glow: campPageHudEl(doc, 'i', 'ph-wg', el), chev: [0, 1, 2].map(() => campPageHudEl(doc, 'i', 'ph-wc', el)) }; }
+  const el = R.wave.el, dir = { r: 0, b: Math.PI / 2, l: Math.PI, t: -Math.PI / 2 }[at.edge] || 0;
+  el.setAttribute('data-e', at.edge); if (el.style && el.style.setProperty) el.style.setProperty('--p', Math.round(at.p * 1000) / 10 + '%');
+  if (el.classList) { el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); } // (a new run of the keyframes)
+  R.waveAt = typeof performance !== 'undefined' ? performance.now() : 0; R.waveDir = dir;
+  if (R.edgeShown && !still) campPageHudSlide(R.edge.el, dir); // the pill is up already (an earlier group): it slides again with the new count
+  return true;
+}
+function campPageHudSlide(el, dir) { // the pill slides in from the edge (angle dir, radians) over 0.25 s: the stylesheet's keyframes on the `translate` property (the pill's own transform keeps its centring); a restart
+  if (!el || !el.classList || (typeof campMomentsStill === 'function' && campMomentsStill())) return;
+  const d = typeof dir === 'number' ? dir : 0; if (el.style && el.style.setProperty) { el.style.setProperty('--sx', (Math.cos(d) * 4).toFixed(2) + 'em'); el.style.setProperty('--sy', (Math.sin(d) * 4).toFixed(2) + 'em'); }
+  el.classList.remove('ph-slide'); void el.offsetWidth; el.classList.add('ph-slide');
+}
 function campPageHudDrop(s) { // the HUD is taken away; the canvas rows and lists are where they were
   const R = s && s.pageHud; if (R && R.root && R.root.parentNode) R.root.parentNode.removeChild(R.root);
   if (s) { s.pageHud = null; s.pageHudHeld = false; s.pageHudOn = false; s.pageListGeo = null; }
@@ -456,7 +480,7 @@ function campPageHudSync(s, now) {
   const r = canvas.getBoundingClientRect(), set = campPageHudSet, cam = s.cameras && s.cameras.main, gk = r.width / campPageW(), fs = gk * W * K.em, soy = typeof fillOy === 'function' ? fillOy() : 0; // the HUD sits over the canvas, the same size; the font size is a share of 1280 game px (the canvas's width, unless the flight has taken a wider window's shape: the text does not grow with the extra view); soy: where the canvas HUD's 1280 by 720 safe area starts, game px down
   set(R.root, 'display', ''); // shown again when a card closes (set 'none' while one is up)
   set(R.root, 'left', Math.round(r.left) + 'px'); set(R.root, 'top', Math.round(r.top) + 'px'); set(R.root, 'width', Math.round(r.width) + 'px'); set(R.root, 'height', Math.round(r.height) + 'px'); set(R.root, 'fontSize', Math.round(fs * 100) / 100 + 'px');
-  const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom, was: R.was || {} } : null; // was: which edge pills showed at the last look (a pill stays until its ship is well inside the screen)
+  const view = cam ? { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom, was: R.was || {}, pulse: s.momPulse || null, now: typeof performance !== 'undefined' ? performance.now() : 0 } : null; // was: which edge pills showed at the last look (a pill stays until its ship is well inside the screen)
   campPageHudPaint(R, campPageModel(C, view), document);
   const Pn = s.pn, fa = Pn && typeof campPanelFade === 'function' && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPanelFade(Pn, t) : 1, LM = Pn && fa >= 0 && typeof campPanelsOn === 'function' && campPanelsOn(s) ? campPageHudListModel(Pn, C, t) : null; // the open Q list (the fade first: a list that nothing touches closes)
   campPageHudListPaint(R, LM, fa);
