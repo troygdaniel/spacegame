@@ -89,7 +89,7 @@ console.log('E. the ship he flies');
   check('its top speed for the feel is the boost\'s 800, and the page HUD\'s speed row reads the fighter (300 px/s, not over its top)', J('campFeelTop(C, C.by[C.cockpit.id])') === 800 && J('campPageHudSpeed(C).n') === 300 && J('campPageHudSpeed(C).over') === false);
   g.run(`campCockpitGive(C, 'hand');`);
   check('handed back: all of it is the cruiser\'s again', J('campFeelShip(C) === C.carrier') && J('campBoostStatus(C).frac') === 0.77);
-  check('the ship look draws the feel for the ship he flies and not for the cruiser he left (one branch, one condition: the cruiser when no hook exists)', /typeof campFeelShip === 'function' \? u === campFeelShip\(C\) : u\.kind === 'carrier'/.test(src('src/shiplookfx.js')));
+  check('the ship look draws the feel for the ship he flies and not for the cruiser he left (mine: the eye, or the cruiser when no hook exists; the cruiser he left keeps its own plain flames)', /mine = eye \? u === eye : u\.kind === 'carrier'/.test(src('src/shiplookfx.js')) && /eye = typeof campFeelShip === 'function' \? campFeelShip\(C\) : null/.test(src('src/shiplookfx.js')));
   check('the scene reads the cockpit\'s stick only while the switch is on, and keeps the nav on in a fighter', /cp = C\.cockpit && typeof campCockpitOn === 'function' && campCockpitOn\(\) \? C\.cockpit : null/.test(src('src/campaignscene.js')) && /if \(wheel && !cp && C\.nav/.test(src('src/campaignscene.js')));
 }
 console.log('F. the keys page');
