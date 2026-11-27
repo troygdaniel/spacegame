@@ -38,12 +38,21 @@ function campPreyKind(u) {
 }
 const campPreyOf = (want, kind) => want === 'haulers' ? kind === 'freighter' : want === 'miners' ? kind === 'miner' : want === 'carrier' ? kind === 'carrier' : true;
 
+// a wave row may carry guard (px) with along (the hauler it comes up behind): the rear raid of 1.3 (card space-game-fighter-job-13, BRIEF 8 proposal C, decision 1: "the rear raid goes for the last hauler only while no pilot and no flown
+// fighter is within 500 px of her"). The hauler along names is the pirate's prey only while none of your fighters (a pilot's, or the one he flies: kind 'fighter', not docked) is within guard px of her; the raid that finds her
+// guarded goes for something else by the usual weights (another hauler, the fighter that is there, the cruiser). Returns that hauler while she is guarded, else null; a wave without guard never asks.
+function campPirateGuarded(C, u) {
+  const W = u && u.wave != null && C.L && C.L.waves ? C.L.waves[u.wave] : null; if (!W || !(W.guard > 0) || !W.along) return null;
+  const h = C.by['freighter-' + W.along]; if (!h || h.hp <= 0) return null;
+  return C.ships.some(s => s.team === 'earth' && s.kind === 'fighter' && s.hp > 0 && !s.docked && campDist(s, h) <= W.guard) ? h : null;
+}
 // what a pirate attacks: the hauler its wave names, else (for a while) whatever hit it, else the best by prey weight
 function campPirateTarget(C, u) {
   const K = CAMP.pirate;
   if (u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) return f; }
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) return h; }
-  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral'));
+  const lg = campPirateGuarded(C, u); // a raid that leaves a hauler alone while a fighter of yours is near her (card space-game-fighter-job-13): she is not prey now
+  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && s !== lg);
   const want = u.prey || 'any';
   let pool = want === 'any' ? all : all.filter(s => campPreyOf(want, campPreyKind(s)));
   if (!pool.length) pool = all;
