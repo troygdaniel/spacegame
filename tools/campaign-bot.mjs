@@ -212,7 +212,7 @@ g.run(`(() => {
       }
       if (B.cockpit === 'sit') { Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); C.input.fire = false; return; }
       C.input.fire = false; // Space is the fighter's gun now (the cruiser's turrets are CAMP.cockpit.turrets' to fire)
-      if (u.hp < u.maxHp * COCK.lowHull) { campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
+      if (u.hp < u.maxHp * COCK.lowHull) { M.cockBacks++; campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
       if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
@@ -236,7 +236,7 @@ g.run(`(() => {
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
     const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank, power: ${JSON.stringify(POWER)}, pace: window.__PACE });
-    const M = window.__M = { hitC: {}, drainE: {}, dead: [], waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0, cockSec: 0, cockKills: 0, cockDeaths: 0, cockTakes: 0, awayHit: 0, cockIds: {} };
+    const M = window.__M = { hitC: {}, drainE: {}, dead: [], waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0, cockSec: 0, cockKills: 0, cockDeaths: 0, cockTakes: 0, cockBacks: 0, cockHurt: 0, awayHit: 0, cockIds: {} };
     const ck0 = B.cockpit && typeof campCockpitTake === 'function' ? { on: CAMP.flags.cockpit, hpK: CAMP.cockpit.hpK, turrets: CAMP.cockpit.turrets } : null; // the table as it was: a cockpit bot sets its own and puts it back
     if (ck0) { CAMP.flags.cockpit = true; if (B.hpK != null) CAMP.cockpit.hpK = B.hpK; if (B.turrets) CAMP.cockpit.turrets = B.turrets; }
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
@@ -247,7 +247,9 @@ g.run(`(() => {
       // where Earth's damage will come from this step: the alien shots that cross the planet
       const E = C.earth, before = E ? E.shield : 0, hits = [];
       if (E) C.bullets.forEach(b => { if (!b.dead && b.team === 'alien' && b.life > 34 && campSegHit(b.x, b.y, b.x + b.vx / 30, b.y + b.vy / 30, E.x, E.y, E.r)) hits.push(kindOf(b.from)); });
-      campStep(C, 1 / 30); if (ck0) C.events.forEach(e => { if (e.type === 'cockpit' && e.stage === 'give' && e.why === 'dead') M.cockDeaths++; }); C.events.length = 0;
+      const fl = ck0 && C.cockpit ? C.by[C.cockpit.id] : null, fhp = fl ? fl.hp / (fl.maxHp || 1) : 0; // the flown fighter's hull, as a share of its full hull (handing the stick back rescales hp and maxHp together: the share stays): what it loses in a step is what hit it (card space-game-b10-c1-lead-shots)
+      campStep(C, 1 / 30); if (fl && !fl.docked && fl.hp / (fl.maxHp || 1) < fhp - 1e-9) M.cockHurt += fhp - Math.max(0, fl.hp) / (fl.maxHp || 1); // (a fighter that docks has its hull set to 0: that is not a hit)
+      if (ck0) C.events.forEach(e => { if (e.type === 'cockpit' && e.stage === 'give' && e.why === 'dead') M.cockDeaths++; }); C.events.length = 0;
       if (E && E.shield < before) { const per = (before - E.shield) / Math.max(1, hits.length); hits.forEach(k => { M.drainE[k] = (M.drainE[k] || 0) + per; }); if (hits.length === 0) M.drainE.other = (M.drainE.other || 0) + (before - E.shield); }
       const w = C.waves.filter(x => x.started).length; if (w > wavesSeen) { wavesSeen = w; M.waves.push(Math.round(C.t / 1000)); started = true; }
       const al = campAliens(C).filter(u => !u.hold).length;
@@ -260,7 +262,7 @@ g.run(`(() => {
     M.recalls = st.recalls || 0;
     if (ck0) { CAMP.flags.cockpit = ck0.on; CAMP.cockpit.hpK = ck0.hpK; CAMP.cockpit.turrets = ck0.turrets; if (C.cockpit) campCockpitGive(C, 'result'); }
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
-      cockSec: Math.round(M.cockSec), cockKills: M.cockKills, cockDeaths: M.cockDeaths, cockTakes: M.cockTakes, awayTaken: Math.round(M.awayHit),
+      cockSec: Math.round(M.cockSec), cockKills: M.cockKills, cockDeaths: M.cockDeaths, cockTakes: M.cockTakes, cockBacks: M.cockBacks, cockHurt: Math.round(M.cockHurt * 1000) / 1000, awayTaken: Math.round(M.awayHit),
       kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, convoyDead: M.dead.join('+'), shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
       torp: Object.assign({ launched: 0, shot: 0, hit: 0 }, C.torpStat || {}), // the torpedoes of the run: launched, shot down, gone off on a ship (card space-game-fighter-job-11)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
@@ -291,7 +293,7 @@ export function summarise(rs) {
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
     shotRuns: pct(rs, r => (r.cockDeaths || 0) > 0), // the share of the runs (percent) in which the flown fighter was shot down at least once (card space-game-chunk4-fighter-shot-down: the ace used to be shot down in none)
-    cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), // the cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
+    cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), cockHurt: Math.round(med(rs.map(r => r.cockHurt || 0)) * 100), cockBacks: Math.round(rs.reduce((a, r) => a + (r.cockBacks || 0), 0) / Math.max(1, rs.length) * 100) / 100, // hurt: the median share of ONE full hull of the flown fighter lost in a run, percent (it can pass 100: a hull mended or a second fighter); backs: the hand-backs for a low hull a run. The cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
     torp: ['launched', 'shot', 'hit'].reduce((o, k) => { o[k] = Math.round(rs.reduce((a, r) => a + ((r.torp && r.torp[k]) || 0), 0) / Math.max(1, rs.length) * 10) / 10; return o; }, {}), // the torpedoes a seed has, on average: launched, shot down, gone off on a ship
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
@@ -357,11 +359,11 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.a
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
   else {
     console.log(`\nTHE COCKPIT SWEEP  ${SEEDS} seeds a mission, pace ${PACE}, cockpit table ${g.run('JSON.stringify({ hpK: CAMP.cockpit.hpK, damageK: CAMP.cockpit.damageK, rateK: CAMP.cockpit.rateK, turrets: CAMP.cockpit.turrets })')}${SETS.length ? ', set ' + SETS.join(' ') : ''}`);
-    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%   rule: time  taken  sit  shot  kills');
+    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%  hurt%  backs   rule: time  taken  sit  shot  kills');
     for (const key of tab) {
       const S = out[key], [mk, skill] = key.split(' ');
-      botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths, x.shotRuns], v = S.verdict;
-        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)} ${String(v.shot).padStart(5)} ${String(v.kills).padStart(5)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
+      botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths, x.shotRuns, x.cockHurt, x.cockBacks], v = S.verdict;
+        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), String(c[5]).padStart(6), String(c[6]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)} ${String(v.shot).padStart(5)} ${String(v.kills).padStart(5)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
     }
     const fails = tab.filter(k => !out[k].verdict.ok);
     console.log(`\n${tab.length - fails.length} of ${tab.length} mission-skills pass the rule${fails.length ? '; fail: ' + fails.join(', ') : ''}`);

@@ -290,6 +290,7 @@ const CAMP = {
     damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
     rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
     pod: true,                             // THE POD (card space-game-chunk5-pod-eject; Troy, 26 Nov 2026): the fighter he flies, shot down, loses no pilot: a pod leaves the wreck, the view goes back to the cruiser, the pilot mends CAMP.repair.time (20 s: the rule of a hurt pilot) and C waits for him; nothing is charged (no kill, no ship lost). false: today's death (the pilot is lost for the mission)
+    leadK: 1,                              // THE LEAD (card space-game-b10-c1-lead-shots; BRIEF 10 chunk 1, Troy, 27 Nov 2026: yes): the share of the full lead the hostile fighters (CAMP.break.kinds) aim at him with: 1 where he will be when the shot gets there, so he can really be hit; 0 where he is, as it was; between, a partial lead (src/campbreak.js campLeadAt). Aim only
     turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
@@ -1650,8 +1651,10 @@ function campAlienAI(C, u, dt) {
   const isEarth = !tgt && !!C.earth; if (!tgt) tgt = C.earth || C.carrier; // nothing near and no Earth in this level: it comes for the carrier
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = isEarth ? { x: 0, y: 0 } : { x: tgt.vx || 0, y: tgt.vy || 0 };
   const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y)); // a raider against a fighter is a dogfight (src/campdogfight.js); with the player's flown fighter on its tail it breaks (src/campbreak.js)
+  const lead = !dog && !isEarth && m.fire && m.face === target ? campLeadAt(C, u, tgt, def.bullet * C.shot, target) : target; // at the fighter the player flies it aims where that fighter will be (src/campbreak.js campLeadAt); at the rest, where it is
+  if (lead !== target) m.face = lead;
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
-  if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
+  if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : lead) - u.rot)) < def.aim) {
     u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
@@ -1678,6 +1681,7 @@ function campRelicAlien(C, u, dt) {
   let fire = true; aim = target;
   if (!out) { // on the ring: it fights as every alien does (a raider against a fighter is a dogfight)
     const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
+    if (!dog && m.fire && m.face === target) { aim = campLeadAt(C, u, tgt, def.bullet * C.shot, target); m.face = aim; } // the flown fighter is led (src/campbreak.js campLeadAt)
     if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
     fire = !!m.fire; if (dog) aim = m.aim;
   }

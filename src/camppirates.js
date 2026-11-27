@@ -84,8 +84,10 @@ function campPirateAI(C, u, dt) {
   if (!tgt) return;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
   const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0))); // a skiff against a fighter is a dogfight; with the player's flown fighter on its tail it breaks (src/campbreak.js)
+  const lead = !dog && m.fire && m.face === target ? campLeadAt(C, u, tgt, def.bullet * C.shot, target) : target; // at the fighter the player flies it aims where that fighter will be (src/campbreak.js campLeadAt); at the rest, where it is
+  if (lead !== target) m.face = lead;
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
-  if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
+  if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : lead) - u.rot)) < def.aim) {
     u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14, { fac: 'pirate' }); // fac: the scene and the map draw a pirate's shot in amber, not the aliens' red
