@@ -37,7 +37,7 @@
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
 function campTgtList(C) {
   if (!C || !C.carrier) return [];
-  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => campDist(a, C.carrier) - campDist(b, C.carrier) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => campDist(a, campEye(C)) - campDist(b, campEye(C)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 function campTgtNow(C) {
   if (!C || !C.tgt) return null;
@@ -51,7 +51,7 @@ function campTgtStep(C, dir) {
   C.tgt = list[i].id; C.fsel = ''; campMarkTouch(C, false, true); return list[i]; // one target: the friendly is let go
 }
 function campTgtNearest(C, within) { // within: only a hostile this close to the carrier (px) is picked, and none leaves the pick as it was (M asks for the missile lock range: card space-game-missiles-miss)
-  let list = campTgtList(C); if (within && C && C.carrier) { list = list.filter(u => campDist(u, C.carrier) <= within); if (!list.length) return null; }
+  let list = campTgtList(C); if (within && C && C.carrier) { list = list.filter(u => campDist(u, campEye(C)) <= within); if (!list.length) return null; }
   if (!list.length) { if (C) C.tgt = ''; return null; }
   C.tgt = list[0].id; C.fsel = ''; C.tgtAt = campMarkClock(C); campMarkTouch(C, false, true); return list[0]; // one target: the friendly is let go. A \ press counts as a press of ]: the next ] within the restart time steps on from it
 }
@@ -69,7 +69,7 @@ function campTgtClear(C) { const had = !!(C && C.tgt); if (C) C.tgt = ''; return
 function campTgtName(C) { const u = campTgtNow(C); return u ? campNavUnitName(u) : ''; }
 function campTgtInfo(C) {
   const u = campTgtNow(C); if (!u) return null;
-  return { id: u.id, name: campNavUnitName(u), km: campNavKm(campDist(u, C.carrier)), hp: Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1))) };
+  return { id: u.id, name: campNavUnitName(u), km: campNavKm(campDist(u, campEye(C))), hp: Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1))) };
 }
 function campTgtRow(C) {
   const u = campTgtNow(C); if (!u) return null;
@@ -84,7 +84,7 @@ function campTgtMissile(C, dry) {
   const u = campTgtNow(C); if (!u) return campNo('notarget');
   if (C.missiles <= 0) return campNo('nomissiles');
   if (C.t < C.nextRocket) return campNo('missilewait');
-  if (campDist(u, C.carrier) > CAMP.missile.lock) return campNo('tgtrange');
+  if (campDist(u, campEye(C)) > CAMP.missile.lock) return campNo('tgtrange'); // the lock is measured from the ship he flies (card space-game-fly-fighter-l4)
   const code = u.kind === 'mother' ? 'missilesmother' : 'missiles';
   if (dry) return campYes(code);
   campFire(C, u); C.orders.missiles++; return campYes(code);
