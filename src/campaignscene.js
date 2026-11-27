@@ -533,6 +533,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }
     else if (e.type === 'launch' || e.type === 'dock') { this.bayAt[e.type === 'launch' ? 'launch' : 'land'] = this.camp.t; beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160); }
+    else if (e.type === 'pod') this.podShow(e); // the fighter he flew was shot down (card space-game-chunk5-pod-eject)
     else if (e.type === 'cockpit') { if (e.stage === 'take') this.tuned = true; } // the stick of a fighter taken: the run is a tuned one (its score and rank are not kept) while the numbers are Troy's to settle (card space-game-fly-fighter-l1)
     else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
@@ -569,6 +570,14 @@ class Campaign extends Phaser.Scene {
     if (typeof this.eyeId !== 'string') { this.eyeId = e.id; return; } // (a scene that was not made by create has no eye yet, and a test's stand-in may answer any property: it is on the ship it is on)
     if (this.eyeId === e.id) return;
     cam.startFollow(sp, true, 0.12, 0.12); this.eyeId = e.id;
+  }
+  podShow(e) { // the fighter he flew was shot down (card space-game-chunk5-pod-eject): one white frame, a small pale-blue pod leaves the wreck and flies to the cruiser, and the line says when the pilot is back (the view goes home by the follow's own glide: eyeSync)
+    const cam = this.cameras && this.cameras.main; if (cam && typeof cam.flash === 'function') cam.flash(70, 255, 255, 255);
+    toast(this, uiText('camp.corner.pod', { name: e.name || '', s: e.s }), '#9fe9ff');
+    if (!this.add || typeof this.add.graphics !== 'function' || !this.tweens || typeof this.tweens.add !== 'function') return;
+    const g = this.add.graphics().setDepth(7), C = this.camp, o = { t: 0 }, x0 = e.x, y0 = e.y;
+    const draw = () => { const c = C.carrier, k = o.t * o.t * (3 - 2 * o.t), px = x0 + (c.x - x0) * k, py = y0 + (c.y - y0) * k; g.clear(); g.fillStyle(0x9fe4ff, 1).fillRoundedRect(px - 5, py - 3, 10, 6, 2); g.lineStyle(1, 0xffffff, 0.9).strokeRoundedRect(px - 5, py - 3, 10, 6, 2); }; // a flat-cut pod in his pale blue
+    draw(); this.tweens.add({ targets: o, t: 1, duration: 1600, onUpdate: draw, onComplete: () => g.destroy() });
   }
   sync() {
     const C = this.camp, seen = {}, F = typeof slookFrame === 'function' ? slookFrame(this) : null; // F: the new ship look's state for this frame, asked once for all the ships (src/shiplookdraw.js)

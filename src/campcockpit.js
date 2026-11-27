@@ -45,6 +45,7 @@ function campCockpitPick(C) {
 
 function campCockpitTake(C, id) {
   if (!C || !C.carrier || C.carrier.hp <= 0 || C.result || !campCockpitOn()) return false;
+  if (C.podUntil && C.t < C.podUntil) return false; // his pilot is mending after a pod (campCockpitEject): C waits
   const u = id ? (C.by ? C.by[id] : null) : campCockpitPick(C);
   if (!u || u.kind !== 'fighter' || u.team !== 'earth' || u.hp <= 0 || u.docked) return false;
   if (C.cockpit) { if (C.cockpit.id === u.id) return true; campCockpitGive(C, 'hand'); }
@@ -109,3 +110,21 @@ function campCockpitCome(C, how, dry) {
   campNavGo(C, { id: 'ship:' + f.id, of: 'ship:' + f.id, kind: 'ship', ref: f.id, name: typeof campNavUnitName === 'function' ? campNavUnitName(f) : f.id, moving: true, x: f.x, y: f.y }, false);
   return { ok: true, code: 'comehere', say: uiText('camp.corner.comesay') };
 }
+
+// THE POD (card space-game-chunk5-pod-eject; Troy, 26 Nov 2026, brief 8 proposal B): the fighter he flies is shot down (campKill asks first). No pilot dies: the stick goes back to the cruiser (the camera's follow is the glide), the fighter is taken off the board the way a hurt one that landed is (src/camprepair.js: C.repairs,
+// mended CAMP.repair.time, 20 s, then out again whole, in its squad, as itself), and C waits until then (C.podUntil). Nothing is charged: campKill's lost-ship count and the score never see it. The scene draws the pod and the white frame
+// from the events { type: 'boom', pod: true } (the kill effect) and { type: 'pod', id, x, y, name, until }. false (and today's death) when CAMP.cockpit.pod is off, the mission is over or the cruiser is gone.
+function campCockpitEject(C, u) {
+  const S = C && C.cockpit, K = CAMP.cockpit;
+  if (!S || !u || S.id !== u.id || !K.pod || C.result || !C.carrier || C.carrier.hp <= 0 || u.kind !== 'fighter') return false;
+  const name = typeof campSelLabel === 'function' ? campSelLabel(CAMP_SELPILOT + (u.squad || '')) : '';
+  campCockpitGive(C, 'pod'); // (the hull is not scaled back: the pilot is whole when he returns)
+  u.hp = 0; u.docked = true; u.repair = false; u.pod = true;
+  const ms = CAMP.repair.time * 1000;
+  (C.repairs = C.repairs || []).push({ kind: u.kind, until: C.t + ms, order: u.order || null, squad: u.squad || '', stay: false, paid: true, pod: true });
+  C.podUntil = C.t + ms;
+  C.events.push({ type: 'boom', x: u.x, y: u.y, big: false, id: u.id, kind: u.kind, team: u.team, pod: true });
+  C.events.push({ type: 'pod', id: u.id, x: u.x, y: u.y, name, s: Math.round(ms / 1000), until: C.podUntil });
+  return true;
+}
+const campCockpitPodWait = C => C && C.podUntil && C.t < C.podUntil ? Math.ceil((C.podUntil - C.t) / 1000) : 0; // seconds until his pilot is back (0: none)
