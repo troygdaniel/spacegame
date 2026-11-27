@@ -329,6 +329,12 @@ const CAMP = {
       behind: 220,                         // px: the point it flies to, dead astern of the chaser (its six o'clock)
       reach: 140,                          // px: near this to the point, it has come round: it goes on as it was (and attacks)
       cool: 4000                           // ms after it, before it can be sent round again
+    },
+    extend: {                              // THE EXTEND (card space-game-chunk8-enemy-extend; brief 8 proposal A, third behaviour): a hurt hostile fighter runs out and comes back in
+      below: 0.5,                          // share of its hull: under this it extends (once: a ship that has come back fights on)
+      near: 900,                           // px: the flown fighter is this near or nearer (it is being fought, not far off)
+      out: 600,                            // px: it runs straight away from the flown fighter until it is this far from it
+      ms: 3500                             // the most time it runs (a fighter that cannot get away turns back after this)
     }
   },
   dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
