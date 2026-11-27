@@ -533,7 +533,7 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }
     else if (e.type === 'launch' || e.type === 'dock') { this.bayAt[e.type === 'launch' ? 'launch' : 'land'] = this.camp.t; beep(e.type === 'launch' ? 560 : 420, 0.07, 'triangle', 0.04, 160); }
-    else if (e.type === 'cockpit') { if (e.stage === 'take') this.tuned = true; } // the stick of a fighter taken: the run is a tuned one (its score and rank are not kept) while the numbers are Troy's to settle (card space-game-fly-fighter-l1)
+    else if (e.type === 'cockpit') { if (e.stage === 'take') { this.tuned = true; if (e.price) toast(this, uiText(e.price), '#9fe9ff'); } } // (e.price: the price of taking the stick in 1.2, said once as a toast on the radio panel and not voiced) // the stick of a fighter taken: the run is a tuned one (its score and rank are not kept) while the numbers are Troy's to settle (card space-game-fly-fighter-l1)
     else if (e.type === 'alarm') { sfx('siren'); this.cameras.main.flash(300, 255, 60, 60); this.cameras.main.shake(300, 0.004); } // the ambush: out of the dark
     else if (e.type === 'blink') { this.boom.explode(30, e.x, e.y); sfx('shieldUp'); }
     else if (e.type === 'anomaly') this.anomalyEvent(e);
