@@ -146,8 +146,9 @@ g.run(`(() => {
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { ord(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
-    if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
-      const big = x => B.tuck !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
+    const TK = B.tuck || (C.L && C.L.torpReach > 0 ? 'torp' : false); // a mission whose torpedoes can only be shot down from close in (the row's torpReach, card space-game-fighter-job-11) teaches every bot the answer a cruiser has: the convoy order Tuck in, against the boats only
+    if (TK && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
+      const big = x => TK !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
       const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
       if (threat && !st.tuck) { st.tuck = true; ord(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; ord(C, 'convoy', 'carry on'); }
     }
@@ -209,7 +210,12 @@ g.run(`(() => {
       if (u.hp < u.maxHp * COCK.lowHull) { campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
-      if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      const TP = C.L && C.L.torpReach > 0 ? (C.torpedoes || []).filter(t0 => !t0.dead) : []; // a mission whose torpedoes can be shot down only from close in (the row's torpReach, card space-game-fighter-job-11): a torpedo in flight is the fighter's first target, fired at from inside that reach
+      if (TP.length) { let bt = 1e9; TP.forEach(t0 => { const d0 = campDist(t0, u); if (d0 < bt) { bt = d0; a = t0; } }); }
+      else {
+        if (C.L && C.L.torpReach > 0) { const bs = foes.filter(x => x.boat); if (bs.length) { let bb = 1e9; bs.forEach(x => { const d0 = campDist(x, u); if (d0 < bb) { bb = d0; a = x; } }); } } // no torpedo up, but a boat that will fire one: a pilot kills it first (60 hit points, slow, and it fires nothing if it dies arming)
+        if (a && !a.boat && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      }
       let goal = a, lead = 0;
       if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
       K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
@@ -217,7 +223,7 @@ g.run(`(() => {
       const gx = goal.x + (a ? (a.vx || 0) * t : 0), gy = goal.y + (a ? (a.vy || 0) * t : 0), dist = Math.hypot(gx - u.x, gy - u.y);
       const want = Math.atan2(gy - u.y, gx - u.x) + K.err, d = Math.atan2(Math.sin(want - u.rot), Math.cos(want - u.rot));
       const now = { turn: clampi(d * sk.gain), thrust: 0, brake: false, boost: false, fire: false };
-      if (a) { now.thrust = dist > 260 && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < 150; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; now.fire = dist < reach && Math.abs(d) < sk.thr; }
+      if (a) { now.thrust = (TP.length || dist > 260) && Math.abs(d) < 1.3 ? 1 : 0; now.brake = !TP.length && dist < 150; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; now.fire = dist < (TP.length ? Math.min(reach, C.L.torpReach - 20) : reach) && Math.abs(d) < sk.thr; } // (after a torpedo it does not slow down: it is a shot to be caught, and it fires from inside the reach)
       else { now.thrust = dist > COCK.home && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < COCK.home * 0.6; now.boost = dist > COCK.chase * 1.5 && Math.abs(d) < 0.35; }
       K.q.push(now); if (K.q.length > COCK.react) Object.assign(inp, K.q.shift()); else Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); // (what its hands do is what it decided a moment ago)
       return;
@@ -256,6 +262,7 @@ g.run(`(() => {
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
       cockSec: Math.round(M.cockSec), cockKills: M.cockKills, cockDeaths: M.cockDeaths, cockTakes: M.cockTakes, awayTaken: Math.round(M.awayHit),
       kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, convoyDead: M.dead.join('+'), shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
+      torp: Object.assign({ launched: 0, shot: 0, hit: 0 }, C.torpStat || {}), // the torpedoes of the run: launched, shot down, gone off on a ship (card space-game-fighter-job-11)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
       hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
     window.__M = null; return r;
@@ -284,6 +291,7 @@ export function summarise(rs) {
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
     cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), // the cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
+    torp: ['launched', 'shot', 'hit'].reduce((o, k) => { o[k] = Math.round(rs.reduce((a, r) => a + ((r.torp && r.torp[k]) || 0), 0) / Math.max(1, rs.length) * 10) / 10; return o; }, {}), // the torpedoes a seed has, on average: launched, shot down, gone off on a ship
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
 
