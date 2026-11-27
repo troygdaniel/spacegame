@@ -3,6 +3,7 @@
 //   A. the chip: not before 5 s, lit from 5 s in 1.1 only, at the left end of the row, its key the key table's, its words two or three; gone when the cruiser's list has been opened; gone after 120 s
 //   C. (card space-game-chunk13-teach-space-c) Space and C at the first hostiles: the row's own chips lit where they stand with a note, quiet once used, 45 s, C only with the cockpit switch on
 //   D. (card space-game-chunk14-teach-e-enter) E and Enter at the 1.1 miner's call: E added lit "then 2: the miner", Enter lit "send a pilot" once it reads Guard (the miner picked), quiet once the friends' list is opened / an order is given, 90 s, gone when the call is over
+//   E. (card space-game-b10-c7-teach-shift) Shift when the ship you escort is more than 150 km off: the boost chip lit "catch up" (1.1: about 30 s after she leaves), quiet once Shift is held or you are beside her, 120 s
 //   B. the rest: the row is as it was before 5 s and in 1.2 and 1.3; the hints switch turns the row (and the chip) off; the sim remembers the lists opened; no letter is written in the file
 // Run: node tests/campteach.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -95,6 +96,37 @@ console.log('D. E and Enter at the miner\'s call (card space-game-chunk14-teach-
   check('and ends with the call: the pirates dead, no chip and no light', J('campMinerCall(C)') === null && J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") < 0'));
   check('the miner\'s price rule did not change: campMinerAway is as it was (the same call, the pilots away)', J(`(() => { __call(100); const f = campWing(C).filter(u => u.pilot)[0]; const m = campMinerCall(C); f.x = m.x + 100; f.y = m.y; return campMinerAway(C).length; })()`) === 1);
   check('the three new words are in the table, shown never said', J("uiText('camp.corner.chip.friendly')") === 'Friendly' && J("uiText('camp.corner.chip.teache')") === 'then 2: the miner' && J("uiText('camp.corner.chip.teachenter')") === 'send a pilot' && ['friendly', 'teache', 'teachenter'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
+}
+
+console.log('E. Shift when the ship you escort is far ahead (card space-game-b10-c7-teach-shift; the cloud\'s BRIEF 10 chunk 7: start 1.1, do nothing for 40 s, the Shift chip lights "catch up")');
+{
+  g.run(`window.__idle = (sec) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; while (C.t < sec * 1000) campTick(C, 0.1); return C; };`);
+  const boostLit = () => J('campPageHudFirst(C).items.filter(i => i.lit && i.id === "boost").map(i => i.key + ":" + i.word + ":" + i.note)');
+  g.run(`__idle(20);`);
+  check('at 20 s (the transport left at 5 s and is about 90 km off) Shift is not lit: she is inside 150 km', J('campTeachLights(C).boost') === null && J('Math.round(campDist(campConvoys(C)[0], C.carrier) / 10) < 150') === true);
+  g.run(`__idle(40);`);
+  const far = J('Math.round(campDist(campConvoys(C)[0], C.carrier) / 10)');
+  check('THE PAGE\'S TEST: start 1.1, do nothing for 40 s, and she is more than 150 km off', far > 150, far);
+  check('and the Shift chip, where it stands in the row, is lit "catch up" (key from the table)', boostLit().join() === 'Shift:Boost:catch up', boostLit().join());
+  check('the row\'s own chips keep their order, and only boost is lit among fly, boost and missile', J('campPageHudFirst(C).items.filter(i => ["fly", "boost", "missile"].indexOf(i.id) >= 0).map(i => i.id + (i.lit ? "*" : "")).join()') === 'fly,boost*,missile', J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).join()'));
+  g.run(`C.input.boost = true; campTick(C, 0.1); C.input.boost = false;`);
+  check('Shift held once (the cruiser\'s input) notes it (C.keysUsed.boost) and the chip goes quiet', J('C.keysUsed.boost') === true && boostLit().length === 0);
+  g.run(`__idle(40); C.cockpit = { input: { boost: true } }; campTick(C, 0.1); C.cockpit = null;`);
+  check('the flown fighter\'s Shift counts too', J('C.keysUsed.boost') === true);
+  g.run(`__idle(40); campTeachLights(C); C.carrier.x += 1000; C.carrier.y += 1000; `);
+  check('it goes dark when you have caught up: the ship you escort inside 150 km again (the chip is lit only while she is far)', J('campTeachLights(C).boost') === null);
+  g.run(`__idle(40); campTeachLights(C); C.carrier.x = campConvoys(C)[0].x; C.carrier.y = campConvoys(C)[0].y;`);
+  check('flying up beside her: no light', J('campTeachLights(C).boost') === null);
+  g.run(`__idle(40); campTeachLights(C); C.t += 121000;`);
+  check('it ends 120 s after the first time she was far, even if she still is', J('campTeachLights(C).boost') === null);
+  g.run(`__idle(40); CAMP.boost.on = false;`);
+  check('with the boost switched off there is nothing to teach: no light', J('campTeachLights(C).boost') === null);
+  g.run(`CAMP.boost.on = true; __idle(40); C.ships = C.ships.filter(u => u.kind !== 'freighter');`);
+  check('with no ship to escort (none alive) nothing is lit', J('campTeachLights(C).boost') === null);
+  g.run(`__idle(40); C.result = 'won';`);
+  check('a mission that has ended lights nothing; the hints off turns the whole row off', J('campTeachLights(C).boost') === null && J('(() => { C.result = null; CAMP.flags.hints = false; try { return campPageHudFirst(C) === null; } finally { CAMP.flags.hints = true; } })()'));
+  check('the note is a content key, shown never said (no letter is written for the key: the chip is the row\'s own)', J("uiText('camp.corner.chip.teachboost')") === 'catch up' && J("VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.teachboost') && r.why && !r.spoken)") === true);
+  check('the sim\'s own rules are as they were: the transport\'s road does not change because a chip is lit (same position at 40 s with and without asking)', J(`(() => { const a = (__idle(40), Math.round(campConvoys(C)[0].x)); const b = (__idle(40), campTeachLights(C), campPageHudFirst(C), Math.round(campConvoys(C)[0].x)); return a === b; })()`) === true);
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
