@@ -536,3 +536,58 @@ Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the firs
 - Both are live rows of the group "The flown fighter (C)" on the N panel (`cockpitrate`, `cockpitdamage`, step 0.25). `CAMP.fighter` (the pilots' own guns: 8 damage, 450 to 650 ms, 700 px/s, 420 range) is untouched: the AI pilots fire as before.
 - **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
 - Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
+
+## Mission 2.3: waves two and three together, from two sides (card `space-game-23-two-sides`; Troy, 26 Nov 2026: "yes"; base: the tip of the section above, `b76e9867`)
+
+**Why.** With the waves on the hold one after another, the cruiser took about half the old damage and a cruiser fighting the ring alone still won two times in three. Troy: the second and third wave arrive together from two sides, so 2.3 can be lost. No hit-point, damage or ship count changed.
+
+**What changed** (the wave rows of 2.3 and one rule in `campWaveOn`, `src/campaign.js`):
+- The second wave comes at **10 s held** (was 5), from the west of the relic.
+- The third comes **8 s behind the second**, from the EAST, the opposite side (`on: { behind: 1, secs: 8 }`: this many seconds after wave 1 of the rows came; it was 10 s held, from the south-east). The second wave is still on the ring when it arrives: twelve ships from two sides.
+- The first wave (on entering), the 20 s hold, the 1,100 px spawn distance and the ring-holding rule are as in the section above.
+
+**Picked by the tables** (32 seeds, steady; seconds / cruiser damage for plain, carrier, ace, sit):
+
+| the two waves | plain | carrier | ace | sit |
+|---|---|---|---|---|
+| one after another, 5 s and 10 s held (the base) | 87 / 72 | 87 / 76 | 86 / 54 | 92 / 75 |
+| both at 5 s held | 72 / 134 | 74 / 177 | 71 / 97 | 80 / 140 |
+| both at 10 s held | 78 / 122 | 79 / 158 | 78 / 108 | 84 / 133 |
+| second at 5 s held, third 8 s behind | 75 / 140 | 75 / 159 | 73 / 112 | 80 / 137 |
+| second at 5 s held, third 14 s behind | 77 / 123 | 77 / 162 | 75 / 97 | 79 / 166 |
+| **second at 10 s held, third 8 s behind (taken)** | **80 / 191** | **80 / 180** | **79 / 122** | **85 / 148** |
+
+The one taken is the longest and the hardest on the cruiser, and the player has ten seconds of hold to lose when they come.
+
+**The numbers** (won per cent / seconds / cruiser damage / kills; 32 seeds):
+
+| skill | bot | before this card (`b76e9867`) | after |
+|---|---|---|---|
+| steady | plain | 100 / 87 / 72 / 19 | 100 / 80 / 191 / 19 |
+| steady | carrier | 100 / 87 / 76 / 19 | 100 / 80 / 180 / 19 |
+| steady | ace | 100 / 86 / 54 / 19 | 100 / 79 / 122 / 19 |
+| steady | sit | 100 / 92 / 75 / 19 | 100 / 85 / 148 / 19 |
+| sharp | plain | 100 / 87 / 69 / 19 | 100 / 80 / 158 / 19 |
+| sharp | carrier | 100 / 87 / 90 / 19 | 100 / 82 / 180 / 19 |
+| sharp | ace | 100 / 87 / 68 / 19 | 100 / 80 / 137 / 19 |
+| sharp | sit | not run | 100 / 84 / 155 / 19 |
+| rough | plain | 100 / 87 / 82 / 19 | 100 / 80 / 162 / 19 |
+| rough | carrier | 100 / 88 / 80 / 19 | 100 / 80 / 165 / 19 |
+| rough | ace | 100 / 81 / 57 / 19 | 100 / 74 / 97 / 19 |
+| rough | sit | 100 / 90 / 93 / 19 | 100 / 82 / 144 / 19 |
+
+**Careless players** (not bots of the tool: flown in the sim on 12 seeds, 300 s each, the cruiser sitting on the ring):
+
+| player | before this card | after |
+|---|---|---|
+| the wing guards, the cruiser never fires | lost 12 of 12 | lost 12 of 12 |
+| the cruiser fires at the nearest, its wing lost | won 8, lost 4 | **lost 12 of 12** |
+| the cruiser never fires, its wing lost (the first wave is never beaten, so the others never come) | neither in 300 s, least hull 384 | the same |
+
+- **Met:** the damage is back in the old range (122 to 191 against the old 137 to 295; ace 97 at rough), and the mission can be lost: a cruiser without its wing is beaten on every seed, and the test's pilot who sits on the ring and never aims is beaten by the two waves together.
+- **Not met:** the time is about 80 s, not 90 to 100 (two fights at once are shorter than two in a row; a longer hold would add only quiet seconds). And no BOT of the tool loses a seed, rough and sit among them: they all keep the wing out and aim. To make the sit or rough bot lose would take more ships or more damage, which this card rules out.
+- The ace bot is 1 to 8 per cent faster than plain and takes 13 to 40 per cent less cruiser damage (rough: 97 against 162, over the sweep's 30 per cent rule; steady 36 per cent; sharp 13).
+
+**Words.** Nothing becomes untrue: "Enter the ring", "Hold 20 seconds", "Keep aliens off", "Aliens arrive fast"; no line changed in this card.
+
+**Pins.** `tests/camprelicwaves.mjs` (18 checks): the second wave at 10 s held, the third 8 s behind it from the opposite side; the pilot who never aims now loses (he won); a cruiser alone loses at least 3 seeds of 4. `tests/campaign.mjs`: the rows' triggers are the hold or "behind". `tests/camppace.mjs`: words only (the 60 s floor holds).
