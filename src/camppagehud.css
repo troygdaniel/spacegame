@@ -95,6 +95,7 @@
 /* top right under the stock: the hostiles; the one lit panel, drawn only when a hostile is seen */
 .ph-foes { right: 1.3em; top: 7.2em; width: 15em; background: rgba(58, 18, 40, .62); border-color: rgba(255, 111, 168, .45); display: flex; flex-direction: column; gap: .35em; }
 .ph-foes .ph-k, .ph-foes .ph-lab { background: #ffc3da; }
+.ph-foes.scout { opacity: .72; border-style: dashed; animation: none; } /* a wave a fighter has revealed (card space-game-fighter-job-31): dimmed and dashed until it is real */
 .ph-foes .ph-lab { background: none; color: #f3bcd2; }
 .ph-big { font-weight: 600; font-size: 1.05em; }
 /* the mothership's hull meter in the hostiles panel, full width, in the aliens' violet (the canvas bar at the top centre is gone while the page HUD is up) */

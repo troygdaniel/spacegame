@@ -37,12 +37,12 @@ g.run(`
 console.log('A. the fighter\'s look');
 {
   check('the fighter has its own two nozzles on the shoulders of the notch in its tail (the picture: (-0.32, 0.1), (-0.42, 0), (-0.32, -0.1)), mirrored; the cruiser keeps its two, anything else one in the middle', J(`campFeelEngines({ kind: 'fighter' })`).length === 2 && J(`campFeelEngines({ kind: 'fighter' })`).every(e => e[0] <= -0.32 && e[0] >= -0.42) && J(`campFeelEngines({ kind: 'fighter' })[0][1] + campFeelEngines({ kind: 'fighter' })[1][1]`) === 0 && J(`campFeelEngines({ kind: 'carrier' }).length`) === 2 && J(`campFeelEngines({ kind: 'skiff' }).length`) === 1);
-  check('its flame and ribbon are a bigger share of a small ship: 2 times the length, 2 times the width (the Wren\'s 54 px flame on a 36 px hull is 1.5 lengths, the cruiser\'s half a length); the cruiser and anything else are 1 and 1', J(`campFeelLook({ kind: 'fighter' })`).len === 2 && J(`campFeelLook({ kind: 'fighter' })`).wid === 2 && J(`campFeelLook({ kind: 'carrier' })`).len === 1 && J(`campFeelLook({ kind: 'freighter' })`).wid === 1 && J('campFeelLook(null).len') === 1);
+  check('its flame and ribbon are a bigger share of a small ship: 2 times the length, 2.5 times the width (the Wren\'s 54 px flame on a 36 px hull is 1.5 lengths, the cruiser\'s half a length); the cruiser and anything else are 1 and 1', J(`campFeelLook({ kind: 'fighter' })`).len === 2 && J(`campFeelLook({ kind: 'fighter' })`).wid === 2.5 && J(`campFeelLook({ kind: 'carrier' })`).len === 1 && J(`campFeelLook({ kind: 'freighter' })`).wid === 1 && J('campFeelLook(null).len') === 1);
   const f1 = { th: 1, boost: 0, flare: 0 }, fb = { th: 1, boost: 1, flare: 0 };
   const cr = J(`campFeelFlameSize(100, ${JSON.stringify(f1)})`), cr2 = J(`campFeelFlameSize(100, ${JSON.stringify(f1)}, campFeelLook({ kind: 'carrier' }))`);
   check('the cruiser\'s flame is what it was (half its length, a tenth wide) with no look and with its own look', near(cr.len, 50) && near(cr.wid, 10) && near(cr2.len, 50) && near(cr2.wid, 10));
   const fl = J(`campFeelFlameSize(22, ${JSON.stringify(f1)}, campFeelLook({ kind: 'fighter' }))`), fbo = J(`campFeelFlameSize(22, ${JSON.stringify(fb)}, campFeelLook({ kind: 'fighter' }))`);
-  check('a 22 px fighter at full thrust has a flame 22 px long and 4.4 px wide, on boost 48 px long (twice the cruiser\'s share of its length, the Wren\'s on a smaller hull)', near(fl.len, 22) && near(fl.wid, 4.4) && near(fbo.len, 22 * 1.1 * 2) && fbo.wid > fl.wid, JSON.stringify([fl, fbo]));
+  check('a 22 px fighter at full thrust has a flame 22 px long and 5.5 px wide, on boost 48 px long (twice the cruiser\'s share of its length and two and a half times its width, the Wren\'s on a smaller hull)', near(fl.len, 22) && near(fl.wid, 5.5) && near(fbo.len, 22 * 1.1 * 2) && fbo.wid > fl.wid, JSON.stringify([fl, fbo]));
   check('the engines are off by the cruiser\'s own rule whatever the look: no thrust, no flame', J(`campFeelFlameSize(22, { th: 0, boost: 0, flare: 0 }, campFeelLook({ kind: 'fighter' }))`) === null);
 }
 
@@ -96,7 +96,7 @@ console.log('C. the camera');
   g.run(`CAMP.flags.cockpit = false; window.cs4 = __camScene(); cs4.camp.cockpit = { id: 'x', boost: { on: false } }; __run(cs4, 120, false); CAMP.flags.cockpit = true;`);
   check('with the cockpit switch off nothing changes even if a state is there', J('cs4._cz.base') === 1);
   g.run(`window.cs5 = __camScene(); cs5.camp.cockpit = { id: 'x', boost: { on: true } }; __run(cs5, 200, true);`);
-  check('boosting in the fighter multiplies the boost\'s slight zoom-out into the closer view (3 times 0.9), and the lerp is the boost\'s 0.07', near(J('cs5._cz.base'), 2.7, 0.01) && near(J('cs5.cameras.main.lerp.x'), 0.07, 0.003), J('cs5._cz.base'));
+  check('boosting in the fighter multiplies the boost\'s slight zoom-out into the closer view (3 times 0.9), and the lerp stays 0.12 (the lead, not a lag)', near(J('cs5._cz.base'), 2.7, 0.01) && near(J('cs5.cameras.main.lerp.x'), 0.12, 0.003), J('cs5._cz.base'));
   g.run(`window.cs6 = __camScene(); cs6.camp.cockpit = { id: 'x', boost: { on: false } }; cs6._cz.base = 0.6; for (let k = 0; k < 60; k++) campFeelCamera(cs6);`);
   check('when something else has moved the base zoom the cockpit waits like the rest of the feel: it never writes over another\'s value', J('cs6._cz.base') === 0.6);
 }
@@ -130,7 +130,7 @@ console.log('E. the puffs of a small ship');
   g.run(`window.PF = (z, sk) => { const F = campFxNew(); const u = { x: 0, y: 0, rot: 0, vx: 0, vy: 0, hp: 50, maxHp: 50 }; for (let k = 0; k < 40; k++) { u.rot += 3 * 0.0167; campFxEmitPuffs(F, u, { turn: 1 }, 22, k * 16.7, 16.7, z, sk); } return F.puffs.map(p => p.r0); };`);
   const plain = J('PF()'), floor = J('PF(1, 1)'), big = J('PF(1, 2)'), far = J('PF(0.2, 1)');
   check('with no zoom and no ship look the puffs are what they were (2 percent of the length, up to twice that on a hard turn)', plain.length > 0 && plain.every(r => r <= 22 * 0.02 * 2 + 1e-9 && r >= 22 * 0.02 - 1e-9));
-  check('a 22 px ship\'s puffs are never under a pixel on the screen (r 1 at zoom 1, 5 at zoom 0.2), and its own look makes them bigger (twice at the same turn)', floor.every(r => r >= 1 - 1e-9) && far.every(r => r >= 5 - 1e-9) && Math.max(...big) > Math.max(...floor) && Math.max(...big) <= 22 * 0.02 * 2 * 2 + 1e-9);
+  check('a 22 px ship\'s puffs are never under a pixel on the screen (r 1 at zoom 1, 5 at zoom 0.2), and its own look makes them bigger (2.5 times at the same turn)', floor.every(r => r >= 1 - 1e-9) && far.every(r => r >= 5 - 1e-9) && Math.max(...big) > Math.max(...floor) && Math.max(...big) <= 22 * 0.02 * 2 * 2 + 1e-9);
   check('the cruiser is untouched by the floor at its own sizes (a 100 px hull: 2 px, over the pixel at zoom 1)', (g.run(`window.PC = (() => { const F = campFxNew(); const u = { x: 0, y: 0, rot: 0, vx: 0, vy: 0, hp: 50, maxHp: 50 }; for (let k = 0; k < 40; k++) { u.rot += 3 * 0.0167; campFxEmitPuffs(F, u, { turn: 1 }, 100, k * 16.7, 16.7, 1, 1); } return F.puffs.map(p => p.r0); })();`), J('PC.every(r => r >= 100 * 0.02 - 1e-9 && r <= 100 * 0.02 * 2 + 1e-9)')));
 }
 

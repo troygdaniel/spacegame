@@ -60,6 +60,8 @@ function campTorpedoSync(scene, ms) {
     if (play && r.puff <= 0) { r.puff = K.puffEvery; const p = scene.add.image(t.x - ux * 14, t.y - uy * 14, 'smoke').setScale(0.2).setTint(0xb8c2cc).setAlpha(0.5).setDepth(4); scene.tweens.add({ targets: p, alpha: 0, scale: 0.75, duration: 650, onComplete: () => p.destroy() }); }
   });
   Object.keys(T.sp).forEach(id => { if (!seen[id]) { T.sp[id].body.destroy(); T.sp[id].flame.destroy(); delete T.sp[id]; } });
+  const run = C.runner && C.runner.id && !C.runner.called && !C.runner.off ? C.by[C.runner.id] : null; // the last guard of 2.2 running to call a group (card space-game-22-runner-tell): the torpedo's pulsing pink ring on it until it dies or its call is made (no words)
+  if (run && run.hp > 0 && play) { const pulse = Math.sin(now / K.ring[2] * Math.PI * 2); g.lineStyle(K.width, campTorpTone(K.color.alien), K.ringAlpha * (0.65 + 0.35 * pulse)).strokeCircle(run.x, run.y, (run.r || 14) + K.ring[0] + K.ring[1] * pulse); }
   C.ships.forEach(u => { // a boat that arms: the glow at its tube grows with the windup and a ring pulses round it
     if (!u.boat || u.hp <= 0 || !(u.arming > 0)) return;
     const bk = CAMP.torpedo.boats[u.kind], col = campTorpTone(K.color[u.faction] || K.color.pirate), left = Math.max(0, Math.min(1, (u.arming - C.t) / bk.tube.windup)), pulse = Math.sin(now / K.arm.ring[2] * Math.PI * 2);

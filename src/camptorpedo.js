@@ -143,8 +143,17 @@ function campTorpedoHurt(C, t, dmg, byId) {
   campTorpSay(C, 'down', 'camp.say.torp.down');
 }
 
+// where a mission's row says so (torpReach, px; 1.1's has it: card space-game-fighter-job-11, BRIEF 8 proposal C, decision 1: "the boats' torpedoes can only be shot down from close in, which a fighter reaches and the cruiser's turrets do
+// not") a torpedo is hurt only by a shot whose shooter is within that many px of it (edge to the shooter's centre): a shot from farther goes through it, a turret does not aim at it, a missile does not fuze on it. byId: who fired
+// (a bullet's `from`, the cruiser for a missile); no shooter known, or no torpReach in the row: it counts, as it always did
+const campTorpedoReach = C => (C && C.L && C.L.torpReach > 0) ? C.L.torpReach : 0;
+function campTorpedoInReach(C, t, byId) {
+  const R = campTorpedoReach(C); if (!R) return true;
+  const s = byId && C.by ? C.by[byId] : null; return !s || campDist(s, t) - t.r <= R;
+}
 // the cruiser's turrets: the torpedo this turret should shoot at, if one is inside its reach: { t, d } (d: px to its edge); campTurrets takes it over a nearer alien within torp.bias
 function campTorpedoPick(C, from, reach) {
+  const R = campTorpedoReach(C); if (R) reach = Math.min(reach, R); // (a mission that lets a torpedo be shot down only from close in: the turrets do not aim at one farther off)
   let best = null, bd = reach;
   (C.torpedoes || []).forEach(t => { if (t.dead) return; const d = campDist(t, from) - t.r; if (d <= bd) { bd = d; best = t; } });
   return best ? { t: best, d: bd } : null;
@@ -152,7 +161,7 @@ function campTorpedoPick(C, from, reach) {
 // a shot of yours (or a neutral's) that crosses a torpedo hurts it; a beam hurts each torpedo once. Called by campBullets for a bullet that has not hit a ship; true when the bullet is spent
 function campTorpedoShot(C, b, px, py) {
   for (const t of C.torpedoes) {
-    if (t.dead || !campSegHit(px, py, b.x, b.y, t.x, t.y, t.r + 2)) continue;
+    if (t.dead || !campSegHit(px, py, b.x, b.y, t.x, t.y, t.r + 2) || !campTorpedoInReach(C, t, b.from)) continue;
     if (b.beam) { b.hit = b.hit || {}; if (b.hit[t.id]) continue; b.hit[t.id] = true; }
     campTorpedoHurt(C, t, b.dmg, b.from);
     if (!b.beam) { b.dead = true; return true; }
@@ -162,11 +171,11 @@ function campTorpedoShot(C, b, px, py) {
 // the missile's fuze: a torpedo this step of the missile (from px, py to m) comes within the fuze; null when none
 function campTorpedoFuze(C, px, py, m) {
   const k = CAMP.missile;
-  return (C.torpedoes || []).find(t => !t.dead && campSegHit(px, py, m.x, m.y, t.x, t.y, t.r + k.fuze)) || null;
+  return (C.torpedoes || []).find(t => !t.dead && campSegHit(px, py, m.x, m.y, t.x, t.y, t.r + k.fuze) && campTorpedoInReach(C, t, C.carrier.id)) || null;
 }
 // the missile's blast: every torpedo within radius of where it went off is hurt
 function campTorpedoBlast(C, m, radius, dmg) {
-  (C.torpedoes || []).forEach(t => { if (!t.dead && campDist(t, m) <= radius + t.r) campTorpedoHurt(C, t, dmg, C.carrier.id); });
+  (C.torpedoes || []).forEach(t => { if (!t.dead && campDist(t, m) <= radius + t.r && campTorpedoInReach(C, t, C.carrier.id)) campTorpedoHurt(C, t, dmg, C.carrier.id); });
 }
 // the torpedo F should fly at when there is no mothership: the nearest inside torp.lock of the carrier (null when none)
 function campTorpedoLock(C, p) {

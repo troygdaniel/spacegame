@@ -53,7 +53,7 @@ check('the mission is not won by the last tower while a group is left: it needs 
 
 console.log('D. 3.3: two waves together, from opposite sides');
 g.run('__mk(2, 5)');
-check('two waves, both on the fourth tower down (no clock)', J('C.L.waves.length') === 2 && J('C.L.waves.every(w => w.on && w.on.towers === 4 && w.at == null)'));
+check('two waves, both on the fourth tower down (no clock), then the four idle groups', J('C.L.waves.filter(w => !w.optional).length') === 2 && J('C.L.waves.filter(w => !w.optional).every(w => w.on && w.on.towers === 4 && w.at == null)') && J('C.L.waves.length') === 6);
 check('nothing comes before the fourth falls (three down)', (g.run('{ const t = C.ships.filter(u => u.kind === "tower"); for (let i = 0; i < 3; i++) { t[i].hp = 0; campKill(C, t[i]); } } __run(40);'), J('__started().join()') === 'false,false'));
 g.run('{ const t = C.ships.filter(u => u.kind === "tower" && u.hp > 0); t[0].hp = 0; campKill(C, t[0]); } __run(0.1);');
 check('the fourth: both waves in the same tick', J('__started().join()') === 'true,true' && J('C.waves[0].at') === J('C.waves[1].at'));
@@ -73,7 +73,7 @@ check('and its shot flies 1.3 times as fast (the tower\'s own 440 px/s, 572 at t
 check('the two numbers are in the tower table: CAMP.tower.flownTurn 1.5 and flownSpeed 1.3', J('[CAMP.tower.flownTurn, CAMP.tower.flownSpeed]').join() === '1.5,1.3');
 
 console.log('G. the idle threats (Troy\'s yes, 26 Nov: 3.1 the picket, 3.2 the reserve)');
-g.run(`window.__kill = () => C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); window.__idleN = () => C.waves.map((w, k) => (w.started && C.L.waves[k].optional) ? 1 : 0).join(''); // (one digit a wave: the three scan waves first, then the four idle ones)`);
+g.run(`window.__kill = () => C.ships.forEach(u => { if (u.team === 'alien' && u.kind !== 'tower') u.hp = 0; }); window.__idleN = () => C.waves.map((w, k) => (w.started && C.L.waves[k].optional) ? 1 : 0).join(''); // (one digit a wave: the three scan waves first, then the four idle ones)`);
 g.run('__mk(0, 7); __run(59);');
 check('3.1: four optional waves on the idle clock (60, 100, 140, 180 s, until a scan has begun), after the three scan waves', J('C.L.waves.slice(3).map(w => w.on.idle + w.on.until + w.optional).join()') === '60scantrue,100scantrue,140scantrue,180scantrue' && J('C.L.waves.slice(0, 3).every(w => !w.optional)'));
 check('59 s in with no scan begun: nothing yet', J('C.waves.slice(3).every(w => !w.started)'));
@@ -98,6 +98,17 @@ check('at 45 s with no tower fallen: 2 drones and 2 gunships for the cruiser, bo
 g.run('{ const t = C.ships.find(u => u.kind === "tower"); t.hp = 0; campKill(C, t); } __kill(); __run(45);');
 check('a tower falls: the reserve stops (the one due at 85 s does not come)', J('C.waves[4].started') === false && J('C.waves[5].started') === false);
 check('3.2 needs the tower groups cleared only: the optional waves are not required for "clear"', J('C.L.waves.slice(3).every(w => w.optional)') && J('C.L.waves.slice(0, 3).every(w => !w.optional)'));
+
+console.log('H. 3.3\'s idle reserve (card space-game-33-idle-threat) and the briefing');
+g.run('__mk(2, 12); C.arrivedAt = 0; __run(44);');
+check('3.3: the reserve waits for 45 s (nothing at 44 s); four optional groups on the idle clock 45, 85, 125, 165 until a tower falls', J('C.L.waves.slice(2).map(w => w.on.idle + w.on.until + w.optional).join()') === '45towertrue,85towertrue,125towertrue,165towertrue' && J('C.waves.slice(2).every(w => !w.started)'));
+g.run('__run(2);');
+check('at 45 s with no tower fallen: 2 raiders and 2 gunships for the cruiser, born toward the nearest tower', J('C.waves[2].started') === true && J('(() => { const a = C.ships.filter(u => u.team === "alien" && u.wave === 2); return a.length === 4 && a.filter(u => u.kind === "raider").length === 2 && a.filter(u => u.kind === "gunship").length === 2 && a.every(u => u.goal === "carrier"); })()'));
+g.run('{ const t = C.ships.find(u => u.kind === "tower"); t.hp = 0; campKill(C, t); } __kill(); __run(45);');
+check('a tower falls: no more groups (the one due at 85 s does not come); the two waves of the fourth tower are still to come', J('C.waves[3].started') === false && J('C.waves[0].started') === false);
+check('the mission does not need the idle groups for "clear" (they are optional), only the two waves', J('C.L.waves.slice(2).every(w => w.optional)') && J('C.L.waves.slice(0, 2).every(w => !w.optional)'));
+check('the briefing counts only what a player who plays meets: 3.1 "Expect 6 raiders, 2 drones, 2 gunships.", 3.2 two raiders, four drones, two gunships and four towers, 3.3 two raiders, two drones, four gunships and eight towers (the idle groups are not in it)', J('campBriefEnemies(3, 0).line') === 'Expect 6 raiders, 2 drones, 2 gunships.' && J('campBriefEnemies(3, 1).line') === 'Expect 2 raiders, 4 drones, 2 gunships, 4 defence towers.' && J('campBriefEnemies(3, 2).line') === 'Expect 2 raiders, 2 drones, 4 gunships, 8 defence towers.');
+check('and the one-page briefing\'s word for the waves counts the real ones: "Two" for 3.3, "Three" for 3.1 and 3.2', J('scrMomentVars(campMissionRow(3, 2)).wavesword') === 'Two' && J('scrMomentVars(campMissionRow(3, 0)).wavesword') === 'Three' && J('scrMomentVars(campMissionRow(3, 1)).wavesword') === 'Three');
 
 console.log('F. the cruiser\'s own game is the same where it should be');
 check('a tower\'s shot at the cruiser is the old one (turn 3 rad/s, 440 px/s: the factors are for the flown fighter only)', J('[CAMP.tower.turn, CAMP.tower.bullet]').join() === '3,440');

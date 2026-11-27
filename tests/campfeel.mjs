@@ -96,7 +96,7 @@ check('campFeelHide takes the picture and the history away (the switch went off,
 
 console.log('E. the camera');
 check('the boost\'s share eases: in about half a second (2.2 a second) and out in about a second (1.4), never overshoots, lands exactly', (() => { let z = 0, t = 0; while (z < 0.9 && t < 5000) { z = J(`campFeelCamStep(${z}, true, 16.7)`); t += 16.7; } let zi = t; z = 1; t = 0; while (z > 0.1 && t < 9000) { z = J(`campFeelCamStep(${z}, false, 16.7)`); t += 16.7; } return zi > 600 && zi < 1400 && t > 1000 && t < 3000 && J('campFeelCamStep(0.999, true, 16.7)') <= 1 && J('campFeelCamStep(0.001, false, 16.7)') === 0; })());
-check('the multiplier of the zoom is 1 at rest and CAMPFEEL.cam.boostZoom (0.9: a slight zoom-out) at full boost; the lerp is 0.12 at rest (the Long Haul\'s and the scene\'s) and 0.07 at full boost', J('campFeelZoomK(0)') === 1 && Math.abs(J('campFeelZoomK(1)') - 0.9) < 1e-12 && J('campFeelLerp(0)') === 0.12 && Math.abs(J('campFeelLerp(1)') - 0.07) < 1e-12 && J('campFeelZoomK(2)') === J('campFeelZoomK(1)') && J('campFeelLerp(-1)') === 0.12);
+check('the multiplier of the zoom is 1 at rest and CAMPFEEL.cam.boostZoom (0.9: a slight zoom-out) at full boost; the lerp is 0.12 at rest (the Long Haul\'s and the scene\'s) and the same 0.12 at full boost (brief 7: the view leads the ship now, it no longer trails it: campFeelLead)', J('campFeelZoomK(0)') === 1 && Math.abs(J('campFeelZoomK(1)') - 0.9) < 1e-12 && J('campFeelLerp(0)') === 0.12 && J('campFeelLerp(1)') === 0.12 && J('CAMPFEEL.cam.boostLag') === J('CAMPFEEL.cam.lag') && J('campFeelZoomK(2)') === J('campFeelZoomK(1)') && J('campFeelLerp(-1)') === 0.12);
 g.run(`
   window.__camScene = () => { const lerp = { x: 0.12, y: 0.12, set(a, b) { lerp.x = a; lerp.y = b; } };
     const cz = { base: 1, out: 1, cur: 1, anchor: null };
@@ -104,7 +104,7 @@ g.run(`
   window.cs = __camScene();
 `);
 g.run(`for (let k = 0; k < 120; k++) { cs.camp.boost.on = true; campFeelCamera(cs); cs._cz.out = cs.cameras.main.zoom = cs._cz.base; }`);
-check('held boost for two seconds: the base zoom has gone to 0.9 (not past it) and the follow\'s lerp to 0.07, and the player\'s own zoom (cur) was never touched', J('Math.abs(cs._cz.base - 0.9) < 0.005') && J('Math.abs(cs.cameras.main.lerp.x - 0.07) < 0.003') && J('cs._cz.cur') === 1, J('[cs._cz.base, cs.cameras.main.lerp.x]'));
+check('held boost for two seconds: the base zoom has gone to 0.9 (not past it) and the follow\'s lerp stays 0.12 (the lead, not a lag, is what the boost does to the view), and the player\'s own zoom (cur) was never touched', J('Math.abs(cs._cz.base - 0.9) < 0.005') && J('cs.cameras.main.lerp.x') === 0.12 && J('cs._cz.cur') === 1, J('[cs._cz.base, cs.cameras.main.lerp.x]'));
 g.run(`for (let k = 0; k < 300; k++) { cs.camp.boost.on = false; campFeelCamera(cs); cs._cz.out = cs.cameras.main.zoom = cs._cz.base; }`);
 check('let go: it eases back to exactly 1 and 0.12 and stays there (nothing is left on the camera)', J('cs._cz.base') === 1 && J('cs.cameras.main.lerp.x') === 0.12 && J('cs.feel.z') === 0);
 g.run(`window.cs2 = __camScene(); cs2.camp.boost.on = true; cs2._cz.anchor = { wx: 0, wy: 0, sx: 0, sy: 0 }; for (let k = 0; k < 60; k++) campFeelCamera(cs2);`);

@@ -207,7 +207,8 @@ function campMapPaint(s, time) {
     else if (m.type === 'convoy') {
       if (m.to) { const q = pin(X(m.to.x), Y(m.to.y)); g.lineStyle(1, m.color, 0.55).lineBetween(p.x, p.y, q.x, q.y); } // a line to where it is heading
       g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 3.5);
-    } else if (m.type === 'alien' || m.type === 'pirate') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5);
+    } else if (m.type === 'scout') { const pk = flat ? slookInt(SLOOK.C.foe) : m.color; g.lineStyle(1.5, pk, 0.4).strokeCircle(p.x, p.y, 7); for (let i = 0; i < Math.min(m.n, 8); i++) { const a = i * 2.4; g.fillStyle(pk, 0.45).fillCircle(p.x + Math.cos(a) * 3.2, p.y + Math.sin(a) * 3.2, 1.3); } } // a wave a fighter has revealed (card space-game-fighter-job-31): a dim ring and a dot for each ship, where it will come from, until it is real
+    else if (m.type === 'alien' || m.type === 'pirate') g.fillStyle(m.color, 1).fillCircle(p.x, p.y, 2.5);
     else if (m.type === 'tboat') { // a torpedo boat: a dart pointing the way it flies, with a bar across its tail (the tube); a ring pulses while it arms
       const a = m.rot || 0, c = Math.cos(a), sn = Math.sin(a), q = (x, y) => ({ x: p.x + c * x - sn * y, y: p.y + sn * x + c * y });
       g.fillStyle(m.color, 1).fillPoints([q(5, 0), q(-3.5, -3), q(-3.5, 3)], true); g.lineStyle(1.5, m.color, 1).lineBetween(q(-5, -3.6).x, q(-5, -3.6).y, q(-5, 3.6).x, q(-5, 3.6).y);

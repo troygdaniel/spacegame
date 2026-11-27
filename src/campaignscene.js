@@ -473,6 +473,7 @@ class Campaign extends Phaser.Scene {
       if (this.sayR && this.sayR.wait.length) this.radioShow(campSayDue(this.sayR, this.time.now)); // the radio lines that waited for a kept line's hold are shown now (src/campsayhold.js)
       campStep(C, Math.min(dt, 100) / 1000);
       if (typeof this.eyeSync === 'function') this.eyeSync();
+      if (typeof campCamFrame === 'function') campCamFrame(this, dt); // the glide's step, the ring and the CRUISER AUTO pill
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
       const now = performance.now(); // the wing's radio: the orders carried out since the last look make a call; the call that is due is said when nothing else is (src/campchatter.js)
@@ -569,7 +570,9 @@ class Campaign extends Phaser.Scene {
     if (!e || !sp || !cam || typeof cam.startFollow !== 'function') return;
     if (typeof this.eyeId !== 'string') { this.eyeId = e.id; return; } // (a scene that was not made by create has no eye yet, and a test's stand-in may answer any property: it is on the ship it is on)
     if (this.eyeId === e.id) return;
-    cam.startFollow(sp, true, 0.12, 0.12); this.eyeId = e.id;
+    const was = this.eyeId; this.eyeId = e.id;
+    if (typeof campCamEye === 'function' && campCamEye(this, e, sp, was)) return; // the glide, the ring and the pill (src/campcockpitcam.js, card space-game-b7-camera-lead-stick): the camera takes the ship by a 0.4 s glide
+    cam.startFollow(sp, true, 0.12, 0.12);
   }
   podShow(e) { // the fighter he flew was shot down (card space-game-chunk5-pod-eject): one white frame, a small pale-blue pod leaves the wreck and flies to the cruiser, and the line says when the pilot is back (the view goes home by the follow's own glide: eyeSync)
     const cam = this.cameras && this.cameras.main; if (cam && typeof cam.flash === 'function') cam.flash(70, 255, 255, 255);
