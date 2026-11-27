@@ -686,6 +686,31 @@ Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the firs
 - **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
 - Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
 
+## Mission 2.2: the called groups and the patrols go for the cruiser (card `space-game-chunk16-22-fighter-gap`; ORCH, 26 Nov 2026 night: option 2; base `654702eb`)
+
+**Why.** In 2.2 the flown-fighter (ace) bot took 31 to 49 per cent less cruiser damage than the plain bot (rule: 30). I measured where it comes from (12 seeds, rough, damage by phase, plain against ace): before the fourth guard 31 against 13, after the reinforcements 24 against 9, after the sixth 122 against 78: lower in every phase, so it is not when the groups arrive (a clock floor would move it by about 5 s: the ace's first group comes at about 19 s, plain's at about 24 s) but the fighter's own gun, and a fighter that flies past or hits a group draws it off the cruiser.
+
+**What changed** (`src/campaign.js`): a wave row's or a hunt's `focus: 'carrier'` (campAlienAI): the aliens of a group so marked go for the cruiser and are not drawn off by a ship of yours that flies by or hits them. On the three wave rows and the patrol of 2.2 only (the guards, and every other mission, are as they were). No hit-point, damage, ship or timing change.
+
+**The numbers** (12 seeds; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| skill | bot | before (`654702eb`) | after |
+|---|---|---|---|
+| steady | plain | 74 / 161 | 74 / 182 |
+| steady | carrier | 88 / 193 | 88 / 193 |
+| steady | ace | 74 / 104 | 71 / 127 |
+| steady | sit | 75 / 182 | 74 / 198 |
+| rough | plain | 75 / 165 | 73 / 170 |
+| rough | carrier | 86 / 208 | 86 / 208 |
+| rough | ace | 65 / 81 | 63 / 93 |
+| rough | sit | 81 / 164 | 74 / 173 |
+
+- Ace against plain, damage: steady 35 per cent less before, **30 per cent after** (127 against 182); rough 51 per cent less before, **45 per cent after** (93 against 170). The rule (docs/night/cockpit-sweep.md) is 30. Time: ace 0 to 4 per cent faster at steady (rule 15), 14 per cent at rough (63 against 73).
+- **Not closed:** at rough the ace still takes 45 per cent less. The rest is the flown fighter's own gun (the same 12 seeds with the guards also going for the cruiser: 182 against 114, 37 per cent less): the fighter is better in 2.2, as intended; for Troy to judge in play.
+- The wing's pilots under the cruiser's orders do not change (carrier and the plain bot keep their numbers within noise).
+
+**Pins.** `tests/camplevel2calls.mjs` (22 checks): the rows carry the flag, and a raider with a fighter on its far side that has just hit it still flies at the cruiser while the same raider without the flag is drawn onto the fighter.
+
 ## Level 3 comes on what the player does (card `space-game-b7-level3`; brief 7 decisions 1, 3, 5 and 6; Troy said yes to all of it on 26 Nov 2026)
 Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK` 0.5, `hpK` 2, turrets 'auto'); old tables from main just before the card (`e0bee48d`, the level 3 sim identical), new from the card's branch. Every number of the waves is a first try, measured with the bots: 32 seeds a mission, skill steady, pace Brisk; `node tools/campaign-bot.mjs --level 3 --seeds 32 --bots idle,carrier,plain,troy --json` for the cruiser bots, `--max 900` for the idle ones, `--cockpit --level 3` for the fighter bots.
 
@@ -738,6 +763,6 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 
 **6 of 9 mission-skills pass the rule (was 4).** Fixed: 3.2 sharp and steady (the ace took a third of the plain bot's damage because a tower could not track a fast fighter: now 166 against 230) and 3.3 rough. Still failing: 3.1 sharp (ace 47 damage against plain's 78: probably the fighter meets each wave before it reaches the cruiser), 3.1 rough (67 s against 81, and 12 damage against 68: probably with no hit the scan never stands still, so the fighter's cover makes the scans quicker), 3.2 rough (46 s against 60: probably three times the rate shoots a tower down quickly). The rough skill is the ace's widest cone; at sharp and steady the rule holds in 3.2 and 3.3 and in 3.1 steady. What might move the rest (not tried): a second 3.1 wave that comes to the cruiser from the far side (a fighter cannot meet both), or fewer scan pauses. Not done: Troy agrees the rule before any retune.
 
-**Briefing lines made untrue (listed, not reworded; Troy to word them):** 3.1 "Aliens answer your first scan." (each scan is answered now), 3.2 "More aliens arrive after 25 seconds, from the north-east." (a group comes when a tower falls), 3.3 "Two waves come: at 20 seconds and at 75." (both come at the fourth tower). `tests/campbrief.mjs` lets those two numbers stand (`STALE`) until they are worded.
+**Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
