@@ -77,7 +77,7 @@ check('the nudge: a half sine, up and back to nothing in 180 ms, nothing before 
 
 console.log('C. the hit in the scene');
 g.run(`__new(); __scene(1); window.AL = campSpawn(C, 'raider', CA.x + 300, CA.y); AL.hp = 100; __ship(AL); campHurt(C, AL, 5, CA.id); window.HE = __ev('hit')[0]; window.R1 = campMomentsHit(S, HE);`);
-check('the hit is taken (the scene\'s puff is left out), three sparks are up: the firing side\'s mint, 8 by 3 px, on the ship\'s place, just above the ships', J('R1') === true && J('S.made.length') === 3 && J('S.made.every(o => o.vis && o.tint === 0x7df0c0 && o.key === "mom-spark")') && J('S.made.every(o => o.x === HE.x && o.y === HE.y)') );
+check('the hit is taken (the scene\'s puff is left out), three sparks are up: the firing side\'s mint, 9 by 3 px, on the ship\'s place, just above the ships', J('R1') === true && J('S.made.length') === 3 && J('S.made.every(o => o.vis && o.tint === 0x7df0c0 && o.key === "mom-spark")') && J('S.made.every(o => o.x === HE.x && o.y === HE.y)') );
 check('the sparks fly back along the shot (toward the shooter: west), spread 0.55 rad apart, each pointing along its way', J('S.made.map(o => o.rot).join()') === J('[HE.a - 0.55, HE.a, HE.a + 0.55].join()') && J('S.hud.mom.sparks.length') === 3);
 g.run(`C.t += 100; campMomentsFrame(S);`);
 check('100 ms later they are half way out and half faded; at 200 they are gone and free again (no new sprite is made for the next hit)', J('S.made.every(o => o.vis && Math.abs(o.a - 0.5) < 1e-9 && o.x < HE.x)') === true);

@@ -31,7 +31,7 @@
 //   campMomentsNote(s, e)            the scene's first look at every event: it remembers where the last kill, loss and arrival were, and starts the beat at the mission's end
 const CAMPMOM = {
   flash: 34,                                   // ms the hit's white flash holds: two frames at 60 a second
-  spark: { n: 3, life: 200, cap: 30, w: 8, h: 3, out: 24, spread: 0.55, depth: 7.2, key: 'mom-spark' }, // three a hit, each 0.2 s; at most 30 up; they fly `out` screen px along the shot's way back, spread by `spread` rad
+  spark: { n: 3, life: 200, cap: 30, w: 9, h: 3, out: 24, spread: 0.55, depth: 7.2, key: 'mom-spark' }, // three a hit, each 0.2 s; at most 30 up; they fly `out` screen px along the shot's way back, spread by `spread` rad
   notch: { life: 450, span: 0.07, w: 1.8 },    // the hull arc's notch: ms, the share of the turn it covers (the part the hull just lost), and how much thicker than the arc it is
   kill: { ms: 600, cap: 6, flashMs: 40, shards: 6, shardOut: 46, ring: [10, 80], ringW: 2, depth: 7.4, keys: { shard: 'mom-shard', ring: 'mom-ring', disc: 'mom-disc' }, big: 2 }, // 0.6 s; records at once; the white frame; six shards out `shardOut` px; the ring from 10 to 80 px; a big ship (the cruiser, the mothership) is `big` times larger
   nudge: { px: 2, gain: 2, ms: 180 },          // the view moves 2 px toward the kill and settles in 0.18 s; the follow's own lag (0.12) takes about half of an offset this short, so the offset is `gain` times the px
@@ -88,7 +88,7 @@ function campMomentsState(s) { const h = s && s.hud; if (!h) return null; return
 function campMomentsTextures(s) { // made once, in code, white (tinted at use): the spark, the shard, the thin ring, the disc for a ship with no picture
   const S = campMomentsState(s); if (!S || S.tex || !s.textures || !s.make) return;
   const mk = (key, w, h, draw) => { if (s.textures.exists(key)) return; const g = s.make.graphics({ x: 0, y: 0, add: false }); draw(g); g.generateTexture(key, w, h); g.destroy(); }, K = CAMPMOM;
-  mk(K.spark.key, K.spark.w, K.spark.h, g => { g.fillStyle(0xffffff, 0.35).fillRoundedRect(0, 0, K.spark.w, K.spark.h, 1.5); g.fillStyle(0xffffff, 1).fillRoundedRect(K.spark.w * 0.4, 0.5, K.spark.w * 0.6, K.spark.h - 1, 1); });
+  mk(K.spark.key, K.spark.w, K.spark.h, g => g.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, K.spark.w, K.spark.h, 1.5)); // a solid bar (the tile's: it fades by its alpha; a soft tail made it dim in the first picture, 26 Nov)
   mk(K.kill.keys.shard, 7, 3, g => g.fillStyle(0xffffff, 1).fillRect(0, 0, 7, 3));
   mk(K.kill.keys.ring, 132, 132, g => g.lineStyle(K.kill.ringW, 0xffffff, 1).strokeCircle(66, 66, 64));
   mk(K.kill.keys.disc, 32, 32, g => g.fillStyle(0xffffff, 1).fillCircle(16, 16, 15));

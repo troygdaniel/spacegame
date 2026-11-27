@@ -320,7 +320,17 @@ No difference outside the noise of a shared Mac: the busiest fight stays smooth.
 ## The moments of a fight: the hit, the kill, the wave (card `space-game-b7-hit-kill-wave`, 26 Nov 2026)
 What it adds: at a hit, three pooled sprites (30 at most), a white fill on the ship's sprite for 34 ms and a note for the hull arc; at a kill, one pooled record of eight sprites for 0.6 s (six records at most: 48 sprites, made once, at the first kill that needs them) and a camera follow offset for 180 ms; at a wave, a few class and style writes on four page elements and CSS keyframes (nothing runs while no wave comes). A quiet frame does one early return and three `for in` loops over empty books: nothing is allocated (the shard and spark poses are written into two results the file keeps).
 
-**What was measured, and what was not.** The Chrome series (`node tools/perfcampaign.mjs frames busy1` with the effects off and on, as the cards before) was NOT taken: Chrome waits for ORCH's word while Troy may be flying. What is here is the cost of this file's own JavaScript in plain Node with stand-in sprites (every Phaser setter is a free call there, so these numbers are the arithmetic and the bookkeeping only, not the drawing). `tests/campmoments.mjs` pins the caps.
+**What was measured.** First the cost of this file's own JavaScript in plain Node with stand-in sprites (every Phaser setter is a free call there, so these numbers are the arithmetic and the bookkeeping only, not the drawing; `tests/campmoments.mjs` pins the caps). Then, once ORCH said Chrome was free, the busiest fight in Chrome: `PERF_ADDR='&pagehud=1&shiplook=1' node tools/perfcampaign.mjs frames busy1`, eight runs alternating off, on, on, off, off, on, on, off, 26 Nov, the Mac at load 12.6 to 16 (other agents). Off is the same page with `campMomentsHit`, `campMomentsKill`, `campMomentsWave`, `campMomentsNote` and `campMomentsFrame` replaced by do-nothing functions (`PERF_PATCH`, applied after the fight is set up: the scene then draws today's puffs and the ship look's kill); on is the code as it is. The fight is the one the tool keeps going: in 720 frames of `busy1` (Node count, 120 warm and 600 measured) there are 145 hits and 19 kills and no wave, so about 36 sparks and one kill record are up at any moment: well under the caps (30 sparks, 6 kills). The wave's glow is page CSS and is not in this series.
+
+| mean ms of a stepped frame, `busy1` | off (4 runs) | on (4 runs) |
+|---|---|---|
+| the frame of JavaScript | 1.32, 1.38, 1.16, 1.18 (median 1.25) | 1.44, 1.37, 1.17, 1.31 (median 1.34) |
+| the update | 0.79, 0.83, 0.80, 0.82 | 0.79, 0.81, 0.79, 0.86 |
+| the drawing | 0.41, 0.42, 0.24, 0.24 | 0.53, 0.43, 0.26, 0.33 |
+| p95 of the frame | 2.4, 2.4, 2.1, 2.3 | 2.3, 2.3, 2.2, 2.5 |
+| the heap | 11.05 to 11.09 MB | 11.06 MB |
+
+No difference outside the noise of a shared Mac (a run differs from the next by more than the two columns differ): the update is the same to a hundredth of a millisecond, the drawing is at most 0.1 ms more with the effects on, which the Node numbers below explain (the pooled sprites' setters). The longest single frames (60 to 105 ms in some runs of both columns) are the first frame's one-off costs, the same with and without. Pictures of each moment, and of the pilot's ring, are kept by ORCH outside the repository (taken 26 Nov, muted, under the lock).
 
 | | per frame | per event |
 |---|---|---|
