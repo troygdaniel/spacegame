@@ -81,7 +81,13 @@ M = J(`__M('content')`);
 check('Content: one row, Pack: Core pack and a tick with No problems (the New screens and Fill the window rows went with card space-game-screens-fill-default-on: both are on for every player, no switch)', M.body.length === 1 && M.body[0].label === 'Pack' && M.body[0].items[0].text === 'Core pack' && M.body[0].items[1].t === 'ok' && M.body[0].items[1].text === 'No problems' && M.body.every(r => r.label !== 'New screens' && r.label !== 'Fill the window'), JSON.stringify(M.body));
 g.run(`CONTENT_ERRORS.push({ path: 'a.md', message: 'one' }, { path: 'b.md', message: 'two' }); CONTENT_STATE.modded = true;`);
 check('with problems and a mod: Modded pack, the number of problems (amber), and the first lines of what went wrong (not more than four)', J(`__M('content').body[0].items[0].text`) === 'Modded pack' && J(`__M('content').body[0].items[1].text`) === '2 problems' && J(`__M('content').body.length`) === 3);
-g.run(`CONTENT_ERRORS.length = 0; CONTENT_STATE.modded = false;`);
+// the packs that are on are named (card space-game-mods-content-packs-red, 26 Nov 2026): the old tab said "packs on: example", the new one said only Modded pack and a player could not see which; Chrome's tests/mods.mjs reads this row in the page
+g.run(`CONTENT_STATE.packs = [{ name: 'example', on: true }, { name: 'sol', on: false }, { name: 'near-stars', on: true }];`);
+check('with packs on: the pack row names exactly the ones that are on, after Modded pack and before the problems (example, near-stars; sol is off)', J(`__M('content').body[0].items.map(i => i.text).join('|')`) === 'Modded pack|example, near-stars|2 problems', J(`__M('content').body[0].items.map(i => i.text).join('|')`));
+check('the names are in what the screen shows (so the page has them), and the tab stays inside its word budget with two packs on and two problems', J(`scrSetShown(__M('content')).join(' ')`).indexOf('example, near-stars') >= 0 && J(`__w(__M('content'))`) <= J(`scrWordsMax(scrSetBudget('content'))`), J(`__w(__M('content'))`) + ' of ' + J(`scrWordsMax(scrSetBudget('content'))`));
+g.run(`CONTENT_STATE.modded = false;`);
+check('a game on the core pack names none, whatever the list holds (nothing is on over the core)', J(`__M('content').body[0].items.map(i => i.text).join('|')`) === 'Core pack|2 problems');
+g.run(`CONTENT_ERRORS.length = 0; CONTENT_STATE.modded = false; CONTENT_STATE.packs = [];`);
 
 M = J(`__M('reset')`);
 const logWord = J('playlogOn()') ? 'On' : 'Off';
