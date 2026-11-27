@@ -5,7 +5,7 @@
 //   campNavRows(C)            the one list: the goal, the places, the convoys, the caches and the relic, your ships: [{ id, kind, group, name, x, y, r, dist, ... }], by group then by distance
 //   campNavFind(C, words)     what the words name: { row } or { code } ('unknown', 'nogoal', 'nomother', 'noconvoy', ...): "mars", "the relic", "the objective", "the mars convoy"
 //   campNavCheck(C, arg)      the dry check the closed list asks before the ship computer says it will fly: { ok, say, row } or { ok: false, say }
-//   campNavGo(C, row, fast)   fly there: C.nav = { on, id, kind, name, fast, ... }; fast is the map's Fast button, a burn at CAMP.nav.fast times the speed; campNavClear(C, why) ends it (why: key, clear, arrived, lost)
+//   campNavGo(C, row, fast)   fly there: C.nav = { on, id, kind, name, fast, ... }; fast is the map's Fast button, a burn at CAMP.nav.fast times the speed; campNavClear(C, why) ends it (why: key: the line 'Trip cancelled. Q 1 to fly to the goal again.', its keys from the table; clear, arrived, lost)
 //   campNavDrive(C, dt)       once a tick, from campTick (src/campaign.js), while C.nav is on: it sets the carrier's input (turn, thrust, brake) by the Long Haul autopilot's rule
 //   campNavEta(C, dist)       the flight time in seconds;   campNavPickAt(rows, project, px, py)   the row nearest a click on the map
 //   campNavEdge(dx, dy, W, H, margin, keep) / campNavArrow(C, scroll, W, H)   where the arrow at the screen edge sits and which way it points, out of the HUD's way
@@ -134,11 +134,17 @@ function campNavGo(C, row, fast) {
   C.events.push({ type: 'nav', key: fast ? 'camp.nav.gofast' : 'camp.nav.go', vars: { name: row.name } });
   return C.nav;
 }
+// the line a steering key's cancel shows (card space-game-chunk3-trip-cancelled-line; BRIEF 8 finding 7): the trip is off, and the way to fly to the goal again, the cruiser list's key and the number of its goal row, both read from the table
+// (CAMP_PANELS, src/data_controls.js), never written here: { name, key, n }
+function campNavResume(C, N) {
+  const P = typeof campPanelDef === 'function' ? campPanelDef('cruiser') : null, rows = P && typeof campPanelList === 'function' ? campPanelList(C, 'cruiser') : [], i = rows.findIndex(r => r.id === 'goal');
+  return { name: N.name, key: P && P.key ? P.key : 'Q', n: String(i >= 0 ? i + 1 : 1) };
+}
 function campNavClear(C, why) {
   const N = C && C.nav; if (!N) return false;
   C.nav = null;
-  const key = { key: 'camp.nav.off', clear: 'camp.nav.cleared', arrived: 'camp.nav.arrived', lost: 'camp.nav.lost' }[why];
-  if (key) C.events.push({ type: 'nav', key, vars: { name: N.name } });
+  const key = { key: 'camp.nav.tripoff', clear: 'camp.nav.cleared', arrived: 'camp.nav.arrived', lost: 'camp.nav.lost' }[why]; // key: a steering key took the wheel (the scene, src/campaignscene.js): one short line, once, with the way back
+  if (key) C.events.push({ type: 'nav', key, vars: why === 'key' ? campNavResume(C, N) : { name: N.name } });
   return true;
 }
 

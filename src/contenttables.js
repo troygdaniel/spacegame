@@ -1614,7 +1614,7 @@ const UI_TEXT = {
   'camp.warp.l3': '{dest}. Dropping out of warp.',
   'camp.warp.skip': 'Any key skips',
   'camp.nav.go': 'Autopilot to {name}. Any steering key takes the wheel.',
-  'camp.nav.off': 'Autopilot off. You have the wheel.',
+  'camp.nav.tripoff': 'Trip cancelled. {key} {n} to fly to the goal again.',
   'camp.nav.cleared': 'Destination cleared.',
   'camp.nav.arrived': '{name}: arrived.',
   'camp.nav.lost': 'Autopilot off: {name} is gone.',
