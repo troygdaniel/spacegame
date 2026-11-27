@@ -37,9 +37,9 @@ console.log('A. the Q list');
 console.log('B. Q 7');
 {
   g.run(`__mk();`);
-  check('no stick: the last row is Form up on me, and it is still the 7th', J('__row7().label') === 'Form up on me' && J(`campPanelRows(C, 'cruiser').findIndex(r => r.id === 'formup')`) === 6);
+  check('no stick: the last row is Form up on me, and it is the 6th since Mine ore left the list (card space-game-orders-f5-q-cruiser-only; it was the 7th)', J('__row7().label') === 'Form up on me' && J(`campPanelRows(C, 'cruiser').findIndex(r => r.id === 'formup')`) === 5);
   g.run(`campCockpitTake(C); __away(3000, 0);`);
-  check('flying a fighter: the same row (still 7) reads Cruiser, come to me', J('__row7().label') === 'Cruiser, come to me' && J(`campPanelRows(C, 'cruiser').findIndex(r => r.id === 'formup')`) === 6);
+  check('flying a fighter: the same row (the 6th) reads Cruiser, come to me', J('__row7().label') === 'Cruiser, come to me' && J(`campPanelRows(C, 'cruiser').findIndex(r => r.id === 'formup')`) === 5);
   g.run(`window.__o0 = JSON.stringify(C.ships.filter(u => u.kind === 'fighter').map(u => u.order)); window.__r = campPanelRun(C, campPanelList(C, 'cruiser').find(r => r.id === 'formup'), 'key');`);
   check('Q 7 sends the cruiser: the autopilot flies to the FIGHTER (a moving ship, kept alongside), with the answer in words (shown, not spoken)', J('__r.ok') === true && J('__r.say') === 'Cruiser on its way to you.' && J('C.nav.on') === true && J('C.nav.ref') === J('C.cockpit.id') && J('C.nav.moving') === true, JSON.stringify(J('[__r, C.nav]')));
   check('and the pilots are not ordered (nobody forms up: their orders are untouched)', J(`JSON.stringify(C.ships.filter(u => u.kind === 'fighter').map(u => u.order)) === __o0`));
@@ -50,7 +50,7 @@ console.log('B. Q 7');
   g.run(`campCockpitGive(C, 'hand'); window.__st = campPanelRowState(C, campPanelList(C, 'cruiser').find(r => r.id === 'formup'));`);
   check('handed back: the row is the pilots\' Form up again (the dry run is theirs), the label too', J('__row7().label') === 'Form up on me' && J('campPanelRun(C, campPanelList(C, "cruiser").find(r => r.id === "formup"), "key").ok') === true);
   g.run(`__mk(); campCockpitTake(C); __away(3000, 0);`);
-  check('the key path: Q then 7 (the numbered list) does it', (g.run(`P.open = ''; campPanelKey(P, C, 'KeyQ', 0); window.__k7 = campPanelKey(P, C, 'Digit7', 100);`), J('__k7.ran') === true && J('__k7.ok') === true && J('C.nav && C.nav.on') === true), JSON.stringify(J('__k7')));
+  check('the key path: Q then 6 (the numbered list) does it', (g.run(`P.open = ''; campPanelKey(P, C, 'KeyQ', 0); window.__k7 = campPanelKey(P, C, 'Digit6', 100);`), J('__k7.ran') === true && J('__k7.ok') === true && J('C.nav && C.nav.on') === true), JSON.stringify(J('__k7')));
 }
 
 console.log('C. W and the pilot he flies');

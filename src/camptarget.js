@@ -262,7 +262,7 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     const info = { second: E.second ? E.second.verb : null, secondWho: E.second ? E.second.who : '', given: E.given }; // for the sentence line: what Enter twice would do (or did)
     if (E.second && E.armed) { // THE SECOND ENTER, within CAMP.orderLine.twice ms of one that was taken (card space-game-orders-f4-enter-twice, Troy, 27 Nov 2026, mock F): the just-given order is switched to its secondary
       const r = E.second.run(how, dry);
-      if (!dry && r && r.ok) CAMP_ENTER.set(C, { key: E.key, at: t, twice: true });
+      if (!dry && r && r.ok) { CAMP_ENTER.set(C, { key: E.key, at: t, twice: true }); (C.keysUsed || (C.keysUsed = {})).twice = true; } // (the one-time chip that teaches Enter twice goes quiet, src/campteach.js)
       return Object.assign({}, r, { verb: E.second.verb, formup: false, second: E.second.verb, secondWho: E.second.who, given: dry ? E.given : 2, twice: true });
     }
     const r = give();
