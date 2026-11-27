@@ -1303,6 +1303,8 @@ const UI_TEXT = {
   'camp.corner.chip.teachenter': 'send a pilot',
   'camp.corner.chip.teachboost': 'catch up',
   'camp.corner.chip.teachmissile': 'in range',
+  'camp.corner.chip.reload': 'Reload',
+  'camp.corner.chip.teachr': 'rack is empty',
   'camp.corner.cruiserauto': 'Cruiser (auto)',
   'camp.corner.comehere': 'Cruiser, come to me',
   'camp.price.stick': 'The miners lose a guard while you fly.',

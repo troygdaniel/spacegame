@@ -15,3 +15,5 @@ The words of the key row that teaches (card space-game-chunk12-teach-q; Troy, 26
 | camp.corner.chip.teachenter | send a pilot |
 | camp.corner.chip.teachboost | catch up |
 | camp.corner.chip.teachmissile | in range |
+| camp.corner.chip.reload | Reload |
+| camp.corner.chip.teachr | rack is empty |
