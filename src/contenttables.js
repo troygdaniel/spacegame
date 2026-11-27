@@ -1296,6 +1296,7 @@ const UI_TEXT = {
   'camp.corner.comehere': 'Cruiser, come to me',
   'camp.corner.comesay': 'Cruiser on its way to you.',
   'camp.corner.flying': 'You are flying {name}.',
+  'camp.corner.backon': 'Back on the cruiser.',
   'scr.keys.r.cockpit': "Take a pilot's stick; again hands it back",
   'camp.corner.lost': 'lost',
   'camp.corner.allshort': 'All',
