@@ -288,6 +288,7 @@ const CAMP = {
     hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
     damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
     rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
+    pod: true,                             // THE POD (card space-game-chunk5-pod-eject; Troy, 26 Nov 2026): the fighter he flies, shot down, loses no pilot: a pod leaves the wreck, the view goes back to the cruiser, the pilot mends CAMP.repair.time (20 s: the rule of a hurt pilot) and C waits for him; nothing is charged (no kill, no ship lost). false: today's death (the pilot is lost for the mission)
     turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
@@ -1041,6 +1042,7 @@ function campHurt(C, u, dmg, byId, ang) {
   if (u.hp <= 0) { u.killer = byId; campKill(C, u); }
 }
 function campKill(C, u) {
+  if (u.cockpit && typeof campCockpitEject === 'function' && campCockpitEject(C, u)) return; // the fighter he flies: a pod, no pilot lost (src/campcockpit.js)
   u.hp = 0;
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind, team: u.team, fac: u.faction, by: u.killer }); // team, fac, by: who died and who fired the last shot, for the kill's colour and the pilot's ring (the picture only, src/campmoments.js)
   if (u.team === 'alien') {

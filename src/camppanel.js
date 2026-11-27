@@ -161,7 +161,7 @@ function campPanelKey(P, C, code, now) {
   }
   if (campKeyIs('cockpit', code) && typeof campCockpitOn === 'function' && campCockpitOn()) { // C: take the stick of a pilot's fighter, or hand it back (card space-game-fly-fighter-l1; with the switch off this key is no key)
     res.used = true; if (!C || campPanelHeld(P, now) || campPanelOwnsArrows(P)) return res; // (a list that has the arrows has the keys: C waits until it is shut)
-    let r = null, say = ''; if (C.cockpit) { campCockpitGive(C, 'hand'); say = uiText('camp.corner.backon'); } else if (!campCockpitTake(C)) r = campNo('nopilot'); else { const f = campCockpitFlown(C); say = f ? uiText('camp.corner.flying', { name: campSelLabel(CAMP_SELPILOT + (f.squad || '')) }) : ''; } // a line either way (the scene toasts what a key says: an empty one left an empty plate on the screen)
+    let r = null, say = ''; if (C.cockpit) { campCockpitGive(C, 'hand'); say = uiText('camp.corner.backon'); } else if (!campCockpitTake(C)) r = campCockpitPodWait(C) > 0 ? { ok: false, say: uiText('camp.corner.podwait', { s: campCockpitPodWait(C) }) } : campNo('nopilot'); else { const f = campCockpitFlown(C); say = f ? uiText('camp.corner.flying', { name: campSelLabel(CAMP_SELPILOT + (f.squad || '')) }) : ''; } // a line either way (the scene toasts what a key says: an empty one left an empty plate on the screen)
     res.ran = true; res.ok = !r; res.say = r ? r.say : say; res.row = 'cockpit'; return res;
   }
   return res;
