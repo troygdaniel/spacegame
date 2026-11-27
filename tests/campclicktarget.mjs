@@ -43,7 +43,7 @@ const at = (u, dx = 0, dy = 0, z = 1) => `campClickHit(C, ${J(u + '.x') + dx}, $
 check('a point on an enemy is a hit: { kind: hostile, id }', J(at('RA')).kind === 'hostile' && J(at('RA')).id === J('RA.id'));
 check('a point on a ship you protect is a hit: friendly; a point on a pilot\'s ship is a hit: pilot, with its squad', J(at('H1')).kind === 'friendly' && J(at('H1')).id === 'freighter-t1' && J(at('PR')).kind === 'pilot' && J(at('PR')).squad === 'red');
 check('a point in empty space is none', J(`campClickHit(C, ${J('C.carrier.x') + 3000}, ${J('C.carrier.y') + 3000}, 1)`) === null);
-check('the cruiser is no ship to click: a point on it is none', J(`campClickHit(C, C.carrier.x, C.carrier.y, 1)`) === null);
+check('the cruiser is no ship of the list to click, but it is YOU: a point on it is "me" (card space-game-orders-click-me-and-rocks; tests/campclickme.mjs), not a hostile, a friendly or a pilot', J(`campClickHit(C, C.carrier.x, C.carrier.y, 1).kind`) === 'me');
 const R1 = Math.max(J('RA.r'), J('CAMP.click.hit'));
 check('close to the ship (inside the circle) hits and past it does not, at zoom 1: the circle is the ship\'s radius or CAMP.click.hit screen pixels, whichever is more', J(at('H1', R1 - 4, 0)) !== null && J(at('H1', R1 + 12, 0)) === null, R1);
 check('and the circle grows as the view zooms out: a point 4 times the circle away at zoom 1 is a miss, and a hit at zoom 0.2 (a pixel is five world px)', J(at('H1', 4 * R1, 0)) === null && J(at('H1', 4 * R1, 0, 0.2)) !== null && J(at('H1', 4 * R1, 0, 0.2)).id === 'freighter-t1');

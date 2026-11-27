@@ -84,10 +84,10 @@ console.log('D. E and Enter at the miner\'s call (card space-game-chunk14-teach-
   const e = J('campTeachChips(C).find(c => c.id === "e")');
   check('the E chip is added, lit: the key table\'s key for the friends\' list, the word Friendly, the note "then 2: the miner"', !!e && e.key === J('campKeyOpens("friends")') && e.key === 'E' && e.word === 'Friendly' && e.note === 'then 2: the miner' && e.lit === true, JSON.stringify(e));
   const en = J('campPageHudFirst(C).items.filter(i => i.id === "enter").map(i => (i.lit ? "lit " : "") + i.word + (i.note ? " [" + i.note + "]" : ""))');
-  check('the Enter chip reads Form up until something is picked: it is NOT lit then (the note would contradict the word)', en.length === 1 && en[0] === 'Form up', JSON.stringify(en));
+  check('the Enter chip reads Do it (card space-game-orders-f3-enter-fits: the verb is the sentence line\'s) until something is picked: it is NOT lit then (the note would contradict the word)', en.length === 1 && en[0] === 'Do it', JSON.stringify(en));
   g.run(`window.__was = campPageHudEnterNow; campPageHudEnterNow = () => ({ key: 'Enter', word: 'Guard', verb: 'guard' });`);
   const picked = J('campPageHudFirst(C).items.filter(i => i.id === "enter").map(i => (i.lit ? "lit " : "") + i.word + " [" + i.note + "]")');
-  check('once the miner is picked (Enter reads Guard) the chip is lit with "send a pilot": E, then 2, then Enter, in the order the key row shows them', picked.length === 1 && picked[0] === 'lit Guard [send a pilot]', JSON.stringify(picked));
+  check('once the miner is picked (Enter will guard it) the chip is lit with "send a pilot": E, then 2, then Enter, in the order the key row shows them', picked.length === 1 && picked[0] === 'lit Do it [send a pilot]', JSON.stringify(picked));
   g.run(`campPanelGo({ open: null, at: 0, top: 0, pick: null, trail: [] }, C, 'friends');`);
   check('opening the friends\' list (E) quiets the E chip; Enter stays lit (it reads Guard)', J('campTeachChips(C).every(c => c.id !== "e")') && J('Object.keys(campTeachLights(C)).indexOf("enter") >= 0'));
   g.run(`C.orders.guard++;`);

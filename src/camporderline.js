@@ -16,13 +16,13 @@ const campOrderLineCruiser = () => { const t = typeof uiText === 'function' ? ui
 function campOrderLine(C) {
   if (!C || !C.carrier || typeof campSelOrder !== 'function' || typeof campSelNow !== 'function') return null;
   const w = campSelNow(C), h = typeof campHeldNow === 'function' ? campHeldNow(C) : null, e = campSelOrder(C, 'engage', 'key', true) || {}; // (the dry run: today's real Enter; nothing is carried out)
-  const kind = e.formup ? 'formup' : e.verb === 'attack' ? 'attack' : 'guard';
-  const verb = uiText(kind === 'attack' ? 'camp.corner.enter.attack' : kind === 'guard' ? 'camp.corner.enter.guard' : 'camp.corner.formup');
+  const kind = e.formup ? 'formup' : e.verb === 'attack' ? 'attack' : e.verb === 'mine' ? 'mine' : 'guard';
+  const verb = uiText(kind === 'attack' ? 'camp.corner.enter.attack' : kind === 'guard' ? 'camp.corner.enter.guard' : kind === 'mine' ? 'camp.corner.enter.mine' : 'camp.corner.formup');
   const f = kind === 'formup' && typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; // flying a fighter, nothing picked: the others form up on HIM
-  const target = kind === 'formup' ? (f ? { t: typeof campSelLabel === 'function' && f.squad ? campSelLabel(CAMP_SELPILOT + f.squad) : f.kind, ghost: true, kind: 'fighter' } : { t: campOrderLineCruiser(), ghost: true, kind: 'cruiser' }) : { t: h ? h.name : '', ghost: false, kind: h ? h.kind : 'friendly' };
+  const target = kind === 'formup' ? (f ? { t: typeof campSelLabel === 'function' && f.squad ? campSelLabel(CAMP_SELPILOT + f.squad) : f.kind, ghost: true, kind: 'fighter' } : { t: campOrderLineCruiser(), ghost: true, kind: 'cruiser' }) : { t: h ? h.name : '', ghost: false, kind: h ? (h.post && h.post.field ? 'field' : h.kind) : 'friendly' };
   const who = { t: w ? String(w.label || w.name || '') : '', ghost: !w || w.kind !== 'pilot' };
   return { who, verb: { t: campOrderLineLower(verb), kind }, target, ok: e.ok !== false, why: e.ok === false && e.say ? String(e.say) : '', pick: !who.ghost || !!h,
-    tip: h && h.unit && e.ok !== false ? { id: h.id, text: uiText('camp.corner.orderline.tip', { who: who.t, verb: campOrderLineLower(verb) }) } : { id: '', text: '' } };
+    tip: h && (h.unit || (h.post && h.post.field)) && e.ok !== false ? { id: h.unit ? h.unit.id : h.id, text: uiText('camp.corner.orderline.tip', { who: who.t, verb: campOrderLineLower(verb) }), at: h.unit ? null : { x: h.post.x, y: h.post.y, r: h.post.r } } : { id: '', text: '' } };
 }
 
 // the Q order just given: a list that runs a row and has it TAKEN notes it in P.did ({ id, at }; a refusal is not noted), so a new P.did is an order (the first look is not news); the row's words, read back
@@ -54,10 +54,10 @@ function campOrderLineNow(C, P) {
 // the scene's half: the tip on the picked target, one small text over it, the same words as the line ("Wedge will attack"), in the strength of the squares; kept in scene.hud (a scene that starts again makes its own)
 function campOrderLineTipSync(scene) {
   const C = scene.camp, cam = scene.cameras && scene.cameras.main, V = scene.hud; if (!C || !cam || !V) return;
-  const L = scene.mode === 'play' && !scene.mp && CAMP.orderLine.tip ? campOrderLineNow(C) : null, u = L && L.tip.id && C.by ? C.by[L.tip.id] : null;
-  let t = V.orderTip; if (!L || !u || u.hp <= 0) { if (t && t.visible) t.setVisible(false); return; }
+  const L = scene.mode === 'play' && !scene.mp && CAMP.orderLine.tip ? campOrderLineNow(C) : null, u = L && L.tip.id ? (L.tip.at ? L.tip.at : C.by ? C.by[L.tip.id] : null) : null; // (a ship, or a rock field: its middle and size)
+  let t = V.orderTip; if (!L || !u || (u.hp != null && u.hp <= 0)) { if (t && t.visible) t.setVisible(false); return; }
   if (!t || (t.active === false && !t.scene)) t = V.orderTip = scene.add.text(0, 0, '', uiFont(11, '#e6edf7', { stroke: '#02060d', strokeThickness: 3 })).setOrigin(0.5, 1).setDepth(9);
   const z = cam.zoom > 0 ? cam.zoom : 1, word = L.tip.text + (L.check ? ' ✓' : '');
   if (typeof campLabel === 'function') campLabel(t, word, '#e6edf7'); else if (t.text !== word) t.setText(word);
-  t.setScale(1 / z).setAlpha(L.a).setPosition(u.x, u.y - ((u.r || 14) + 18) / z).setVisible(true); // the same size on the screen at any zoom, above the ship
+  t.setScale(1 / z).setAlpha(L.a).setPosition(u.x, u.y - ((L.tip.at ? 0 : (u.r || 14)) + 18) / z).setVisible(true); // the same size on the screen at any zoom, above the ship
 }
