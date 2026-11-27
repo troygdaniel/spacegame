@@ -62,7 +62,8 @@ const BOTS = {
   ace: { name: 'ace', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace' },
   ace1: { name: 'ace1', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace', hpK: 1 },
   sit: { name: 'sit', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit' },
-  sitoff: { name: 'sitoff', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit', turrets: 'off' }
+  sitoff: { name: 'sitoff', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit', turrets: 'off' },
+  sitm: { name: 'sitm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sitm' }                // sit, beside a miner (card space-game-b10-c11-12-miner-guard): the stick taken, flown to the nearest neutral miner and parked there, no gun; only a mission with miners (1.2) means anything
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
@@ -204,6 +205,11 @@ g.run(`(() => {
     const s = C.t / 1000, K = st.ck = st.ck || { q: [], err: 0, hold: 0 };
     if (C.cockpit) {
       const u = campEye(C), inp = C.cockpit.input; M.cockSec += 1 / 30; M.cockIds[C.cockpit.id] = 1;
+      if (B.cockpit === 'sitm') { // sits BESIDE a miner (card space-game-b10-c11-12-miner-guard: the page's one-minute test of chunk 11): flies to the nearest neutral miner, brakes beside him, never fires and never leaves
+        const m = C.ships.filter(x => x.kind === 'miner' && x.team === 'neutral' && x.hp > 0).sort((p, q) => campDist(p, u) - campDist(q, u))[0], now = { turn: 0, thrust: 0, brake: false, boost: false, fire: false };
+        if (m) { const dist = campDist(m, u), d = Math.atan2(Math.sin(Math.atan2(m.y - u.y, m.x - u.x) - u.rot), Math.cos(Math.atan2(m.y - u.y, m.x - u.x) - u.rot)); now.turn = clampi(d * sk.gain); now.thrust = dist > 150 && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < 100; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; }
+        Object.assign(inp, now); C.input.fire = false; return;
+      }
       if (B.cockpit === 'sit') { Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); C.input.fire = false; return; }
       C.input.fire = false; // Space is the fighter's gun now (the cruiser's turrets are CAMP.cockpit.turrets' to fire)
       if (u.hp < u.maxHp * COCK.lowHull) { campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
