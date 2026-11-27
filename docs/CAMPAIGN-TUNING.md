@@ -930,6 +930,30 @@ No number changed. While the last guard of 2.2 runs to call the second group (`C
 ## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`, brief 8)
 `CAMP.cockpit.hpK` stays **2** (Troy's own call: double hull, so he is not shot down in seconds while he learns). The measurement: the ace bot is shot down in no run of any mission at 2; at 0.65 it is shot down in 3 percent of 3.2 and 9 percent of 3.3 and still wins every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The bot is too evasive to show when a human is shot down (it parks out of reach), so Troy judges hpK in play: the "Flown hull" row of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already choose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.
 
+## Mission 2.2: the guards stand in two groups (card `space-game-b10-c6-22-two-guard-groups`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 6; base main `571624b9`; agreed with 4-GEN's chunk 2: theirs lands first, this touches only the guards' positions)
+
+**The change** (the mission row's `guards`, positions only; no code, the same seven guards, no hit-point change): four guards (two gunships, two drones) stand south of Proxima d and three (a gunship, two drones) west of it, one group each side of the gate at Proxima b: the groups' centres are **1,532 px apart**, each about 750 px from the gate and 1,184 px from where the cruiser arrives (the nearest guard 1,005 px, so none wakes at the arrival), each within 260 px of its own centre. One pass cannot kill both. The fourth-guard call, the runner (six dead) and the guard patrol read the one list, so they count the guards of both groups; the gate at Proxima b stays "hot" (no safe dock) while either group lives, because each has guards within the outpost's clear distance of it (900 px: `tests/campoutpost.mjs`).
+
+**Placements tried** (plain bot, 12 seeds, steady, seconds / cruiser damage; today 68 / 165): the two groups either side of the arrival, 1,640 apart: 66 / 161; four near the arrival and three at 1,500: 63 / 148; both a flight east of the arrival, 1,500 apart: 67 / 135 (it left the gate uncovered, and `tests/campoutpost.mjs` caught it: the gate is hot only while a guard is within 900 px of it); **either side of the gate: 63 / 127 (taken)**. The spacing moves the plain bot's time by a few seconds only (it flies about 400 px a second and kills as it comes); the length of 2.2 is in the kills and the reinforcements, not the walk. I did not push the groups farther apart than the page's 1,500.
+
+**The numbers** (12 seeds, 2.2; won per cent / seconds / cruiser damage; 100 per cent won everywhere; kills 14, the group stopped, as before):
+
+| skill | bot | before (`571624b9`) | after |
+|---|---|---|---|
+| steady | plain | 68 / 165 | 63 / 127 |
+| steady | carrier | 80 / 222 | 67 / 193 |
+| steady | ace | 66 / 138 | 61 / 124 |
+| steady | sit | 69 / 165 | 64 / 188 |
+| rough | plain | 67 / 150 | 62 / 150 |
+| rough | carrier | 82 / 213 | 68 / 188 |
+| rough | ace | 60 / 81 | 55 / 70 |
+| rough | sit | 69 / 147 | 64 / 165 |
+
+- **Not met:** the page asks for 2.2 to be "back toward the old length" (83 s): it is 62 to 68 s, about 5 s shorter than today (the groups are a little nearer than the old ring, which lay round the place). **Ace at rough** takes 53 per cent less cruiser damage than plain (70 against 150; 46 per cent before): over the sweep's 30 per cent rule, as it was; steady 2 per cent less (124 against 127).
+- **Words:** nothing becomes untrue ("Seven guards", "Reinforcements", "Missiles help", "Clear them all"); nothing voiced changed.
+
+**Pins.** `tests/campguardgroups.mjs` (8 checks: the same seven guards in groups of four and three; the centres 1,400 to 1,650 px apart and each within 400 px; each group over 1,100 px from the arrival; the gate stays hot while either lives; none wakes with the cruiser at the place and a ship 450 px from the first wakes that group only; two dead in each group call the reinforcements; six dead across both make the last guard (in the second group) the runner; the patrol comes at 40 s with all seven there).
+
 ## Mission 2.1: the second cache is guarded from the start (card `space-game-b10-c5-21-guarded-cache`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 5; base main `042bc059`)
 
 **Why.** 2.1 had become a 33 s mission with no fight in it (it was 42): the first cache taken calls a group, but the player could fly the whole route unopposed. **The rule** (the mission row's `guards`, no new code): a guard group waits at the second cache (the one the cruiser reaches second; caches `[800, 1600]`) from the start: 3 gunships, 3 raiders and 2 drones within 450 px of it, held until a ship of yours comes within reach, then fighting as any alien. **Two caches stay** (Troy): the objective, "Gather two resource caches", the first cache calling its group and the hunting party for a player who takes none are as built. A player can take the first and third cache and never wake them (the guards are not a condition of the win); that is the choice of who goes where, and costs the longer flight (3,490 px between those two against 2,400 to the second).
