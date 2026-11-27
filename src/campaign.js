@@ -750,8 +750,9 @@ const CAMP = {
         { id: 'guards', kind: 'attack', par: 100, hpScale: 2, dmgScale: 2.4, place: 'proxima-d', dock: 'proxima-w',  // M2 at Proxima d (a trip of about 11 s by Fast): the relic's guards                  // M2: five guards wait round the relic until your ships come within reach
           guards: [{ kind: 'gunship', at: [900, -300] }, { kind: 'gunship', at: [-700, 500] }, { kind: 'gunship', at: [1100, 700] }, { kind: 'drone', at: [-300, -700] }, { kind: 'drone', at: [300, 900] }, { kind: 'drone', at: [-1000, -200] }, { kind: 'drone', at: [700, -900] }],  // the guards (kind, offset from Proxima d)
           objectives: [{ type: 'kill', what: 'guards' }, { type: 'kill', what: 'wave:all' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
+          runner: { after: 6, far: 2400, rush: 4 },  // the guard that runs to call the second group (campRunner): with six of the seven guards dead the last runs straight away from the cruiser and calls the group when it is 2,400 px from it, at four times its speed; killed first, no group comes
           hunt: { every: 40, from: [2600, -2200], ships: { drone: 2, gunship: 1 }, more: { drone: 1, gunship: 1 }, until: { guardsDead: 7 }, restart: 'guard', focus: 'carrier' },  // the threat that comes to a player who kills no guard (campHunt): a patrol from the north-east when no guard has died for 40 s, each two ships larger, until the guards are all dead
-          waves: [{ on: { guardsDead: 4 }, from: [2600, -2200], ships: { drone: 2, gunship: 2 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2' }, { on: { guardsDead: 4 }, from: [-2500, 2000], ships: { drone: 2, gunship: 1 }, goal: 'carrier', focus: 'carrier' }, { on: { guardsDead: 6 }, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves come on what the player does (card space-game-b7-level2): the reinforcements (the old first wave, split in two) when the fourth guard dies, from two sides at once; a second group (the old second wave) when the sixth dies: the last guard calls it. They came at 18 and 40 s of the clock
+          waves: [{ on: { guardsDead: 4 }, from: [2600, -2200], ships: { drone: 2, gunship: 2 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2' }, { on: { guardsDead: 4 }, from: [-2500, 2000], ships: { drone: 2, gunship: 1 }, goal: 'carrier', focus: 'carrier' }, { on: { runner: true }, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves come on what the player does (card space-game-b7-level2): the reinforcements (the old first wave, split in two) when the fourth guard dies, from two sides at once; a second group (the old second wave) when the sixth dies: the last guard calls it. They came at 18 and 40 s of the clock
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
           start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 20, caches: 0, clear: 650, leash: 800, stand: 200 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
@@ -878,7 +879,7 @@ const campSmall = kind => kind === 'fighter' || !!PIRATES[kind] || !!CAMP.pirate
 // the pace is put on a ship from the numbers it was made with (u.base), so it can change in play and come back to Brisk exactly; u.tow is a ship of the wing towed by a burn (src/campaign.js campTowSet): its top speed and push times it
 function campPaceShip(C, u) {
   if (!u.base) return;
-  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R * (u.tow || 1); u.accel = b.accel * P * R * (u.tow || 1); u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
+  const P = C.pace * (u.fp || 1), R = u.running ? CAMP.pirate.run : 1, b = u.base; u.vmax = b.vmax * P * R * (u.tow || 1) * (u.rushK || 1); u.accel = b.accel * P * R * (u.tow || 1) * (u.rushK || 1); u.turn = b.turn * P; // R: a runner flies faster (src/camppirates.js campPirateBreakOne) and keeps it; u.fp: the share of the pace the ship flies at now, 1 away from every foe, CAMP.pace.fight in a fight (campFightPace)
   u.def = P === 1 ? b.def : Object.assign({}, b.def, { speed: b.def.speed * P, max: b.def.max * P }); // pirateSteer reads the shape: its ring and its lean use the speed and the acceleration
 }
 // A BURN TAKES THE WING WITH IT (card space-game-burn-with-wing-out; src/campnav.js has the rule and campTowTop): once a tick for each ship of the wing, is it towed? u.tow is the factor on its top speed and push (CAMP.nav.tow
@@ -1277,6 +1278,7 @@ function campSchedule(C) {
   });
   L.waves.forEach((w, i) => { const st = C.waves[i]; if (w.say2 && st.started && !st.said2 && sec - st.at >= (w.say2At || 5)) { st.said2 = true; campSay(C, w.say2, { n: i + 1 }); } }); // a second line, some seconds after the wave came
   if (L.hunt) campHunt(C, sec);
+  if (L.runner) campRunner(C);
 }
 
 // ---------- the ship's systems: power to weapons, shields and engines (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems") ----------
@@ -1361,6 +1363,7 @@ function campWaveOn(C, on) {
   if (on.cue != null) return C.cues[on.cue] != null; // a named cue a script fired (campCue, src/camppirates.js)
   if (on.held != null) return !!(C.relic && C.relic.entered && C.relic.best >= on.held); // the relic has been held this many seconds (0: the cruiser has been inside its ring): a wave of 2.3 comes for what the player does, not at a second of the clock (card space-game-23-waves-on-entry; the cloud's brief 7: one on entering, one at 5 s held, one at 10 s held)
   if (on.caches != null) return C.cachesGot >= on.caches; // this many caches taken (2.1: each cache taken calls the aliens to the next one; card space-game-b7-level2, the cloud's brief 7)
+  if (on.runner != null) return !!(C.runner && C.runner.called); // the guard that runs has reached its call point (campRunner): the group comes. Caught first, it never does
   if (on.guardsDead != null) return !!C.guardsStart && (C.L.guards || []).length - C.ships.filter(u => u.guard && u.hp > 0).length >= on.guardsDead; // this many of the mission's guards are dead (2.2: the fourth calls the reinforcements, the sixth, with one guard left, a second group)
   if (on.behind != null) { const st = C.waves[on.behind]; return !!st && st.started && campMissionClock(C) - st.at >= (on.secs || 0) * CAMP.time.waves; } // right behind another wave: this many seconds after wave `behind` came (2.3: the third wave, from the other side, while the second is still on the ring; card space-game-23-two-sides)
   if (on.cleared != null) { const w = /^wave:(\d+)$/.exec(on.cleared); return !!w && !!C.waves[+w[1]] && C.waves[+w[1]].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === +w[1]); } // a wave is cleared: it came and none of it is left (a pirate that ran away is gone, not left)
@@ -1596,6 +1599,7 @@ function campTowerAI(C, u, dt) { // a gun on a post: turns on the nearest of you
 }
 function campAlienAI(C, u, dt) {
   const def = u.def;
+  if (u.runner && C.L.runner && C.carrier) { const dx = u.x - C.carrier.x, dy = u.y - C.carrier.y, d = Math.hypot(dx, dy) || 1; campSeek(u, u.x + dx / d * 1000, u.y + dy / d * 1000, dt); return; } // the guard that runs to call a group (campRunner): it flies straight away from the cruiser and does nothing else
   if (u.hold) { // a guard: it waits where it is until one of your ships comes within reach, then it is an ordinary alien
     if (!campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.9)) { const keep = Math.pow(0.5, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; return; }
     u.hold = false;
@@ -1653,6 +1657,20 @@ function campRelicAlien(C, u, dt) {
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
   }
+}
+// THE GUARD THAT RUNS (a mission row's `runner`; card space-game-fighter-job-22, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes). When `after` of the mission's guards are dead (2.2: six of seven) the last one runs: it flies for the call point
+// away from the cruiser at its own speed and, when it is `far` px from the cruiser, has made its call, and the group of the wave row with `on: { runner: true }` comes (campWaveOn). A ship of yours that kills it first (a fighter is
+// fast enough to catch it; the cruiser is not) stops the call for good: the group never comes, and 'wave:all' counts it as gone. If the guards are all dead before one could run, the call is not made either.
+function campRunner(C) {
+  const r = C.L.runner, R = C.runner || (C.runner = { id: '', called: false, off: false }); if (R.called || R.off || C.result) return;
+  if (!R.id) {
+    const live = C.ships.filter(u => u.guard && u.hp > 0);
+    if (!live.length) { R.off = true; return; }
+    if ((C.L.guards || []).length - live.length < r.after) return;
+    const u = live[0]; R.id = u.id; u.runner = true; u.hold = false; u.rushK = r.rush || 1; return; // (it runs at `rush` times its speed: out of the turrets' reach in a second or two, so only a ship close behind it can stop the call)
+  }
+  const u = C.by[R.id]; if (!u || u.hp <= 0) { R.off = true; return; }
+  if (campDist(u, C.carrier) >= r.far) { R.called = true; u.runner = false; } // the call is made: it is an ordinary guard again
 }
 // THE HUNTING PARTIES (a mission row's `hunt`; card space-game-b7-level2, the cloud's brief 7, decision 6; Troy, 26 Nov 2026: yes to the 2.1 party). A threat that comes to a player who does nothing: while the row's
 // `until` (a wave's trigger: campWaveOn) is not true, a party comes for the cruiser from `from` every `every` seconds of the mission's clock, the first after `every`; party k has the row's `ships` and `more` of each kind
@@ -1925,7 +1943,7 @@ function campObjectives(C) {
       else if (o.what === 'towers') got = C.flags.towers ? 1 : 0;
       else if (o.what === 'guards') got = C.guardsStart && !C.ships.some(u => u.guard && u.hp > 0) ? 1 : 0;
       else if (/^rival:/.test(o.what)) got = campRivalDone(C, o.what.slice(6)) ? 1 : 0; // the rival is dead or has got away (src/camprival.js)
-      else if (o.what === 'wave:all') got = C.waves.length && C.waves.every(w => w.started) && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && (u.wave != null || u.hunt != null)) ? 1 : 0; // every wave of the mission has come and none of them is left, nor any of a hunting party (campHunt) (2.1 and 2.2: the groups the player's own deeds call; its words are the one wave's, "Destroy the attackers.")
+      else if (o.what === 'wave:all') got = C.waves.length && C.waves.every((w, k) => w.started || (C.runner && C.runner.off && C.L.waves[k].on && C.L.waves[k].on.runner != null)) && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && (u.wave != null || u.hunt != null)) ? 1 : 0; // every wave of the mission has come and none of them is left, nor any of a hunting party (campHunt) (2.1 and 2.2: the groups the player's own deeds call; its words are the one wave's, "Destroy the attackers.")
       else if (/^wave:/.test(o.what)) { const w = parseInt(o.what.slice(5), 10); got = C.waves[w] && C.waves[w].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w) ? 1 : 0; }
     } else if (o.type === 'hold') { need = o.secs; got = Math.min(o.secs, Math.floor(campMissionClock(C))); }
     else if (o.type === 'ore') { need = o.n; got = Math.min(o.n, Math.floor(C.oreBest)); } // the store held this much at some time (selling it afterwards does not undo it)
