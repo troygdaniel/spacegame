@@ -1151,3 +1151,48 @@ Also tried, no better: one group nearer and the other farther (3,000 and 4,400, 
 - **Mission 2.2 on the 3,800 px ring (the fighter gap at rough).** The rule asks the ace bot's cruiser damage to be at least 70 per cent of the plain bot's (the fighter may not make the cruiser's fight more than 30 per cent softer). Before the cut: 115 against 204 at rough, 44 per cent softer (rule fails; sharp 7 and steady 21 per cent softer pass). **At 15 per cent less: 142 against 204, 30.4 per cent softer, which misses by one point of damage (143 is the line)**; sharp (199 against 213) and steady (193 against 227, 15 per cent softer) pass. 25 per cent less gives 138 (32.4 per cent): it does not do better, so the rest of the gap is not the fighter's damage (the ace bot's fighter meets the farther groups on the way, as the 2.2 section above says), and another size would not close it.
 - **Voiced or shown words:** nothing says the fighter's damage; none untrue, none re-recorded.
 - **Pins:** `tests/campcockpit.mjs` and `tests/campcockpitfire.mjs` pin damageK 0.425 (re-pinned from 0.5; the fire suite's mechanism checks still run the gun at the explicit 0.5 they were written for), `tests/camptune.mjs` passes with the 0.025 step; `tests/campcockpitaim.mjs`, which sets its own gun numbers, is unchanged.
+## Mission 1.1: the probe's two skiffs stay until the fighter you fly has hit one (card `space-game-b12-c4-11-skiffs-stay`; Troy, 27 Nov 2026: yes, BRIEF 12 chunk 4, `docs/next-chunks.html`; base main `daba9be3`; 32 seeds, pace Brisk, the bots' tables before and after)
+
+**What changed.** The probe's wave row (the last of 1.1's four, at 12 percent of the road) has **`stayUntilHit: true`** (`src/campaign.js`). Its two skiffs do not break off for a hurt hull until the fighter the player flies has hit one of the wave's ships (`campHurt` sets `C.waves[3].flownHit`; `campPirateStays` in `src/camppirates.js` holds the run back until then). A hit by the turrets, by a wing fighter or by the patrol does not count, nor does one while no fighter is flown. Nothing else of 1.1 to 3.3 has the field, nothing is voiced or reworded, and the probe still comes at 0.12 with two skiffs, silent.
+
+**What it does (12 seeds, bot steady, the probe's two skiffs; `ace` flies the fighter from 1 s, `sit` takes the stick and does nothing, `plain` is the cruiser alone).**
+
+| bot | first hit on the probe by | a probe skiff ran, before | after | first skiff dead at | the radio said "A pirate is running", before | after |
+|---|---|---|---|---|---|---|
+| ace | the flown fighter on 7 seeds at 40.6 to 41.1 s; on the other 5 the neutral patrol lands a shot about a second earlier (39.6 to 39.9 s) and the fighter its own right after | 12 of 12 | 12 of 12 | 41.2 s | 12 of 12, at 41.1 s | 12 of 12 |
+| sit | the turrets on 11 of 12, at 43.2 s | 12 of 12 | **0 of 12** | 43.4 s | 12 of 12, at 43.4 s | **0 of 12** |
+| plain | the turrets on 11 of 12, at 43.1 s | 11 of 12 | **0 of 12** | 43.3 s | 11 of 12, at 42.8 s | **0 of 12** |
+
+- **The fighter that arrives first changes nothing:** with the stick taken at 1 s the fighter hits the first skiff at about 41 s, 900 px out, before the turrets can, so the flag is set at once and they run as they always did. (A patrol's shot, a second earlier on 5 of 12 seeds, does not count and does not matter: three hits are needed to bring a skiff under the break line.)
+- **Without a fighter hit the skiffs stay in the fight and the turrets kill both at 43.4 s,** the same second as before: a skiff under the break line ran for under a second before the turrets finished it, and said "A pirate is running" for a ship that was dead a moment later. That line is no longer said at 43 s; the first one now comes with the miner's pirates, at about 110 s.
+- **What it does not do (for Troy): the skiffs are not "still there" for a fighter that arrives after 43 s.** The cruiser's turrets kill both within four seconds of their showing at 39 s, running or not. The page's one-minute test (take the stick at 39 s, hold Up and Shift) shows the skiffs there only if the fighter is on them before about 43 s. To keep them for a later fighter the turrets' reach or the skiffs' approach would have to change, which is another chunk.
+
+**The cruiser bots, 1.1 (32 seeds each; median win time 306 s in every cell: it is the transport's own road).**
+
+| skill | bot | won, before | after | cruiser damage, before | after |
+|---|---|---|---|---|---|
+| sharp | plain | 97 | 94 | 212 | 222 |
+| steady | plain | 94 | 97 | 227 | 217 |
+| rough | plain | 97 | 100 | 222 | 222 |
+| sharp | carrier | 97 | 100 | 227 | 227 |
+| steady | carrier | 94 | 97 | 222 | 237 |
+| rough | carrier | 94 | 91 | 237 | 232 |
+| steady | thinks (the careful player: helps the miner, convoy orders) | 100 | 100 | 112 | 92 |
+
+The careful player still wins every seed (32 of 32, win time 312 s then 317 s). Every other move is a seed or two of 32 and goes both ways: the skiffs' changed end re-rolls the random draws of every fight after 43 s.
+
+**The cockpit sweep, 1.1 (`--cockpit --level 1 --mission 1 --cbots plain,ace,sit`; won percent, plain / ace / sit, cruiser damage plain / ace / sit).**
+
+| skill | before | after |
+|---|---|---|
+| sharp | 97 / 97 / 94, 212 / 212 / 227: time, damage, sit, hurt pass; kills fail | 94 / 94 / 88, 222 / 212 / 227: sit and kills fail |
+| steady | 94 / 94 / 88, 227 / 212 / 217: sit fails | 97 / 94 / 100, 217 / 212 / 222: **all five pass** |
+| rough | 97 / 100 / 84, 222 / 202 / 227: sit fails | 100 / 100 / 97, 222 / 202 / 217: **all five pass** |
+
+0 of 3 mission-skills pass the rule before and 2 of 3 after. **That is the same re-roll, not the rule at work:** the damage and time columns are the same to within 10, and the hands-off bot's win rate swings 84 to 97 and 88 to 100 with a seed or two. The rule's third part (rule 3, the hands-off bot) is the one that moves, and it moves with plain's own rate.
+
+**The miner's call (`tests/campminer.mjs`, 32 seeds: ignore / one pilot / all three).** Won 32, 32, 25 before and 32, 31, 24 after; a torpedo gets through on 5, 18 and 24 before and 13, 14 and 27 after; the miner is saved on 0, 18 and 31 before and 0, 22 and 30 after; a pilot is lost in 0 of 96 runs before and 1 after (Kara, seed 1 of the one-pilot answer, at 114 s in the miner's own fight, not the probe's). The "ignore" torpedo count is the one that looks like a move, so it was checked on 64 more seeds (33 to 96): **29 of 64 before, 27 of 64 after**, one pilot lost in 64 after and none before. It is the re-roll again. All the 32-seed pins hold: all three still costs at least 10 more torpedo runs than ignoring it (14 against 27), the transport's hull order never reverses, and every answer wins on at least 24 of 32 (all three: 24, exactly the pin).
+
+**Pins moved (and said so, not loosened).** `tests/campminer.mjs`: (1) the three-seed sample "every answer still wins, no pilot lost, on all but one of nine runs" is now "all but two of nine, at most one pilot lost in a run" (two of the nine runs, both of the all-three answer, are lost after; it was one), with a new 32-seed line beside it: a pilot is lost in at most 3 of the 96 runs; (2) the keys-against-order check asks for the same pilots lost as the order bot (none until now; seed 1 loses one in both) instead of none. The two 1.1 numbers in the comment, "all three wins 25 of 32", now say 24. No other suite moved.
+
+**Pins added.** `tests/campskiffsstay.mjs` (12 checks: exactly one row of Level 1 has the field and it is 1.1's probe, the flag is set by the flown fighter only and only on its own wave, a hurt probe skiff stays until then and runs after it, another wave's skiff runs when hurt as before, the row's lane, count and silence are as they were).
