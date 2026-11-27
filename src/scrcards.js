@@ -82,6 +82,7 @@ function scrWonModel(C, P, o) { // o: { sc: the score, title: the mission's name
   o = o || {}; const sc = o.sc || (C && typeof campScore === 'function' ? campScore(C) : {}), R = o.replay || null;
   const hp = C && C.carrier ? Math.round(100 * C.carrier.hp / Math.max(1, C.carrier.maxHp)) : 100, stats = [scrStatN(uiText('scr.card.time'), scrClock(sc.t | 0)), scrStatN(uiText('scr.card.hull'), hp + '%'), scrStatN(uiText('scr.card.shipslost'), sc.shipsLost | 0)];
   if ((sc.haulersLost | 0) > 0) stats.push(scrStatN(uiText('scr.card.haulerslost'), sc.haulersLost | 0));
+  if (sc.flown === true) stats.push(scrStatN(uiText('scr.card.ownkills'), sc.ownKills | 0)); // the kills he made himself in a fighter he flew (card space-game-b10-c14-won-kills; BRIEF 10 chunk 14): shown only when he took the stick
   if (o.tuned === true) stats.push(scrPillN(uiText('scr.card.notkept'), null, { tone: 'amber', push: true })); else stats.push(scrRankGroup(P));
   const kids = [
     scrRowN([scrColN([scrTextN('lab', uiText(R ? 'scr.card.replay' : 'scr.card.complete'), 'ok'), scrTextN('t2', o.title || '')], { gap: 0.1 }), scrTextN('t1', scrNum(sc.score | 0), 'gold')], { just: 'sp' }),
