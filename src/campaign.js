@@ -233,7 +233,8 @@ const CAMP = {
     hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
   },
   target: {                                // the hostiles' key (card space-game-keys4-onekey; src/camptarget.js campTgtCycle)
-    restart: 2000                          // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
+    restart: 2000,                         // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
+    nose: 2.5                               // while a fighter is flown: ] and \ order the hostiles by distance times (1 + nose times the angle off the fighter's nose, in radians): 0 is the plain distance, 2.5 puts one dead ahead before one twice as near abeam (card space-game-chunk9-pick-from-nose). In the cruiser the plain distance, as it was
   },
   charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
