@@ -42,7 +42,7 @@ console.log('A. the switch and the table');
   check('C is the key (the table: one key, KeyC), and the H page lists it only while the switch is on', J('CAMP_KEYS.cockpit.k') === 'C' && J('CAMP_KEYS.cockpit.codes.join()') === 'KeyC' && J(`campKeysPage().some(gr => gr.rows.some(r => r.caps.join() === 'C'))`) === true && (g.run(`CAMP.flags.cockpit = false;`), J(`campKeysPage().some(gr => gr.rows.some(r => r.caps.join() === 'C'))`)) === false);
   g.run(`CAMP.flags.cockpit = true;`);
   check('the address ?cockpit=1 is on, ?cockpit=0 is off, none says nothing', J(`campCockpitAddrOn('?campaign=1&cockpit=1')`) === true && J(`campCockpitAddrOff('?cockpit=0')`) === true && J(`campCockpitAddrOn('?campaign=1')`) === false && J(`campCockpitAddrOff('?campaign=1')`) === false);
-  check('the three words are the content table\'s (shown, never said): the chip words and the cruiser line', J(`uiText('camp.corner.chip.cockpit')`) === 'Cockpit' && J(`uiText('camp.corner.chip.cockpitback')`) === 'Hand back' && J(`uiText('camp.corner.cruiserline', { hull: 540, max: 600, shield: 220 })`) === 'Cruiser 540/600 · shield 220');
+  check('the three words are the content table\'s (shown, never said): the chip words and the cruiser\'s tag (Cruiser (auto): card space-game-b7-hud-q-cockpit)', J(`uiText('camp.corner.chip.cockpit')`) === 'Cockpit' && J(`uiText('camp.corner.chip.cockpitback')`) === 'Hand back' && J(`uiText('camp.corner.cruiserauto')`) === 'Cruiser (auto)');
 }
 
 console.log('B. who is taken');

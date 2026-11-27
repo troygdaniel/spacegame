@@ -75,7 +75,7 @@ function campPageModel(C, view) {
   if (!C || !C.carrier) return null;
   const S = campCruiserStatus(C);
   const eye = typeof campEye === 'function' ? campEye(C) : C.carrier, fly = !!C.cockpit && !!eye && eye !== C.carrier; // fly: he holds the stick of a pilot's fighter (card space-game-fly-fighter-l1): the bars are the fighter's (it has no shield), the boost and the speed are the ship he flies (campBoostStatus, campFeelShip), and the cruiser he left is one small line
-  const ship = { key: campCornerCap('zoomreset'), shield: fly ? null : campPageHudBar(S.shield, 'shield'), hull: campPageHudBar(fly ? { frac: eye.maxHp > 0 ? Math.max(0, Math.min(1, eye.hp / eye.maxHp)) : 0 } : S.hull, 'hull'), boost: campPageHudBoost(C), speed: campPageHudSpeed(C), cruiser: fly ? { text: uiText('camp.corner.cruiserline', { hull: S.hull.n, max: Math.round(C.carrier.maxHp), shield: S.shield.n }), warn: !!S.hull.warn } : null };
+  const ship = { key: campCornerCap('zoomreset'), shield: fly ? null : campPageHudBar(S.shield, 'shield'), hull: campPageHudBar(fly ? { frac: eye.maxHp > 0 ? Math.max(0, Math.min(1, eye.hp / eye.maxHp)) : 0 } : S.hull, 'hull'), boost: campPageHudBoost(C), speed: campPageHudSpeed(C), cruiser: fly ? { tag: uiText('camp.corner.cruiserauto'), shield: campPageHudBar(S.shield, 'shield'), hull: campPageHudBar(S.hull, 'hull'), warn: !!S.hull.warn } : null }; // the cruiser he left, flying itself: two thin meters under a small tag (card space-game-b7-hud-q-cockpit; it was a line of small grey text)
   const rows = typeof campPanelDef === 'function' && campPanelDef('fleet') ? campPanelList(C, 'fleet').filter(r => r.who && r.who !== 'all') : [], stops = typeof campSelList === 'function' ? campSelList(C) : [], now = typeof campSelNow === 'function' ? campSelNow(C) : null;
   const items = rows.map((r, i) => {
     const e = stops.find(x => x.id === r.who), u = e && e.unit, up = !!u && u.hp > 0 && !u.gone, name = e ? e.name : campSelPilotName(null, String(r.who).replace(CAMP_SELPILOT, '')), frac = up ? campTdispHull(u).share : 0;
@@ -301,7 +301,8 @@ function campPageHudBuild(doc) {
   const br = campPageHudEl(doc, 'div', 'ph-row ph-boostrow', ship), bw = campPageHudEl(doc, 'span', 'ph-lab', br), bt = campPageHudEl(doc, 'div', 'ph-meter', br); // Boost: a word, a thin track, a percentage under 100
   R.ship.boost = { el: br, word: bw, pct: campPageHudEl(doc, 'b', 'ph-lab', br), fill: campPageHudEl(doc, 'i', 'ph-fill ph-boost', bt) };
   const sr = campPageHudEl(doc, 'div', 'ph-row ph-speedrow', ship); R.ship.speed = { el: sr, word: campPageHudEl(doc, 'span', 'ph-lab', sr), n: campPageHudEl(doc, 'b', 'ph-lab ph-sp', sr) }; // Speed: the word and the number (the Long Haul's dial)
-  R.ship.cruiser = campPageHudEl(doc, 'div', 'ph-row ph-cruiser', ship); // the cruiser he left, while he flies a fighter: one small line (card space-game-fly-fighter-l1)
+  const cr = campPageHudEl(doc, 'div', 'ph-cruiser', ship), crt = campPageHudEl(doc, 'div', 'ph-lab ph-ctag', cr), crr = campPageHudEl(doc, 'div', 'ph-row', cr); // the cruiser he left, while he flies a fighter (cards space-game-fly-fighter-l1 and space-game-b7-hud-q-cockpit): a small tag (Cruiser (auto)) over its two meters, shield and hull
+  R.ship.cruiser = { el: cr, tag: crt, shield: campPageHudMeterEl(doc, crr, 'shield'), hull: campPageHudMeterEl(doc, crr, 'hull') };
   campPageHudEl(doc, 'div', 'ph-hr', ship);
   const fl = campPageHudEl(doc, 'div', 'ph-row ph-fleet', ship); R.fleet = { el: fl, pilots: [], ships: [] };
   R.fleet.pkey = campPageHudEl(doc, 'span', 'ph-k', fl); R.fleet.pBox = campPageHudEl(doc, 'div', 'ph-grp', fl); campPageHudEl(doc, 'span', 'ph-sep', fl);
@@ -333,7 +334,7 @@ function campPageHudListModel(P, C, now) {
   const id = campPanelOpen(P), def = id ? campPanelDef(id) : null; if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(id))) return null;
   const V = campPanelView(P, C); if (!V) return null;
   const cur = V.rows[V.at], flash = typeof CAMP_PANELS === 'object' ? CAMP_PANELS.anim.flash : 160;
-  return { id, key: def.key, pick: !!V.pick, title: V.pick ? String(V.title || '') : '', below: V.below | 0,
+  return { id, key: def.key, pick: !!V.pick, title: V.pick ? String(V.title || '') : id === 'cruiser' && C.cockpit && typeof campCockpitFlown === 'function' && campCockpitFlown(C) ? uiText('camp.corner.cruiserauto') : '', below: V.below | 0, // (the cruiser's list is headed Cruiser (auto) while he flies a fighter: card space-game-b7-hud-q-cockpit)
     rows: V.rows.map((st, i) => ({ id: st.id, num: V.numbers ? (st.num ? String(st.num) : '') : String(st.key || ''), key2: V.numbers && st.key ? String(st.key) : '', label: String(st.label || '') + (st.more ? '  >' : ''), short: String(st.short || ''), ok: !!st.ok, marked: !!st.marked, at: V.at >= 0 && i === V.at, lit: !!(P.lit && P.lit[st.id] != null && now - P.lit[st.id] >= 0 && now - P.lit[st.id] < flash), hull: st.hull >= 0 ? st.hull : -1, band: st.band || '' })),
     foot: cur && cur.state ? cur.state.charAt(0).toUpperCase() + cur.state.slice(1) : (V.below ? uiText('camp.ui.listmore', { n: V.below }) : ''), why: !!cur && !cur.ok, keys: uiText(V.keys, { key: def.key, last: V.last }) };
 }
@@ -413,7 +414,7 @@ function campPageHudPaint(R, M, doc) {
   set(S.key, 'text', M.ship.key);
   set(S.shield.el, 'display', M.ship.shield ? '' : 'none'); // no shield bar on a fighter
   ['shield', 'hull'].forEach(id => { if (M.ship[id]) campPageHudPaintMeter(S[id], M.ship[id]); });
-  if (S.cruiser) { const cr = M.ship.cruiser; set(S.cruiser, 'display', cr ? '' : 'none'); if (cr) { set(S.cruiser, 'text', cr.text); set(S.cruiser, 'cls', 'ph-row ph-cruiser' + (cr.warn ? ' warn' : '')); } }
+  if (S.cruiser) { const cr = M.ship.cruiser; set(S.cruiser.el, 'display', cr ? '' : 'none'); if (cr) { set(S.cruiser.tag, 'text', cr.tag); campPageHudPaintMeter(S.cruiser.shield, cr.shield); campPageHudPaintMeter(S.cruiser.hull, cr.hull); set(S.cruiser.el, 'cls', 'ph-cruiser' + (cr.warn ? ' warn' : '')); } }
   if (S.boost && M.ship.boost) { const b = M.ship.boost; campPageHudPaintMeter(S.boost, b); set(S.boost.fill, 'cls', 'ph-fill ph-boost' + (b.on ? ' on' : b.locked ? ' dry' : b.full ? ' full' : '')); set(S.boost.el, 'cls', 'ph-row ph-boostrow' + (b.locked ? ' dry' : '')); } // the boost store: its fill is bright white while it boosts and when it is full, and while it is locked the whole row is dim, the fill the player's pale blue at low strength and the word REFILLING where the percentage goes (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour)
   if (S.speed && M.ship.speed) { const sp = M.ship.speed; set(S.speed.word, 'text', sp.word); set(S.speed.n, 'text', String(sp.n)); set(S.speed.el, 'display', sp.show ? '' : 'none'); set(S.speed.el, 'cls', 'ph-row ph-speedrow' + (sp.over ? ' on' : '')); }
   const F2 = R.fleet; set(F2.pkey, 'text', M.pilots.key); set(F2.ekey, 'text', M.friends.key);

@@ -96,12 +96,12 @@ const CAMP_PANELS = {
   why: { over: 'the battle is over', bay: 'the bay is empty', launching: 'still launching', baydry: 'all of it is out', nofighters: 'no fighters out', nosquad: 'no ships in the squad', noconvoy: 'no convoy to escort', nowing: 'no ships out',
     noore: 'no ore in reach', noore2: 'needs {need} ore', noearth: 'no Earth here', what: 'cannot do that now', mending: 'already being mended', farward: 'too far from the cruiser', noward: 'no ship of ours is hurt', nobuild: 'nothing is built now',
     cnone: 'no escorted ships', cwhat: 'cannot do that now', nogoal: 'no objective', there: 'you are there', docked: 'already docked', noposts: 'no outpost here', whichpost: 'no such outpost', farpost: 'no outpost in range', hotdock: 'aliens too close', hullfull: 'the hull is sound', shieldfull: 'the shield is full', powermax: 'at full power', powernone: 'no power to take', powerwhat: 'which system?', locked: 'running: the power is held', cooling: 'ready in {s} s',
-    notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech', nopilot: 'that pilot is not out', nofriend: 'that ship is gone', rackfull: 'the rack is full', reloading: 'already building' },
+    notarget: 'pick a target first', nofoe: 'no hostiles in sight', nomissiles: 'no missiles left', missilewait: 'the launcher is reloading', range: 'out of missile range', nobig: 'nothing in reach', noblink: 'needs the warp tech', nopilot: 'that pilot is not out', flying: 'you are flying him', nofriend: 'that ship is gone', rackfull: 'the rack is full', reloading: 'already building' },
   // the same, a word or two, beside a row of the list
   shortWhy: { over: 'over', bay: 'bay empty', launching: 'leaving', baydry: 'all out', nofighters: 'none out', nosquad: 'none out', noconvoy: 'no convoy', nowing: 'none out', cnone: 'no convoy', cwhat: 'not now',
     noore: 'no ore near', noore2: 'needs {need} ore', noearth: 'no Earth', what: 'not now', mending: 'mending', farward: 'too far', noward: 'none hurt', nobuild: 'no building',
     nogoal: 'no goal', nofoe: 'none seen', there: 'there', docked: 'docked', noposts: 'no outpost', whichpost: 'no post', farpost: 'too far', hotdock: 'foes near', hullfull: 'hull sound', shieldfull: 'shield full', powermax: 'at full', powernone: 'none free', powerwhat: 'which?', locked: 'held', cooling: '{s} s',
-    notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech', nopilot: 'not out', nofriend: 'gone', rackfull: 'rack full', reloading: 'building' }
+    notarget: 'no target', nomissiles: 'none left', missilewait: 'reloading', range: 'too far', nobig: 'none near', noblink: 'no tech', nopilot: 'not out', flying: 'you', nofriend: 'gone', rackfull: 'rack full', reloading: 'building' }
 };
 // the direct keys of the Campaign (the scene reads the codes here; a hint names the cap): { k: the cap or caps a hint prints, codes: the KeyboardEvent.codes that do it }. One key, one meaning, everywhere in flight
 const CAMP_KEYS = {
@@ -316,7 +316,7 @@ const CONTROLS = [
     { k: ['F'], t: 'F looks at the picked ship', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Q (the zoom row) brings it back. X (clear the picks) is gone: card space-game-keys5-qwe
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
-    { k: ['Enter'], t: 'Map: fly there (Shift+Enter: fast)', sub: 'THE MAP' },
+    { k: ['Enter'], t: 'Map: the cruiser flies to the mark (Shift+Enter: fast)', sub: 'THE MAP' }, // (card space-game-b7-hud-q-cockpit: it is the CRUISER that flies, from a fighter too; the open map has the keys)
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['X'], t: 'Map: X clears the trip', sub: 'THE MAP' },
     { k: ['/'], t: 'Type an order (needs a chat key)', sub: 'THE STRIP' }, // the same words the lists say: the strip answers through the chat key (Settings > Keys); the lists, the map and the calls need none. Hold to speak is off (CAMP_VOICE): its row comes back with campVoiceSet
