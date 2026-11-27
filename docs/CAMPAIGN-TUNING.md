@@ -202,7 +202,7 @@ Troy on the first mission: "lots of flying, not much happens", "the waiting, and
 | 0 s | At Ceres, empty store, three rock fields, two other miners | Which squads mine and which stand guard | A squad on guard cuts no rock |
 | 40 s | A probe: 3 skiffs from the east, for the miners | Which squad stops mining to meet it | Ore not mined while it is away |
 | 100 s | A raid from the south-west: 3 skiffs, 1 cutter | Send the wing, or part of it | See the next row |
-| 112 s | A second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | A pilot to each side, or finish one side first | A side with no pilot is a miner under fire |
+| 100 s (112 s until card `space-game-b7-level1`) | AT THE SAME TIME a second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | A pilot to each side, or finish one side first | A side with no pilot is a miner under fire |
 | 175 s | 2 torpedo boats and 2 skiffs, for the miners | Send the pilots at the boats (the radio and the hint say so), or tuck the miners in under the shield (typed on the strip: no key), or both | Tucked: the torpedoes hit the cruiser's shield. Pilots on the boats are not on the skiffs. Nothing: a miner or both are lost |
 | 230 to 240 s | The heavy raid, once the others are dead: 3 skiffs, 3 cutters, 2 brutes | Hurt squads home to be mended first, or all in now | Mending takes a squad out of the fight for a while |
 | after it | The Works opens its doors | Dock and sell (the mission ends), or mine on for the 400-ore bonus | Time against the speed bonus |
@@ -426,6 +426,31 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *The cruiser alone* (`campturretlead.mjs`, `campmissiles.mjs`): the pilots start out beside the cruiser, at the mouth, and shoot too; the mouth moved, so the raider of one duel was hit by their guns, not the turrets'. The two suites keep the pilots in the bay (`CAMP.bay.startOut = false`, as the suites of the bay do), which is what they were measuring.
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
+
+## Level 1, brief 7: a probe, two raids at once, the flown fighter counts (card `space-game-b7-level1`; Troy said yes to all fifteen decisions, 26 Nov 2026; base main `71e94e1c`)
+The authority is the page `docs/pace-and-polish.html` (decisions 3, 4 and 14). Three missions, one idea: the player who flies a fast fighter, or sends one pilot away, must still face a real question.
+
+| Mission | What changed | Why |
+|---|---|---|
+| 1.1 | **A probe of 2 skiffs** at 12 percent of the road, when the patrol turns back (a fourth wave, last in the row, silent: no new voiced line). The first hostile shot was at about 100 s (8 seeds: 100 to 102 s); it is at **41 to 43 s** now. **The pilots SENT count** (`campMinerSent`, `src/campminer.js`): every pilot seen at the miner while his call is live, flown by the player or not, counts when the price wave spawns, even if his pirates are dead by then. | A fighter at boost reaches the miner in about 4 s and kills his two pirates in less than the ten seconds the price wave waits, and was back before the boats: the call was over and nobody counted, so the rescue was free. (The flown fighter was already counted at the instant of the spawn: I tested it; it was the instant that was the loophole.) |
+| 1.2 | The raid at 100 s and **the second group arrive together** (both at 100 s, from the south-west and the north-east; the second was at 112 s); **par and the swift bonus 300 to 270 s**. | A fast fighter answered each raid alone. Together, one is the cruiser's and the other the pilots' or the fighter's. |
+| 1.3 | **The front raid and the rear raid together at 40 percent** (the front raid was at 56); the last rear raid at **56** (it was 72, so it still comes before the contact); **first contact at 70 percent** (it was 82). | Both ends of the convoy are hit at once; the empty road before contact is shorter. |
+
+The brief said "the front raid (40 percent)": in the table 40 is the REAR raid (beat 3, on the last hauler) and the front raids are at 8, 24 and 56; ORCH agreed to pair the rear raid at 40 with the front raid of 56.
+
+**The cruiser bots, old (main `71e94e1c`) against new, the same 32 seeds.** All 26 bots, the bots' default pace (brisk):
+
+| | mean win rate | plain bot | median win time | mean hull | mean damage taken |
+|---|---|---|---|---|---|
+| 1.1 | 88.0 to 87.2 | 100 to 97 | 306 to 306 s | 582.0 to 578.8 | 166.6 to 165.3 |
+| 1.2 | 80.7 to 79.2 | 100 to 97 | 266 to 266 s | 600 to 600 | 33.3 to 34.3 |
+| 1.3 | 88.5 to 88.5 | 100 to 100 | 292 to 292 s | 600 to 600 | 55.5 to 57.4 |
+
+No bot moves its win rate by 9 points or more in any mission. At **Normal, the pace a player gets** (plain and carrier bots, 32 seeds): 1.1 plain 97 to 100 percent, carrier 100 to 100; 1.2 plain 94 to 94 (win time 270 to 268 s), carrier 0 to 0 (it never mines: it loses to the miners, 69 to 59 percent of runs lost); 1.3 plain 100 to 100, carrier 100 to 97 (one lost transport). On the first sixteen seeds at Normal the plain bot wins 1.2 on 16 of 16 before and 14 of 16 after (the two lost are lost to the miners); on all 32 seeds the rate is the same, 94 percent: which seed is lost moves with when the second group arrives, so the small-seed pins of `tests/campl1tune.mjs` read twelve seeds now. Each mission is about as hard as it was for the cruiser bots. **The fighter bots (`--cockpit`: ace, sit, card `space-game-fly-fighter-l3`) are not on main yet: the table with them follows when that card lands.**
+
+**The pins this moved:** `tests/campl1pacing.mjs` (1.2's second group at 100 s, 1.3's lanes 0.08, 0.24, 0.40, 0.40, 0.56 and the contact at 0.70 and at 188 s, the hint "Two groups, two sides" at 104 s, the 1.1 wave count 4), `tests/campl1tune.mjs` (par and swift 270 s; the 1.2 runs read six seeds and the plain bot's wins twelve), `tests/campbeats.mjs` (the row has four waves; the probe is one), `tests/campminer.mjs` (the price checks were gated on the row having THREE waves: with the probe they were skipped without a word; they are gated on the price wave itself now, and a unit check says a pilot sent counts after his pirates die, flown or not).
+
+**For Troy (briefings and voiced lines are not reworded; these are what the new rules make less true):** (1) the 1.1 briefing's first moment, "Patrol leaves" (`scr.bf.1.1.m1`), is now also the moment two skiffs attack the transport: the moment is true but short of what happens. (2) The ship's line on the radio for the probe is none: it is silent, so a player learns of it from the pink pill and the shot. (3) 1.2's "Pirates from the south-west" and "A second group, north-east. A pilot to each side." now come in the same moment, one after the other (both lines are still true). Nothing else in the briefings of 1.1 to 1.3 is made untrue.
 
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
