@@ -1,5 +1,6 @@
 // smoke: the flown fighter's gun (card space-game-fly-fighter-fire-rate): a steady shot every 183 ms at half the pilot's damage (rateK 3, damageK 0.5), the AI pilots' guns unchanged, and in the scene the pew is always heard and stays a stream, with a flash at the nose (plain Node, no Chrome)
 // Troy, 26 Nov 2026, after flying the fighter: the fire rate was too slow. The Wren fires every 160 ms; the pilots every 450 to 650 ms (8 damage). The flown gun: CAMP.cockpit.rateK 3 and damageK 0.5, so about 1.5 times a pilot's damage a second, not the Wren's 94. Both are live sliders on the N panel (card space-game-fly-fighter-l3).
+// Card space-game-player-damage-down (Troy, 27 Nov 2026: flying the fighter is a bit easy): the table's damageK is 0.425 now (was 0.5); the mechanism checks below run the gun at the explicit 0.5 they were written for (__go(3, 0.5, 5)), so they test the gun, not the table; the table is the one check above.
 // Run: node tests/campcockpitfire.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +11,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame(), J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`)), src = f => readFileSync(join(ROOT, f), 'utf8');
 
 console.log('A. the table');
-check('the flown gun is three times the pilot\'s rate at half the damage, the hull double: rateK 3, damageK 0.5, hpK 2', JSON.stringify(J('[CAMP.cockpit.rateK, CAMP.cockpit.damageK, CAMP.cockpit.hpK]')) === '[3,0.5,2]');
+check('the flown gun is three times the pilot\'s rate at 0.425 of the damage (card space-game-player-damage-down, Troy 27 Nov: 15 percent less than the 0.5 it was), the hull double: rateK 3, damageK 0.425, hpK 2', JSON.stringify(J('[CAMP.cockpit.rateK, CAMP.cockpit.damageK, CAMP.cockpit.hpK]')) === '[3,0.425,2]');
 check('the pilots\' own guns are what they were: 8 damage, a shot every 450 to 650 ms, 700 px/s, 420 range', JSON.stringify(J('[CAMP.fighter.damage, CAMP.fighter.delay, CAMP.fighter.bullet, CAMP.fighter.range]')) === '[8,[450,650],700,420]');
 
 console.log('B. the gun, five seconds with Space held (the sim, a ship standing still)');
@@ -20,7 +21,7 @@ g.run(`window.__go = (rateK, damageK, secs) => {
   const u = C.ships.find(x => x.team === 'earth' && x.kind === 'fighter' && x.hp > 0 && !x.docked); campCockpitTake(C, u.id); const S = C.cockpit; S.input.fire = true;
   const times = []; let dmg = 0; // (the shots are counted from the events, one 'wingshot' each: a shot's bullet may be gone again in the same step when many are alive)
   for (let i = 0; i < secs * 30; i++) { C.ships.forEach(x => { if (x.team === 'alien') x.hp = 1e9; }); campStep(C, 1 / 30); C.events.filter(e => e.type === 'wingshot' && e.id === u.id).forEach(() => times.push(Math.round(C.t))); const lb = C.bullets.filter(x => x.from === u.id).pop(); if (lb) dmg = lb.dmg; C.events.length = 0; }
-  CAMP.flags.cockpit = false; CAMP.cockpit.rateK = 3; CAMP.cockpit.damageK = 0.5; return { times, dmg, str: u.str || 1 };
+  CAMP.flags.cockpit = false; CAMP.cockpit.rateK = 3; CAMP.cockpit.damageK = 0.425; return { times, dmg, str: u.str || 1 };
 };`);
 const r = J('__go(3, 0.5, 5)');
 const gaps = r.times.slice(1).map((t, i) => t - r.times[i]), mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
