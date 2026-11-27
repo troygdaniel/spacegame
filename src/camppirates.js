@@ -38,12 +38,21 @@ function campPreyKind(u) {
 }
 const campPreyOf = (want, kind) => want === 'haulers' ? kind === 'freighter' : want === 'miners' ? kind === 'miner' : want === 'carrier' ? kind === 'carrier' : true;
 
+// a wave row may carry guard (px) with along (the hauler it comes up behind): the rear raid of 1.3 (card space-game-fighter-job-13, BRIEF 8 proposal C, decision 1: "the rear raid goes for the last hauler only while no pilot and no flown
+// fighter is within 500 px of her"). The hauler along names is the pirate's prey only while none of your fighters (a pilot's, or the one he flies: kind 'fighter', not docked) is within guard px of her; the raid that finds her
+// guarded goes for something else by the usual weights (another hauler, the fighter that is there, the cruiser). Returns that hauler while she is guarded, else null; a wave without guard never asks.
+function campPirateGuarded(C, u) {
+  const W = u && u.wave != null && C.L && C.L.waves ? C.L.waves[u.wave] : null; if (!W || !(W.guard > 0) || !W.along) return null;
+  const h = C.by['freighter-' + W.along]; if (!h || h.hp <= 0) return null;
+  return C.ships.some(s => s.team === 'earth' && s.kind === 'fighter' && s.hp > 0 && !s.docked && campDist(s, h) <= W.guard) ? h : null;
+}
 // what a pirate attacks: the hauler its wave names, else (for a while) whatever hit it, else the best by prey weight
 function campPirateTarget(C, u) {
   const K = CAMP.pirate;
   if (u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) return f; }
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) return h; }
-  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral'));
+  const lg = campPirateGuarded(C, u); // a raid that leaves a hauler alone while a fighter of yours is near her (card space-game-fighter-job-13): she is not prey now
+  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && s !== lg);
   const want = u.prey || 'any';
   let pool = want === 'any' ? all : all.filter(s => campPreyOf(want, campPreyKind(s)));
   if (!pool.length) pool = all;
@@ -61,6 +70,9 @@ function campPirateAI(C, u, dt) {
   }
   if (u.hp < u.maxHp * (u.breakAt != null ? u.breakAt : K.breakHp)) { campPirateBreakOne(C, u, 'hurt'); return campPirateRun(C, u, dt); }
   const def = u.def, tgt0 = campPirateTarget(C, u) || C.carrier, tgt = tgt0 && campDogFoe(C, u, tgt0); // a skiff that picked one of your fighters flies at its partner (src/campdogfight.js)
+  if (u.wave != null && tgt0 && C.waves[u.wave] && !C.waves[u.wave].told) { // THE ALONE LINES (card space-game-13-alone-lines-guarded; Troy, 26 Nov 2026: yes): 1.3's two rear raids' VOICED lines ("Pirates on the last hauler. She is alone back there." and "More of them, on the last hauler again.") play only when a pirate of the raid really goes for her: it has picked the hauler the row names (`along`), and that happens only while no fighter of yours is within `guard` px of her (campPirateGuarded). A raid that finds her guarded says nothing (no new line, no rewording); one that comes on her later, when the fighter has left, says it then, once.
+    const W = C.L.waves[u.wave]; if (W && W.say && W.guard > 0 && W.along && tgt0.id === 'freighter-' + W.along) { C.waves[u.wave].told = true; campSay(C, W.say, { n: u.wave + 1 }); }
+  }
   if (!tgt) return;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
   const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0))); // a skiff against a fighter is a dogfight; with the player's flown fighter on its tail it breaks (src/campbreak.js)
