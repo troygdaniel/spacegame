@@ -322,7 +322,14 @@ const CAMP = {
     turn: 1.5708,                          // rad: the heading it breaks to, off the line from the chaser to it (a right angle: across the chaser's nose)
     turnK: 1.6,                            // times its own turn rate, while it breaks (a hard turn)
     ms: 700,                               // how long it breaks
-    cool: 3000                             // ms after it, before it can break again (so it does not jitter)
+    cool: 3000,                            // ms after it, before it can break again (so it does not jitter)
+    pair: {                                // THE PAIR (card space-game-chunk7-enemy-pair; brief 8 proposal A, second behaviour): when a hostile fighter breaks, the nearest other one comes round behind the chaser instead of going on as it was
+      range: 500,                          // px: a hostile fighter this near the one that breaks is its partner
+      ms: 2500,                            // how long the partner comes round (it gives up then, and goes on as it was)
+      behind: 220,                         // px: the point it flies to, dead astern of the chaser (its six o'clock)
+      reach: 140,                          // px: near this to the point, it has come round: it goes on as it was (and attacks)
+      cool: 4000                           // ms after it, before it can be sent round again
+    }
   },
   dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
     kinds: ['fighter', 'raider'],          // who flies it (and the pirates whose base is the raider: the skiff): they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
