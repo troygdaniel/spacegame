@@ -63,7 +63,7 @@ function campPirateAI(C, u, dt) {
   const def = u.def, tgt0 = campPirateTarget(C, u) || C.carrier, tgt = tgt0 && campDogFoe(C, u, tgt0); // a skiff that picked one of your fighters flies at its partner (src/campdogfight.js)
   if (!tgt) return;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
-  const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0)); // a skiff against a fighter is a dogfight
+  const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0))); // a skiff against a fighter is a dogfight; with the player's flown fighter on its tail it breaks (src/campbreak.js)
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
     u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
