@@ -998,13 +998,14 @@ function campHurt(C, u, dmg, byId, ang) {
   }
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
-  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0 }); // hull: it got through to the hull (the carrier's shield takes the first of it)
+  const sh = byId && C.by ? C.by[byId] : null; // who fired, if the sim knows (the picture only: the hit's sparks are the firing side's colour, src/campmoments.js; nothing here reads it back)
+  C.events.push({ type: 'hit', x: u.x, y: u.y, id: u.id, hull: dmg > 0, by: byId, side: sh ? (sh.team === 'earth' ? 'own' : 'foe') : (u.team === 'alien' ? 'own' : 'foe'), a: ang !== undefined ? ang : campHitAngle(C, u, byId) }); // hull: it got through to the hull (the carrier's shield takes the first of it); by: the shooter's id; side: 'own' or 'foe', the side that fired; a: the way the shot came from
   if (u.team === 'alien' && byId) { u.hitBy = byId; u.distractedUntil = C.t + CAMP.alien.distract; }
-  if (u.hp <= 0) campKill(C, u);
+  if (u.hp <= 0) { u.killer = byId; campKill(C, u); }
 }
 function campKill(C, u) {
   u.hp = 0;
-  C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind });
+  C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind, team: u.team, fac: u.faction, by: u.killer }); // team, fac, by: who died and who fired the last shot, for the kill's colour and the pilot's ring (the picture only, src/campmoments.js)
   if (u.team === 'alien') {
     C.kills++;
     if (u.rival) campRivalDied(C, u);
@@ -1232,6 +1233,7 @@ function campSchedule(C) {
     });
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
+    C.events.push({ type: 'wave', i, x: org[0], y: org[1] }); // a wave has come out of the dark at (x, y): the picture glows the edge it comes from (src/campmoments.js); no rule reads it
     campSay(C, w.say, { n: i + 1 });
   });
   L.waves.forEach((w, i) => { const st = C.waves[i]; if (w.say2 && st.started && !st.said2 && sec - st.at >= (w.say2At || 5)) { st.said2 = true; campSay(C, w.say2, { n: i + 1 }); } }); // a second line, some seconds after the wave came
