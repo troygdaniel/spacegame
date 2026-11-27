@@ -1301,6 +1301,7 @@ const UI_TEXT = {
   'camp.corner.chip.friendly': 'Friendly',
   'camp.corner.chip.teache': 'then 2: the miner',
   'camp.corner.chip.teachenter': 'send a pilot',
+  'camp.corner.chip.teachboost': 'catch up',
   'camp.corner.cruiserauto': 'Cruiser (auto)',
   'camp.corner.comehere': 'Cruiser, come to me',
   'camp.price.stick': 'The miners lose a guard while you fly.',
