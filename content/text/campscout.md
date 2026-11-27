@@ -7,4 +7,4 @@ The words of the scout (card space-game-fighter-job-31, BRIEF 8 proposal C): a f
 | key | text |
 |---|---|
 | camp.hud.scouted | Scouted |
-| camp.map.scout | Scouted ({n}) |
+| camp.map.scouted | Scouted ({n}) |

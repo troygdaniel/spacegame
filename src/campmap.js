@@ -154,7 +154,7 @@ function campMapLegend(C, marks) {
   marks = marks || campMapMarks(C);
   const n = t => marks.filter(m => m.type === t).length, c = CAMPMAP.color;
   const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['scout', c.alien, 1], ['pirate', c.pirate, 1], ['tboat', c.pirate, 1], ['torpedo', c.torpedo, 1], ['patrol', c.patrol, 1], ['miner', c.miner, 1], ['mother', c.mother, 0], ['rival', c.pirate, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
-  const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: r[0] === 'scout' ? marks.filter(m => m.type === 'scout').reduce((a, m) => a + m.n, 0) : n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing'); // (a scouted wave's row counts the ships of the waves revealed, not the marks)
+  const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + (r[0] === 'scout' ? 'scouted' : r[0]), { n: r[0] === 'scout' ? marks.filter(m => m.type === 'scout').reduce((a, m) => a + m.n, 0) : n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing'); // (a scouted wave's row counts the ships of the waves revealed, not the marks)
   const sq = CAMP.wing.squads.filter(k => marks.some(m => m.squad === k)).map(k => ({ type: k, color: CAMP.wing.squadColor[k], text: uiText('camp.map.' + k, { n: marks.filter(m => m.squad === k).length }) })); // the squads in focus that have ships out, under the wing's row (their ring on the map: only a squad in focus has a coloured mark, so only it has a row)
   if (at >= 0) out.splice(at + 1, 0, ...sq); else out.push(...sq);
   return out;
