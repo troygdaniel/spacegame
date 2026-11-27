@@ -131,7 +131,7 @@ function campMomentsKill(s, e) {
   k.ringDone = false;
   campMomentsKillPlace(k, 0);
   if (!still) { // the view's nudge toward the kill (a unit vector from the middle of the view; the size is the number of the frame)
-    const cam = s.cameras && s.cameras.main, mx = cam && cam.midPoint ? cam.midPoint.x : (cam ? cam.scrollX + (cam.width || 0) / 2 : e.x), my = cam && cam.midPoint ? cam.midPoint.y : (cam ? cam.scrollY + (cam.height || 0) / 2 : e.y), dx = e.x - mx, dy = e.y - my, d = Math.hypot(dx, dy);
+    const cam = s.cameras && s.cameras.main, mid = cam && cam.midPoint, dx = mid ? e.x - mid.x : 0, dy = mid ? e.y - mid.y : 0, d = Math.hypot(dx, dy); // (the camera's own middle: the scroll is read in the files that own it, src/camzoom.js)
     if (d > 1) S.nudge = { x: dx / d, y: dy / d, t0: C.t };
   }
   if (e.by !== undefined && e.by !== null) { const m = s.momPulse || (s.momPulse = {}); m[e.by] = (typeof performance !== 'undefined' ? performance.now() : 0) + CAMPMOM.pulse; } // the pilot whose shot it was: his ring in the page HUD pulses (campPageModel reads it)
@@ -147,10 +147,8 @@ function campMomentsKillPlace(k, age) { // the pooled sprites of one kill at its
   return true;
 }
 function campMomentsWave(s, e) {
-  if (!s || !e || !s.pageHudOn || typeof campPageHudWave !== 'function' || !s.camp) return false;
-  const cam = s.cameras && s.cameras.main, z = cam && cam.zoom > 0 ? cam.zoom : 1, W_ = typeof campPageW === 'function' ? campPageW() : W, H_ = typeof campPageH === 'function' ? campPageH() : H;
-  const sx = ((e.x - (cam ? cam.scrollX : 0)) - W_ / 2) * z + W_ / 2, sy = ((e.y - (cam ? cam.scrollY : 0)) - H_ / 2) * z + H_ / 2; // (the page pills' own formula: the scroll is the camera's)
-  const at = campMomentsEdge(sx, sy, W_, H_); if (!at) return false;
+  if (!s || !e || !s.pageHudOn || typeof campPageHudWave !== 'function' || typeof campPageHudWaveEdge !== 'function' || !s.camp) return false;
+  const at = campPageHudWaveEdge(s, e.x, e.y); if (!at) return false; // (the page's own geometry, as its pills use it: src/camppagehud.js)
   s.momWaveAt = typeof performance !== 'undefined' ? performance.now() : 0; // the hostiles' pill slides in if it first shows within `hold` ms of this
   return campPageHudWave(s, at, campMomentsStill());
 }

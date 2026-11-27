@@ -425,6 +425,11 @@ function campPageHudPaint(R, M, doc) {
 // ---- the scene's call ----
 // the wave that arrives (card space-game-b7-hit-kill-wave, src/campmoments.js): the edge it comes from glows pink for a third of a second, three chevrons run inward once, and the hostiles' pill slides in. Page elements with CSS keyframes (the
 // stylesheet holds still under reduced motion): made when the first wave comes, restarted by each. at: { edge: 'l' | 'r' | 't' | 'b', p: how far along that edge, 0 to 1 }; true when it was started
+function campPageHudWaveEdge(s, x, y) { // where a point of the world is seen from the middle of the page, as { edge, p } (src/campmoments.js campMomentsEdge); the page's own geometry as the pills use it: the camera's scroll and zoom over the whole page. null with no camera or at the middle
+  const cam = s && s.cameras && s.cameras.main; if (!cam || typeof campMomentsEdge !== 'function') return null;
+  const W_ = campPageW(), H_ = campPageH(), z = cam.zoom > 0 ? cam.zoom : 1;
+  return campMomentsEdge((x - cam.scrollX - W_ / 2) * z + W_ / 2, (y - cam.scrollY - H_ / 2) * z + H_ / 2, W_, H_);
+}
 function campPageHudWave(s, at, still) {
   const R = s && s.pageHud; if (!R || !R.root || !at || typeof R.root.ownerDocument !== 'object') return false;
   const doc = R.root.ownerDocument; if (!R.wave) { const el = campPageHudEl(doc, 'div', 'ph-wave', R.root); R.wave = { el, glow: campPageHudEl(doc, 'i', 'ph-wg', el), chev: [0, 1, 2].map(() => campPageHudEl(doc, 'i', 'ph-wc', el)) }; }
