@@ -79,7 +79,7 @@ const CAMPWALKS = {
   '3.2': { moments: [
     { key: 'm1', kind: 'goal', at: { tower: 0 } },                                 // the towers
     { key: 'm2', kind: 'mute', at: { mid: [{ start: true }, { tower: 0 }] } },     // the wing goes first
-    { key: 'm3', kind: 'threat', at: { wave: 0 } },                                // reinforcements
+    { key: 'm3', kind: 'threat', at: { tower: 0, off: [-340, 330] } },             // reinforcements (a group comes out from behind the next tower when one falls, so it is a point by the ring, not a wave's spawn: card space-game-b7-level3)
     { key: 'm4', kind: 'threat', at: { tower: 0, off: [260, -240] } }              // the towers are tough
   ] },
   '3.3': { moments: [
