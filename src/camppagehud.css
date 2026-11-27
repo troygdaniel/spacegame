@@ -212,3 +212,5 @@
 .ph-qc.lit { color: var(--ph-fire); font-weight: 600; }
 .ph-qc.lit .ph-k { background: var(--ph-fire); }
 .ph-qf, .ph-qs { display: none; }
+/* Enter twice (card space-game-orders-f4-enter-twice; mock F): the secondary action after the sentence, small and dim */
+.ph-sa { color: var(--ph-mute); font-weight: 400; font-size: .85em; }
