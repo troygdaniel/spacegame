@@ -53,7 +53,9 @@ function campCockpitTake(C, id) {
   C.flights = null; C.cockpitTaken = true; // the flights of the tick are made again without this ship; cockpitTaken: once taken, the first-minute tip is not shown
   u.cockpit = true; u.hp *= k; u.maxHp = (u.maxHp || u.hp / k) * k; // the hull is the pilot's times hpK, from where it is
   const m = u.mate && C.by[u.mate]; if (m && m.mate === u.id) m.mate = null; u.mate = null; u.run = null; // out of any duel: nobody is paired with a ship the pilot's own AI is not flying
-  C.events.push({ type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y });
+  const ev = { type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y };
+  if (C.level === 1 && C.L && C.L.mid === 'mine' && !C.pricePaid) { C.pricePaid = true; ev.price = 'camp.price.stick'; } // 1.2 only: taking a pilot has a price here (a miner is lost when a pilot leaves the wing) and nothing said so: the first time, once a mission, the scene shows one line (card space-game-chunk11-12-price-line; BRIEF 8 decision 10); shown only, never voiced
+  C.events.push(ev);
   return true;
 }
 

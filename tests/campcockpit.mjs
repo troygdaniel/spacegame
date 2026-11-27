@@ -10,6 +10,7 @@
 //   H. the hand-back: the key, the fighter's loss (the pilot is lost as always), the cruiser's loss and a win
 //   I. orders and missiles keep working from the fighter
 // Run: node tests/campcockpit.mjs   (exit code 1 on a failed check)
+import { readFileSync } from 'node:fs';
 import { nodeGame } from './nodegame.mjs';
 
 let failed = 0, n = 0;
@@ -176,6 +177,24 @@ console.log('I. orders and missiles from the fighter');
   check('W still picks a pilot, with the stick held (Wedge is not a stop, so W cannot name him)', J(`campSelNow(C).squad`) === 'green' && J('C.cockpit.id') === 'fighter-5');
   g.run(`campCockpitGive(C, 'hand'); __run(1);`);
   check('the whole run is deterministic: the same level, seed and keys give the same fighter place twice', (() => { const run = () => { g.run(`__mk(); campCockpitTake(C); C.cockpit.input.thrust = 1; C.cockpit.input.turn = 0.5; C.cockpit.input.boost = true; C.cockpit.input.fire = true; __run(4);`); return J('[Math.round(__fly().x * 1000), Math.round(__fly().y * 1000), __ev.wingshot]').join(); }; return run() === run(); })());
+}
+
+console.log('J. the price of taking the stick in 1.2 (card space-game-chunk11-12-price-line; BRIEF 8 decision 10)');
+{
+  g.run(`window.__mk2 = mission => { CAMP.flags.cockpit = true; const C = window.C = campNew(1, [], { seed: 7, mission }); C.t = 1000; C.god = true; campOrder(C, 'launch'); for (let i = 0; i < 240; i++) campStep(C, 1 / 30); C.events.length = 0; return C; };`);
+  g.run(`__mk2(1); window.R1 = campCockpitTake(C); window.E1 = C.events.find(e => e.type === 'cockpit' && e.stage === 'take');`);
+  check('in 1.2 (the mission "mine") the first take carries the price line: the key camp.price.stick on the take event, and the words are "The miners lose a guard while you fly."', J('R1') === true && J('C.L.mid') === 'mine' && J('E1.price') === 'camp.price.stick' && J(`uiText('camp.price.stick')`) === 'The miners lose a guard while you fly.');
+  g.run(`campCockpitGive(C, 'hand'); C.events.length = 0; window.R2 = campCockpitTake(C); window.E2 = C.events.find(e => e.type === 'cockpit' && e.stage === 'take');`);
+  check('once a mission: handing back and taking again carries no price', J('R2') === true && J('E2') !== null && J('E2.price') === null && J('C.pricePaid') === true);
+  g.run(`__mk2(1); window.E3 = (campCockpitTake(C), C.events.find(e => e.type === 'cockpit' && e.stage === 'take'));`);
+  check('and a new mission 1.2 says it again (the flag is the battle\'s, not the page\'s)', J('E3.price') === 'camp.price.stick');
+  g.run(`__mk2(0); window.E4 = (campCockpitTake(C), C.events.find(e => e.type === 'cockpit' && e.stage === 'take')); __mk2(2); window.E5 = (campCockpitTake(C), C.events.find(e => e.type === 'cockpit' && e.stage === 'take'));`);
+  check('only in 1.2: no price on the take in 1.1 or in 1.3', J('E4') !== null && J('E4.price') === null && J('E5') !== null && J('E5.price') === null && J('C.L.mid') === 'haulers');
+  g.run(`__mk2(1); CAMP.flags.cockpit = false; window.R6 = campCockpitTake(C);`);
+  check('a refused take (the switch is off) says nothing and does not use the once', J('R6') === false && J('C.pricePaid') === null && J(`C.events.filter(e => e.price).length`) === 0);
+  g.run(`CAMP.flags.cockpit = true;`);
+  const sc = readFileSync(new URL('../src/campaignscene.js', import.meta.url), 'utf8'), vp = readFileSync(new URL('../src/voicepack.js', import.meta.url), 'utf8');
+  check('the scene shows it as a toast on the radio panel, not through the voice (campSay would speak it); the voice pack classes the key as shown only', /if \(e\.stage === 'take'\) \{ this\.tuned = true; if \(e\.price\) toast\(this, uiText\(e\.price\), '#9fe9ff'\); \}/.test(sc) && !/e\.price[^;]*\bsay\(/.test(sc) && /\^camp\\\.price\\\./.test(vp) && J(`(() => { const f = voicePackFamily('camp.price.stick'); return !!f && !!f.why && !f.spoken; })()`) === true);
 }
 
 console.log(`\n${n - failed}/${n} checks passed`);
