@@ -83,6 +83,7 @@ function campPageModel(C, view) {
   });
   const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C), edge = campPageHudEdge(C, view), fedges = campPageHudFriendEdges(C, view, edge); // open: the pick that is open now, '' none (the rings of that group grow in place)
   if (edge) C.edgeSeen = true; // a wave has been off the screen (the hostiles' pill is up): the key row teaches Tab, the map, once (src/campteach.js, card space-game-b10-c10-teach-tab)
+  C.edgeNow = !!edge; // and the pill is up NOW: the Tab chip stays lit only while it is, and goes dark once the wave is on the screen (card space-game-b12-c1-tab-chip-dark)
   const was = {}; if (edge) was.hostiles = true; fedges.forEach(f => { was[f.id] = true; }); // the pills that show now: the next look at the ships (view.was) keeps them a little longer (campEdgeOffscreen: no flicker at the edge)
   return { first: campPageHudFirst(C), ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), mother: campPageHudMother(C), hint: campPageHudHint(C), edge: edge, fedges, was, places: campPageHudPlaces(C, view),
     pilots: { key: campCornerCap('who'), items, open: open === 'fleet' },
