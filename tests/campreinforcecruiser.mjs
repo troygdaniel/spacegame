@@ -11,7 +11,7 @@ g.run(`window.T = {}; T.make = () => { const C = campNew(2, ['shield'], { seed: 
   T.step = (C, secs) => { for (let i = 0; i < 30 * secs && !C.result; i++) { C.input.thrust = 0; C.input.brake = true; C.input.fire = false; campStep(C, 1 / 30); } };`);
 
 const rows = J(`(() => { const C = T.make(); return C.L.waves.map(w => ({ on: w.on, around: w.around || null, d: w.ring ? Math.round(Math.hypot(w.ring[0], w.ring[1])) : null, ang: w.ring ? Math.atan2(w.ring[1], w.ring[0]) : null, focus: w.focus || null })); })()`);
-check('2.2\'s three wave rows come out around the cruiser, 1,500 to 1,900 px from her, and carry the focus', rows.length === 3 && rows.every(r => r.around === 'carrier' && r.d >= 1500 && r.d <= 1900 && r.focus === 'carrier'), JSON.stringify(rows));
+check('2.2\'s three wave rows come out around the cruiser, 3,500 to 4,100 px from her (card space-game-22-farther-ring: they came out 1,700 px from her until Troy found 2.2 too short), and carry the focus', rows.length === 3 && rows.every(r => r.around === 'carrier' && r.d >= 3500 && r.d <= 4100 && r.focus === 'carrier'), JSON.stringify(rows));
 check('the two reinforcement groups come from opposite sides of her (their bearings half a turn apart, within 0.1 rad)', Math.abs(Math.abs(rows[0].ang - rows[1].ang) - Math.PI) < 0.1, JSON.stringify(rows));
 
 // the cruiser at one place, the fighter flown far away (3,500 px), four guards killed: the groups appear around HER
@@ -19,7 +19,7 @@ const a = J(`(() => { const C = T.make(); const car = C.carrier, f = C.ships.fin
   C.ships.filter(u => u.guard).slice(0, 4).forEach(u => { u.hp = 0; }); C.cockpit.input.thrust = 0; campStep(C, 1 / 30); campStep(C, 1 / 30);
   const w = C.ships.filter(u => u.team === 'alien' && u.wave != null && (u.wave === 0 || u.wave === 1)); const dC = w.map(u => Math.round(campDist(u, car))), dF = w.map(u => Math.round(campDist(u, f)));
   return { n: w.length, started: C.waves.map(x => x.started ? 1 : 0).join(''), dCmin: Math.min(...dC), dCmax: Math.max(...dC), dFmin: Math.min(...dF) }; })()`);
-check('the fighter flown 4,300 px from the cruiser, the fourth guard dies: both reinforcement groups (11 ships: card space-game-22-longer-more-ships) appear 1,200 to 2,200 px from the CRUISER, and farther than 2,000 px from the fighter', a.started.slice(0, 2) === '11' && a.n === 11 && a.dCmin >= 1200 && a.dCmax <= 2200 && a.dFmin > 2000, JSON.stringify(a));
+check('the fighter flown 4,300 px from the cruiser, the fourth guard dies: both reinforcement groups (11 ships: card space-game-22-longer-more-ships) appear 3,400 to 4,200 px from the CRUISER, and farther than 2,000 px from the fighter', a.started.slice(0, 2) === '11' && a.n === 11 && a.dCmin >= 3400 && a.dCmax <= 4200 && a.dFmin > 2000, JSON.stringify(a));
 
 const b = J(`(() => { const C = T.make(); const car = C.carrier, f = C.ships.find(u => u.team === 'earth' && u.kind === 'fighter'); campCockpitTake(C, f.id); C.ships.forEach(u => { if (u.team === 'earth' && u !== car && u !== f) { u.x = -9000; u.y = -9000; u.hp = 1e9; } }); f.hp = f.maxHp = 1e9;
   C.ships.filter(u => u.guard).slice(0, 4).forEach(u => { u.hp = 0; }); campStep(C, 1 / 30); campStep(C, 1 / 30);
@@ -29,7 +29,7 @@ const b = J(`(() => { const C = T.make(); const car = C.carrier, f = C.ships.fin
 check('with the fighter parked on the path of one group, the groups still close on the cruiser (they do not stop for it): most of the live ones are over 100 px nearer her after 4 s', b.live >= 4 && b.closer >= b.live - 1, JSON.stringify(b));
 
 const c = J(`(() => { const C = T.make(); const car = C.carrier; C.ships.forEach(u => { if (u.team === 'earth' && u !== car) { u.x = -9000; u.y = -9000; u.hp = 1e9; } }); const gs = C.ships.filter(u => u.guard); gs.slice(0, 6).forEach(u => { u.hp = 0; }); campStep(C, 1 / 30); campStep(C, 1 / 30); const R = C.runner, u = R && R.id ? C.by[R.id] : null; for (let i = 0; i < 30 * 15 && !R.called; i++) campStep(C, 1 / 30); campStep(C, 1 / 30); const g3 = C.ships.filter(x => x.team === 'alien' && x.wave === 2); return { called: R.called, n: g3.length, d: g3.length ? Math.round(Math.min(...g3.map(x => campDist(x, car)))) : null, dmax: g3.length ? Math.round(Math.max(...g3.map(x => campDist(x, car)))) : null }; })()`);
-check('the second group (called by the runner) also comes out around the cruiser: 1,200 to 2,300 px from her', c.called === true && c.n === 10 && c.d >= 1200 && c.dmax <= 2300, JSON.stringify(c));
+check('the second group (called by the runner) also comes out around the cruiser: 3,300 to 4,200 px from her', c.called === true && c.n === 10 && c.d >= 3300 && c.dmax <= 4200, JSON.stringify(c));
 
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nCAMP REINFORCE CRUISER OK (${n} checks)`);
 process.exit(failed ? 1 : 0);
