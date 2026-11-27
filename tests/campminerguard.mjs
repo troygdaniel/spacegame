@@ -86,8 +86,11 @@ console.log('E. the page\'s test, as a run: 1.2, the stick taken, the fighter be
   check('the first raid (wave 0, three skiffs, 40 s) came while the fighter sat 120 px from a miner, and the skiffs picked the FIGHTER (at least 4 picks in 5), never the miner (the page: turn away from him and toward you)', aimOn.length >= 3 && aimOn.filter(k => k === 'miner').length === 0 && aimOn.filter(k => k === 'fighter').length >= aimOn.length * 0.8, JSON.stringify([aimOn.length, aimOn.filter(k => k === 'fighter').length, aimOn.filter(k => k === 'miner').length, aimOn.filter(k => k !== 'fighter' && k !== 'miner')]));
   check('the miners were not lost: both alive', J('__m.every(m => m.hp > 0)') === true);
   g.run(`__run(false);`);
+  const aimBait = J('__aims');
+  g.run(`CAMP.cockpit.baitR = 0; __run(false); CAMP.cockpit.baitR = 500;`);
   const aimOff = J('__aims');
-  check('the same run with the row taken away (as it was): the skiffs go for a miner (most of their picks)', aimOff.length >= 3 && aimOff.filter(k => k === 'miner').length >= aimOff.length * 0.8, JSON.stringify([aimOff.length, aimOff.filter(k => k === 'miner').length, aimOff.filter(k => k !== 'miner')]));
+  check('the same run with the row taken away and the bait off (as it was): the skiffs go for a miner (most of their picks)', aimOff.length >= 3 && aimOff.filter(k => k === 'miner').length >= aimOff.length * 0.8, JSON.stringify([aimOff.length, aimOff.filter(k => k === 'miner').length, aimOff.filter(k => k !== 'miner')]));
+  check('the row taken away but the bait on (card space-game-b10-c15-tune-11: a pirate within 500 px of the fighter he flies shoots IT): some of the picks are the fighter now (a quarter at least), and more than with the bait off, which is none', aimBait.length >= 3 && aimBait.filter(k => k === 'fighter').length >= aimBait.length * 0.25 && aimBait.filter(k => k === 'fighter').length > aimOff.filter(k => k === 'fighter').length, JSON.stringify([aimBait.length, aimBait.filter(k => k === 'fighter').length, aimOff.filter(k => k === 'fighter').length]));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
