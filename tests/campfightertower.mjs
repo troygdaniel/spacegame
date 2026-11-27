@@ -26,5 +26,9 @@ check('the fighter flown OUT of the tower\'s range (900 px, the range is 800): t
 const d = J(`(() => { const C = T.make(2); campCockpitTake(C, C.__f.id); campCockpitGive(C, 'hand'); const sh = T.run(C, 6, 300, 0, 0, 600); return { rot: +C.__t.rot.toFixed(2) }; })()`);
 check('the stick given back: the pilot\'s fighter is no one\'s decoy: the tower is back on the nearest ship, the cruiser', Math.abs(d.rot) < 0.3, JSON.stringify(d));
 
+// ---- the number that moves how often it hits: the gun's lead ----
+const lead = J(`(() => { const run = L => { CAMP.tower.flownLead = L; const C = T.make(2); campCockpitTake(C, C.__f.id); const f = C.__f; C.carrier.x = -9000; C.carrier.y = -9000; let first = null; for (let i = 0; i < 30 * 4 && first == null; i++) { f.x = 700; f.y = -300 + i * 20; f.vx = 0; f.vy = 600; campStep(C, 1 / 30); const b = C.bullets.find(x => x.team === 'alien'); if (b) first = Math.atan2(b.vy, b.vx); } CAMP.tower.flownLead = 0; return first; }; return { zero: run(0), one: run(1), def: CAMP.tower.flownLead }; })()`);
+check('CAMP.tower.flownLead is 0 (the gun aims where the fighter is) and moving it to 1 turns the first shot at a fighter flying north to south ahead of it', lead.def === 0 && lead.zero != null && lead.one != null && lead.one > lead.zero + 0.02, JSON.stringify(lead));
+
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nCAMP FIGHTER TOWER OK (${n} checks)`);
 process.exit(failed ? 1 : 0);
