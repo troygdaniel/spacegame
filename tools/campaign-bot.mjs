@@ -256,6 +256,7 @@ g.run(`(() => {
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
       cockSec: Math.round(M.cockSec), cockKills: M.cockKills, cockDeaths: M.cockDeaths, cockTakes: M.cockTakes, awayTaken: Math.round(M.awayHit),
       kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, convoyDead: M.dead.join('+'), shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
+      torp: Object.assign({ launched: 0, shot: 0, hit: 0 }, C.torpStat || {}), // the torpedoes of the run: launched, shot down, gone off on a ship (card space-game-fighter-job-11)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
       hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
     window.__M = null; return r;
@@ -285,6 +286,7 @@ export function summarise(rs) {
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
     shotRuns: pct(rs, r => (r.cockDeaths || 0) > 0), // the share of the runs (percent) in which the flown fighter was shot down at least once (card space-game-chunk4-fighter-shot-down: the ace used to be shot down in none)
     cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), // the cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
+    torp: ['launched', 'shot', 'hit'].reduce((o, k) => { o[k] = Math.round(rs.reduce((a, r) => a + ((r.torp && r.torp[k]) || 0), 0) / Math.max(1, rs.length) * 10) / 10; return o; }, {}), // the torpedoes a seed has, on average: launched, shot down, gone off on a ship
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
 

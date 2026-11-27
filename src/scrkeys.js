@@ -10,9 +10,9 @@
 //   scrKeysOpen(s, ids), scrKeysClose(s)   the page on a Phaser scene: a veil that takes the clicks (the game under it is not clicked) and the panel of the host (src/scrhost.js); campKeysOpen and campKeysClose call them when the switch is on
 const SCRKEYS = {
   groups: [
-    { id: 'fly', rows: [['fly', ['fly']], ['fire', ['fire']], ['missile', ['missile']], ['reload', ['reload']], ['zoom', ['zoomout', 'zoomin']]] },
+    { id: 'fly', rows: [['fly', ['fly']], ['fire', ['fire']], ['boost', ['boost']], ['missile', ['missile']], ['reload', ['reload']], ['zoom', ['zoomout', 'zoomin']]] }, // Shift (the boost) is here, with the rest of what flies the ship and in the bottom key row's own order (card space-game-chunk1-c-on-key-row; it was the Cruiser group's last row)
     { id: 'fleet', rows: [['who', ['who']], ['friend', ['friendlies']], ['enemy', ['hostiles']], ['near', ['near']], ['order', ['order']], ['look', ['focus']]] },
-    { id: 'cruiser', rows: [['list', ['@cruiser']], ['map', ['map']], ['esc', ['pause']], ['tune', ['tune']], ['boost', ['boost']]] }
+    { id: 'cruiser', rows: [['list', ['@cruiser']], ['map', ['map']], ['esc', ['pause']], ['tune', ['tune']]] }
   ],
   veil: 0.55, depth: 300                       // how dark the canvas goes behind the panel, and over what (the old page's depth: over the cards, the map and the lists)
 };

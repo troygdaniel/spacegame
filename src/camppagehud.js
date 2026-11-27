@@ -152,8 +152,15 @@ function campPageHudHint(C) {
   const nr = typeof campDockHint === 'function' ? campDockHint(C) : ''; if (nr) return { text: nr, tone: 'warn' };
   const go = typeof campBeatGoHint === 'function' ? campBeatGoHint(C) : ''; return go ? { text: go, tone: 'warn' } : null; // mission 1.1's opening hint ("Stay with the transport: Q, Fly to the goal"): its own place, so the radio's story lines never push it out (card space-game-chunk2-opening-hint)
 }
+// 3.1's scout (card space-game-fighter-job-31, src/campscout.js): while nothing hostile is in sight and a fighter of yours has revealed the wave a scan ring will call, the hostiles panel says so: the group is named "Scouted", with how many and of what, the side
+// it will come from and how far; dimmed (the class scout) until the wave is real. Real hostiles in sight, or a picked target, come first as always.
+function campPageHudFoesScout(C) {
+  const r = typeof campScoutReveals === 'function' && C && C.carrier ? campScoutReveals(C)[0] : null; if (!r) return null;
+  const c = campEye(C);
+  return { key: campCornerCap('hostiles'), label: uiText('camp.hud.scouted'), enter: null, what: campPageHudWhat(r.kinds, true), dir: campSightDir(r.x - c.x, r.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(Math.hypot(r.x - c.x, r.y - c.y)) }), target: null, scout: true };
+}
 function campPageHudFoes(C) {
-  const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : [], t = campPageHudTarget(C); if (!gs.length && !t) return campPageHudFoesAlone(C);
+  const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : [], t = campPageHudTarget(C); if (!gs.length && !t) return campPageHudFoesAlone(C) || campPageHudFoesScout(C);
   const c = campEye(C), g = gs[0] || { kinds: { [t.u.kind]: 1 }, x: t.u.x, y: t.u.y, dist: Math.hypot(t.u.x - c.x, t.u.y - c.y) }; // a picked ship nothing groups (a tower: always seen) is its own group
   return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campPageHudWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }), target: t };
 }
@@ -400,7 +407,7 @@ function campPageHudPaint(R, M, doc) {
   if (M.goal) { set(G.label, 'text', M.goal.label); set(G.value, 'text', M.goal.value); set(G.meter, 'display', M.goal.frac === null ? 'none' : ''); set(G.fill, 'width', M.goal.frac === null ? '0%' : Math.round(M.goal.frac * 1000) / 10 + '%'); set(G.fill, 'cls', 'ph-fill ph-' + M.goal.tone); set(G.ghost, 'display', M.goal.ghost == null ? 'none' : ''); set(G.ghost, 'width', M.goal.ghost == null ? '0%' : Math.round(M.goal.ghost * 1000) / 10 + '%'); }
   const F = R.foes; set(F.el, 'display', M.foes ? '' : 'none');
   if (M.foes) { set(F.key, 'text', M.foes.key); set(F.label, 'text', M.foes.label); set(F.what, 'text', M.foes.what); set(F.sub, 'text', M.foes.dir + ' \u00b7 ' + M.foes.km); campPageHudPaintEnter(F.ent, M.foes.enter); const tm = M.foes.target, T = F.tg; set(T.el, 'display', tm ? '' : 'none'); if (tm) { campPageHudPaintMeter(T.hull, tm.hull); set(T.shield.el, 'display', tm.shield ? '' : 'none'); if (tm.shield) campPageHudPaintMeter(T.shield, tm.shield); set(T.none, 'display', tm.shield ? 'none' : ''); set(T.none, 'text', tm.noshield); set(T.act, 'text', tm.doing); }
-    const pc = tm && tm.pic, pk = pc ? pc.kind + '|' + pc.side : ''; set(T.pic, 'display', pc ? '' : 'none'); set(F.el, 'cls', 'ph-p ph-foes' + (pc ? ' pic' : '')); if (T.pic._pk !== pk) { T.pic._pk = pk; T.pic.innerHTML = pc ? slookPicSvg(pc.kind, pc.side) : ''; } } // the picture: written only when the ship's kind or side changes
+    const pc = tm && tm.pic, pk = pc ? pc.kind + '|' + pc.side : ''; set(T.pic, 'display', pc ? '' : 'none'); set(F.el, 'cls', 'ph-p ph-foes' + (pc ? ' pic' : '') + (M.foes.scout ? ' scout' : '')); if (T.pic._pk !== pk) { T.pic._pk = pk; T.pic.innerHTML = pc ? slookPicSvg(pc.kind, pc.side) : ''; } } // the picture: written only when the ship's kind or side changes
   const E = R.edge; set(E.el, 'display', M.edge ? '' : 'none');
   if (M.edge && !R.edgeShown && R.waveAt && typeof performance !== 'undefined' && performance.now() - R.waveAt < (typeof CAMPMOM === 'object' ? CAMPMOM.wave.hold : 0)) campPageHudSlide(E.el, R.waveDir); // the hostiles' pill first shows within a moment of a wave: it slides in from the edge the wave came from
   R.edgeShown = !!M.edge;
