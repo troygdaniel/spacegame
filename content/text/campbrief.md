@@ -87,13 +87,13 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.2.3.w4 | Aliens come from the north-east after 3 seconds. |
 | camp.bf.3.1.w1 | Fly to each of the 3 marked rings on the map. |
 | camp.bf.3.1.w2 | Any ship of yours inside a ring scans it: 7 seconds. |
-| camp.bf.3.1.w3 | Aliens answer your first scan. Keep the wing close. |
+| camp.bf.3.1.w3 | Aliens answer each scan. Keep the wing close. |
 | camp.bf.3.1.w4 | Finish by destroying every alien that comes. |
 | camp.bf.3.2.w1 | Destroy all 4 defence towers around the target. |
 | camp.bf.3.2.w2 | Approach with the wing ahead of the cruiser. |
-| camp.bf.3.2.w3 | More aliens arrive after 25 seconds, from the north-east. |
+| camp.bf.3.2.w3 | Each tower that falls calls a group to the next one. |
 | camp.bf.3.3.w1 | Destroy all 8 defence towers of the inner ring. |
-| camp.bf.3.3.w2 | Two waves come: at 20 seconds and at 75. |
+| camp.bf.3.3.w2 | Two waves come together when the fourth tower falls. |
 | camp.bf.3.3.w3 | Approach with the wing ahead of the cruiser. |
 | camp.bf.at.relic | RELIC |
 | camp.bf.at.tower | DEFENCE TOWERS |
