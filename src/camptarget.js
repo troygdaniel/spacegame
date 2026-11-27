@@ -183,6 +183,12 @@ function campFriField(C, id) { // a rock field (id 'field-k', src/camppick.js ca
   if (!/^field-/.test(String(id || '')) || !C || !C.carrier || typeof campPickFields !== 'function') return null;
   const f = campPickFields(C).find(x => x.id === id); return f ? { id: f.id, kind: 'post', field: true, unit: null, name: f.name, x: f.x, y: f.y, r: f.r, rock: f.rock, n: f.n } : null;
 }
+function campFriMe(C) { // "me" (card space-game-orders-click-me-and-rocks; Troy, 27 Nov 2026: click your own ship): the ship the player flies now, the cruiser or the fighter he holds the stick of, as a friendly: { id: 'me', kind: 'ward', me: true, unit, name, x, y, r }; guard it and the pilots come to it. null with no cruiser
+  const u = C && C.carrier ? (typeof campEye === 'function' ? campEye(C) : C.carrier) : null; if (!u || !(u.hp > 0)) return null;
+  return { id: 'me', kind: 'ward', me: true, unit: u, name: typeof uiText === 'function' ? uiText('camp.corner.orderline.me') : 'me', x: u.x, y: u.y, r: u.r || 20 };
+}
+function campFriHoldMe(C) { const e = campFriMe(C); if (!e) return null; C.fsel = 'me'; C.tgt = ''; campMarkTouch(C, false, true); return e; } // a click on your own ship: it is THE target held (the enemy is let go)
+function campFriHoldField(C, id) { const e = campFriField(C, id); if (!e) return null; C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return e; } // a click on a rock of a field: that field is THE target held
 function campFriHold(C, id) { // a click on an outpost or a planet on the Tab map (src/campmapdraw.js): that place is THE target held now (the enemy is let go); the entry, or null when it is no place
   const e = campFriPlace(C, id); if (!e) return null;
   C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return e;
@@ -193,7 +199,7 @@ function campFriShip(C, id) { // a click on a ship you protect (card space-game-
 }
 function campFriNow(C) { // the friendly now: a ship of the list, or the place a map click holds; null when there is none (a ship that was lost is let go the next time anyone asks)
   if (!C || !C.fsel) return null;
-  const e = campFriList(C).find(x => x.id === C.fsel) || campFriPlace(C, C.fsel) || campFriField(C, C.fsel);
+  const e = campFriList(C).find(x => x.id === C.fsel) || campFriPlace(C, C.fsel) || campFriField(C, C.fsel) || (C.fsel === 'me' ? campFriMe(C) : null);
   if (!e) { C.fsel = ''; return null; }
   return e;
 }
@@ -251,5 +257,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
   if (verb === 'mine') { const fl = campFriNow(C); return fl && fl.field ? campWingOrder(C, group, 'mine', fl.rock, how || 'key', dry) : campNo('what'); } // the pilots mine the rock of the field held that is nearest (the field's own rock, as the Q list's field pick gave it)
   if (verb === 'formup') return campWingOrder(C, 'fighters', 'guard', null, how || 'key', dry); // the Q list's last row (card space-game-keys7-trim, Troy): ALL pilots form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
   const fr = campFriNow(C), fl = !fr && typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; // fl: while a fighter is flown and no friend is picked, "the cruiser" is the wrong place to form up: the two other pilots form up on the fighter he flies (card space-game-chunk10-enter-forms-on-you, Troy 26 Nov 2026: yes, BRIEF 8 decision 8)
-  return campWingOrder(C, group, 'guard', fr ? fr.id : fl ? fl.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser, or the fighter flown
+  const tid = fr ? (fr.me ? (fr.unit === C.carrier ? null : fr.unit.id) : fr.id) : fl ? fl.id : null; // "me" (a click on your own ship): the cruiser is the default place to guard (none), the fighter flown is a ship
+  return campWingOrder(C, group, 'guard', tid, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser, or the fighter flown
 }

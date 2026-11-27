@@ -22,7 +22,7 @@ function campOrderLine(C) {
   const target = kind === 'formup' ? (f ? { t: typeof campSelLabel === 'function' && f.squad ? campSelLabel(CAMP_SELPILOT + f.squad) : f.kind, ghost: true, kind: 'fighter' } : { t: campOrderLineCruiser(), ghost: true, kind: 'cruiser' }) : { t: h ? h.name : '', ghost: false, kind: h ? (h.post && h.post.field ? 'field' : h.kind) : 'friendly' };
   const who = { t: w ? String(w.label || w.name || '') : '', ghost: !w || w.kind !== 'pilot' };
   return { who, verb: { t: campOrderLineLower(verb), kind }, target, ok: e.ok !== false, why: e.ok === false && e.say ? String(e.say) : '', pick: !who.ghost || !!h,
-    tip: h && (h.unit || (h.post && h.post.field)) && e.ok !== false ? { id: h.id, text: uiText('camp.corner.orderline.tip', { who: who.t, verb: campOrderLineLower(verb) }), at: h.unit ? null : { x: h.post.x, y: h.post.y, r: h.post.r } } : { id: '', text: '' } };
+    tip: h && (h.unit || (h.post && h.post.field)) && e.ok !== false ? { id: h.unit ? h.unit.id : h.id, text: uiText('camp.corner.orderline.tip', { who: who.t, verb: campOrderLineLower(verb) }), at: h.unit ? null : { x: h.post.x, y: h.post.y, r: h.post.r } } : { id: '', text: '' } };
 }
 
 // the Q order just given: a list that runs a row and has it TAKEN notes it in P.did ({ id, at }; a refusal is not noted), so a new P.did is an order (the first look is not news); the row's words, read back
