@@ -917,6 +917,7 @@ const UI_TEXT = {
   'scr.card.levellost': 'Level {n} lost',
   'scr.card.nexttime': 'Next time',
   'scr.card.kills': '{n} kills',
+  'scr.card.ownkills': 'Your kills',
   'scr.card.again': 'Again',
   'scr.card.levelwon': 'Level {n} won',
   'scr.card.haulershome': 'Haulers home',

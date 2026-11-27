@@ -1062,6 +1062,7 @@ function campKill(C, u) {
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind, team: u.team, fac: u.faction, by: u.killer }); // team, fac, by: who died and who fired the last shot, for the kill's colour and the pilot's ring (the picture only, src/campmoments.js)
   if (u.team === 'alien') {
     C.kills++;
+    if (C.cockpit && u.killer && u.killer === C.cockpit.id) C.ownKills = (C.ownKills | 0) + 1; // a kill the player made himself, with the shot of the fighter he flies (card space-game-b10-c14-won-kills: the won card says how many)
     if (u.rival) campRivalDied(C, u);
     const ore = CAMP.ore.wreck[u.kind] || (CAMP.pirate.kinds[u.kind] || {}).ore || (CAMP.torpedo.boats[u.kind] || {}).ore || (CAMP.rival.kinds[u.kind] || {}).ore; if (ore) C.pickups.push({ id: 'wreck-' + (C.nextId++), kind: 'wreck', x: u.x, y: u.y, ore, born: C.t });
     if (u.kind === 'mother') campWin(C, 'mother');
@@ -2016,7 +2017,7 @@ function campBonuses(C) {
 function campScore(C) {
   const K = CAMP.score, bonuses = campBonuses(C), t = Math.round(campMissionClock(C)), par = C.L.par || K.par, hullShare = C.carrier.hp / C.carrier.maxHp;
   const hull = Math.round(K.hull * Math.max(0, hullShare)), speed = Math.max(0, par - t) * K.speed, lost = C.lostShips * K.ship, haulerLost = C.lost * K.hauler, bonus = bonuses.reduce((a, b) => a + b.points, 0);
-  return { score: Math.max(0, K.base + bonus + hull + speed - lost - haulerLost), base: K.base, bonuses, bonus, hull, speed, lost, haulerLost, haulersLost: C.lost, t, hullLeft: Math.round(C.carrier.hp), shipsLost: C.lostShips };
+  return { score: Math.max(0, K.base + bonus + hull + speed - lost - haulerLost), base: K.base, bonuses, bonus, hull, speed, lost, haulerLost, haulersLost: C.lost, t, hullLeft: Math.round(C.carrier.hp), shipsLost: C.lostShips, flown: !!C.cockpitTaken, ownKills: C.ownKills | 0 };
 }
 
 // the key of an objective's words: its type, then what is killed (a kill) or an optional word for what is delivered (a deliver row says `word: 'transport'` when it is one ship and not haulers: card space-game-hunt-l1-fleet)
