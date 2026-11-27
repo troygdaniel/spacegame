@@ -10,7 +10,7 @@ const check = (name, cond, detail = '') => { n++; if (cond) console.log('  ok   
 const g = nodeGame(), J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`)), src = f => readFileSync(join(ROOT, f), 'utf8');
 
 console.log('A. the table');
-check('the flown gun is three times the pilot\'s rate at half the damage, the hull 0.65 of the pilot\'s (brief 8: shot down now and then): rateK 3, damageK 0.5, hpK 0.65', JSON.stringify(J('[CAMP.cockpit.rateK, CAMP.cockpit.damageK, CAMP.cockpit.hpK]')) === '[3,0.5,0.65]');
+check('the flown gun is three times the pilot\'s rate at half the damage, the hull double: rateK 3, damageK 0.5, hpK 2', JSON.stringify(J('[CAMP.cockpit.rateK, CAMP.cockpit.damageK, CAMP.cockpit.hpK]')) === '[3,0.5,2]');
 check('the pilots\' own guns are what they were: 8 damage, a shot every 450 to 650 ms, 700 px/s, 420 range', JSON.stringify(J('[CAMP.fighter.damage, CAMP.fighter.delay, CAMP.fighter.bullet, CAMP.fighter.range]')) === '[8,[450,650],700,420]');
 
 console.log('B. the gun, five seconds with Space held (the sim, a ship standing still)');

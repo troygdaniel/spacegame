@@ -701,6 +701,5 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
 
-## The flown fighter can be shot down now (card `space-game-chunk4-fighter-shot-down`, brief 8)
-`CAMP.cockpit.hpK: 2 -> 0.65` (the pilot's hull times it while he is flown): the ace bot was shot down in no run of any mission at 2, and is shot down in 3 percent of 3.2 and 9 percent of 3.3 at 0.65, winning every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The row "Flown hull" of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already chose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.
-
+## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`, brief 8)
+`CAMP.cockpit.hpK` stays **2** (Troy's own call: double hull, so he is not shot down in seconds while he learns). The measurement: the ace bot is shot down in no run of any mission at 2; at 0.65 it is shot down in 3 percent of 3.2 and 9 percent of 3.3 and still wins every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The bot is too evasive to show when a human is shot down (it parks out of reach), so Troy judges hpK in play: the "Flown hull" row of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already choose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.
