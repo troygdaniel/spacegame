@@ -282,3 +282,26 @@ Both are n/a where plain does not fight (under 5 kills) or the numbers are missi
 | 3.3 | sharp | 16 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
 | 3.3 | steady | 16 | 0 | 2 | pass | pass | pass | FAIL | FAIL | FAIL |
 | 3.3 | rough | 16 | 0 | 3 | pass | pass | pass | FAIL | FAIL | FAIL |
+
+## Hostile fighters lead their shots at the flown fighter (card `space-game-b10-c1-lead-shots`, brief 10 chunk 1; Troy, 27 Nov 2026: yes)
+
+The rule (`campLeadAt`, `src/campbreak.js`; the knob `CAMP.cockpit.leadK`, 1): a skiff, a cutter, a raider or a drone (the break's kinds) aims at where the fighter THE PLAYER FLIES will be when its shot gets there, with the wing fighters' lead maths (`campDogLead`); at every other ship it aims where the ship is, as before. Aim only: no hit point, damage, rate or speed changed, and `hpK` stays 2. With nobody flying a fighter nothing runs: the plain bot's every number is the same to the last digit before and after (all 27 mission-skills).
+
+**Measured** (`node tools/campaign-bot.mjs --cockpit --cbots plain,ace,sit --seeds 12`, steady skill; before is main `37b62765`, after is the card's branch; the new columns `hurt%` and `backs` are the median share of one full hull the flown fighter lost in a run, and the hand-backs for a low hull a run, the bot's rule being to hand the stick back under 30 percent hull):
+
+| mission | hull lost % (before → after) | handed back a run (before → after) | shot down % | kills | win time s | cruiser damage |
+|---|---|---|---|---|---|---|
+| 1.1 | 2 → 2 | 0 → 0 | 0 → 0 | 5 → 5 | 306 → 306 | 217 → 217 |
+| 1.2 | 28 → 73 | 0 → 3.17 | 0 → 0 | 5 → 6 | 270 → 268 | 31 → 27 |
+| 1.3 | 17 → 70 | 0 → 1.67 | 0 → 0 | 4 → 3 | 292 → 292 | 39 → 39 |
+| 2.1 | 4 → 8 | 0 → 0 | 0 → 0 | 1 → 1 | 32 → 32 | 6 → 6 |
+| 2.2 | 8 → 17 | 0 → 0 | 0 → 0 | 1 → 1 | 66 → 67 | 138 → 109 |
+| 2.3 | 17 → 31 | 0 → 0 | 0 → 0 | 2 → 1 | 77 → 78 | 97 → 79 |
+| 3.1 | 16 → 54 | 0 → 0.83 | 0 → 0 | 3 → 2 | 78 → 72 | 37 → 35 |
+| 3.2 | 73 → 73 | 2.83 → 2.83 | 0 → 0 | 1 → 1 | 53 → 53 | 165 → 165 |
+| 3.3 | 97 → 92 | 4.17 → 4.25 | 0 → 0 | 1 → 1 | 75 → 75 | 396 → 432 |
+
+- **The fighter is hit now, where hostile fighters meet it:** in 1.2 it loses 73 percent of a hull a run (was 28) and is handed back 3.2 times a run (was never); 1.3 70 percent (was 17), 3.1 54 (was 16), 2.3 31 (was 17), 2.2 17 (was 8). 1.1 and 2.1 hardly move (2 to 2 and 4 to 8 percent), and 3.2 and 3.3 are as they were (73 and 92 percent; their towers already led their shots at it, card `space-game-fighter-job-32`).
+- **It is shot down in no run, in any of the 27 mission-skills, before and after.** The ace hands the stick back under 30 percent hull, as a player would, and a hull of 216 (hpK 2) cannot go from above 30 percent to nothing in a step. So the stop rule (shot down in most runs) is not met: nothing needs the partial lead (`leadK` 0.5 to 0.8) and the default is the full lead, 1. `shot%` (rule 4) is still 0, so the pass rule still passes 0 of 27; it needs a different measure to show that the fighter is hit (hull lost, hand-backs), which is for ORCH to propose.
+- **Nothing else moved much:** the ace wins every cell it won before (1.1 and 1.2 sharp 92 percent as before), win time within 6 s (3.1 steady 78 to 72 s, 1.2 270 to 268), its kills within one, the cruiser damage the same or lower (2.2 138 to 109, 2.3 97 to 79; 3.3 396 to 432). The hands-off bot (`sit`, the stick taken and nothing done) now loses 1.2 rough in 2 runs of 12 where it lost none; its steady and sharp cells did not move.
+
