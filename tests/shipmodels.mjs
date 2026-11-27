@@ -72,7 +72,10 @@ try {
   await t.clock();
   await t.ev("(() => { const d0 = Date.now(), p0 = __t; performance.now = () => __t; Date.now = () => d0 + (__t - p0); return 1; })()");
   await t.ev(`(() => { ${SP}.enemies.clear(true, true); ${SP}.pirateOff = true; return 1; })()`);
-  check('the ship starts with max speed 480', (await t.ev(`${SP}.ship.body.maxSpeed`)) === 480);
+  // The scene ran in real time while the tiers above were being set. Its top speed (boostCap, src/boost.js) follows a higher number up at once and falls back to the model's at BOOST.fall, so right after the stepped clock starts it
+  // can still be on its way down (557 was seen, one run in four or five: card space-game-shipmodels-flake). Let it settle in stepped time, as the game does, then check: it must reach 480 and stay (a game that never got there fails).
+  for (let i = 0; i < 40 && (await t.ev(`${SP}.ship.body.maxSpeed`)) !== 480; i++) await t.run(100);
+  { const v = await t.ev(`${SP}.ship.body.maxSpeed`); check('the ship starts with max speed 480', v === 480, String(v)); }
   await t.run(1500); // past the launch lock (1.3 s)
   check('and still 480 when not boosting', (await t.ev(`${SP}.ship.body.maxSpeed`)) === 480);
   // thrust: W held. The key goes through DevTools so the real Phaser key handling reads it
