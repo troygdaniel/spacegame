@@ -217,6 +217,7 @@ g.run(`(() => {
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
       if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      { const R = C.runner, rn = R && R.id && !R.called && !R.off ? C.by[R.id] : null; if (rn && rn.hp > 0 && campDist(rn, c) <= 3200) a = rn; } // the guard that runs (2.2, card space-game-b12-c6-22-runner-stake): a player sees its pink ring and the edge pill and goes for it first; only the fighter he flies can stop it
       let goal = a, lead = 0;
       if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
       K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;

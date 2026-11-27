@@ -923,6 +923,29 @@ The bots' fighter flies beside the cruiser, so the rule is noise to them (the ot
 - **A bug found on the way and fixed here:** the briefing's "Expect ..." line (`campBriefEnemies`) and the one-page briefing's wave word (`scrMomentVars`) counted the optional idle groups of 3.1 and 3.2 since level 3 landed ("Expect 18 raiders, 2 drones, 6 gunships", "Seven waves"). They skip `optional` waves now: 3.1 reads 6 raiders, 2 drones, 2 gunships, 3.2 two raiders, four drones, two gunships and four towers, 3.3 two raiders, two drones, four gunships and eight towers. Pinned by `tests/campl3waves.mjs` (section H).
 
 
+## 2.2: only the fighter you fly can stop the guard that runs (card `space-game-b12-c6-22-runner-stake`; Troy, 27 Nov 2026: yes, BRIEF 12 chunk 6; base: main `daba9be3`)
+
+**The check first.** The cloud measured an older 2.2 and said the runner's group is never fought. Read from the runner's own state (`C.runner`, who made the last hit, how far from the cruiser it died), on today's main, plain, carrier, ace and sit bots, 6 seeds each: **the runner died before it could call in 24 of 24 runs**, 140 to 570 px from the cruiser: the cruiser's turrets killed it 15 times, a pilot 7, the flown fighter 2. The group was never called, so never fought. The cloud was right.
+
+**Why the old numbers said otherwise.** The runner never ran at its four times speed in a long fight: `campFightPace` slowed it to half pace while the cruiser was inside 1,700 px (it was not `u.running`, the pirate that has broken off), and `u.rushK` was set without the ship's top speed being worked out again. Measured with the turrets off it: 29 px a second, 300 px from the cruiser, for a minute.
+
+**What changed.** (1) While it runs (`u.runner`) the cruiser's turrets and the AI pilots do not pick it (`campFoes`, the aliens but not the runner; `campAliens` stays every alien for the win, the sight and the flown fighter's aim), and `campHurt` takes nothing off it unless the shot is the flown fighter's (`C.cockpit.id`); a stray shot glances off. (2) It is out of the fight pace and its top speed is worked out when it is chosen, so it really runs; once it has called, it is an ordinary guard at its own speed again. (3) `rush` is **3**, not 4: at four times its speed (510 px/s) the flown fighter (480, boosting 800) stopped it in **2 of 16** runs, at three **8 of 16**, at two and a half 13 of 16, at two 16 of 16 (ace, steady, the bot after it). Three keeps a stake: about half. The row is one number (`runner.rush`). `far` stays 2,400. The ring and the edge pill are as they were.
+
+**What the bots do.** The ace goes for the runner first while it runs (a player sees its pink ring and the edge pill). On 32 seeds the ace stopped it **18 of 32 (steady)** and **0 of 32 (sharp)**: the sharp ace's cone is narrow (0.15 rad) and it brakes and starts again behind a ship that keeps moving, so it rarely fires; a hand on the stick that holds thrust does not. Holding thrust in the bot made it worse (9 of 32 and 2 of 32), so it was left alone: the bot's pursuit is the limit here, not the game. Plain, carrier and sit never stop it: the group always comes and is fought.
+
+**The numbers** (2.2, 32 seeds, steady / sharp; won per cent, seconds of the win, damage the cruiser took; the "before" is main `daba9be3`):
+
+| bot | before | after |
+|---|---|---|
+| plain | 100 / 70 s / 227 and 100 / 69 s / 213 | 100 / 95 s / 274 and 100 / 96 s / 285 |
+| carrier | 100 / 77 s / 279 and 100 / 78 s / 294 | 100 / 111 s / 506 and 100 / 110 s / 489 |
+| ace | 100 / 68 s / 179 and 100 / 70 s / 199 | 100 / 72 s / 179 and 100 / 100 s / 262 |
+| sit | 100 / 71 s / 245 and 100 / 71 s / 222 | 100 / 96 s / 334 and 100 / 99 s / 306 |
+
+Every bot still wins every seed. A mission whose runner got away is 25 to 35 s longer and costs the cruiser 30 to 80 percent more damage (the carrier alone, 506 against 279); the ace that catches it takes the old time and the old damage (steady 72 s, 179). **This moves the cockpit sweep's rules for 2.2 at steady**: plain is now 95 s, so ace at 72 s is 24 percent faster (rule 1 allows 15) and takes 65 percent of plain's damage (rule 2 allows 70). That is the stake working: the rule was written when the runner never got away. Troy's call whether the sweep's rules change or `rush` moves.
+
+**Pins.** `tests/campfighterrunner.mjs` (10 checks: the row's `rush` is 3; the turrets never aim at it though it is inside their reach; it covers at least 250 px a second with the cruiser at its heels; a hit from the cruiser, a pilot or nobody does nothing, one from the flown fighter kills it and stops the call; alone it gets away within 12 s, calls, the group comes and it is an ordinary guard again).
+
 ## 2.2: the running guard's tell (card `space-game-22-runner-tell`; Troy, 26 Nov 2026: yes; on top of the runner, `f81ea6ee`)
 
 No number changed. While the last guard of 2.2 runs to call the second group (`C.runner`, not called, not caught) it wears the torpedo's pulsing pink ring (`src/camptorpedoscene.js`, the torpedo's own colour, size and pulse) and its group is first in `campSightArrows` (`src/campsight.js`), so the page HUD's one edge pill, or the canvas arrow with the page HUD off, points at it: "1 · 204 km", the pill's own words. Both go when it dies or the call is made. At four times its speed the run lasts a few seconds: the tell is a short, hard-to-miss warning, not a long one. `tests/camprunnertell.mjs` (5 checks); the ring's drawing was looked at in a muted Chrome run (its graphics commands exist while the guard runs).
