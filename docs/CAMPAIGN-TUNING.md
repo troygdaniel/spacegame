@@ -1103,6 +1103,54 @@ Also tried, no better: one group nearer and the other farther (3,000 and 4,400, 
 **Pins.** `tests/campreinforcecruiser.mjs` (5 checks; the rows 3,500 to 4,100 px from her, the groups 3,400 to 4,200 px from the cruiser and farther than 2,000 from a fighter flown 4,300 px off, the runner's group 3,300 to 4,200).
 
 
+## The fighter you fly does 15 percent less damage per shot (card `space-game-player-damage-down`, Troy, 27 Nov 2026 after playing 1.1: flying a fighter is a bit easy)
+
+**The change.** One number: `CAMP.cockpit.damageK` 0.5 → **0.425** (`src/campaign.js`). It is the share of the pilot's 8 damage a shot of the fighter you fly does, before the auto-target's own `aimK` 0.32 (which stays a separate factor, so a shot the auto-target sent does 8 × 0.425 × 0.32 = 1.09, was 1.28). The gun's rate (`rateK` 3), the hull (`hpK` 2), the cruiser's turrets, the wing pilots' own guns, torpedoes and missiles are untouched. It is the same number the N panel's "cockpitdamage" slider moves; the slider's step is now 0.025 so its default sits on a step. No switch: it applies in every mission.
+
+**What was tried** (32 seeds a mission, the cockpit sweep, `tools/campaign-bot.mjs --cockpit`, plain, ace and hands-off bots, sharp, steady and rough; main `e0396b5d` with 2.2's 3,800 px ring, except the 25 per cent rows of 1.x and 3.x steady, which are the same code measured on `12f51ebc`: 1.x and 3.x did not change between the two):
+
+| size | what it cuts | result |
+|---|---|---|
+| **15 per cent, fighter only (damageK 0.425)** | the flown fighter's shot | **taken.** The plain bot and the hands-off bot are the same to the digit (they never fly), the ace bot still wins every mission (23 of its 27 mission-skills have the same win rate; 4 are a seed or two lower: 1.1 steady 94 → 91, 1.2 steady 100 → 94, 1.1 rough 100 → 97, 1.2 sharp 91 → 88), its win time is the same in 11 cells, 1 to 2 s longer in 11, 4 s in one and 13 s in one (1.2 at sharp, 276 → 289), 2 to 3 s shorter in 3 (noise), and its cruiser's damage is higher in 17 cells (up to 36 more, 3.3 at rough), the same in 3 and lower in 7. Ace rules at steady: 12 fails before, 11 after (1.3 `taken` now passes); sharp and rough: 25 before, 27 after (4 go from pass to fail: 1.3 sharp `taken`, 1.3, 2.2 and 3.3 at rough `kills`; 2 go the other way: 1.2 sharp `taken`, 3.1 rough `time`): level, within what 32 seeds can tell. |
+| 25 per cent, fighter only (damageK 0.375) | the flown fighter's shot | **not taken.** Same wins, but at steady the fighter no longer makes a quarter of the plain bot's kills in 1.1 and 3.1 (rule 5 passes before): 14 ace fails at steady against 12. Nothing it gains over 15 per cent (2.2 at rough: 138 cruiser damage, 15 per cent gives 142). |
+| 15 and 25 per cent, the fighter **and** the cruiser's turrets (a factor `playerK` 0.85 and 0.75, measured on `12f51ebc`, not built) | also the cruiser's turret shots at aliens | **not taken: it costs the careful player 1.1.** The plain bot's 1.1 win rate falls from 94 to 88 (0.85) and 84 (0.75) at steady, and at 0.85 from 97 to 75 at sharp and 97 to 81 at rough; the hands-off bot's from 88 to 81 and 69 (1.2: 91 to 63 at 0.85), and 2.2's cruiser damage rises 190 → 222 → 233 for the plain bot. Everywhere else the cruiser's cut only added cruiser damage (that is the point of it) but 1.1, the escort, is the mission the cruiser's guns carry. The cut was removed again (no `playerK` in the code); the measurement stays here if Troy asks for the cruiser too. |
+
+**The table** (won per cent / seconds / cruiser damage; the plain bot's and the hands-off bot's rows are the same before and after the cut, so only the ace bot's are given before and after, with the plain bot beside them as the rule 2 comparison):
+
+| mission | skill | ace before: won % / s / cruiser damage | ace after (damageK 0.425) | plain (both) | rules that changed (ace) |
+|---|---|---|---|---|---|
+| 1.1 | sharp | 97/306/212 | 97/306/207 | 97/306/212 | none |
+| 1.1 | steady | 94/306/212 | 91/306/202 | 94/306/227 | none |
+| 1.1 | rough | 100/306/202 | 97/306/212 | 97/306/222 | none |
+| 1.2 | sharp | 91/276/12 | 88/289/24 | 100/266/33 | taken fail to pass |
+| 1.2 | steady | 100/269/16 | 94/269/23 | 97/266/35 | none |
+| 1.2 | rough | 100/269/19 | 100/269/19 | 97/266/26 | none |
+| 1.3 | sharp | 100/292/49 | 100/292/44 | 100/292/64 | taken pass to fail |
+| 1.3 | steady | 100/292/36 | 100/292/48 | 100/292/65 | taken fail to pass |
+| 1.3 | rough | 100/292/38 | 100/292/39 | 100/292/59 | kills pass to fail |
+| 2.1 | sharp | 100/40/54 | 100/41/56 | 100/42/73 | none |
+| 2.1 | steady | 100/39/51 | 100/40/54 | 100/42/71 | none |
+| 2.1 | rough | 100/38/50 | 100/39/48 | 100/43/82 | none |
+| 2.2 | sharp | 100/70/199 | 100/72/199 | 100/69/213 | none |
+| 2.2 | steady | 100/68/179 | 100/70/193 | 100/70/227 | none |
+| 2.2 | rough | 100/66/115 | 100/67/142 | 100/71/204 | kills pass to fail |
+| 2.3 | sharp | 100/78/133 | 100/79/155 | 100/80/158 | none |
+| 2.3 | steady | 100/78/97 | 100/78/112 | 100/80/191 | none |
+| 2.3 | rough | 100/75/90 | 100/76/112 | 100/80/162 | none |
+| 3.1 | sharp | 100/80/47 | 100/78/40 | 100/79/78 | none |
+| 3.1 | steady | 100/77/31 | 100/74/40 | 100/80/65 | none |
+| 3.1 | rough | 100/68/25 | 100/72/25 | 100/81/68 | time fail to pass |
+| 3.2 | sharp | 100/61/126 | 100/59/130 | 100/59/245 | none |
+| 3.2 | steady | 100/59/166 | 100/59/162 | 100/59/230 | none |
+| 3.2 | rough | 100/43/159 | 100/45/148 | 100/60/238 | none |
+| 3.3 | sharp | 100/76/468 | 100/76/482 | 100/70/544 | none |
+| 3.3 | steady | 100/73/428 | 100/75/446 | 100/71/486 | none |
+| 3.3 | rough | 100/66/335 | 100/68/371 | 100/70/443 | kills pass to fail |
+
+- **Win times rise a little and cruiser damage rises a little, for the ace bot only** (numbers above; 1.1 is a 306 s mission whatever happens). The careful player (the plain bot) is exactly as before: 100 per cent in every cell except 1.1 (94 steady, 97 sharp and rough) and 1.2 (97 steady and rough). What the sweep cannot say is how much longer a hand on the stick takes to kill a raider: the bot is steady, the cut is 15 per cent of a shot, and Troy's own hands are the test.
+- **Mission 2.2 on the 3,800 px ring (the fighter gap at rough).** The rule asks the ace bot's cruiser damage to be at least 70 per cent of the plain bot's (the fighter may not make the cruiser's fight more than 30 per cent softer). Before the cut: 115 against 204 at rough, 44 per cent softer (rule fails; sharp 7 and steady 21 per cent softer pass). **At 15 per cent less: 142 against 204, 30.4 per cent softer, which misses by one point of damage (143 is the line)**; sharp (199 against 213) and steady (193 against 227, 15 per cent softer) pass. 25 per cent less gives 138 (32.4 per cent): it does not do better, so the rest of the gap is not the fighter's damage (the ace bot's fighter meets the farther groups on the way, as the 2.2 section above says), and another size would not close it.
+- **Voiced or shown words:** nothing says the fighter's damage; none untrue, none re-recorded.
+- **Pins:** `tests/campcockpit.mjs` and `tests/campcockpitfire.mjs` pin damageK 0.425 (re-pinned from 0.5; the fire suite's mechanism checks still run the gun at the explicit 0.5 they were written for), `tests/camptune.mjs` passes with the 0.025 step; `tests/campcockpitaim.mjs`, which sets its own gun numbers, is unchanged.
 ## 3.2 and 3.3: a tower's first shot at the fighter you fly comes a second late (card `space-game-b12-c9-tower-delay`, the cloud's BRIEF 12 chunk 9, Troy, 27 Nov 2026: yes)
 
 **The change.** `CAMP.tower.flownDelay` 1000 ms (0 is no delay; `src/campaign.js`, `campTowerAI`). When a tower turns on the fighter the player flies (a tick ago it was on nothing, or on another ship), its first shot comes that long after it began to turn on it. For that second a thin pink ring closes on the tower (a `towertell` event, drawn by `towerTell` in `src/campaignscene.js`), so the shot is seen coming. It is a warning, not a weaker tower: every shot after the first is as it was (1.3 to 1.9 s apart, the same damage and speed). A fighter that leaves the tower's 800 px range and comes back is turned on again and gets the second again; the cruiser and a wing fighter nobody flies are shot at as before. It applies wherever there are towers: 3.2 has four and 3.3 eight at the start, no other mission has any.
