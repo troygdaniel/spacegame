@@ -12,6 +12,7 @@
 // steady, rough). The carrier flies at the alien nearest Earth (or nearest itself on a level with no Earth) and fires; that is the "plain strategy" of tests/campaign.mjs.
 // Per run it keeps: the result and the seconds, the carrier's hull, Earth's shield and where its damage came from (by the kind of the ship that fired), the carrier's
 // damage by kind, the wave starts, the seconds with no alien alive (waiting), the ships lost.
+import { writeFileSync } from 'node:fs';
 import { nodeGame } from '../tests/nodegame.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : (process.argv[i + 1] || '').startsWith('--') || i + 1 >= process.argv.length ? true : process.argv[i + 1]; };
@@ -53,7 +54,15 @@ const BOTS = {
   plaina: { name: 'plaina', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: 'all' },                 // plain, and at the miner's call all three pilots are sent at the pirates on him
   plainr: { name: 'plainr', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, rear: true },               // plain, and when the last hauler leaves one pilot (Kara) is posted on it to guard it (card space-game-13-all-haulers-savable): a player who sends a pilot to the rear
   thinks: { name: 'thinks', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp' },   // a player who directs the fleet: helps the miner and uses the convoy orders (and scouts the fork)
-  thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp', noroute: true } // the same on the default lane
+  thinku: { name: 'thinku', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, help: true, tuck: 'torp', noroute: true }, // the same on the default lane
+  // THE COCKPIT BOTS (card space-game-fly-fighter-l3; Troy, 26 Nov 2026: he will fly a pilot's fighter with the C key, src/campcockpit.js). Each is `plain` (the cruiser flown the plain way, standing for a Q order the cruiser keeps flying, and its turrets on their own while
+  // the stick is away) plus a player in a fighter: `ace` takes the stick at 1 s (as soon as Wedge is out) and flies it through C.cockpit.input, the same five fields a human's keys write, with a human's limits (cockReact: 200 ms between what it sees and what its hands
+  // do; a firing cone; boost only on a long chase; the sharp, steady and rough skills are its aim); `sit` takes the stick and does nothing (the fighter hangs where it was taken): what the cruiser and the other five pilots do alone. ace1 and sit's other
+  // column change one number each: hpK 1 (the fighter's own hull, not double), turrets 'off' (the cruiser's turrets silent while he is away). All of them need CAMP.flags.cockpit, which the run turns on and puts back (the other bots never see it).
+  ace: { name: 'ace', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace' },
+  ace1: { name: 'ace1', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace', hpK: 1 },
+  sit: { name: 'sit', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit' },
+  sitoff: { name: 'sitoff', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit', turrets: 'off' }
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
 
@@ -72,7 +81,9 @@ g.run(`(() => {
   campHurt = function (C, u, dmg, byId) {
     const M = window.__M;
     if (M && u.kind === 'carrier' && u.hp > 0 && !C.result && !C.god) { const d = dmg * (campHas(C, 'shield') ? CAMP.tech.shield.taken : 1); const k = kindOf(byId); M.hitC[k] = (M.hitC[k] || 0) + d; }
-    const was = u.kind === 'freighter' && u.hp > 0, r0 = hurt0.apply(null, arguments);
+    if (M && u.kind === 'carrier' && u.hp > 0 && !C.result && !C.god && C.cockpit) M.awayHit += dmg * (campHas(C, 'shield') ? CAMP.tech.shield.taken : 1); // the cruiser's damage while the stick is away (what the player in a fighter lets it take)
+    const was = u.kind === 'freighter' && u.hp > 0, alive = u.team === 'alien' && u.hp > 0, r0 = hurt0.apply(null, arguments);
+    if (M && alive && u.hp <= 0 && M.cockIds[byId]) M.cockKills++; // an alien killed by the fighter the player flies (its id is the shot's from)
     if (M && was && u.hp <= 0) M.dead.push((u.cid || u.id) + '@' + Math.round(C.t / 1000) + ':' + kindOf(byId)); // which convoy ship was lost, and when (card space-game-13-all-haulers-savable)
     return r0;
   };
@@ -184,19 +195,52 @@ g.run(`(() => {
     C.input.fire = !!a && (turrets ? campDist(a, c) - a.r < reach : Math.abs(d2) < sk.thr && campDist(a, c) < reach); // Space held while an alien is in reach
     if (turrets && (C.torpedoes || []).some(t => !t.dead && campDist(t, c) - t.r < reach)) C.input.fire = true; // and while a torpedo is: the turrets shoot it down (card space-game-torpedo-boats)
   };
+  // THE PLAYER IN A FIGHTER (card space-game-fly-fighter-l3). campCockpitTake / campCockpitGive / campEye / C.cockpit.input are src/campcockpit.js (card space-game-fly-fighter-l1); a bot writes the five fields (turn -1 to 1, thrust 0 to 1, brake, boost, fire)
+  // a human's keys write, and nothing else of the fighter. 'ace' decides every tick but its hands do what it decided cockReact ticks ago (200 ms: a human's reaction), so it never turns before it has seen the foe turn.
+  const COCK = { react: 6, takeAt: 1, wait: 10, lowHull: 0.3, back: 0.8, home: 320, chase: 800, fire: 1.5, lead: { sharp: 1, steady: 0.6, rough: 0.3 } }; // react: ticks (30 a second); wait: seconds after a lost fighter before another is taken; lowHull: hand it back under this share of the hull; back: take one again over this share; home: the px from the cruiser it waits at; chase: boost only past this many px; fire: the gun's reach in multiples of the pilots' (CAMP.fighter.range)
+  window.__cockpit = (C, B, sk, st, M) => {
+    if (!B.cockpit || typeof campCockpitTake !== 'function' || C.result) return;
+    const s = C.t / 1000, K = st.ck = st.ck || { q: [], err: 0, hold: 0 };
+    if (C.cockpit) {
+      const u = campEye(C), inp = C.cockpit.input; M.cockSec += 1 / 30; M.cockIds[C.cockpit.id] = 1;
+      if (B.cockpit === 'sit') { Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); C.input.fire = false; return; }
+      C.input.fire = false; // Space is the fighter's gun now (the cruiser's turrets are CAMP.cockpit.turrets' to fire)
+      if (u.hp < u.maxHp * COCK.lowHull) { campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
+      const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
+      let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
+      if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
+      let goal = a, lead = 0;
+      if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
+      K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
+      const sp = Math.max(1, F.bullet * (C.shot || 1)), t = a ? Math.min(1.2, campDist(a, u) / sp) * lead : 0;
+      const gx = goal.x + (a ? (a.vx || 0) * t : 0), gy = goal.y + (a ? (a.vy || 0) * t : 0), dist = Math.hypot(gx - u.x, gy - u.y);
+      const want = Math.atan2(gy - u.y, gx - u.x) + K.err, d = Math.atan2(Math.sin(want - u.rot), Math.cos(want - u.rot));
+      const now = { turn: clampi(d * sk.gain), thrust: 0, brake: false, boost: false, fire: false };
+      if (a) { now.thrust = dist > 260 && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < 150; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; now.fire = dist < reach && Math.abs(d) < sk.thr; }
+      else { now.thrust = dist > COCK.home && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < COCK.home * 0.6; now.boost = dist > COCK.chase * 1.5 && Math.abs(d) < 0.35; }
+      K.q.push(now); if (K.q.length > COCK.react) Object.assign(inp, K.q.shift()); else Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); // (what its hands do is what it decided a moment ago)
+      return;
+    }
+    if (s < COCK.takeAt || s < K.hold) return;
+    const fs = C.ships.filter(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked && !u.cockpit);
+    if (B.cockpit === 'ace' && K.hold && !fs.some(u => u.hp >= u.maxHp * COCK.back)) return; // wait for a fit one
+    if (campCockpitTake(C)) { M.cockTakes++; K.q.length = 0; }
+  };
   window.__run1 = (level, seed, techs, B, sk, maxSec, mission) => {
     const rank = window.__RANK === 'auto' ? campRankAt(((level - 1) * 3 + (mission | 0)) * 1400) : Number(window.__RANK) | 0; // the ranks card: the wing of the rank
     const C = window.C = campNew(level, techs, { seed, mission: mission | 0, rank, power: ${JSON.stringify(POWER)}, pace: window.__PACE });
-    const M = window.__M = { hitC: {}, drainE: {}, dead: [], waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0 };
+    const M = window.__M = { hitC: {}, drainE: {}, dead: [], waves: [], clear: [], idle: 0, first: null, minHull: 1e9, recalls: 0, earthSum: 0, cockSec: 0, cockKills: 0, cockDeaths: 0, cockTakes: 0, awayHit: 0, cockIds: {} };
+    const ck0 = B.cockpit && typeof campCockpitTake === 'function' ? { on: CAMP.flags.cockpit, hpK: CAMP.cockpit.hpK, turrets: CAMP.cockpit.turrets } : null; // the table as it was: a cockpit bot sets its own and puts it back
+    if (ck0) { CAMP.flags.cockpit = true; if (B.hpK != null) CAMP.cockpit.hpK = B.hpK; if (B.turrets) CAMP.cockpit.turrets = B.turrets; }
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
     let wavesSeen = 0, started = false, prevAl = 0;
     for (let i = 0; i < total && !C.result; i++) {
       const s = i / 30;
-      __botStep(C, s, B, sk, st); __fly(C, B, sk, st);
+      __botStep(C, s, B, sk, st); __fly(C, B, sk, st); __cockpit(C, B, sk, st, M);
       // where Earth's damage will come from this step: the alien shots that cross the planet
       const E = C.earth, before = E ? E.shield : 0, hits = [];
       if (E) C.bullets.forEach(b => { if (!b.dead && b.team === 'alien' && b.life > 34 && campSegHit(b.x, b.y, b.x + b.vx / 30, b.y + b.vy / 30, E.x, E.y, E.r)) hits.push(kindOf(b.from)); });
-      campStep(C, 1 / 30); C.events.length = 0;
+      campStep(C, 1 / 30); if (ck0) C.events.forEach(e => { if (e.type === 'cockpit' && e.stage === 'give' && e.why === 'dead') M.cockDeaths++; }); C.events.length = 0;
       if (E && E.shield < before) { const per = (before - E.shield) / Math.max(1, hits.length); hits.forEach(k => { M.drainE[k] = (M.drainE[k] || 0) + per; }); if (hits.length === 0) M.drainE.other = (M.drainE.other || 0) + (before - E.shield); }
       const w = C.waves.filter(x => x.started).length; if (w > wavesSeen) { wavesSeen = w; M.waves.push(Math.round(C.t / 1000)); started = true; }
       const al = campAliens(C).filter(u => !u.hold).length;
@@ -207,7 +251,9 @@ g.run(`(() => {
       if (C.carrier.hp < M.minHull) M.minHull = C.carrier.hp;
     }
     M.recalls = st.recalls || 0;
+    if (ck0) { CAMP.flags.cockpit = ck0.on; CAMP.cockpit.hpK = ck0.hpK; CAMP.cockpit.turrets = ck0.turrets; if (C.cockpit) campCockpitGive(C, 'result'); }
     const r = { level, seed, result: C.result || 'timeout', why: C.why, t: Math.round(C.t / 1000), hull: Math.round(C.carrier.hp), hull0: Math.round(hull0), minHull: Math.round(M.minHull), earth: C.earth ? Math.round(C.earth.shield) : null,
+      cockSec: Math.round(M.cockSec), cockKills: M.cockKills, cockDeaths: M.cockDeaths, cockTakes: M.cockTakes, awayTaken: Math.round(M.awayHit),
       kills: C.kills, delivered: C.delivered, score: C.score ? Math.round(C.score.score || 0) : 0, bonus: (typeof campBonuses === 'function' ? campBonuses(C).filter(b => b.ok).map(b => b.id) : []).join('+'), ore: Math.round(C.ore), oreBest: Math.round(C.oreBest || 0), sold: Math.round(C.sold || 0), convoyLost: C.lost, convoyDead: M.dead.join('+'), shipsLost: C.lostShips, mended: C.mended | 0, // mended: the fighters that landed hurt and went out whole (src/camprepair.js: every bot gets the repair, there is nothing to teach it)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
       hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
@@ -236,10 +282,11 @@ export function summarise(rs) {
   return { n: rs.length, won: pct(rs, r => r.result === 'won'), lost: pct(rs, r => r.result === 'lost'), timeout: pct(rs, r => r.result === 'timeout'), tWin: med(won.map(r => r.t)), tAll: med(rs.map(r => r.t)),
     hull: med(rs.map(r => r.hull)), taken: med(rs.map(r => Object.values(r.hitC || {}).reduce((a, b) => a + b, 0))), // taken: the damage the carrier was dealt in all (its shield, 150 from the ore card, takes it before the hull does, so hull is 600 until the shield is gone)
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
+    cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), // the cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
 
-if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs')) {
+if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && !process.argv.includes('--cockpit')) {
   const botList = String(arg('bots', Object.keys(BOTS).join(','))).split(',');
   const out = {};
   const missionsOf = level => MISSION ? [Number(MISSION) - 1] : Array.from({ length: g.run(`campMissions(${level}).length`) }, (_, i) => i);
@@ -261,5 +308,48 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs')) {
     console.log(`\nLevel ${key} (mission ${key.split('.')[1]})  skill ${SKILL}  techs [${techsFor(level, TECH).join(',')}]  ${SEEDS} seeds`);
     console.log('bot       won%  lost%  t(win)  hull  taken  earth  kills  shipsLost  deliv  idle  lost because');
     for (const b of botList) { const s = out[key][b]; console.log(b.padEnd(9), String(s.won).padStart(4), String(s.lost).padStart(6), String(s.tWin == null ? '-' : s.tWin).padStart(7), String(s.hull).padStart(5), String(s.taken).padStart(6), String(s.earth == null ? '-' : s.earth).padStart(6), String(s.kills).padStart(6), String(s.shipsLost).padStart(10), String(s.delivered).padStart(6), String(s.idle).padStart(5), ' ' + JSON.stringify(s.why)); }
+  }
+}
+
+// THE COCKPIT SWEEP AND ITS PASS RULE (card space-game-fly-fighter-l3; the rule is 2-GEN's proposal in the scope report of card space-game-fly-fighter-scope, for Troy to agree before anything is retuned)
+//   node tools/campaign-bot.mjs --cockpit [--seeds 32] [--skills sharp,steady,rough] [--level 1] [--mission 2] [--set cockpit.damageK=2] [--json] [--save sweep.json]
+//   For every mission and skill: plain, ace (hull x CAMP.cockpit.hpK, 2 to start), ace1 (hpK 1: the comparison column), sit (turrets 'auto') and sitoff (turrets 'off'), the same seeds, the same cruiser. THE RULE, per mission and skill:
+//     1. ace is not faster than plain by more than 15 percent: its median win time is at least 85 percent of plain's;
+//     2. ace does not take less cruiser damage than plain by more than 30 percent: its median is at least 70 percent of plain's;
+//     3. sit (turrets auto) loses no mission plain wins: where plain wins at least 90 percent of the seeds, sit wins at least plain's rate less one seed in 32 (3 points).
+//   A rule's number is judged only where plain's own number is big enough to mean something (win time over 20 s, damage over 30): under that it is 'n/a' (no verdict), and the raw numbers stay in the table.
+export const COCKPIT_RULE = { faster: 0.85, softer: 0.7, sitSlack: 3, sitFrom: 90, minTime: 20, minTaken: 30 };
+export function cockpitVerdict(p, a, s) { // p, a, s: the summaries of plain, ace and sit (turrets auto) for one mission at one skill (summarise's shape)
+  const R = COCKPIT_RULE, v = { time: 'n/a', taken: 'n/a', sit: 'n/a' };
+  if (p.tWin != null && a.tWin != null && p.tWin >= R.minTime) v.time = a.tWin >= p.tWin * R.faster ? 'pass' : 'FAIL';
+  if (p.taken != null && a.taken != null && p.taken >= R.minTaken) v.taken = a.taken >= p.taken * R.softer ? 'pass' : 'FAIL';
+  if (p.won >= R.sitFrom) v.sit = s.won >= p.won - R.sitSlack ? 'pass' : 'FAIL';
+  v.ok = !Object.values(v).includes('FAIL'); return v;
+}
+if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.argv.includes('--cockpit')) {
+  if (JSON.parse(g.run("typeof campCockpitTake === 'function'")) !== true) { console.log('src/campcockpit.js is not in this game yet (card space-game-fly-fighter-l1): nothing to sweep'); process.exit(2); }
+  const skills = String(arg('skills', 'sharp,steady,rough')).split(','), botList = ['plain', 'ace', 'ace1', 'sit', 'sitoff'];
+  const out = {}, tab = [];
+  const missionsOf = level => MISSION ? [Number(MISSION) - 1] : Array.from({ length: g.run(`campMissions(${level}).length`) }, (_, i) => i);
+  for (const level of LEVELS) {
+    const techs = techsFor(level, TECH);
+    for (const m of missionsOf(level)) for (const skill of skills) {
+      const key = level + '.' + (m + 1) + ' ' + skill, S = {}; out[key] = S;
+      for (const b of botList) { const rs = []; for (let seed = 1; seed <= SEEDS; seed++) rs.push(run(level, seed, b, skill, techs, MAXSEC, m)); S[b] = summarise(rs); }
+      S.verdict = cockpitVerdict(S.plain, S.ace, S.sit); tab.push(key);
+    }
+  }
+  if (arg('save', false) && arg('save') !== true) writeFileSync(String(arg('save')), JSON.stringify(out, null, 1)); // --save FILE: the numbers too, whatever is printed
+  if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
+  else {
+    console.log(`\nTHE COCKPIT SWEEP  ${SEEDS} seeds a mission, pace ${PACE}, cockpit table ${g.run('JSON.stringify({ hpK: CAMP.cockpit.hpK, damageK: CAMP.cockpit.damageK, rateK: CAMP.cockpit.rateK, turrets: CAMP.cockpit.turrets })')}${SETS.length ? ', set ' + SETS.join(' ') : ''}`);
+    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths   rule: time  taken  sit');
+    for (const key of tab) {
+      const S = out[key], [mk, skill] = key.split(' ');
+      botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths], v = S.verdict;
+        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
+    }
+    const fails = tab.filter(k => !out[k].verdict.ok);
+    console.log(`\n${tab.length - fails.length} of ${tab.length} mission-skills pass the rule${fails.length ? '; fail: ' + fails.join(', ') : ''}`);
   }
 }

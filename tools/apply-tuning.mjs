@@ -52,11 +52,11 @@ export function findLine(text, name, parts) {
   return at;
 }
 
-const lit = v => typeof v === 'boolean' ? String(v) : Array.isArray(v) ? '[' + v.join(', ') + ']' : String(v);
+const lit = v => typeof v === 'boolean' ? String(v) : Array.isArray(v) ? '[' + v.join(', ') + ']' : typeof v === 'string' ? "'" + v + "'" : String(v); // (a word: the cockpit's turrets 'auto' or 'off', card space-game-fly-fighter-l3)
 // the new text of the file with the row's value written on its line (the number, the array or the boolean after the last key; the comment stays as it was)
 export function editText(text, name, path, value) {
   const parts = path.split('.'), i = findLine(text, name, parts); if (i < 0) return null;
-  const lines = text.split('\n'), key = parts[parts.length - 1], re = new RegExp('(^|[\\s{,])(' + key + '\\s*:\\s*)(\\[[^\\]]*\\]|true|false|-?\\d+(?:\\.\\d+)?(?:e-?\\d+)?)');
+  const lines = text.split('\n'), key = parts[parts.length - 1], re = new RegExp('(^|[\\s{,])(' + key + '\\s*:\\s*)(\\[[^\\]]*\\]|true|false|-?\\d+(?:\\.\\d+)?(?:e-?\\d+)?|\'[A-Za-z]+\')');
   const code = lines[i].replace(/\/\/.*$/, ''), m = re.exec(code); if (!m) return null;
   const at = m.index + m[1].length + m[2].length, was = m[3];
   lines[i] = lines[i].slice(0, at) + lit(value) + lines[i].slice(at + was.length);
@@ -74,7 +74,7 @@ export function plan(g, block) { // what the block means: [{ id, label, ref, was
     else if (row.derive) { // a derived row (card space-game-cruiser-feel-sliders): what is baked in is the table's own number: the boost's multiple of the top speed (worked out against the block's own top speed when it has one), or the start zoom
       const sp = P.rows.find(x => x.id === 'cruiserspeed'), id = JSON.stringify(r.id);
       g.run(`campTuneResetAll(); ${sp ? `campTuneSet('cruiserspeed', ${JSON.stringify(sp.value)});` : ''} campTuneSet(${id}, ${JSON.stringify(r.value)})`);
-      now = Math.round(JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${id})); return s.obj[s.key]; })())`)) * 10000) / 10000; g.run('campTuneResetAll()');
+      const nv = JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${id})); return s.obj[s.key]; })())`)); now = typeof nv === 'string' ? nv : Math.round(nv * 10000) / 10000; g.run('campTuneResetAll()'); // (a word stays a word)
     }
     else if (row.of != null) { g.run(`campTuneRestore(); campTuneResetAll(); campTuneSet(${JSON.stringify(r.id)}, ${JSON.stringify(r.value)})`); now = JSON.parse(g.run(`JSON.stringify((() => { const s = campTuneSlot(campTuneRow(${JSON.stringify(r.id)})); return s.obj[s.key]; })())`)); g.run('campTuneResetAll()'); }
     else { g.run(`campTuneResetAll(); campTuneSet(${JSON.stringify(r.id)}, ${JSON.stringify(r.value)})`); now = JSON.parse(g.run(`campTuneValue(${JSON.stringify(r.id)})`)); g.run('campTuneResetAll()'); }

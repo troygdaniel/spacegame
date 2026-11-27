@@ -22,8 +22,8 @@ console.log('A. every row has its line');
 const rows = J('CAMP_TUNE.rows.map(r => ({ id: r.id, flag: r.kind === "flag", name: r.kind === "flag" ? "CAMP" : r.root, path: r.kind === "flag" ? "flags." + r.flag : r.path, d: (() => { const s = campTuneSlot(r); return s.obj[s.key]; })() }))');
 for (const r of rows) {
   const i = findLine(SRC[r.name], r.name, r.path.split('.')), line = i < 0 ? '' : SRC[r.name].split('\n')[i].replace(/\/\/.*$/, '');
-  const key = r.path.split('.').pop(), m = new RegExp('\\b' + key + '\\s*:\\s*(\\[[^\\]]*\\]|true|false|-?[\\d.]+)').exec(line);
-  const val = m ? JSON.parse(m[1]) : undefined;
+  const key = r.path.split('.').pop(), m = new RegExp('\\b' + key + '\\s*:\\s*(\\[[^\\]]*\\]|true|false|-?[\\d.]+|\'[A-Za-z]+\')').exec(line);
+  const val = m ? (m[1].charAt(0) === "'" ? m[1].slice(1, -1) : JSON.parse(m[1])) : undefined; // (a quoted word: the cockpit's turrets 'auto' or 'off')
   check(`${r.id}: ${r.name}.${r.path} is on a line of its source, and the value there is the row's default`, i >= 0 && JSON.stringify(val) === JSON.stringify(r.d), `line ${i + 1}: ${line.trim().slice(0, 100)}`);
 }
 
@@ -63,6 +63,12 @@ writeFileSync(join(dir, 'bad.txt'), 'distress = 7\n');
 const badRun = cli([join(dir, 'bad.txt')]);
 check('a block with a line it does not understand exits 1 and says which', badRun.status === 1 && /NOT UNDERSTOOD {2}distress = 7/.test(badRun.stdout), badRun.stdout);
 check('the repository was not touched by a plain run', readFileSync(join(ROOT, 'src/campaign.js'), 'utf8') === SRC.CAMP);
+
+// the flown fighter's rows (card space-game-fly-fighter-l3): a word-valued row (the cruiser's turrets 'auto' or 'off') is baked in as the word, the others as their numbers
+const ck = plan(g, 'LONG HAUL TUNING v1\ncockpitturrets = 0\ncockpithull = 3\ncockpitflag = on\n');
+check('the cockpit rows: turrets 0 is the word off, the hull 3 is 3, the switch is true', ck.bad.length === 0 && ck.rows.map(r => r.id + ':' + JSON.stringify(r.was) + '>' + JSON.stringify(r.now)).join(' ') === 'cockpitturrets:"auto">"off" cockpithull:2>3 cockpitflag:false>true', JSON.stringify(ck.rows.map(r => [r.id, r.was, r.now])));
+let ctext = SRC.CAMP; const cedit = ck.rows.map(r => { const e = editText(ctext, r.name, r.path, r.now); if (e) ctext = e.text; return e && e.line; });
+check('...and the edit writes turrets: \'off\' and hpK: 3 on their own lines, a flag line true, nothing else changed', cedit.every(x => x > 0) && /turrets: 'off'/.test(ctext) && /hpK: 3,/.test(ctext) && ctext.split('\n').length === SRC.CAMP.split('\n').length && ctext.split('\n').filter((l, i) => l !== SRC.CAMP.split('\n')[i]).length === 3);
 
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);
 process.exit(failed ? 1 : 0);
