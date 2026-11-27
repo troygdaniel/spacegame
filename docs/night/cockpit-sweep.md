@@ -248,7 +248,7 @@ What happens to a shot-down pilot (lost for the mission today, a pod and back in
 ## Rules 4 and 5: "safe and changes little" fails (card `space-game-chunk15-sweep-rule`; brief 8 decision 12)
 Added to the pass rule (`COCKPIT_RULE`, `cockpitVerdict`; tools and docs only, no game change): where plain fights (a fight to speak of: plain's median kills at least 5),
 4. the flown fighter is **shot down in at least 5 percent and no more than 50 percent of the runs** (the sweep's `shot%` column: the share of runs in which it was shot down at least once): never shot down fails, and so does shredded;
-5. the fighter's **own kills** (median a run) are **at least a quarter of plain's** kills: few kills fails.
+5. the fighter's **own kills** (median a run) are **at least a quarter of plain's** kills: few kills fails. *(Changed on 27 Nov 2026 to the fighter's share of the damage dealt, at least 15 percent: see "Rules 3 and 5 changed" at the end.)*
 Both are n/a where plain does not fight (under 5 kills) or the numbers are missing. The thresholds (5, 50, a quarter, a fight of 5) are mine, for Troy to agree like the rest of the rule. `node tools/campaign-bot.mjs --cockpit` prints the two verdicts in the `shot` and `kills` columns.
 
 **The sweep again, 32 seeds, defaults (`hpK` 2, `rateK` 3, `damageK` 0.5, turrets auto): 0 of 27 mission-skills pass.** The fighter is never shot down in any mission (rule 4 fails in all 27 of the 27: `shot%` is 0 everywhere, which is the finding of card `space-game-chunk4-fighter-shot-down`: with Troy's double hull the bot is too evasive to be hit) and its own kills are few (rule 5 fails in 17 of 27: the median is 0 to 10 against plain's 7 to 21). Rules 1 to 3 on their own fail in 11 of the 27 (16 pass). So "safe and changes little" fails every cell, as the card asks; a retune that makes the fighter matter has to start with kills and being hit, not with speed.
@@ -318,3 +318,51 @@ The rule's fourth part (the flown fighter "is shot down now and then, 5 to 50 pe
 | rough | FAIL (0) | 2 to 23 pass | 97 to 100 | FAIL to pass (137 to 202 against 222) | FAIL (rule 3: sit 84 against 97) |
 
 The sweep now prints `conv%` for every bot (the convoy ships' hull lost, median a run). A run's `convHurt` is in the bot's result.
+
+
+## Rules 3 and 5 changed (card `space-game-b12-c11-12-sweep-rules`; Troy, 27 Nov 2026: yes; brief 12 chunks 11 and 12)
+Test-only: no game behaviour moves (`tools/campaign-bot.mjs` and this page). The sweep rule's two parts that Troy called wrong are:
+
+- **Rule 3, a hands-off run (`sit`: a pilot taken out of the wing who then does nothing) may be up to 10 points worse than plain**, not the same: where plain wins at least 90 percent of the seeds, sit must win at least plain's rate less **10 points** (`COCKPIT_RULE.sitSlack`, was 3: one seed in 32). Doing nothing in a fighter should cost a little; it should not be free and it should not ruin the mission.
+- **Rule 5 counts the fighter's share of the DAMAGE dealt, not of the kills.** At sharp skill the turrets land the last hit on what the fighter started, so its kills said it did almost nothing where it did not (1.2 sharp: 1 kill of plain's 20, and 17 percent of the damage). The run now keeps `alienDmg` (every hit point taken off a hostile, by anybody: the one hook in the bot tool that `cockDmg` already used) and the summary `dmgShare` (the flown fighter's `cockDmg` over `alienDmg`, percent, median a run). Rule 5 (still only where plain fights: median kills at least 5) is: **`dmgShare` at least 15 percent** (`COCKPIT_RULE.dmgShare`; the verdict column is `dmg`, the table has a `dmg%` column; `killsShare` is gone).
+
+**The number I settled on for rule 5 is 15 percent (about a seventh), and it is a judgement for Troy to move.** The old threshold was "a quarter of plain's kills". On this sweep a quarter of the DAMAGE passes 9 of 27 cells where the old rule passed 7 (the two counts are of the same order where the fighter really fights), but it would keep every sharp cell failing (the share at sharp is 2 to 17 percent), which is the thing the card is about. The 27 shares, smallest first: 2.3, 4.7, 5.4, 6, 8.8, 9.2, 10.3, 10.8, 12.7, 13.9, 14, | 15.2, 16.9, 18.3, 19.2, 20.8, 21.4 and up to 43: there is no wide gap, but 14 (3.1 sharp) and 15.2 (2.2 steady) are neighbours and 15 falls between them, so it fails a fighter that deals under about a seventh of the damage and passes one that deals a seventh or more. At 10 percent 21 of 27 cells pass, at 15 percent 16, at 20 percent 12, at 25 percent 9.
+
+**The sweep again** (32 seeds a mission, every mission, skills sharp, steady and rough, plain, ace, ace1, sit and sitoff; main `3d87414f` with this card's changes, so with the player-damage change (`damageK` was 0.5), the 2.2 ring change and the page-HUD pills; the cockpit table at its defaults `hpK` 2, `damageK` 0.425, `rateK` 3, turrets 'auto'; about 40 minutes): **7 of 27 mission-skills pass the whole rule** (1.1 steady and rough, 1.2 rough, 1.3 steady, 2.1 steady, 2.2 steady, 3.3 rough); the same runs under the old rules 3 and 5 pass 2 of 27 (1.1 steady and rough). Before and after, from the same runs (rules 1, 2 and 4 are as they were; `won` is percent of seeds; the whole rule is rules 1 to 5):
+
+| mission | skill | plain won / kills | sit won | rule 3 before → after | ace kills | ace share of damage % | rule 5 before → after | other rules (1, 2, 4) | whole rule before → after |
+|---|---|---|---|---|---|---|---|---|---|
+| 1.1 | sharp | 94 / 19 | 88 | FAIL → pass | 2 | 4.7 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 1.1 | steady | 97 / 19 | 100 | pass → pass | 5 | 18.3 | pass → pass | pass/pass/pass | pass → pass |
+| 1.1 | rough | 100 / 19 | 97 | pass → pass | 8 | 25.8 | pass → pass | pass/pass/pass | pass → pass |
+| 1.2 | sharp | 100 / 20 | 84 | FAIL → FAIL | 1 | 16.9 | FAIL → pass | pass/pass/pass | FAIL → FAIL |
+| 1.2 | steady | 97 / 19 | 91 | FAIL → pass | 6 | 31.9 | pass → pass | pass/FAIL/pass | FAIL → FAIL |
+| 1.2 | rough | 97 / 19 | 88 | FAIL → pass | 9 | 41.1 | pass → pass | pass/n/a/pass | FAIL → pass |
+| 1.3 | sharp | 100 / 20 | 100 | pass → pass | 1 | 10.8 | FAIL → FAIL | pass/FAIL/pass | FAIL → FAIL |
+| 1.3 | steady | 100 / 20 | 100 | pass → pass | 4 | 21.4 | FAIL → pass | pass/pass/pass | FAIL → pass |
+| 1.3 | rough | 100 / 21 | 100 | pass → pass | 5 | 30.3 | FAIL → pass | pass/FAIL/pass | FAIL → FAIL |
+| 2.1 | sharp | 100 / 14 | 100 | pass → pass | 1 | 12.7 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 2.1 | steady | 100 / 14 | 100 | pass → pass | 2 | 19.2 | FAIL → pass | pass/pass/pass | FAIL → pass |
+| 2.1 | rough | 100 / 14 | 100 | pass → pass | 3 | 26 | FAIL → pass | pass/FAIL/pass | FAIL → FAIL |
+| 2.2 | sharp | 100 / 18 | 100 | pass → pass | 0 | 8.8 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 2.2 | steady | 100 / 18 | 100 | pass → pass | 1 | 15.2 | FAIL → pass | pass/pass/pass | FAIL → pass |
+| 2.2 | rough | 100 / 18 | 100 | pass → pass | 4 | 30.9 | FAIL → pass | pass/FAIL/pass | FAIL → FAIL |
+| 2.3 | sharp | 100 / 19 | 100 | pass → pass | 1 | 9.2 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 2.3 | steady | 100 / 19 | 100 | pass → pass | 1 | 13.9 | FAIL → FAIL | pass/FAIL/pass | FAIL → FAIL |
+| 2.3 | rough | 100 / 19 | 100 | pass → pass | 4 | 23.8 | FAIL → pass | pass/FAIL/pass | FAIL → FAIL |
+| 3.1 | sharp | 100 / 10 | 100 | pass → pass | 1 | 14 | FAIL → FAIL | pass/FAIL/pass | FAIL → FAIL |
+| 3.1 | steady | 100 / 10 | 100 | pass → pass | 3 | 28.1 | pass → pass | pass/FAIL/pass | FAIL → FAIL |
+| 3.1 | rough | 100 / 10 | 100 | pass → pass | 4 | 43.2 | pass → pass | pass/FAIL/pass | FAIL → FAIL |
+| 3.2 | sharp | 100 / 12 | 100 | pass → pass | 0 | 6 | FAIL → FAIL | pass/FAIL/pass | FAIL → FAIL |
+| 3.2 | steady | 100 / 12 | 100 | pass → pass | 1 | 10.3 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 3.2 | rough | 100 / 12 | 100 | pass → pass | 3 | 43.1 | pass → pass | FAIL/FAIL/pass | FAIL → FAIL |
+| 3.3 | sharp | 100 / 16 | 100 | pass → pass | 2 | 2.3 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 3.3 | steady | 100 / 16 | 100 | pass → pass | 3 | 5.4 | FAIL → FAIL | pass/pass/pass | FAIL → FAIL |
+| 3.3 | rough | 100 / 16 | 100 | pass → pass | 3 | 20.8 | FAIL → pass | pass/pass/pass | FAIL → pass |
+
+- **Rule 3 after:** sit passes everywhere except **1.2 sharp (84 against plain's 100: 16 points)**; 1.1 sharp (88 against 94), 1.2 steady (91 against 97) and 1.2 rough (88 against 97) now pass. 1.1 and 1.2 are the missions where taking a pilot out of the wing costs something real (the miners), as the sweep said at the start; 10 points lets that cost be a little, not 16.
+- **Rule 5 after:** 9 more cells pass (the ones where the fighter deals 15 to 31 percent of the damage but kills 0 to 5 ships: 1.2 sharp, 1.3 steady and rough, 2.1 steady and rough, 2.2 steady and rough, 2.3 rough, 3.3 rough); 11 still fail (sharp in 1.1, 1.3, 2.1, 2.2, 2.3, 3.1, 3.2, 3.3 and steady in 2.3, 3.2, 3.3: shares 2 to 14 percent): in those the fighter is not worth much at the bot's skill, which is what the rule is for.
+- **What now stands between the missions and a pass is rule 2** (the ace takes more than 30 percent less cruiser damage than plain): it fails in 12 of 27 cells (sharp 3, steady 3, rough 6; rule 1 fails in 1, rule 4 in none), because a fighter flown at the hostiles meets them before they reach the cruiser. That is a finding, not a change; this card does not touch it.
+- **The player-damage change moved the table a little** (a 12-seed check on the same seeds, before and after it landed: the fighter's share of the damage fell 3 to 30 percent of itself in most cells, because the cruiser's turrets and the fighter's gun were both cut by 15 percent but the turrets finish more; a few cells crossed 15, e.g. 2.3 steady 15.8 to 12.1). The table above is after it.
+
+`node tools/campaign-bot.mjs --cockpit --seeds 32` prints the table with the new `dmg%` column and the `dmg` verdict; `tests/campcockpitbot.mjs` and `tests/campcockpitbait.mjs` pin the rules (the 10 points, 15 percent of the damage, the tally of `alienDmg` and `cockDmg`).
