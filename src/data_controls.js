@@ -316,7 +316,7 @@ const CONTROLS = [
     { k: ['F'], t: 'F looks at the picked ship', sub: 'THE TARGET' }, // F: the camera glides to the target, a ship a list is on, or a squad's leader, and follows it (src/campfocus.js); Q (the zoom row) brings it back. X (clear the picks) is gone: card space-game-keys5-qwe
     { k: ['Tab'], t: 'Open or close the map of the level', sub: 'THE MAP' },
     { k: ['Up', 'Down'], t: 'Map: last or next mark (Left, Right)', sub: 'THE MAP' },
-    { k: ['Enter'], t: 'Map: the cruiser flies to the mark (Shift+Enter: fast)', sub: 'THE MAP' }, // (card space-game-b7-hud-q-cockpit: it is the CRUISER that flies, from a fighter too; the open map has the keys)
+    { k: ['Enter'], t: 'Map: cruiser flies there; Shift: fast', sub: 'THE MAP' }, // (card space-game-b7-hud-q-cockpit: it is the CRUISER that flies, from a fighter too; the open map has the keys)
     { k: ['Click'], t: 'Map: click a mark sets it, again flies', sub: 'THE MAP' },
     { k: ['X'], t: 'Map: X clears the trip', sub: 'THE MAP' },
     { k: ['/'], t: 'Type an order (needs a chat key)', sub: 'THE STRIP' }, // the same words the lists say: the strip answers through the chat key (Settings > Keys); the lists, the map and the calls need none. Hold to speak is off (CAMP_VOICE): its row comes back with campVoiceSet

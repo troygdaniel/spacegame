@@ -98,7 +98,7 @@ console.log('E. Z and R from a fighter');
 console.log('F. the keys pages');
 {
   const rows = J('campKeysPage()').flatMap(gr => gr.rows.map(r => r.caps.join('+') + ':' + r.t));
-  check('the Campaign page says Enter on the map flies the cruiser to the mark (Shift+Enter: fast)', rows.some(r => /^Enter:Map: the cruiser flies to the mark \(Shift\+Enter: fast\)$/.test(r)), JSON.stringify(rows.filter(r => /Map:/.test(r))));
+  check('the Campaign page says, on its Enter row, that the cruiser flies there from the map (Shift: fast)', rows.some(r => /^Enter:Map: cruiser flies there; Shift: fast$/.test(r)), JSON.stringify(rows.filter(r => /Map:/.test(r))));
   check('the new keys page\'s map row says Map: Enter flies the cruiser (five words), and the Controls tab\'s word is "The cruiser flies there"', J(`scrKeysModel().groups.find(gr => gr.id === 'cruiser').rows.find(r => r.chips[0].k === 'Tab').t`) === 'Map: Enter flies the cruiser' && J(`uiText('scr.ctl.campaign.15')`) === 'The cruiser flies there');
 }
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));
