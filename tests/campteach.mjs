@@ -5,6 +5,7 @@
 //   D. (card space-game-chunk14-teach-e-enter) E and Enter at the 1.1 miner's call: E added lit "then 2: the miner", Enter lit "send a pilot" once it reads Guard (the miner picked), quiet once the friends' list is opened / an order is given, 90 s, gone when the call is over
 //   E. (card space-game-b10-c7-teach-shift) Shift when the ship you escort is more than 150 km off: the boost chip lit "catch up" (1.1: about 30 s after she leaves), quiet once Shift is held or you are beside her, 120 s
 //   F. (card space-game-b10-c8-teach-z) Z when a torpedo boat or the pirate leader is inside missile range (2400 px) and there is a missile: the missile chip lit "in range", quiet once a missile is fired, 90 s
+//   G. (card space-game-b10-c9-teach-r) R when the missile rack is empty for the first time: the R chip is added to the row, lit "rack is empty", quiet once R is pressed, 60 s
 //   B. the rest: the row is as it was before 5 s and in 1.2 and 1.3; the hints switch turns the row (and the chip) off; the sim remembers the lists opened; no letter is written in the file
 // Run: node tests/campteach.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -162,6 +163,39 @@ console.log('F. Z when a torpedo boat or the pirate leader is in missile range (
   g.run(`__stay(false);`);
   check('(the page says "wait for the boats": with the cruiser left idle they come for the transport, 700 km off, and Z is not lit: the page\'s test needs you beside her)', J('__first') === null, J('__first'));
   check('the new word is in the table, shown never said', J("uiText('camp.corner.chip.teachmissile')") === 'in range' && J("VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.teachmissile') && r.why && !r.spoken)") === true);
+}
+
+console.log('G. R when the missile rack is empty for the first time (card space-game-b10-c9-teach-r; the cloud\'s BRIEF 10 chunk 9)');
+{
+  g.run(`window.__rack = (n) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = 10000; C.missiles = n; return C; };`);
+  const rLit = () => J('campTeachChips(C).filter(c => c.id === "r").map(c => c.key + ":" + c.word + ":" + c.note + ":" + c.lit)');
+  g.run(`__rack(2);`);
+  check('with missiles left there is nothing to teach: no R chip, the row as it was', rLit().length === 0 && J('campPageHudFirst(C).items.map(i => i.id).filter(x => ["fly", "fire", "boost", "missile"].indexOf(x) >= 0).join()') === 'fly,fire,boost,missile' && J('campPageHudFirst(C).items.every(i => i.id !== "r")'));
+  g.run(`__rack(0);`);
+  check('the first time the rack is empty the R chip is ADDED to the row, lit, with the key table\'s key (R), the word Reload and the note "rack is empty"', rLit().join() === 'R:Reload:rack is empty:true', rLit().join());
+  check('it is among the added chips at the left end of the row (after Q\'s, which is up at 10 s in 1.1), before the row\'s own chips, which are unchanged', J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).filter(x => x !== "enter").join()') === 'q*,r*,fly,fire,boost,missile'); // (Q's chip is there at 10 s in 1.1; the added chips come before the row's own, in the order of the table)
+  g.run(`__rack(0); campTeachChips(C); C.missiles = 3;`);
+  check('it is lit while the rack is not full and goes with the rack full (loot or a build): here 3 of 6 it still is', rLit().length === 1);
+  g.run(`C.missiles = C.magazine;`);
+  check('the rack full again: no chip', rLit().length === 0);
+  g.run(`__rack(0); campTeachChips(C); C.t += 61000;`);
+  check('it ends 60 s after the first time, even if the rack is still empty', rLit().length === 0);
+  g.run(`__rack(0); campOrder(C, 'reload', '', 'key');`);
+  check('R pressed (a refusal for ore counts too: campReloadDo, the key or the Q list\'s row) notes it (C.keysUsed.reload) and the chip goes quiet', J('C.keysUsed.reload') === true && rLit().length === 0);
+  g.run(`__rack(0); campReloadDo(C, true);`);
+  check('a dry run (the Q list asking whether the row can run) is not a press: the chip stays', J('!!(C.keysUsed && C.keysUsed.reload)') === false && rLit().length === 1);
+  g.run(`__rack(0); CAMP.flags.hints = false;`);
+  check('the hints off: the row is gone, the chip with it', J('campPageHudFirst(C) === null') === true);
+  g.run(`CAMP.flags.hints = true; __rack(0); C.result = 'won';`);
+  check('a mission that has ended lights nothing', rLit().length === 0);
+  // THE PAGE'S TEST: start 1.1, press Z six times at anything: works from the first skiffs (about 38 s: nothing is in range before), one press every 0.8 s (the launcher cycles in 0.7 s)
+  g.run(`window.__six = (from) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; window.P = campPanelNew(); window.__n = 0; for (let t = 0; t < 12 && C.missiles > 0; t++) { while (C.t < (from + t * 0.8) * 1000) campTick(C, 0.1); const m0 = C.missiles; campPanelKey(P, C, 'KeyZ', C.t); if (C.missiles < m0) __n++; } return C; };`);
+  g.run(`__six(1);`);
+  check('THE PAGE\'S TEST, as it works: pressing Z at the very start does nothing (no hostile in range: "No big ship in missile range"), so no chip', J('__n') === 0 && J('C.missiles') === J('C.magazine') && rLit().length === 0);
+  g.run(`__six(38);`);
+  check('pressing Z at the first skiffs (from about 38 s), six times, 0.8 s apart: the rack is empty and the R chip is lit "rack is empty"', J('C.missiles') === 0 && J('__n') === 6 && rLit().join() === 'R:Reload:rack is empty:true', J('[C.missiles, __n]') + ' ' + rLit().join());
+  check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.reload')") === 'Reload' && J("uiText('camp.corner.chip.teachr')") === 'rack is empty' && ['reload', 'teachr'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
+  check('no key is written for R: the cap is the key table\'s (campCornerCap)', !/'R'/.test(readFileSync(join(ROOT, 'src/campteach.js'), 'utf8').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\s\/\/ .*$/gm, '')));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));

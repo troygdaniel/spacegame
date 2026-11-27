@@ -14,6 +14,7 @@ const CAMP_TEACH = [
   // the chips that are in the row already are LIT where they stand, with a note (a row with `chip`: the id of the key row's own chip, fly, fire, boost, missile, enter or cockpit); `seen` starts its clock, `for` is how long it lasts after it (s), `keep` (optional) must stay true, `base` (optional) is read when the clock starts and handed to `used`
   { id: 'fire', chip: 'fire', note: 'camp.corner.chip.teachfire', seen: C => campTeachHostile(C), for: 45, used: C => !!(C.keysUsed && C.keysUsed.fire) },     // the first hostiles seen, in any mission: Space, hold to fire (card space-game-chunk13-teach-space-c)
   { id: 'cockpit', chip: 'cockpit', note: 'camp.corner.chip.teachc', seen: C => campTeachHostile(C), for: 45, used: C => !!(C.cockpitTaken || C.cockpit) }, // and C, take a fighter, only while the cockpit switch is on (the chip is in the row only then)
+  { id: 'r', cap: 'reload', word: 'camp.corner.chip.reload', note: 'camp.corner.chip.teachr', seen: C => C.missiles <= 0, keep: C => C.missiles < C.magazine, for: 60, used: C => !!(C.keysUsed && C.keysUsed.reload) }, // the rack is empty for the first time, in any mission: R is ADDED to the row (it has no chip of its own), lit "rack is empty" while the rack is not full, up to 60 s after the first time; `cap` is the key table's id for its key (card space-game-b10-c9-teach-r)
   { id: 'boost', chip: 'boost', note: 'camp.corner.chip.teachboost', needs: () => !!CAMP.boost.on, seen: C => campTeachFar(C), keep: C => campTeachFar(C), for: 120, used: C => !!(C.keysUsed && C.keysUsed.boost) }, // the ship you escort is more than CAMP_TEACH_FAR km from you (1.1: about 30 s after she leaves): Shift, catch up (card space-game-b10-c7-teach-shift); lit while she is, up to 120 s after the first time
   { id: 'missile', chip: 'missile', note: 'camp.corner.chip.teachmissile', needs: C => C.missiles > 0, seen: C => campTeachBig(C), keep: C => campTeachBig(C), for: 90, used: C => !!(C.keysUsed && C.keysUsed.missile) }, // a torpedo boat or the pirate leader inside missile range of the ship you fly, and a missile in the rack: Z, in range (card space-game-b10-c8-teach-z); lit while one is, up to 90 s after the first time
   // the 1.1 miner's call (card space-game-chunk14-teach-e-enter): E opens the friends' list (the miner is row 2) and Enter sends a pilot; an added chip or a lit one, while the call is live
@@ -36,12 +37,12 @@ const campTeachDue = (C, r) => { // is the row's moment on, and not yet used
   if (r.seen) { const s = campTeachClock(C, r); return s !== null && s <= r.for && (!r.keep || r.keep(C)); }
   const sec = typeof campMissionClock === 'function' ? campMissionClock(C) : C.t / 1000; return sec >= r.at && sec <= r.until;
 };
-function campTeachChips(C) { // the chips that are ADDED to the row (the rows with no `chip`)
+function campTeachChips(C) { // the chips that are ADDED to the row (the rows with no `chip`: `panel`, the list whose key it teaches, or `cap`, a key's id in the table)
   if (!C || C.result || !C.L) return [];
   const out = [];
   CAMP_TEACH.forEach(r => {
     if (r.chip || !campTeachDue(C, r)) return;
-    const key = typeof campKeyOpens === 'function' ? campKeyOpens(r.panel) : ''; if (!key) return; // a key the table has not (the list's panel is off) has no chip
+    const key = r.cap ? (typeof campCornerCap === 'function' ? campCornerCap(r.cap) : '') : typeof campKeyOpens === 'function' ? campKeyOpens(r.panel) : ''; if (!key) return; // a key the table has not (the list's panel is off) has no chip; a row with `cap` teaches a key that opens no list (R: the key table's id, reload)
     out.push({ id: r.id, key, word: uiText(r.word), note: uiText(r.note), lit: true });
   });
   return out;
