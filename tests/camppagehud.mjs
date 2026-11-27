@@ -664,6 +664,7 @@ g.run(`CAMP.flags.pagehud = false;`);
 
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 console.log('U. the open Q list is a panel of the page (card space-game-lists-panel-look; the browser batch on main 922b7a92, item 1)');
+g.run(`CAMP.orderLine.row = false;`); // (the vertical list, which a target sub-list still is: card space-game-orders-f2-q-row puts the top level of the cruiser list in a row, section V below)
 g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); window.SU = __scene(); SU.pn = campPanelNew(); SU.time = { now: 1000 }; SU.toastPanel = () => true; window.__us = t => { SU.time.now = t; campPageHudSync(SU, t); }; __us(1000);`);
 check('U no list open: the panel is made and hidden, the model has none, the page keeps no geometry for a click', J('SU.pageHud.list.el.style.display') === 'none' && J('campPageHudListModel(SU.pn, C, 1000)') === null && (J('SU.pageListGeo') === null || J('SU.pageListGeo') === undefined) && J('SU.pageHud.list.rows.length') === J('CAMP_PANELS.show'));
 g.run(`campPanelKey(SU.pn, C, campPanelDef('cruiser').code, 1100); __us(1200);`);
@@ -733,6 +734,26 @@ console.log('R. the hostiles panel names two kinds at most, the edge pill has it
   check('R the pill\'s view: a ring (a span of its own, class ph-fnum) holds the digit, and the words after it are the label: the ring then "Transport · 29 km"', vR.length === pf.length && vR.every((v, i) => v.num === String(pf[i].n) && v.text === pf[i].label), JSON.stringify(vR));
   check('R the ring is drawn in the pill\'s amber (currentColor), round, in em (no px but the 1px border), and the words are the last span (the ellipsis rule is on it)', /\.ph-fnum \{[^}]*border-radius: 50%[^}]*border: 1px solid currentColor/.test(src('src/camppagehud.css')) && /\.ph-fedge span:last-child \{[^}]*text-overflow: ellipsis/.test(src('src/camppagehud.css')) && /const num = campPageHudEl\(doc, 'span', 'ph-fnum', el\)/.test(src('src/camppagehud.js')));
 }
+
+g.run(`CAMP.orderLine.row = true;`);
+console.log('V. the cruiser\'s orders as ONE ROW beside the left panel (card space-game-orders-f2-q-row; Troy chose mock F, 27 Nov 2026)');
+g.run(`CAMP.flags.pagehud = true; __out(); C.ships = C.ships.filter(u => u.team !== 'alien'); window.SV = __scene(); SV.pn = campPanelNew(); SV.time = { now: 1000 }; SV.toastPanel = () => true; window.__vs = t => { SV.time.now = t; campPageHudSync(SV, t); }; __vs(1000);`);
+check('V no list open: the row is made and hidden, no geometry for a click', J('SV.pageHud.qrow.el.style.display') === 'none' && (J('SV.pageQrowGeo') === null || J('SV.pageQrowGeo') === undefined));
+g.run(`campPanelKey(SV.pn, C, campPanelDef('cruiser').code, 1100); __vs(1200);`);
+const QV = J(`(() => { const Q = SV.pageHud.qrow, V = campPanelView(SV.pn, C); return { shown: Q.el.style.display !== 'none', n: V.rows.length, chips: Q.chips.map(o => ({ d: o.el.style.display, cls: o.el._cls, cap: o.cap._text, word: o.label._text, full: o.full._text, state: o.state._text })), vertical: SV.pageHud.list.el.style.display, left: Q.el.style.left, top: Q.el.style.top, max: Q.el.style.maxWidth }; })()`);
+check('V Q opens the row, not the vertical list: the row is up and the column under the left panel stays hidden', QV.shown === true && QV.vertical === 'none', JSON.stringify([QV.shown, QV.vertical]));
+check('the row has the list\'s rows in their order, each a digit cap and a SHORT word (Goal, Target, Mine, Dock, Repair, Shields, Form up), the full label and the state kept in hidden spans for the boots; the rest of the chips are hidden', QV.chips.slice(0, QV.n).map(c => c.cap + ' ' + c.word).join(' | ') === J(`campPanelView(SV.pn, C).rows.map(r => r.num + ' ' + ({ goal: 'Goal', target: 'Target', fmine: 'Mine', dock: 'Dock', srepair: 'Repair', emergency: 'Shields', formup: 'Form up' }[r.id] || r.label)).join(' | ')`) && QV.chips.slice(0, QV.n).every(c => c.full.length > 3) && QV.chips.slice(QV.n).every(c => c.d === 'none'), JSON.stringify(QV.chips));
+check('a row that cannot be done now is dim (class no), the others are not (Fly to the target with no target)', QV.chips.some(c => /\bno\b/.test(c.cls)) && QV.chips.slice(0, QV.n).some(c => !/\bno\b/.test(c.cls)), JSON.stringify(QV.chips.map(c => c.cls)));
+check('it stands to the right of the left panel, level with its top: a left in px, a top in px, a width it may not pass', /px$/.test(QV.left) && /px$/.test(QV.top) && parseFloat(QV.left) > 0 && /px$/.test(QV.max), JSON.stringify([QV.left, QV.top, QV.max]));
+check('the page says where the row and its chips are, in game px, for the mouse: a box and one rectangle for each chip', J('!!SV.pageQrowGeo') && J('SV.pageQrowGeo.chips.length') === QV.n && J('SV.pageQrowGeo.w') > 0 && J('SV.pageQrowGeo.chips.every(c => c.x1 > c.x0 && c.y1 > c.y0)') === true, J('SV.pageQrowGeo && SV.pageQrowGeo.chips.length'));
+check('a frame with nothing new writes nothing', (g.run(`__vs(1300); window.__w0 = __writes; __vs(1400);`), J('__writes') === J('__w0')), J('__writes - __w0'));
+g.run(`campPanelKey(SV.pn, C, 'Digit5', 1500); __vs(1600);`);
+check('a digit that is REFUSED (5, Repair hull: the hull is sound) leaves the row open and the line does not claim it was done (no "I  repair hull")', J('campPanelOpen(SV.pn)') === 'cruiser' && J('SV.pageHud.qrow.el.style.display') !== 'none' && J('SV.pageHud.sent.who._text') !== 'I', J('[campPanelOpen(SV.pn), SV.pageHud.sent.who._text]'));
+g.run(`campPanelKey(SV.pn, C, 'Digit1', 1700); __vs(1800);`);
+check('a digit that is TAKEN (1, Fly to the goal) acts at once and closes the list: the row goes, and the line under the panel reads "I  fly to the goal" with a check', J('campPanelOpen(SV.pn)') === '' && J('SV.pageHud.qrow.el.style.display') === 'none' && J('SV.pageHud.sent.el.style.display') !== 'none' && J('SV.pageHud.sent.who._text') === 'I' && J('SV.pageHud.sent.verb._text') === 'fly to the goal' && J('SV.pageHud.sent.check.style.display') !== 'none' && J('SV.pageHud.sent.target.style.display') === 'none', J('[campPanelOpen(SV.pn), SV.pageHud.sent.who._text, SV.pageHud.sent.verb._text, SV.pageHud.sent.check.style.display]'));
+g.run(`CAMP.orderLine.row = false; campPanelClose(SV.pn); campPanelGo(SV.pn, C, 'cruiser'); __vs(2000);`);
+check('with CAMP.orderLine.row false the vertical list is back and the row is hidden (the way back)', J('SV.pageHud.list.el.style.display') !== 'none' && J('SV.pageHud.qrow.el.style.display') === 'none');
+g.run(`CAMP.orderLine.row = true; campPanelClose(SV.pn); CAMP.flags.pagehud = false;`);
 
 console.log('T. the place pills: a gap under the name, clear of the panels, the relic\'s word as a pill (card space-game-world-batch-fixes, the browser batch on b55c3046: items 4, 5 and 8)');
 {

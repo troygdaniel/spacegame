@@ -83,20 +83,23 @@ function campPanelsPaint(s, now) {
 // where the open list is for a click: its own, or (the page HUD draws it as a panel: src/camppagehud.js) where the page says its rows are
 const campPanelsGeo = (s, def, V) => { const G0 = campPanelsGeometry(def, V.total, V.pick); return typeof campPageHudListGeo === 'function' ? campPageHudListGeo(s, G0) : G0; };
 // a click on a row of the open list does the row (as Enter would). true when the list took the click (so it is not also a click on the map or the battle)
+// the row of the cruiser's orders (src/camppagehud.js: the page puts the top level of the cruiser list in ONE ROW beside the left panel, s.pageQrowGeo, in the safe area's numbers): its box and its chips, or null when the list is not that row
+const campPanelsRowGeo = (s, def, V) => { const g = s && s.pageQrowGeo; return g && def && def.id === 'cruiser' && !V.pick && g.chips && g.chips.length && typeof campPageHudHides === 'function' && campPageHudHides('list') ? g : null; };
 // the pointer is on the open list's box: a press there is the list's click (campPanelsClick), never the start of a drag of the view (src/campdrag.js)
 function campPanelsOver(s, px, py) {
   const P = s.pn; if (!P || typeof P !== 'object' || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(def.id))) return false;
   const V = campPanelView(P, s.camp); if (!V) return false;
+  const Q = campPanelsRowGeo(s, def, V); if (Q) return px >= Q.x && px <= Q.x + Q.w && py >= Q.y && py < Q.y + Q.h; // the cruiser's orders as a row (card space-game-orders-f2-q-row): the row's box
   const G = campPanelsGeo(s, def, V); return px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h;
 }
 function campPanelsClick(s, px, py) {
   const P = s.pn, L = s.pnl; if (!P || !L || !campPanelsOn(s)) return false;
   const def = campPanelDef(campPanelOpen(P)); if (!def || (typeof campCornerDrawsList === 'function' && campCornerDrawsList(def.id))) return false; // (a list a corner draws has no rows here to click)
   const V = campPanelView(P, s.camp); if (!V) return false; // the rows on the screen: the list's, or the candidates of a target sub-list
-  const G = campPanelsGeo(s, def, V), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
+  const Q = campPanelsRowGeo(s, def, V), G = Q ? { x: Q.x, y: Q.y, w: Q.w, h: Q.h } : campPanelsGeo(s, def, V), now = (s.time && s.time.now) || 0; if (!(px >= G.x && px <= G.x + G.w && py >= G.y && py < G.y + G.h)) return false;
   P.touch = now; // a click on the list is a touch: it does not fade while it is used (campPanelFade)
-  let i = -1; for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k;
+  let i = -1; if (Q) { Q.chips.forEach((c, k) => { if (px >= c.x0 - 2 && px < c.x1 + 2 && py >= c.y0 - 2 && py < c.y1 + 2) i = k; }); } else for (let k = 0; k < G.n; k++) if (py >= G.rowY(k) - 1 && py < G.rowY(k) + G.rowH + 1) i = k; // (a chip of the row, or a row of the column)
   if (P.pick) { // a candidate: highlighted and chosen, the order is given at it
     const pk = P.pick, items = campPickSync(s.camp, pk), it = i >= 0 ? items[pk.top + i] : null; if (!it) return true;
     pk.at = pk.top + i; pk.sel = it.id; const r = campPanelChoose(P, s.camp, now, 'click', def); if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454'); return true;
@@ -106,7 +109,7 @@ function campPanelsClick(s, px, py) {
   if (hit) {
     P.at = (P.top | 0) + i; let item = null;
     if (campPickKind(hit) && campPanelRowState(s.camp, hit).ok) { const plan = campPickPlan(s.camp, hit); if (plan.how === 'list') { campPickOpen(P, hit, plan.items); return true; } if (plan.how === 'auto') item = plan.item; } // a row that needs a target: one is taken, several open a sub-list
-    const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
+    const r = campPanelRun(s.camp, hit, 'click', item); P.lit[hit.id] = now; if (r && r.ok) P.did = { id: hit.id, at: now }; if (r && r.say) toast(s, r.say, r.ok ? '#9fe9ff' : '#ffb454');
     if (r && r.ok && item) P.seen = { kind: campPickKind(hit), id: item.id, until: now + CAMP_PICK.seen };
     if (r && r.ok) campPanelClose(P);
   }

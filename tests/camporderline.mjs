@@ -4,6 +4,7 @@
 //   B  the clock: nothing at the start; a pick brings it up, an order puts a check after it for CAMP.orderLine.check ms, it fades with the pick squares (campMarkNow) and goes; Enter with nothing picked shows it too (form up)
 //   C  a refused Enter says why in the line; flying a fighter, nothing picked: the others form up on HIM; the tip is on the picked ship only
 //   D  the page HUD's line: written by campPageHudSync (who white, the verb in mint, the target; grey for a default; the check), hidden with nothing to say and while the Q list stands where it stands
+//   F  a Q order read back ("I  fly to the goal" with a check, only when it was TAKEN) and the click on the row of the Q orders (card space-game-orders-f2-q-row)
 //   E  the tip in the scene: one text over the picked ship, the same words, a check after Enter, hidden when nothing is picked; and the one new line has its words and a shown-only rule
 // Run: node tests/camporderline.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -105,9 +106,45 @@ console.log('D. the page HUD\'s line');
   check('after the squares fade the whole line is hidden again', J('S.pageHud.sent.el.style.display') === 'none');
   g.run(`campSelPick(C, 'pilot:green', 'key'); campPageHudSync(S, 600); window.__w0 = __writes; campPageHudSync(S, 700);`);
   check('a frame with nothing new writes nothing (only an element whose value changed is written)', J('__writes') === J('__w0'), J('__writes - __w0'));
-  g.run(`campPanelGo(S.pn = campPanelNew(), C, 'cruiser'); campPageHudSync(S, 800);`);
-  check('while the Q list is open the line is not shown (the list stands where the line would)', J('S.pageHud.sent.el.style.display') === 'none');
-  g.run(`campPanelClose(S.pn); C.sel = 'pilot:red'; CAMP.flags.pagehud = false;`);
+  g.run(`campSelPick(C, 'pilot:green', 'key'); campPanelGo(S.pn = campPanelNew(), C, 'cruiser'); campPageHudSync(S, 800);`);
+  check('while the Q ROW is open the line is still shown (the row is at the top, beside the panel: card space-game-orders-f2-q-row)', J('S.pageHud.sent.el.style.display') !== 'none' && J('S.pageHud.qrow.el.style.display') !== 'none');
+  g.run(`CAMP.orderLine.row = false; campPanelClose(S.pn); campPanelGo(S.pn, C, 'cruiser'); campSelPick(C, 'pilot:red', 'key'); campPageHudSync(S, 900);`);
+  check('with the vertical list open (row off, or a target sub-list) the line is not shown: the list stands where the line would', J('S.pageHud.sent.el.style.display') === 'none' && J('S.pageHud.list.el.style.display') !== 'none');
+  g.run(`CAMP.orderLine.row = true; campPanelClose(S.pn); C.sel = 'pilot:red'; CAMP.flags.pagehud = false;`);
+}
+
+console.log('F. a Q order read back, and the click on the row (card space-game-orders-f2-q-row)');
+{
+  g.run(`CAMP.flags.pagehud = true; __mk(); window.__P = campPanelNew(); window.__kq = (code, now) => campPanelKey(__P, C, code, now);`);
+  check('the first look is not news: nothing is said of an order given before it', J('campOrderLineNow(C, __P)') === null);
+  g.run(`__kq('KeyQ', 1000);`);
+  check('Q opens the cruiser list and says nothing yet', J('campPanelOpen(__P)') === 'cruiser' && J('campOrderLineNow(C, __P)') === null);
+  g.run(`window.__r5 = __kq('Digit5', 1100);`);
+  check('5 (Repair hull) is refused, the hull is sound: the list stays open and nothing is said of it (no "I  repair hull")', J('__r5.ok') === false && J('campPanelOpen(__P)') === 'cruiser' && J('campOrderLineNow(C, __P)') === null, J('[__r5.ok, campOrderLineNow(C, __P)]'));
+  g.run(`window.__r1 = __kq('Digit1', 1200);`);
+  const q = J('campOrderLineNow(C, __P)');
+  check('1 (Fly to the goal) is taken: the list closes and the line reads "I  fly to the goal" with a check, no target, full strength', J('__r1.ok') === true && J('campPanelOpen(__P)') === '' && q && q.q === true && q.who.t === 'I' && q.verb.t === 'fly to the goal' && q.target.t === '' && q.check === true && q.a === 1, JSON.stringify(q));
+  g.run(`C.t += CAMP.orderLine.check + 50;`);
+  check('the check goes after 2.5 s, the words stay with the squares', J('campOrderLineNow(C, __P).check') === false && J('campOrderLineNow(C, __P).who.t') === 'I');
+  g.run(`campSelPick(C, 'pilot:red', 'key');`);
+  check('a pick after the Q order retires it: the line is the pick sentence again (Wedge ...)', J('campOrderLineNow(C, __P).who.t') === 'Wedge' && !J('campOrderLineNow(C, __P).q'));
+  g.run(`C.t += CAMP.mark.show + CAMP.mark.fade + 100; campSelPick(C, 'all', 'key'); campMarkNow(C); C.t += CAMP.mark.show + CAMP.mark.fade + 100;`);
+  check('and it all fades away', J('campOrderLineNow(C, __P)') === null);
+  g.run(`__kq('KeyQ', 5000); __kq('Digit1', 5100); C.t += 10; campOrderLineNow(C, __P);`); // (the page's frame sees it first)
+  check('the Q order read back without a list (P undefined, as the tip scene asks) is the same line: it keeps what the page saw', J('campOrderLineNow(C).q') === true && J('campOrderLineNow(C).tip.id') === '');
+  check('the short words of the row: Goal, Target, Mine, Dock, Repair, Shields, Form up; flown, the last is Come here; a row with none says nothing', J(`['goal', 'target', 'fmine', 'dock', 'srepair', 'emergency', 'formup'].map(id => campOrderRowShort(id, false)).join()`) === 'Goal,Target,Mine,Dock,Repair,Shields,Form up' && J(`campOrderRowShort('formup', true)`) === 'Come here' && J(`campOrderRowShort('nothing', false)`) === '');
+  // the click on a chip of the row: the page says where the chips are (s.pageQrowGeo, game px); a click on one does the row as its digit would; off the row it is not the list's
+  g.run(`__mk(); window.__P2 = campPanelNew(); campPanelGo(__P2, C, 'cruiser'); window.__s = { pn: __P2, camp: C, pnl: { objs: [], rows: [], live: -1e9, key: '' }, mode: 'play', mp: null, time: { now: 5000 }, toastPanel: () => true, hud: {}, pageQrowGeo: { x: 300, y: 20, w: 420, h: 30, chips: [0, 1, 2, 3, 4, 5, 6].map(i => ({ x0: 310 + i * 58, x1: 360 + i * 58, y0: 25, y1: 45 })) } };`);
+  check('the press on the row is the list\'s (not the start of a drag of the view): over the row yes, off it no', J('campPanelsOver(__s, 400, 30)') === true && J('campPanelsOver(__s, 100, 300)') === false);
+  g.run(`window.__took = campPanelsClick(__s, 600, 300);`);
+  check('a click off the row is not the list\'s: nothing happens, the list stays', J('__took') === false && J('campPanelOpen(__P2)') === 'cruiser');
+  g.run(`window.__took = campPanelsClick(__s, 330, 30);`);
+  check('a click on chip 1 (Fly to the goal) does the row, as its digit: the click is taken, the list closes and P.did is that row', J('__took') === true && J('campPanelOpen(__P2)') === '' && J('__P2.did.id') === 'goal', J('[__took, campPanelOpen(__P2), __P2.did]'));
+  g.run(`campPanelGo(__P2, C, 'cruiser'); window.__took = campPanelsClick(__s, 310 + 4 * 58 + 20, 30);`);
+  check('a click on chip 5 (Repair hull, refused: the hull is sound) is taken as the list\'s click and the list stays open, the reason is said (a toast)', J('__took') === true && J('campPanelOpen(__P2)') === 'cruiser');
+  g.run(`__s.pageQrowGeo = null; campPanelGo(__P2, C, 'cruiser'); window.__took = campPanelsClick(__s, 330, 30);`);
+  check('with no row on the page (the vertical list, geometry from the canvas) a click up there is not a chip', J('campPanelsOver(__s, 330, 30)') === false || J('__took') === false);
+  g.run(`CAMP.flags.pagehud = false;`);
 }
 
 console.log('E. the tip in the scene, and the words');

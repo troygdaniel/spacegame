@@ -220,7 +220,8 @@ const CAMP = {
   },
   orderLine: {                             // THE ORDER AS A SENTENCE (card space-game-orders-f1-sentence; Troy, 27 Nov 2026: mock F; src/camporderline.js): the line under the left panel that reads WHO, the verb Enter will do and the target; the tip on the picked target
     check: 2500,                           // ms the check after Enter stays (an order was carried out)
-    tip: true                              // the small tip on the picked target in the world ("Wedge will attack"); false: the line only
+    tip: true,                             // the small tip on the picked target in the world ("Wedge will attack"); false: the line only
+    row: true                              // card space-game-orders-f2-q-row (Troy, 27 Nov 2026: mock F): Q opens the cruiser's orders as ONE ROW at the top, to the right of the left panel, in place of the vertical list under it (a target sub-list still opens under the panel); false: the vertical list, as it was
   },
   mark: {                                  // the squares come and go (cards space-game-pilot-squares-fade; Troy, 24 Nov 2026: "have the reticle squares disappear from the pilots after a few seconds", and the same for the selected targets; src/camptarget.js campMarkNow, src/camptargetdraw.js): the squares on the pilots WHO is show when WHO is picked, an order is given or the mission begins; the square on the target held (the enemy's or the friend's) shows when it is picked, and an order shows both; then they go
     show: 3000,                            // ms (the game's own clock, so a pause does not eat it) a square stays at full strength after it was brought back
