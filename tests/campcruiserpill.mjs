@@ -1,4 +1,4 @@
-// smoke: while you fly a fighter the cruiser has an edge pill on the page ("Cruiser · 210 km", pale blue, like the ships you protect) (plain Node, no Chrome)
+// smoke: while you fly a fighter the cruiser has an edge pill on the page ("Cruiser · 210 km", pale blue, like the ships you protect) and the canvas's gold goal label keeps clear of the page's edge pills and panels (plain Node, no Chrome)
 // Card space-game-b12-c2-3-pills (Troy's BRIEF 12 chunks 2 and 3, docs/next-chunks.html). Two things Troy saw in 2.2 with a fighter flown:
 //   chunk 2  the cruiser's only mark was the canvas tag CRUISER AUTO, pinned half off the screen or under a panel: now she has an edge pill like every other ship while she is off the screen (src/camppagehud.js campPageHudCruiserEdge,
 //            riding in the friends' list as id 'carrier'), and the canvas tag steps aside while that pill is up (tests/campcockpitcam.mjs section E has the tag's half)
@@ -64,9 +64,28 @@ console.log('B. with a friend off the screen too');
   check('and the friend\'s keeps its digit (the E key\'s number) while the cruiser\'s has none', !hasFriend || (String(M.fedges[1].n).length > 0 && M.fedges[0].n === ''), JSON.stringify(M.fedges.map(f => f.n)));
 }
 
+console.log('C. the goal label keeps clear of the page\'s pills and panels');
+{
+  const M = { edge: { n: 3, km: '400 km' }, fedges: [{ text: 'Cruiser · 210 km' }] }, PC = { edge: { x: 1230, y: 30 }, fedges: [{ x: 70, y: 360 }] }, PR = [{ x: 1170, y: 125, w: 190, h: 85 }];
+  const b = J(`campPageHudPillBoxes(${JSON.stringify(M)}, ${JSON.stringify(PC)}, ${JSON.stringify(PR)}, 0, 0)`);
+  const z1 = J(`campPageHudPillSize('3 · 400 km')`), z2 = J(`campPageHudPillSize('Cruiser · 210 km')`);
+  check('the boxes: the hostiles\' pill, the cruiser\'s pill and the panel, each [x0, y0, x1, y1] around its centre, in that order', b.length === 3 && Math.abs(b[0][0] - (1230 - z1.w / 2)) < 0.01 && Math.abs(b[0][3] - (30 + z1.h / 2)) < 0.01 && Math.abs(b[1][2] - (70 + z2.w / 2)) < 0.01 && b[2][0] === 1170 - 95 && b[2][3] === 125 + 42.5, JSON.stringify(b));
+  const sh = J(`campPageHudPillBoxes(${JSON.stringify(M)}, ${JSON.stringify(PC)}, ${JSON.stringify(PR)}, 100, 40)`);
+  check('where the flight has taken a wider or taller window (the safe area starts 100 px in and 40 down) the numbers are the canvas HUD\'s: the page\'s less that', Math.abs(sh[2][0] - (b[2][0] - 100)) < 1e-9 && Math.abs(sh[2][1] - (b[2][1] - 40)) < 1e-9);
+  check('nothing on the page: no boxes (a stand-in scene, the page HUD off)', J('campPageHudPillBoxes(null, null, null, 0, 0).length') === 0 && J('campPageHudPillBoxes({ edge: null, fedges: [] }, { edge: null, fedges: [] }, [], 0, 0).length') === 0);
+  // the goal's label the way the scene asks for it (src/campaignscene.js): the arrow at the right edge level with the hostiles' pill, its label standing back and a little up
+  const spread = boxes => J(`campEdgeSpread([{ x: 1270, y: 120, angle: 0, w: 150, h: 18, want: (px, py, an) => ({ x: px - Math.cos(an) * 64, y: py - Math.sin(an) * 28 }) }], { keep: [], W: 1280, H: 720, m: CAMP.nav.arrow.margin, tri: 13, boxes: ${JSON.stringify(boxes)} })[0]`);
+  const meet = (a, r) => a[0] < r[2] && a[2] > r[0] && a[1] < r[3] && a[3] > r[1];
+  const free = spread([]), clear = spread(b);
+  check('as it was (no boxes) the label stands where the hostiles\' panel is (the fault Troy saw in 2.2)', free.boxes.some(x => b.some(r => meet(x, r))), JSON.stringify(free.boxes));
+  check('with the page\'s boxes the arrow and its label are moved along the edge and touch none of them', clear.boxes.length === 2 && clear.moved === true && clear.boxes.every(x => b.every(r => !meet(x, r))), JSON.stringify(clear));
+}
+
 console.log('D. wiring');
 {
   const hud = code('src/camppagehud.js'), scene = code('src/campaignscene.js'), cam = code('src/campcockpitcam.js'), css = readFileSync(ROOT + '/src/camppagehud.css', 'utf8');
+  check('the sync stores where the pills and panels end up: R.pillBoxes = campPageHudPillBoxes(...) after campPageHudEdgesClear', /R\.pillBoxes = campPageHudPillBoxes\(M, PC, PR,/.test(hud));
+  check('the scene\'s goal label is spread off them: the sight boxes plus this.pageHud.pillBoxes go to fillSpread', /boxes: \(this\.hud\.sight && this\.hud\.sight\.boxes \? this\.hud\.sight\.boxes : \[\]\)\.concat\(this\.pageHud && this\.pageHud\.pillBoxes/.test(scene));
   check('the cruiser\'s pill is painted in the pale blue class and has no digit (the ring shows nothing for her)', /ph-fcruiser/.test(hud) && /f\.cruiser \? '' : String\(f\.n\)/.test(hud) && /\.ph-fcruiser \{[^}]*9fd8ff/.test(css) && /\.ph-fnum:empty \{ display: none; \}/.test(css));
   check('the canvas tag asks the page first: campPageHudHasPill(s, \'carrier\') in its `want`', /campPageHudHasPill\(s, 'carrier'\)/.test(cam));
 }

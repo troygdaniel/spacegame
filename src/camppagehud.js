@@ -220,6 +220,14 @@ function campPageHudEdgeFit(items, fixed) {
     const r = pick || { x: p0.x, y: p0.y, moved: false, b: box(p0, it) }; taken.push(r.b); return { x: r.x, y: r.y, moved: r.moved };
   });
 }
+// the rectangles the page's edge pills and panels stand on, [x0, y0, x1, y1] in the canvas HUD's 1280 by 720 numbers (the page's own px less where the safe area starts: sox, soy), for the canvas's goal label: "Proxima d 707 km" in gold keeps out of them (card space-game-b12-c2-3-pills, BRIEF 12 chunk 3: in 2.2 it stood under the hostiles' pill at the right edge, and under the HOSTILES panel). M: the model, PC: where its pills ended up (campPageHudEdgesClear), PR: the panels' rectangles { x, y, w, h } (campPageHudPanelRects)
+function campPageHudPillBoxes(M, PC, PR, sox, soy) {
+  const out = [], box = (x, y, w, h) => out.push([x - w / 2 - (sox || 0), y - h / 2 - (soy || 0), x + w / 2 - (sox || 0), y + h / 2 - (soy || 0)]);
+  if (M && M.edge && PC && PC.edge) { const z = campPageHudPillSize(M.edge.n + ' \u00b7 ' + M.edge.km); box(PC.edge.x, PC.edge.y, z.w, z.h); }
+  ((PC && PC.fedges) || []).forEach((p, i) => { const f = M && M.fedges && M.fedges[i]; if (f) { const z = campPageHudPillSize(f.text); box(p.x, p.y, z.w, z.h); } });
+  (PR || []).forEach(q => box(q.x, q.y, q.w, q.h));
+  return out;
+}
 // does the page have the hostiles' pill now? (the last model: s.pageHud.last.edge): the canvas's amber goal arrow for the nearest hostile (src/campaignscene.js paintHud: "Pirate 201 km") is not drawn then, the pill carries it (card space-game-edge-pills-position)
 function campPageHudHasFoePill(s) { const L = s && s.pageHud && s.pageHud.last; return !!L && !!L.edge; }
 // does the page have a pill for this ship now? (the last model the scene's sync wrote, 10 a second: s.pageHud.last.fedges): the canvas's amber goal arrow (src/campaignscene.js paintHud) is not drawn for a ship that has one
@@ -563,6 +571,7 @@ function campPageHudSync(s, now) {
     // in space: the pill at the edge for the hostiles off the screen, and a pill for each place in view (world px to the canvas's px)
     const M = R.last = campPageModel(C, view); R.was = M.was; // (the same view as the paint above: both looks gave the same pills)
     const PR = campPageHudPanelRects(R, r, k), PC = campPageHudEdgesClear(M, PR), PP = campPageHudPlacesClear(M.places, PR); // the pills are put clear of the panels (and of each other) now that the panels are in place
+    R.pillBoxes = campPageHudPillBoxes(M, PC, PR, typeof fillOx === 'function' ? fillOx() : 0, soy); // where they stand, for the canvas's goal label to keep out of (src/campaignscene.js)
     if (PC.edge) { set(R.edge.el, 'left', Math.round(PC.edge.x * k) + 'px'); set(R.edge.el, 'top', Math.round(PC.edge.y * k) + 'px'); set(R.edge.ic, '--a', String(Math.round(PC.edge.angle * 180 / Math.PI)) + 'deg'); }
     R.fedges.forEach((p, i) => { const f = PC.fedges[i]; if (f) { set(p.el, 'left', Math.round(f.x * k) + 'px'); set(p.el, 'top', Math.round(f.y * k) + 'px'); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
     R.pills.forEach((p, i) => { const pl = M.places[i], q = PP[i]; if (pl && q) { set(p, 'display', ''); set(p, 'left', Math.round(q.x * k) + 'px'); set(p, 'top', Math.round(q.y * k) + 'px'); } else if (pl) set(p, 'display', 'none'); });
