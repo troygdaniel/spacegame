@@ -17,3 +17,5 @@ The words of the key row that teaches (card space-game-chunk12-teach-q; Troy, 26
 | camp.corner.chip.teachmissile | in range |
 | camp.corner.chip.reload | Reload |
 | camp.corner.chip.teachr | rack is empty |
+| camp.corner.chip.map | Map |
+| camp.corner.chip.teachtab | wave off screen |

@@ -47,6 +47,7 @@ function campMapClose(s) {
 
 function campMapOpen(s) {
   if (s.mp || !s.camp) return;
+  (s.camp.keysUsed || (s.camp.keysUsed = {})).map = true; // the map has been opened (Tab): the key row's teaching chip for it goes quiet (src/campteach.js, card space-game-b10-c10-teach-tab)
   if (typeof campPanelsClose === 'function') campPanelsClose(s); // the map has the arrows and Enter now: an open list closes
   const C = s.camp, dom = typeof campMapPanelsOn === 'function' && campMapPanelsOn(s), F = dom ? CAMPMAPPANEL.frame : CAMPMAP.frame, P = CAMPMAP_PANEL, L = (C.L || CAMP.levels[C.level]); // dom: the page HUD is up, so the map is drawn in its card and its lists are page panels (src/campmappanel.js, card space-game-b3-f-tab-map-build); else the glass panel as it was
   const base = campMapFit(campMapBounds(C.level, false, C.L), F), wholeBase = campMapFit(campMapBounds(C.level, true, C.L), F); // wholeBase: the whole system fitted: where zooming out ends (zMin), and where the view's centre goes as it does
