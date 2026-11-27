@@ -31,7 +31,7 @@ g.run(`{
 
 console.log('A. the switch and the table');
 {
-  check('off by default: CAMP.flags.cockpit is false in the table', J('CAMP.flags.cockpit') === false && J('campCockpitOn()') === false);
+  check('ON by default (card space-game-cockpit-default-on): CAMP.flags.cockpit is true in the table and campCockpitOn() is true with no address switch; ?cockpit=0 is off whatever the flag says', J('CAMP.flags.cockpit') === true && J('campCockpitOn()') === true && J('campCockpitAddrOff("?cockpit=0")') === true && J('campCockpitAddrOn("?cockpit=1")') === true);
   g.run(`__mk(false);`);
   g.run(`CAMP.flags.cockpit = false; window.P = campPanelNew();`);
   check('with the switch off a take is refused and the key does nothing', J('campCockpitOn()') === false && J('campCockpitTake(C)') === false && J('C.cockpit') === null && J(`(() => { const r = campPanelKey(P, C, 'KeyC', 0); return [r.used, r.ran]; })()`).join() === 'false,false');

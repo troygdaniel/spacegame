@@ -17,5 +17,5 @@ The words of taking a pilot's stick (card space-game-fly-fighter-l1; Troy, 26 No
 | camp.corner.backon | Back on the cruiser. |
 | camp.corner.pod | {name} ejected. Back in {s} s. |
 | camp.corner.podwait | Your pilot is mending: {s} s. |
-| scr.keys.r.cockpit | Take a pilot's stick; again hands it back |
+| scr.keys.r.cockpit | Pilot's stick: take, give back |
 | camp.nudge.cockpit | {keycockpit} flies a pilot's fighter. {keycockpit} again hands it back. |
