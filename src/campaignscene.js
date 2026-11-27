@@ -134,6 +134,7 @@ class Campaign extends Phaser.Scene {
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
     if (typeof campPlaceLabelsInstall === 'function') campPlaceLabelsInstall(this); // the two labels of a place keep clear of each other at every zoom (src/campplacelabels.js); after the zoom, which scales the labels, on the same event
+    if (typeof campMomentsReset === 'function') campMomentsReset(this); // the hits' and the kills' notes of the battle before are not this battle's (src/campmoments.js)
     if (typeof slookFxInstall === 'function') slookFxInstall(this); // the new ship look's engine trails and kills, once a frame after the ships' sprites are in place (src/shiplookfx.js; they draw only with the switch on)
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }

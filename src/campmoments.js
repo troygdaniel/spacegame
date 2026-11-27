@@ -20,6 +20,7 @@
 //   campMomentsKill(s, e)            the scene's 'boom' handler: true when the new kill is drawn (false: the scene draws the ship look's or the old puffs)
 //   campMomentsWave(s, e)            the scene's 'wave' handler: asks the page HUD for the glow and the slide; true when it did
 //   campMomentsFrame(s)              once a frame, after the ships' sprites are in place: the sparks, the kills, the flashes, the view's nudge
+//   campMomentsReset(s)              from the scene's create: the notes of the last battle (a scene that starts again is the same object) are gone
 //   campMomentsNotch(g, s, u, R, w, f)   the hull arc's notch of a ship hit a moment ago, on the arc's Graphics (src/shiplookmarks.js slookArcDraw)
 //   campMomentsOffset(s)             the camera's follow offset in world px now: the nudge plus s.camLead (the view's lead, which another card sets), in the sign Phaser takes
 const CAMPMOM = {
@@ -175,6 +176,9 @@ function campMomentsFrame(s) { // once a frame, after the ships' sprites are in 
     if (live) { const o = campMomentsOffset(s); cam.setFollowOffset(o.x, o.y); S.offsetSet = true; }
     else if (S.offsetSet) { const o = campMomentsOffset(s); cam.setFollowOffset(o.x, o.y); S.offsetSet = false; S.nudge = null; } // the nudge is over: the offset goes back to the lead's alone (nothing, today)
   }
+}
+function campMomentsReset(s) { // from the scene's create (a scene that starts again is the same object, so its notes would live on): the notes of the last battle are gone
+  if (!s) return; s.momHitAt = {}; s.momPulse = {}; s.momWaveAt = 0;
 }
 function campMomentsNotch(g, s, u, R, w, f) { // on the hull arc's Graphics, the part the hull just lost: a short bright white run from the end of the arc that fades; true when drawn
   const t0 = s && s.momHitAt && u ? s.momHitAt[u.id] : undefined, C = s && s.camp; if (t0 === undefined || !C || !g) return false;
