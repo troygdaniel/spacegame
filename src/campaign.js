@@ -1478,12 +1478,12 @@ function campRelic(C, dt) {
   } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
 }
 
-// THE ALIEN A FIGHTER HOLDS OFF THE RING (the relic row's `held`; card space-game-fighter-job-23, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes): an alien that is OUTSIDE the ring and within `held` px of one of your fighters (the pilots', or the one he flies)
-// does not stop the hold, one alien for each fighter (the nearest to it): a fighter that has an alien busy at the ring's edge is doing the job of the cruiser's guns. It is not the old kite: the wave holds the ring (campRelicAlien), so the
-// aliens cannot be drawn off it, and it is one alien a fighter, so a wave of twelve cannot be held off by one ship. Returns the Set of the ids it frees.
+// THE ALIEN THE FIGHTER HE FLIES HOLDS OFF THE RING (the relic row's `held`; card space-game-fighter-job-23, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes): an alien that is OUTSIDE the ring and within `held` px of the fighter the player flies
+// does not stop the hold: the nearest one, ONE alien. It is the player's job, not the wing's: the pilots' own fighters hold nothing off (a wing that did it by itself would win the mission for a cruiser that sits and never fires). It is not the
+// old kite either: the wave holds the ring (campRelicAlien), so the aliens cannot be drawn off it, and one ship cannot hold off twelve. Returns the Set of the ids it frees.
 function campRelicHeld(C, R, r) {
-  const out = new Set(), al = campAliens(C).filter(u => campDist(u, R) > r.radius);
-  C.ships.forEach(f => { if (f.team !== 'earth' || f.kind !== 'fighter' || f.hp <= 0 || f.docked) return; const a = campNearest(al.filter(u => !out.has(u.id)), f, r.held); if (a) out.add(a.id); });
+  const out = new Set(), f = typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; if (!f || f.kind !== 'fighter') return out;
+  const a = campNearest(campAliens(C).filter(u => campDist(u, R) > r.radius), f, r.held); if (a) out.add(a.id);
   return out;
 }
 // C.lasers from this tick's beams: a beam stays on the list for 250 ms after its last pulse (a turret fires every 0.7 s, eight of them: it reads as one beam), and its since is when it began
