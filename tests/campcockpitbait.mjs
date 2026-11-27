@@ -65,13 +65,13 @@ console.log('C. aim only');
 
 console.log('D. the sweep\'s rule 4');
 {
-  const S = (won, tWin, taken) => ({ won, tWin, taken }), plain = S(100, 100, 100), F = (kills, cockKills, cockHurt, shotRuns) => Object.assign(S(100, 100, 100), { kills, cockKills, cockHurt, shotRuns });
+  const S = (won, tWin, taken) => ({ won, tWin, taken }), plain = S(100, 100, 100), F = (kills, dmgShare, cockHurt, shotRuns) => Object.assign(S(100, 100, 100), { kills, dmgShare, cockHurt, shotRuns });
   const fplain = F(12, null, null, null);
   check('rule 4: in a fight, a median of 15 percent of a hull lost passes, 14 fails', cockpitVerdict(fplain, F(12, 6, 15, 0), plain).hurt === 'pass' && cockpitVerdict(fplain, F(12, 6, 14, 0), plain).hurt === 'FAIL');
   check('rule 4: never shot down is no longer a failure (0 percent shot down, 20 percent of a hull lost passes)', cockpitVerdict(fplain, F(12, 6, 20, 0), plain).hurt === 'pass');
   check('rule 4: shot down in more than half the runs (shredded) still fails, whatever the hull lost: 50 percent passes, 51 fails', cockpitVerdict(fplain, F(12, 6, 90, 50), plain).hurt === 'pass' && cockpitVerdict(fplain, F(12, 6, 90, 51), plain).hurt === 'FAIL');
   check('rule 4 judges only a fight: plain with under 5 kills gives n/a', cockpitVerdict(F(4, null, null, null), F(4, 0, 0, 0), plain).hurt === 'n/a');
-  check('the numbers: hurtMin 15, shotMax 50, a fight is 5 kills, a quarter of plain\'s kills; shotMin is gone', COCKPIT_RULE.hurtMin === 15 && COCKPIT_RULE.shotMax === 50 && COCKPIT_RULE.minFight === 5 && COCKPIT_RULE.killsShare === 0.25 && COCKPIT_RULE.shotMin === undefined);
+  check('the numbers: hurtMin 15, shotMax 50, a fight is 5 kills, 15 percent of the damage dealt (card space-game-b12-c11-12-sweep-rules: it was a quarter of plain\'s kills); shotMin is gone', COCKPIT_RULE.hurtMin === 15 && COCKPIT_RULE.shotMax === 50 && COCKPIT_RULE.minFight === 5 && COCKPIT_RULE.dmgShare === 15 && COCKPIT_RULE.killsShare === undefined && COCKPIT_RULE.shotMin === undefined);
 }
 
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nall ${n} checks passed`);
