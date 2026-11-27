@@ -202,7 +202,7 @@ Troy on the first mission: "lots of flying, not much happens", "the waiting, and
 | 0 s | At Ceres, empty store, three rock fields, two other miners | Which squads mine and which stand guard | A squad on guard cuts no rock |
 | 40 s | A probe: 3 skiffs from the east, for the miners | Which squad stops mining to meet it | Ore not mined while it is away |
 | 100 s | A raid from the south-west: 3 skiffs, 1 cutter | Send the wing, or part of it | See the next row |
-| 112 s | A second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | A pilot to each side, or finish one side first | A side with no pilot is a miner under fire |
+| 100 s (112 s until card `space-game-b7-level1`) | AT THE SAME TIME a second group from the north-east, the far side: 2 skiffs, 1 cutter (the pilots' "second group" call asks) | A pilot to each side, or finish one side first | A side with no pilot is a miner under fire |
 | 175 s | 2 torpedo boats and 2 skiffs, for the miners | Send the pilots at the boats (the radio and the hint say so), or tuck the miners in under the shield (typed on the strip: no key), or both | Tucked: the torpedoes hit the cruiser's shield. Pilots on the boats are not on the skiffs. Nothing: a miner or both are lost |
 | 230 to 240 s | The heavy raid, once the others are dead: 3 skiffs, 3 cutters, 2 brutes | Hurt squads home to be mended first, or all in now | Mending takes a squad out of the fight for a while |
 | after it | The Works opens its doors | Dock and sell (the mission ends), or mine on for the 400-ore bonus | Time against the speed bonus |
@@ -272,7 +272,7 @@ The owner's test for a beat: what does the player decide, and what does it cost?
 | Number | Old (main `4e02059`) | New |
 |---|---|---|
 | Waves in the 1.1 row | 2 (the call at 31 percent of the road, the ambush at 52) | 3: one more at **34 percent** (about 10 s after the call), **3 torpedo boats and 2 skiffs**, 1,700 px ahead of the transport, for the transport |
-| Pirates the 1.1 briefing counts | 8 skiffs, 2 torpedo boats | 10 skiffs, 5 torpedo boats |
+| Pirates the 1.1 briefing counts | 8 skiffs, 2 torpedo boats | 10 skiffs, 5 torpedo boats (12 skiffs since the probe of card `space-game-b7-level1`) |
 
 Nothing else in the row moved: the call (31 percent, 2 skiffs), the ambush (52 percent, 4 skiffs and 2 boats) and the leader (75 percent) are as they were. The new wave is the last in the row's list, so the waves before it keep their numbers. It is not on the `N` panel (that file is the local team's).
 
@@ -483,6 +483,49 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 | 3.3 | 100 to 100 | 73 to 73 | 450 to 450 | 3 to 3 | 0 to 0 | 461 |
 
 **What it says:** the extend is the smallest of the three: every mission is still won on every seed, times move by at most 3 s, kills by one, and nobody is shot down. The cruiser's damage with the fighter out moves a little both ways (1.2 40 to 24, 2.2 90 to 104, 1.3 34 to 31): a hurt fighter that runs 600 px out stops shooting at the cruiser for those seconds, and the fighter bot, which hunts the nearest foe, follows it out. In muted Chrome a skiff at 40 percent hull 300 px from the flown fighter turned round and ran 296 to 585 px in 2.6 s (the turn takes the first second), 0 game errors. `extend.below`, `out`, `near` and `ms` are one number each.
+
+## Level 1, brief 7: a probe, two raids at once, the flown fighter counts (card `space-game-b7-level1`; Troy said yes to all fifteen decisions, 26 Nov 2026; base main `71e94e1c`)
+The authority is the page `docs/pace-and-polish.html` (decisions 3, 4 and 14). Three missions, one idea: the player who flies a fast fighter, or sends one pilot away, must still face a real question.
+
+| Mission | What changed | Why |
+|---|---|---|
+| 1.1 | **A probe of 2 skiffs** at 12 percent of the road, when the patrol turns back (a fourth wave, last in the row, silent: no new voiced line). The first hostile shot was at about 100 s (8 seeds: 100 to 102 s); it is at **41 to 43 s** now. **The pilots SENT count** (`campMinerSent`, `src/campminer.js`): every pilot seen at the miner while his call is live, flown by the player or not, counts when the price wave spawns, even if his pirates are dead by then. | A fighter at boost reaches the miner in about 4 s and kills his two pirates in less than the ten seconds the price wave waits, and was back before the boats: the call was over and nobody counted, so the rescue was free. (The flown fighter was already counted at the instant of the spawn: I tested it; it was the instant that was the loophole.) |
+| 1.2 | The raid at 100 s and **the second group arrive together** (both at 100 s, from the south-west and the north-east; the second was at 112 s); **par and the swift bonus 300 to 270 s**. | A fast fighter answered each raid alone. Together, one is the cruiser's and the other the pilots' or the fighter's. |
+| 1.3 | **The front raid and the rear raid together at 40 percent** (the front raid was at 56); the last rear raid at **56** (it was 72, so it still comes before the contact); **first contact at 70 percent** (it was 82). | Both ends of the convoy are hit at once; the empty road before contact is shorter. |
+
+The brief said "the front raid (40 percent)": in the table 40 is the REAR raid (beat 3, on the last hauler) and the front raids are at 8, 24 and 56; ORCH agreed to pair the rear raid at 40 with the front raid of 56.
+
+**The cruiser bots, old (main `71e94e1c`) against new, the same 32 seeds.** All 26 bots, the bots' default pace (brisk):
+
+| | mean win rate | plain bot | median win time | mean hull | mean damage taken |
+|---|---|---|---|---|---|
+| 1.1 | 88.0 to 87.2 | 100 to 97 | 306 to 306 s | 582.0 to 578.8 | 166.6 to 165.3 |
+| 1.2 | 80.7 to 79.2 | 100 to 97 | 266 to 266 s | 600 to 600 | 33.3 to 34.3 |
+| 1.3 | 88.5 to 88.5 | 100 to 100 | 292 to 292 s | 600 to 600 | 55.5 to 57.4 |
+
+No bot moves its win rate by 9 points or more in any mission. At **Normal, the pace a player gets** (plain and carrier bots, 32 seeds): 1.1 plain 97 to 100 percent, carrier 100 to 100; 1.2 plain 94 to 94 (win time 270 to 268 s), carrier 0 to 0 (it never mines: it loses to the miners, 69 to 59 percent of runs lost); 1.3 plain 100 to 100, carrier 100 to 97 (one lost transport). On the first sixteen seeds at Normal the plain bot wins 1.2 on 16 of 16 before and 14 of 16 after (the two lost are lost to the miners); on all 32 seeds the rate is the same, 94 percent: which seed is lost moves with when the second group arrives, so the small-seed pins of `tests/campl1tune.mjs` read twelve seeds now. Each mission is about as hard as it was for the cruiser bots.
+
+**The fighter bots** (`node tools/campaign-bot.mjs --cockpit --seeds 32 --level 1 --skills steady,sharp,rough`, 3-GEN's ace, ace1, sit and sitoff, card `space-game-fly-fighter-l3`; old = main `5786eac9` without this card, new = this card): the pass rule of `docs/night/cockpit-sweep.md` (1: ace not faster than plain by more than 15 percent; 2: ace's cruiser damage not under 70 percent of plain's; 3: sit loses no mission plain wins).
+
+| mission, skill | plain won, time, damage (old to new) | ace won, time, damage (old to new) | sit won (old to new) | rules 1, 2, 3 old to new |
+|---|---|---|---|---|
+| 1.1 steady | 100 to 97, 306 s, 207 to 217 | 100 to 97, 306 s, 202 to 212 | 97 to 100 | pass pass pass to pass pass pass |
+| 1.1 sharp | 88 to 100, 306 s, 207 to 222 | 100 to 94, 306 s, 217 | 94 to 100 | pass pass n/a to pass pass pass |
+| 1.1 rough | 100, 306 s, 212 to 227 | 100, 306 s, 105 to 110 | 100 to 97 | pass **FAIL** pass to pass **FAIL** pass |
+| 1.2 steady | 100 to 97, 266 s, 35 | 97 to 91, 273 to 271 s, 33 to 31 | 84 | pass pass **FAIL** to pass pass **FAIL** |
+| 1.2 sharp | 100, 266 s, 29 to 33 | 94, 292 to 293 s, 9 to 12 | 88 to 81 | pass n/a **FAIL** to pass **FAIL** **FAIL** |
+| 1.2 rough | 97, 267 to 266 s, 33 to 26 | 97 to 100, 269 to 268 s, 24 | 78 to 81 | pass pass **FAIL** to pass n/a **FAIL** |
+| 1.3 steady | 100, 292 s, 58 to 59 | 100, 292 s, 50 to **58** | 100 | pass pass pass to pass pass pass |
+| 1.3 sharp | 100, 292 s, 63 to 62 | 100, 292 s, 56 to 50 | 100 | pass pass pass to pass pass pass |
+| 1.3 rough | 100, 292 s, 77 to 62 | 100, 292 s, 32 to 35 | 100 | pass **FAIL** pass to pass **FAIL** pass |
+
+What it says: the flown fighter does not win level 1 faster than plain in any mission or skill (rule 1 passes everywhere, times within a few seconds). **Rule 2** (the cruiser takes under 70 percent of plain's damage while a fighter is out) fails at the same places as before the card: 1.1 rough (ace 110 against plain 227) and 1.3 rough (35 against 62, 56 percent; it was 32 against 77, 42 percent), and 1.2 sharp is judged now because plain's own damage rose over the 30 floor (the ratio is the same, about a third). In 1.3 the change helped as meant: at steady the flown fighter takes about what plain does (58 against 59; it was 50 against 58, 86 percent), at rough 56 percent where it was 42. **Rule 3** fails in 1.2 at every skill before and after (sit 81 to 88 against plain's 97 to 100, the same size as before: the wing is what guards the miners, and taking a pilot away costs them; 1.2 does not get harder for the player who sits in the fighter than it was). What is left is not a number of this card: a fighter that outruns everything kites the aliens off the cruiser, so the cruiser is hardly touched; no raid that goes only for the transport or the miners can change that, and a raid that goes for the cruiser would be a new enemy rule, which is Troy's to say. **For Troy:** whether 1.1 and 1.3 should get a threat that comes to the cruiser (the brief's decision 6 is the same question for 2.1 to 3.2).
+
+**The pins this moved:** `tests/campl1pacing.mjs` (1.2's second group at 100 s, 1.3's lanes 0.08, 0.24, 0.40, 0.40, 0.56 and the contact at 0.70 and at 188 s, the hint "Two groups, two sides" at 104 s, the 1.1 wave count 4), `tests/campl1tune.mjs` (par and swift 270 s; the 1.2 runs read six seeds and the plain bot's wins twelve), `tests/campbeats.mjs` (the row has four waves; the probe is one), `tests/campminer.mjs` (the price checks were gated on the row having THREE waves: with the probe they were skipped without a word; they are gated on the price wave itself now, and a unit check says a pilot sent counts after his pirates die, flown or not).
+
+**The miner call's table moves with this card** (32 seeds, ignore / one pilot / all three; main before it, after card `space-game-fighter-job-11`: torpedoes through 10 / 16 / 27, the transport's mean hull 162 / 149 / 104, wins 31 / 32 / 26; with the probe and the "pilots sent" rule: **5 / 18 / 24, hull 186 / 144 / 115, wins 32 / 32 / 25**, the miner saved 0 / 18 / 31): the order never reverses and all three still costs the most; one pilot away is already a price (18 of 32) because a pilot who went counts even if he is back before the boats. `tests/campminer.mjs` states it (the gap between one pilot and all three is at least 4 runs, it was 10).
+
+**For Troy (briefings and voiced lines are not reworded; these are what the new rules make less true):** (1) the 1.1 briefing's first moment, "Patrol leaves" (`scr.bf.1.1.m1`), is now also the moment two skiffs attack the transport: the moment is true but short of what happens. (2) The ship's line on the radio for the probe is none: it is silent, so a player learns of it from the pink pill and the shot. (3) 1.2's "Pirates from the south-west" and "A second group, north-east. A pilot to each side." now come in the same moment, one after the other (both lines are still true). Nothing else in the briefings of 1.1 to 1.3 is made untrue.
 
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
@@ -782,6 +825,30 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 **Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
+
+## 3.3: the fighter clears the towers on one side so the cruiser comes in from there (card `space-game-fighter-job-33`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base main `a3fe84f1`)
+
+**What was in the way.** The fighter could never clear a tower: 3.3's towers have 480 hit points and the flown fighter's gun deals 4 a shot at a shot every 183 ms (22 a second): about 22 s of fire for one tower, while a tower kills the fighter's 72 hull (Troy's double) in three hits. So the rule is about the fighter's gun against a tower, nothing else.
+
+**The rule** (`CAMP.cockpit.towerK`, applied where a shot hits, `campBullets`): the fighter the player flies deals **three times** its damage to a TOWER: 12 a shot, 36 a second, one tower in about 7 s of fire. Its shots at anything else, the wing pilots' shots and the cruiser's are as they were. The fighter's hull stays at Troy's double (`hpK` 2); no tower number changed. The gap itself needs no code: 3.3's eight towers stand 765 px apart on a ring at 1,000 px and each reaches 800, so a ring point is under the guns of three of them; with the two nearest dead it is under one (pinned).
+
+**The numbers** (12 seeds, 3.3; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| skill | bot | before | after |
+|---|---|---|---|
+| steady | plain | 70 / 461 | 70 / 461 |
+| steady | carrier | 76 / 569 | 76 / 569 |
+| steady | ace | 73 / 450 | 74 / 457 (one pilot's fighter lost in the 12 runs) |
+| steady | sit | 77 / 536 | 77 / 536 |
+| rough | plain | 68 / 410 | 68 / 410 |
+| rough | carrier | 76 / 504 | 76 / 504 |
+| rough | ace | 68 / 378 | 59 / 320 |
+| rough | sit | 76 / 522 | 76 / 522 |
+
+- Ace against plain: steady 1 per cent less damage, 4 per cent slower (74 against 70); rough 22 per cent less damage and 13 per cent faster (59 against 68). The sweep's rule is 15 per cent faster and 30 per cent less damage: inside it at both.
+- Why not a higher factor: at 2 the rough ace was 59 / 288 (30 per cent less than plain: at the rule's edge); at 3, 59 / 320. The cruiser bots do not change at any value (they never fly the fighter at a tower).
+
+**Pins.** `tests/campfightergap.mjs` (5 checks: the number is 3; a flown shot deals 30 for 10 to a tower, a wing pilot's 10, and at 1 the flown one 10; against a raider the flown shot deals 10 as a wing pilot's does; one 3.3 tower takes about 7 s of fire (5 to 9); the gap: a ring point is under three towers and under one once the two nearest are dead).
 
 ## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`, brief 8)
 `CAMP.cockpit.hpK` stays **2** (Troy's own call: double hull, so he is not shot down in seconds while he learns). The measurement: the ace bot is shot down in no run of any mission at 2; at 0.65 it is shot down in 3 percent of 3.2 and 9 percent of 3.3 and still wins every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The bot is too evasive to show when a human is shot down (it parks out of reach), so Troy judges hpK in play: the "Flown hull" row of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already choose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.

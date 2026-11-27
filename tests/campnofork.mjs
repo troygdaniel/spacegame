@@ -31,9 +31,9 @@ check('A  1.1\'s row has no route', row.route === 'none' || row.route === null, 
 check('A  no wave of the row belongs to a lane', row.lanes === 0, JSON.stringify(row.waves));
 const amb = row.waves.find(w => w.ambush);
 check('A  the ambush is a plain wave of the row: 4 skiffs and 2 torpedo boats at 0.52 of the road, with its own line', !!amb && amb.ships.skiff === 4 && amb.ships.tboat === 2 && amb.on.lane === 0.52 && amb.say === 'camp.say.rimambush', JSON.stringify(amb));
-check('A  the row has the miner\'s skiffs and the ambush, in that order, and after them the group that goes for the transport after the call (card l1-miner-choice: it had two waves) (the long lane\'s two raids went with the lane)', row.waves.length === 3 && row.waves[0].on.lane === 0.31 && row.waves[1].ambush && row.waves[2].on.lane === 0.34, JSON.stringify(row.waves));
+check('A  the row has the miner\'s skiffs and the ambush, in that order, and after them the group that goes for the transport after the call (card l1-miner-choice: it had two waves) (the long lane\'s two raids went with the lane)', row.waves.length === 4 && row.waves[0].on.lane === 0.31 && row.waves[1].ambush && row.waves[2].on.lane === 0.34 && row.waves[3].on.lane === 0.12, JSON.stringify(row.waves)); // (four since the probe of card space-game-b7-level1: two skiffs at 12 percent, last in the row)
 const en = J('campBriefEnemies(1, 0)'), sk = en.list.find(e => e.kind === 'skiff'), tb = en.list.find(e => e.kind === 'tboat');
-check('A  the briefing counts what 1.1 sends: 10 skiffs and 5 torpedo boats (8 and 2 before card l1-miner-choice) (as it did for the default lane)', sk && sk.n === 10 && tb && tb.n === 5, en.line);
+check('A  the briefing counts what 1.1 sends: 12 skiffs and 5 torpedo boats (10 before the probe of card space-game-b7-level1, 8 and 2 before card l1-miner-choice) (as it did for the default lane)', sk && sk.n === 12 && tb && tb.n === 5, en.line);
 check('A  the route system is still in the code: a row with a route still gets its lanes (campRouteRow)', J('(() => { const r = campRouteRow({ route: { lanes: [{ id: "a", hides: { waves: [{ ships: { skiff: 1 } }] } }] }, waves: [] }); return r.waves.length === 1 && r.waves[0].lane === "a"; })()') === true);
 
 // ---- B. the sim ----
@@ -73,6 +73,7 @@ const src = read('src/campbeats.js');
 check('D  the beat hints are the fast, tuck and run hints: the scout and take hints are gone', !/id: 'b-scout'/.test(src) && !/id: 'b-take'/.test(src) && /id: 'b-fast'/.test(src) && /id: 'b-tuck'/.test(src) && /id: 'b-run'/.test(src));
 check('D  the hint lines "pick a lane" and "waits at the fork" are gone from the words', J('typeof UI_TEXT["camp.hint.scout"]') === 'undefined' && J('typeof UI_TEXT["camp.hint.take"]') === 'undefined');
 g.run('__mk(1)'); g.run('__go(56)');
+g.run('campAliens(C).forEach(u => { u.hp = 0; }); __go(1)'); // the probe of card space-game-b7-level1 (two skiffs at the transport since 12 percent of the road, about 37 s) is dead: the hint is for a quiet road, and with a hostile alive it is not offered
 const hint = J('(() => { try { return campBeatNudge(C, {}) || ""; } catch (e) { return "THROWS " + e.message; } })()');
 check('D  the fast-burn hint still comes in 1.1 with no route (the transport is far ahead on a quiet road), and names no lane', /Fast/.test(hint) && !/lane|fork|scout/i.test(hint), hint);
 g.run('__mk(1)'); g.run('__go(20)');
