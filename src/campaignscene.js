@@ -601,6 +601,7 @@ class Campaign extends Phaser.Scene {
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
     if (typeof campOrderLineTipSync === 'function') campOrderLineTipSync(this); // the tip on the picked target: "Wedge will attack" (src/camporderline.js)
     if (typeof campCockpitAimSync === 'function') campCockpitAimSync(this); // the thin mint ring at the lead point of the hostile the flown fighter's guns track (src/campcockpitaim.js)
+    if (typeof campCockpitMendSync === 'function') campCockpitMendSync(this); // the thin pale-blue tether from the cruiser to the fighter he flies while she mends it (src/campcockpitmend.js)
     if (typeof campWingTagSync === 'function') campWingTagSync(this); // the tag under the fighter he flies: what the other two pilots are doing (src/campwingtag.js)
     this.syncWorldLeast();
     this.squadMarks();
