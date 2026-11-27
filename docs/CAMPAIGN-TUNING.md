@@ -272,7 +272,7 @@ The owner's test for a beat: what does the player decide, and what does it cost?
 | Number | Old (main `4e02059`) | New |
 |---|---|---|
 | Waves in the 1.1 row | 2 (the call at 31 percent of the road, the ambush at 52) | 3: one more at **34 percent** (about 10 s after the call), **3 torpedo boats and 2 skiffs**, 1,700 px ahead of the transport, for the transport |
-| Pirates the 1.1 briefing counts | 8 skiffs, 2 torpedo boats | 10 skiffs, 5 torpedo boats |
+| Pirates the 1.1 briefing counts | 8 skiffs, 2 torpedo boats | 10 skiffs, 5 torpedo boats (12 skiffs since the probe of card `space-game-b7-level1`) |
 
 Nothing else in the row moved: the call (31 percent, 2 skiffs), the ambush (52 percent, 4 skiffs and 2 boats) and the leader (75 percent) are as they were. The new wave is the last in the row's list, so the waves before it keep their numbers. It is not on the `N` panel (that file is the local team's).
 
