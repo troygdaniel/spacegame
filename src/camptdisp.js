@@ -27,7 +27,7 @@ function campTdispSubject(C, P, now) { // the ONE target box (bottom right): a s
   return h.unit && h.unit.hp > 0 && !h.unit.gone ? { u: h.unit, side: h.kind === 'hostile' ? 'hostile' : 'friend', held: true } : null;
 }
 function campTdispPostInfo(C, e) {
-  const km = campNavKm(campDist(e, campEye(C))), type = uiText('camp.tdisp.type.post');
+  const km = campNavKm(campDist(e, campEye(C))), type = uiText(e.field ? 'camp.tdisp.type.field' : 'camp.tdisp.type.post');
   return { id: e.id, side: 'friend', kind: 'post', name: e.name, type, hull: null, shield: null, km, doing: '', key: [e.id, 'post', e.name, km].join('|') };
 }
 function campTdispOrder(C, verb) {

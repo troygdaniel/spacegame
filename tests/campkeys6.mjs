@@ -10,7 +10,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const g = nodeGame({ store: new Map() });
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`window.__run = (C, s) => { for (let i = 0; i < Math.round(s * 30) && !C.result; i++) campStep(C, 1 / 30); C.events.length = 0; };
-  window.C = campNew('home', [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); campOrder(C, 'launch'); __run(C, 8); window.P = campPanelNew();
+  window.C = campNew('home', [], { seed: 3, god: true }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.rocks = []; /* (a rock field is an E target since card space-game-orders-f3-enter-fits; these checks are about the ships) */ campOrder(C, 'launch'); __run(C, 8); window.P = campPanelNew();
   const f = campSpawn(C, 'freighter', C.carrier.x + 500, C.carrier.y); f.id = 'freighter-t1'; C.by[f.id] = f; f.cname = 'Transport'; f.named = true;
   campSpawn(C, 'raider', C.carrier.x + 900, C.carrier.y);`);
 const k = (code, now) => J(`(() => { const r = campPanelKey(P, C, '${code}', ${now || 0}); return { used: r.used, ran: r.ran, ok: r.ok, open: r.open, row: r.row, say: r.say }; })()`);

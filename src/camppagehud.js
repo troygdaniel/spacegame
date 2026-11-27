@@ -59,7 +59,7 @@ function campPageHudRing(name, number, frac, on, pick, alive) { // on: out in sp
 // the ships you protect as numbered rings: 2-GEN's pure list (card space-game-keys8-e-digit, src/camptarget.js campFriNumbered: { id, name, number, alive, hull, picked }); a ship that is lost keeps its number and is dark
 function campPageHudShips(C) {
   const L = typeof campFriNumbered === 'function' ? campFriNumbered(C) : [];
-  return L.map(e => Object.assign(campPageHudRing(String(e.name || ''), e.number, e.alive ? e.hull : 0, !!e.alive, !!e.picked, !!e.alive), { id: e.id }));
+  return L.map(e => Object.assign(campPageHudRing(String(e.name || ''), e.number, e.alive ? e.hull : 0, !!e.alive, !!e.picked, !!e.alive), { id: e.id }, e.field ? { color: 'ore' } : {})); // (a rock field, card space-game-orders-f3-enter-fits, is a ring in the ore colour: what the pilots go to mine)
 }
 // the cruiser's boost store (card space-game-cruiser-boost-flames; Troy, 26 Nov 2026): a thin third meter under Shields and Hull, the same language as the other two (a ring would be taken for a ship: the rings of this panel are the pilots and the ships you protect). Pale blue, white and bright while it boosts, dim pale blue with the word REFILLING when the store ran dry and the boost is locked (never amber: amber is for the ships you protect; card space-game-boost-row-locked-colour)
 function campPageHudBoost(C) {
@@ -101,7 +101,7 @@ function campPageHudFirst(C) {
   const F = CAMP_PAGEHUD.first;
   if (!C || C.result || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
   const items = (typeof campTeachChips === 'function' ? campTeachChips(C) : []).concat(F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key)), en = campPageHudEnterNow(C); // a teaching chip is lit at the left end while its moment lasts (src/campteach.js, card space-game-chunk12-teach-q)
-  if (en) items.push({ id: 'enter', key: en.key, word: en.word, verb: en.verb }); // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
+  if (en) items.push({ id: 'enter', key: en.key, word: uiText('camp.corner.enter.doit'), verb: en.verb }); // (card space-game-orders-f3-enter-fits, mock F: the bottom row's Enter says DO IT; the verb it will do is in the sentence line and the tip, src/camporderline.js, and in the left panel's own Enter chip) // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
   if (typeof campCockpitOn === 'function' && campCockpitOn() && (C.cockpit || C.ships.some(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked))) items.push({ id: 'cockpit', key: campCornerCap('cockpit'), word: uiText(C.cockpit ? 'camp.corner.chip.cockpitback' : 'camp.corner.chip.cockpit') }); // C takes the stick of a pilot's fighter, and hands it back (card space-game-fly-fighter-l1), while the switch is on and a pilot is out
   const lights = typeof campTeachLights === 'function' ? campTeachLights(C) : {}; items.forEach(x => { if (lights[x.id]) { x.lit = true; x.note = lights[x.id]; } }); // a chip of the row lit where it stands, with its note (src/campteach.js)
   return items.length ? { items, a: 1 } : null;

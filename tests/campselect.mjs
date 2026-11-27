@@ -18,7 +18,7 @@ g.run('CAMP.bay.startOut = false; // this suite\'s set-up is the old start: the 
 const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 g.run(`
   window.__run = (C, s) => { for (let i = 0; i < Math.round(s * 30) && !C.result; i++) campStep(C, 1 / 30); C.events.length = 0; };
-  window.__new = (level, mission) => { const C = campNew(level, [], { seed: 5, god: true, mission: mission || 0 }); C.ships = C.ships.filter(u => u.team !== 'alien'); return C; };
+  window.__new = (level, mission) => { const C = campNew(level, [], { seed: 5, god: true, mission: mission || 0 }); C.ships = C.ships.filter(u => u.team !== 'alien'); C.rocks = []; /* (a rock field is an E target since card space-game-orders-f3-enter-fits; these checks are about the ships and the places) */ return C; };
   window.__out = () => { const C = __new('home'); campOrder(C, 'launch'); __run(C, 8); return C; };
   window.__foe = (C, dx, dy) => campSpawn(C, 'raider', C.carrier.x + dx, C.carrier.y + dy);
   window.__hauler = (C, id, name, dx, dy, tox, toy) => { const f = campSpawn(C, 'freighter', C.carrier.x + dx, C.carrier.y + dy); f.id = 'freighter-' + id; C.by[f.id] = f; f.dest = { x: C.carrier.x + tox, y: C.carrier.y + toy }; f.cname = name; f.named = true; return f; };
