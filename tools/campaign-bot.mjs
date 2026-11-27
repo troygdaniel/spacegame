@@ -175,6 +175,7 @@ g.run(`(() => {
       if (first.type === 'scan') goal = byD(C.scan.filter(p => !p.got)) || goal; else if (first.type === 'caches') goal = byD(C.caches.filter(k => !k.got)) || goal; else if (first.type === 'relic') goal = C.relic;
       else if (first.type === 'deliver') goal = byD(campConvoys(C).slice()) || goal || { x: 1000, y: -500 }; else if (first.type === 'hold') goal = C.earth || goal;
       else if (first.type === 'ore') goal = byD(C.rocks.filter(r => r.hp > 0)) || goal; // mine: fly to the nearest rock (the carrier's lasers cut it; the wing mines too)
+      else if (first.type === 'kill' && !goal && (first.what === 'guards' || first.what === 'wave:all')) goal = byD(C.ships.filter(u => u.team === 'alien' && u.hp > 0 && (first.what === 'guards' ? u.guard : u.wave != null))) || goal; // guards, and the groups a cache or a dead guard calls, wait where they are: no clock brings a fight to a cruiser that sits (card space-game-b7-level2), so the bot flies at the nearest of them, as a player would
       else if (first.type === 'kill' && !goal) goal = byD(C.rocks.filter(r => r.hp > 0)) || goal; // wait for the raid at the rocks, not in the open
       else if (first.type === 'cashin') { // sell the store: fly to the market outpost and dock (campDock refuses with an alien near: the fight comes first)
         const o = campOutposts(C.level).find(x => x.market); if (o) { goal = { x: o.x, y: o.y, got: false }; if (campOutpostNear(C) && !campAliens(C).length) { campDock(C, o.id); campUndock(C); } }
