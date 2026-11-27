@@ -61,12 +61,13 @@ check('and from opposite sides of the world: the two spawn points are on opposit
 check('par is 180 s, the swift bonus too', J('campMissions(3)[2].par') === 180 && J('campMissions(3)[2].bonus.find(b => b.id === "swift").secs') === 180);
 
 console.log('E. towers and the ship the player flies');
-g.run(`window.__probe = (flown, turnTest) => { CAMP.flags.cockpit = true; const C2 = __mk(1, 6); campOrder(C2, 'launch'); __run(3);
+// card space-game-b12-c9-tower-delay: a tower's first shot at the flown fighter now comes CAMP.tower.flownDelay (1 s) late, so this one-tick probe of the shot's speed runs with the delay at 0 (the delay is pinned in tests/camptowerdelay.mjs)
+g.run(`window.__probe = (flown, turnTest) => { const dl0 = CAMP.tower.flownDelay; CAMP.tower.flownDelay = 0; CAMP.flags.cockpit = true; const C2 = __mk(1, 6); campOrder(C2, 'launch'); __run(3);
   const f = C2.ships.find(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked), tw = C2.ships.find(u => u.kind === 'tower' && u.hp > 0);
   if (flown) campCockpitTake(C2, f.id);
   C2.ships.forEach(u => { if (u !== tw && u !== f && u.team === 'earth') { u.x = 1e6; u.y = 1e6; } }); C2.carrier.x = 1e6; C2.carrier.y = 1e6;
   f.x = tw.x + (turnTest ? 0 : 300); f.y = tw.y + (turnTest ? 300 : 0); f.vx = f.vy = 0; tw.rot = 0; tw.nextShot = 0; C2.bullets.length = 0;
-  const r0 = tw.rot; campTowerAI(C2, tw, 1 / 30); const out = { turned: Math.abs(tw.rot - r0), speed: C2.bullets.length ? Math.hypot(C2.bullets[0].vx, C2.bullets[0].vy) : null }; CAMP.flags.cockpit = false; return out; };`);
+  const r0 = tw.rot; campTowerAI(C2, tw, 1 / 30); const out = { turned: Math.abs(tw.rot - r0), speed: C2.bullets.length ? Math.hypot(C2.bullets[0].vx, C2.bullets[0].vy) : null }; CAMP.flags.cockpit = false; CAMP.tower.flownDelay = dl0; return out; };`);
 const tf = J('__probe(true, true)'), tn = J('__probe(false, true)'), sf = J('__probe(true, false)'), sn = J('__probe(false, false)');
 check('the tower turns 1.5 times as fast at the flown fighter as at the same fighter on its own', tn.turned > 0 && Math.abs(tf.turned / tn.turned - 1.5) < 0.02, JSON.stringify([tf, tn]));
 check('and its shot flies 1.3 times as fast (the tower\'s own 440 px/s, 572 at the flown fighter)', sf.speed != null && sn.speed != null && Math.abs(sf.speed / sn.speed - 1.3) < 0.02 && Math.abs(sn.speed - 440) < 2, JSON.stringify([sf, sn]));
