@@ -121,7 +121,7 @@ const campMapWholeZ = (base, whole) => whole && whole.s > 0 && base && base.s > 
 const campMapZMin = (base, whole, floor) => Math.min(floor == null ? 1 : floor, campMapWholeZ(base, whole));
 const campMapPoint = (fit, frame, x, y) => ({ x: frame.x + frame.w / 2 + (x - fit.cx) * fit.s, y: frame.y + frame.h / 2 + (y - fit.cy) * fit.s });
 
-const CAMPMAP_RANK = { lane: 0, place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
+const CAMPMAP_RANK = { lane: 0, place: 0, objective: 0, relic: 1, anomaly: 2, cache: 2, scan: 2, rock: 2, pickup: 2, tower: 3, convoy: 4, patrol: 4, miner: 4, pirate: 5, alien: 5, scout: 5, scout: 5, tboat: 5, wing: 6, rival: 7, mother: 7, torpedo: 7, carrier: 8 }; // drawn in this order: the carrier on top
 function campMapMarks(C, whole, rings) { // whole: the far places too (the whole system); else only the level's own area; rings: the squads in focus (src/campwing.js campSquadsShown), whose fighters' marks carry the squad
   const L = (C.L || CAMP.levels[C.level]), pl = campPlaces(C.level), c = CAMPMAP.color, out = [];
   Object.keys(pl).forEach(id => { const p = pl[id]; if (p.hidden || (p.far && !whole && !campMapUsed(L, id))) return; out.push({ type: 'place', id, x: p.x, y: p.y, r: p.r || 60, name: String(p.name) + (p.base ? ' / ' + p.base : ''), color: p.kind === 'star' ? c.star : id === 'earth' ? c.earth : c.place, outpost: !!(L && L.outposts && L.outposts[id]) }); }); // outpost: a friendly station (the map draws a mark on it)
@@ -144,6 +144,7 @@ function campMapMarks(C, whole, rings) { // whole: the far places too (the whole
     if (type === 'tboat') m.arming = u.arming > 0; // a torpedo boat (card space-game-torpedo-art): its own mark, with a ring while it arms
     out.push(m);
   });
+  if (typeof campScoutReveals === 'function') campScoutReveals(C).forEach(r => out.push({ type: 'scout', x: r.x, y: r.y, n: r.n, color: c.alien })); // a wave a fighter has revealed (card space-game-fighter-job-31, src/campscout.js): where it will come from and how many, dimmed, until it is real
   (C.torpedoes || []).forEach(t => { if (!t.dead) out.push({ type: 'torpedo', id: t.id, x: t.x, y: t.y, rot: t.rot, color: c.torpedo }); }); // a torpedo in flight: a bright mark, the one thing to look for
   return out.sort((a, b) => CAMPMAP_RANK[a.type] - CAMPMAP_RANK[b.type]);
 }
@@ -152,8 +153,8 @@ function campMapMarks(C, whole, rings) { // whole: the far places too (the whole
 function campMapLegend(C, marks) {
   marks = marks || campMapMarks(C);
   const n = t => marks.filter(m => m.type === t).length, c = CAMPMAP.color;
-  const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['pirate', c.pirate, 1], ['tboat', c.pirate, 1], ['torpedo', c.torpedo, 1], ['patrol', c.patrol, 1], ['miner', c.miner, 1], ['mother', c.mother, 0], ['rival', c.pirate, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
-  const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing');
+  const rows = [['carrier', c.carrier, 0], ['wing', c.wing, 1], ['convoy', c.convoy, 1], ['alien', c.alien, 1], ['scout', c.alien, 1], ['pirate', c.pirate, 1], ['tboat', c.pirate, 1], ['torpedo', c.torpedo, 1], ['patrol', c.patrol, 1], ['miner', c.miner, 1], ['mother', c.mother, 0], ['rival', c.pirate, 0], ['tower', c.tower, 1], ['cache', c.cache, 1], ['anomaly', c.anomaly, 1], ['relic', c.relic, 0]];
+  const out = rows.filter(r => n(r[0]) > 0).map(r => ({ type: r[0], color: r[1], text: uiText('camp.map.' + r[0], { n: r[0] === 'scout' ? marks.filter(m => m.type === 'scout').reduce((a, m) => a + m.n, 0) : n(r[0]) }) })), at = out.findIndex(r => r.type === 'wing'); // (a scouted wave's row counts the ships of the waves revealed, not the marks)
   const sq = CAMP.wing.squads.filter(k => marks.some(m => m.squad === k)).map(k => ({ type: k, color: CAMP.wing.squadColor[k], text: uiText('camp.map.' + k, { n: marks.filter(m => m.squad === k).length }) })); // the squads in focus that have ships out, under the wing's row (their ring on the map: only a squad in focus has a coloured mark, so only it has a row)
   if (at >= 0) out.splice(at + 1, 0, ...sq); else out.push(...sq);
   return out;
