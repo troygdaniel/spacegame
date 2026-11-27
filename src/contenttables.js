@@ -1325,6 +1325,7 @@ const UI_TEXT = {
   'camp.corner.formup': 'Form up',
   'camp.corner.orderline.tip': '{who} will {verb}',
   'camp.corner.orderline.i': 'I',
+  'camp.corner.orderline.me': 'me',
   'camp.corner.enter.doit': 'Do it',
   'camp.corner.enter.mine': 'Mine',
   'camp.tdisp.type.field': 'Rock field',

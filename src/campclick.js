@@ -21,14 +21,20 @@ function campClickHit(C, wx, wy, zoom) {
   const add = (kind, id, unit, extra) => { if (!unit || !(unit.hp > 0) || unit === C.carrier) return; const d = Math.hypot(unit.x - wx, unit.y - wy); if (d <= Math.max(unit.r || 0, ring)) found.push(Object.assign({ kind, id, unit, d }, extra)); };
   campTgtList(C).forEach(u => add('hostile', u.id, u));
   campFriList(C).forEach(e => add('friendly', e.id, e.unit));
-  campSelList(C).forEach(e => { if (e.kind === 'pilot') add('pilot', e.id, e.unit, { squad: e.squad }); });
-  return found.reduce((best, h) => (!best || h.d < best.d ? h : best), null);
+  const eye = typeof campEye === 'function' ? campEye(C) : C.carrier; // YOUR OWN SHIP (card space-game-orders-click-me-and-rocks): the cruiser, or the fighter you fly: "me"
+  if (eye && eye.hp > 0) { const d = Math.hypot(eye.x - wx, eye.y - wy); if (d <= Math.max(eye.r || 0, ring)) found.push({ kind: 'me', id: 'me', unit: eye, d }); }
+  campSelList(C).forEach(e => { if (e.kind === 'pilot' && e.unit !== eye) add('pilot', e.id, e.unit, { squad: e.squad }); });
+  const ship = found.reduce((best, h) => (!best || h.d < best.d ? h : best), null); if (ship) return ship;
+  let rock = null; (C.rocks || []).forEach(r => { if (!(r.hp > 0)) return; const d = Math.hypot(r.x - wx, r.y - wy); if (d <= Math.max(r.r || 0, ring) && (!rock || d < rock.d)) rock = { kind: 'field', id: 'field-' + (r.field == null ? 0 : r.field), rock: r, d }; }); // a rock of a field (a ship has the click first): the field is the target
+  return rock;
 }
 function campClickPick(C, hit) {
   if (!C || !hit) return false;
   if (hit.kind === 'hostile') return !!campTgtHold(C, hit.id);
   if (hit.kind === 'friendly') return !!campFriShip(C, hit.id);
   if (hit.kind === 'pilot') return !!campSelHold(C, hit.squad);
+  if (hit.kind === 'me') return !!campFriHoldMe(C);
+  if (hit.kind === 'field') return !!campFriHoldField(C, hit.id);
   return false;
 }
 function campClickAct(P, C, hit, button, now) {
