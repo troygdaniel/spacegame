@@ -135,7 +135,7 @@ function campTorpedoBoom(C, t, hit) {
 // a torpedo takes damage (a turret shot, a missile, a stray shot of the wing); at zero it is shot down
 function campTorpedoHurt(C, t, dmg, byId) {
   if (t.dead || t.hp <= 0) return;
-  t.hp -= dmg; C.events.push({ type: 'hit', x: t.x, y: t.y, id: t.id, hull: false });
+  t.hp -= dmg; C.events.push({ type: 'hit', x: t.x, y: t.y, id: t.id, hull: false, side: 'own', by: byId }); // side, by: your fire hit it (the picture's sparks are the firing side's colour, src/campmoments.js)
   if (t.hp > 0) return;
   t.hp = 0; t.dead = true; t.by = byId || ''; C.torpStat.shot++;
   C.events.push({ type: 'torpedo', stage: 'shot', id: t.id, from: t.from, target: t.target, x: t.x, y: t.y });

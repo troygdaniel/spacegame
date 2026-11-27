@@ -134,6 +134,7 @@ class Campaign extends Phaser.Scene {
       this.events.once('shutdown', () => { CAMZOOM.want = this.lhZoom; if (typeof campZoomRange === 'function') campZoomRange(false); });
     }
     if (typeof campPlaceLabelsInstall === 'function') campPlaceLabelsInstall(this); // the two labels of a place keep clear of each other at every zoom (src/campplacelabels.js); after the zoom, which scales the labels, on the same event
+    if (typeof campMomentsReset === 'function') campMomentsReset(this); // the hits' and the kills' notes of the battle before are not this battle's (src/campmoments.js)
     if (typeof slookFxInstall === 'function') slookFxInstall(this); // the new ship look's engine trails and kills, once a frame after the ships' sprites are in place (src/shiplookfx.js; they draw only with the switch on)
     if (this.resume) { this.mdone = true; this.showWon(true); } else this.showIntro();
   }
@@ -161,7 +162,7 @@ class Campaign extends Phaser.Scene {
   // the far bodies of the system (CAMP.world, src/campsol.js): a picture only while the carrier is within CAMP.world.draw px of the edge of it, a few times a second
   syncFar(time) {
     if (!this.farObjs || time < this.farAt) return; this.farAt = time + 250;
-    const pl = campPlaces(this.level), c = this.camp.carrier, near = CAMP.world.draw;
+    const pl = campPlaces(this.level), c = campEye(this.camp), near = CAMP.world.draw; // (the far bodies come when the ship he flies comes near)
     Object.keys(pl).forEach(id => {
       const p = pl[id]; if (!p.far || p.hidden) return;
       const d = Math.hypot(p.x - c.x, p.y - c.y) - (p.r || 60) * (p.kind === 'star' ? 3 : 1), on = this.farObjs[id];
@@ -423,7 +424,7 @@ class Campaign extends Phaser.Scene {
     if (!(C.t - this.blipAt < B.gap) && !campHas(C, 'beam')) { this.blipAt = C.t; sfx('turret', e.i); } // with the Beam turrets the hum is the sound (src/audio.js beamHum), not a pew a shot
   }
   wingShot(e) { // a fighter's shot: a quieter, farther pew, softer the farther the ship is from the carrier (CAMP_SND.far px and it is gone), at most one in CAMP_SND.wing ms
-    const c = this.camp.carrier, near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
+    const c = campEye(this.camp), near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
   }
   battleSound(kind, name, arg) { // one of the battle's sounds, no more often than CAMP_SND[kind] ms of the battle's clock
     if (!Object.prototype.hasOwnProperty.call(this, 'sndAt')) this.sndAt = {};
@@ -491,6 +492,7 @@ class Campaign extends Phaser.Scene {
     this.sync(); if (this.hudHides()) this.hudShow(false); else { this.hudShow(true); this.paintHud(); } // a result card (won, lost, the debrief, the refit, the ending) has the screen to itself: no goal line, arrow or radar under it
     if (typeof campChargeSync === 'function') campChargeSync(this); // the health bars of the ships you protect, over them (src/campchargescene.js), once their sprites are in place
     if (typeof campShieldHitPaint === 'function') campShieldHitPaint(this, this.time.now); // the shield's arcs, after the sprites are in place and the health numbers (src/campshieldhit.js)
+    if (typeof campMomentsFrame === 'function') campMomentsFrame(this); // the hit's sparks and white frames, the kill's shards and ring, the view's nudge (src/campmoments.js)
     if (this.mp) campMapPaint(this, time);
   }
   arrowKeep() { return CAMP.nav.arrow.keep; } // the places the edge arrow's label keeps out of: the table's (the target display's corner is one of them: its box, campTdispBox, is inside it)
@@ -515,8 +517,9 @@ class Campaign extends Phaser.Scene {
     else if (e.type === 'turret') { this.turretFlash(e); if (e.tx !== undefined) this.beam(e, 120); } // a turret shot at an alien is the same laser: a beam flash
     else if (e.type === 'laser') this.beam(e, e.src === 'turret' ? 220 : 90);
     else if (e.type === 'rockbreak') { this.boom.explode(16, e.x, e.y); beep(520, 0.09, 'triangle', 0.04, 260); }
-    else if (e.type === 'boom') { if (!(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
-    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id) { this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e))) this.boom.explode(3, e.x, e.y); }
+    else if (e.type === 'boom') { if (!(typeof campMomentsKill === 'function' && campMomentsKill(this, e)) && !(typeof slookKill === 'function' && slookKill(this, e.x, e.y, e.big ? SLOOKFX.kill.big : 1))) this.boom.explode(e.big ? 90 : 26, e.x, e.y); this.battleSound('blast', e.big ? 'blastBig' : 'blastSmall'); if (e.kind === 'carrier') this.cameras.main.shake(400, 0.01); }
+    else if (e.type === 'hit') { if (e.id === this.camp.carrier.id || e.id === campEye(this.camp).id) { if (e.id === campEye(this.camp).id) this.cameras.main.shake(90, 0.003); this.flash(e.id); if (e.hull) this.battleSound('hull', 'hullHit'); } if (!(typeof campShieldHitSkip === 'function' && campShieldHitSkip(this, e)) && !(typeof campMomentsHit === 'function' && campMomentsHit(this, e))) this.boom.explode(3, e.x, e.y); } // (a hit on the ship he flies shakes the view; a hit on the cruiser he left still blinks it and sounds, so he knows; a hit the shield took whole is its arc and nothing else; any other: the new look's white frames, three sparks and the arc's notch, src/campmoments.js, else the puff)
+    else if (e.type === 'wave') { if (typeof campMomentsWave === 'function') campMomentsWave(this, e); } // a wave came out of the dark: the edge it comes from glows, three chevrons run in, the pill slides (src/campmoments.js, the page HUD)
     else if (e.type === 'earthhit') { this.boom.explode(6, e.x, e.y); this.battleSound('earth', 'earthHit'); }
     else if (e.type === 'docked') this.openDock(e.id); // the carrier is in an outpost's bay: the ready room opens over the paused battle (src/campdock.js)
     else if (e.type === 'mend') { beep(660, 0.1, 'triangle', 0.04, 220); }

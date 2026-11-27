@@ -125,7 +125,9 @@ console.log('B1. the real game: off by default, the screen, the picker');
     check('after a restart the pack is laid over the core: Rescue pays 650 and JUNO says the pack\'s line', w.packs.join() === listOf({ example: '+2' }) && w.rescue === 650 && /^This line comes from/.test(w.juno), JSON.stringify(w));
     check('the Title says MODDED, with no problems', w.modded && w.errors.length === 0 && await t.ev('!!contentTitleUi && !!game.scene.getScene("Title").contentUi.tag'));
     await keyEv(t, 'KeyP'); await sleep(500);
-    check('the Content section of Settings says which packs are on', await t.ev("(() => { if (!game.scene.isActive('Settings')) return false; const pt = []; const walk = o => { if (o.type === 'Text') pt.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Settings').children.list.forEach(walk); return pt.some(x => /packs on: example/.test(x)); })()")); // P opens Settings at Content (src/settings.js); Esc closes it
+    // Settings is the page's own panel now (the new screens are the default, card space-game-screens-fill-default-on: the reload above goes to the bare address, as a player does), and its Content tab names the packs that are on in the pack row
+    // (card space-game-mods-content-packs-red: the old canvas tab said "packs on: example"). Either look is read: the canvas text of the old one, the page's panel for the new one.
+    check('the Content section of Settings says which packs are on', await t.ev("(() => { if (!game.scene.isActive('Settings')) return false; const pt = []; const walk = o => { if (o.type === 'Text') pt.push(o.text); if (o.list) o.list.forEach(walk); }; game.scene.getScene('Settings').children.list.forEach(walk); const page = [...document.querySelectorAll('.sc-root')].map(e => e.innerText || '').join(' '); return pt.some(x => /packs on: example/.test(x)) || (/Modded pack/.test(page) && /(^|[^\\w-])example([^\\w-]|$)/.test(page)); })()")); // P opens Settings at Content (src/settings.js); Esc closes it
     await keyEv(t, 'Escape'); await sleep(400);
 
     // turn it off again in the screen and restart: back to the shipped game
