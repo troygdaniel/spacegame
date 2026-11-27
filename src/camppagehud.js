@@ -99,9 +99,10 @@ function campPageHudEnterNow(C) {
 function campPageHudFirst(C) {
   const F = CAMP_PAGEHUD.first;
   if (!C || C.result || (typeof campFlag === 'function' && !campFlag('hints'))) return null;
-  const items = F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key), en = campPageHudEnterNow(C);
+  const items = (typeof campTeachChips === 'function' ? campTeachChips(C) : []).concat(F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key)), en = campPageHudEnterNow(C); // a teaching chip is lit at the left end while its moment lasts (src/campteach.js, card space-game-chunk12-teach-q)
   if (en) items.push({ id: 'enter', key: en.key, word: en.word, verb: en.verb }); // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
   if (typeof campCockpitOn === 'function' && campCockpitOn() && (C.cockpit || C.ships.some(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked))) items.push({ id: 'cockpit', key: campCornerCap('cockpit'), word: uiText(C.cockpit ? 'camp.corner.chip.cockpitback' : 'camp.corner.chip.cockpit') }); // C takes the stick of a pilot's fighter, and hands it back (card space-game-fly-fighter-l1), while the switch is on and a pilot is out
+  const lights = typeof campTeachLights === 'function' ? campTeachLights(C) : {}; items.forEach(x => { if (lights[x.id]) { x.lit = true; x.note = lights[x.id]; } }); // a chip of the row lit where it stands, with its note (src/campteach.js)
   return items.length ? { items, a: 1 } : null;
 }
 
@@ -415,7 +416,7 @@ function campPageHudPaint(R, M, doc) {
   R.fedges.forEach((p, i) => { const f = M.fedges[i]; set(p.el, 'display', f ? '' : 'none'); if (f) { set(p.el, 'cls', 'ph-p ph-edge ph-fedge' + (f.hot ? ' hot' : '')); set(p.num, 'text', String(f.n)); set(p.text, 'text', f.label); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
   set(F.mother.el, 'display', M.mother ? '' : 'none'); if (M.mother) campPageHudPaintMeter(F.mother, M.mother);
   const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
-  if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ el: grp, key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); FI.items.forEach((it, i) => { const x = fm.items[i]; set(it.el, 'display', x ? '' : 'none'); if (x) { set(it.key, 'text', x.key); set(it.word, 'text', x.word); } }); } // (a pair with no chip now, the Enter one when no order can be given, is hidden, not left with the old words)
+  if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ el: grp, key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp), note: campPageHudEl(doc, 'span', 'ph-note', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); FI.items.forEach((it, i) => { const x = fm.items[i]; set(it.el, 'display', x ? '' : 'none'); if (x) { set(it.key, 'text', x.key); set(it.word, 'text', x.word); set(it.el, 'cls', 'ph-fc' + (x.lit ? ' lit' : '')); set(it.note, 'text', x.note || ''); set(it.note, 'display', x.note ? '' : 'none'); } }); } // (a pair with no chip now, the Enter one when no order can be given, is hidden, not left with the old words)
   while (R.pills.length < M.places.length) R.pills.push(campPageHudEl(doc, 'div', 'ph-p ph-place', R.root));
   R.pills.forEach((p, i) => { const pl = M.places[i]; set(p, 'display', pl ? '' : 'none'); if (pl) { set(p, 'text', pl.name); set(p, 'cls', 'ph-p ph-place' + (pl.goal ? ' goal' : '')); } });
   const T = R.stock, k = M.stock; set(T.oreFill, 'width', Math.round(k.ore.frac * 1000) / 10 + '%'); campPageHudPips(doc, R, k.missiles.cap);

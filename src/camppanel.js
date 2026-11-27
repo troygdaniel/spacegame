@@ -56,6 +56,7 @@ function campPanelScroll(P, n) {
 }
 // open a list: at its first row, or (back: the part we came back from) on that part's row; via: the list whose row opened this one (Esc goes back to it), none for a list opened by its own key
 function campPanelGo(P, C, id, back, via) {
+  if (C) (C.keysUsed || (C.keysUsed = {}))[id] = true; // the lists a player has opened (card space-game-chunk12-teach-q: the key row's teaching chip goes quiet once its key has been used; src/campteach.js)
   P.open = id; P.at = 0; P.top = 0; P.pick = null; P.trail = via ? (P.trail || []).concat(via) : [];
   if (back) { const rows = campPanelList(C, id), i = rows.findIndex(r => r.open === back); if (i >= 0) { P.at = i; campPanelScroll(P, rows.length); } }
 }
