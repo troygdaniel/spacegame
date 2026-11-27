@@ -418,11 +418,11 @@ class Campaign extends Phaser.Scene {
   }
   closeTune() { campTuneClose(this); if (this.tunePaused) { this.tunePaused = false; this.mode = 'play'; } }
 
-  // a tower turned on the fighter you fly (src/campaign.js campTowerAI says it with a 'towertell' event; card space-game-b12-c9-tower-delay, the cloud's BRIEF 12 chunk 9: its first shot comes CAMP.tower.flownDelay ms later): a thin red ring closes on the tower for that long, brighter as it closes, and is gone as the shot leaves, so the shot is seen coming. A picture only: the rule is the sim's
+  // a tower turned on the fighter you fly (src/campaign.js campTowerAI says it with a 'towertell' event; card space-game-b12-c9-tower-delay, the cloud's BRIEF 12 chunk 9: its first shot comes CAMP.tower.flownDelay ms later): a thin pink ring (the look's hostile pink) closes on the tower for that long, steadily and brighter as it closes, and is gone as the shot leaves, so the shot is seen coming. A picture only: the rule is the sim's
   towerTell(e) {
     if (!this.textures || !this.textures.exists('ring')) return;
-    const f = this.add.image(e.x, e.y, 'ring').setBlendMode('ADD').setTint(0xff6a4a).setDepth(7).setScale(1.3).setAlpha(0.15);
-    this.tweens.add({ targets: f, scale: 0.42, alpha: 0.95, duration: Math.max(60, e.ms || 1000), ease: 'Quad.easeIn', onComplete: () => f.destroy() });
+    const f = this.add.image(e.x, e.y, 'ring').setBlendMode('ADD').setTint(0xff6fa8).setDepth(7).setScale(1.3).setAlpha(0.3); // the hostile pink of the look (SLOOK.C.foe: every hostile mark is pink, red is retired; tests/shiplookpink.mjs)
+    this.tweens.add({ targets: f, scale: 0.42, alpha: 0.95, duration: Math.max(60, e.ms || 1000), ease: 'Linear', onComplete: () => f.destroy() });
   }
   // a turret fires (src/campaign.js says each shot with an event of its own): a flash at its muzzle, and its pew (src/audio.js, SFX.turret), never more than one in CAMP_BLIP.gap ms of the battle's clock, so eight turrets rattle and do not pile up into noise
   turretFlash(e) {
