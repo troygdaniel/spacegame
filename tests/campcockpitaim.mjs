@@ -1,5 +1,5 @@
 // smoke: the flown fighter's AUTO-TARGET (card space-game-fly-fighter-aim-help; Troy, 26 Nov 2026 evening): the gun finds a hostile within the cone and in reach and sends each shot along the lead point to it, a helped shot does aimK of the damage, the cone 0 is the gun of before, the cone is an N-panel row, and the ace bot gets the same help a human would (plain Node, no Chrome)
-// The rule is src/campcockpitaim.js (campCockpitLead, campCockpitAimPick, campCockpitAim), called every tick by campCockpitStep (src/campcockpit.js); its numbers are CAMP.cockpit aimCone (20 degrees), aimReach, aimLead, aimK (0.32), aimOn, aimMark.
+// The rule is src/campcockpitaim.js (campCockpitLead, campCockpitAimPick, campCockpitAim), called every tick by campCockpitStep (src/campcockpit.js); its numbers are CAMP.cockpit aimCone (20 degrees), aimReach, aimAhead, aimK (0.32), aimOn, aimMark.
 //   A  the table and the N panel's rows: the cone slider 0 to 30 degrees, the price row; they read and write the table
 //   B  the lead: where a moving ship and the shot meet (a shot flown to the end meets it), the fighter's own speed counts, too far or no root: where the ship is
 //   C  the pick: in the cone and in reach; the picked target first, then the one the guns hold, else the nearest; nothing outside the cone, out of reach, dead or unseen; the cone 0 looks (aimMark) but sends nothing
@@ -17,7 +17,7 @@ const g = nodeGame({ store: new Map() });
 const J = e => JSON.parse(g.run(`{ (() => { const r = (${e}); return r === undefined ? 'null' : JSON.stringify(r); })() }`));
 
 g.run(`{
-  window.__reset = () => { Object.assign(CAMP.cockpit, { hpK: 2, damageK: 0.5, rateK: 3, turrets: 'auto', aimCone: 20, aimReach: 0.85, aimLead: 1, aimK: 0.32, aimOn: 4, aimMark: 30 }); };
+  window.__reset = () => { Object.assign(CAMP.cockpit, { hpK: 2, damageK: 0.5, rateK: 3, turrets: 'auto', aimCone: 20, aimReach: 0.85, aimAhead: 1, aimK: 0.32, aimOn: 4, aimMark: 30 }); };
   // a flown fighter alone with the hostiles it is given: the others of the wing are put far away, the aliens of the mission removed, the cruiser's turrets off
   window.__mk = () => { __reset(); const C = window.C = campNew(1, [], { seed: 3 }); CAMP.flags.cockpit = true; CAMP.cockpit.turrets = 'off'; for (let i = 0; i < 90; i++) campStep(C, 1 / 30); C.events.length = 0; C.ships = C.ships.filter(u => u.team !== 'alien'); C.by = {}; C.ships.forEach(u => { C.by[u.id] = u; }); C.waves.forEach(w => { w.started = true; });
     const f = C.ships.find(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked); campCockpitTake(C, f.id); f.x = 0; f.y = 0; f.vx = 0; f.vy = 0; f.rot = 0; C.carrier.x = -9000; C.carrier.y = 0; window.__f = f; return C; };
@@ -30,7 +30,7 @@ g.run(`{
 console.log('A. the table and the N panel');
 {
   g.run(`__reset();`);
-  check('the cone is 20 degrees, the price aimK 0.32, the reach 0.85 of a shot\'s flight, the lead 1, the lit nose 4 degrees, the marker looks 30 degrees when the cone is 0', J('[CAMP.cockpit.aimCone, CAMP.cockpit.aimK, CAMP.cockpit.aimReach, CAMP.cockpit.aimLead, CAMP.cockpit.aimOn, CAMP.cockpit.aimMark]').join() === '20,0.32,0.85,1,4,30');
+  check('the cone is 20 degrees, the price aimK 0.32, the reach 0.85 of a shot\'s flight, the lead 1, the lit nose 4 degrees, the marker looks 30 degrees when the cone is 0', J('[CAMP.cockpit.aimCone, CAMP.cockpit.aimK, CAMP.cockpit.aimReach, CAMP.cockpit.aimAhead, CAMP.cockpit.aimOn, CAMP.cockpit.aimMark]').join() === '20,0.32,0.85,1,4,30');
   check('the gun\'s own numbers are as they were: damageK 0.5, rateK 3 (the price is on top of them, not instead)', J('[CAMP.cockpit.damageK, CAMP.cockpit.rateK]').join() === '0.5,3');
   const row = J('campTuneRow("cockpitaim")'), rowk = J('campTuneRow("cockpitaimk")');
   check('the N panel has the cone row: the group of the flown fighter, CAMP.cockpit.aimCone, 0 to 30 in steps of 1, in degrees, felt at once', row && row.group === 'cockpit' && row.path === 'cockpit.aimCone' && row.min === 0 && row.max === 30 && row.step === 1 && row.unit === 'deg' && row.when === 'now', JSON.stringify(row));
@@ -55,8 +55,8 @@ console.log('B. the lead');
   g.run(`__mk(); __sees(); window.__u = __foe(600, 0, 0, 300); __f.vx = 0; __f.vy = 240;`);
   const own = J(`(() => { const L = campCockpitLead(C, __f, __u); const b = campBullet(C, __f, L.rot, CAMP.fighter.bullet * C.shot, 1, 1400, 'earth', 0); return { d: Math.hypot(b.x + b.vx * L.t - (__u.x + __u.vx * L.t), b.y + b.vy * L.t - (__u.y + __u.vy * L.t)), rot: L.rot }; })()`);
   check('the fighter\'s own speed counts (a shot keeps campDrift of it): moving, the shot still meets the ship', own.d < 2, JSON.stringify(own));
-  g.run(`__mk(); __sees(); window.__u = __foe(600, 0, 0, 300); CAMP.cockpit.aimLead = 0;`);
-  check('aimLead 0 is no lead: the angle to where it is now, though it crosses at 300 px/s', near(J('campCockpitLead(C, __f, __u).rot'), 0, 1e-9) && J('campCockpitLead(C, __f, __u).t') === 0);
+  g.run(`__mk(); __sees(); window.__u = __foe(600, 0, 0, 300); CAMP.cockpit.aimAhead = 0;`);
+  check('aimAhead 0 is no lead: the angle to where it is now, though it crosses at 300 px/s', near(J('campCockpitLead(C, __f, __u).rot'), 0, 1e-9) && J('campCockpitLead(C, __f, __u).t') === 0);
   g.run(`__mk(); __sees(); window.__u = __foe(600, 0, 0, 900);`);
   check('a ship crossing faster than the shot (900 against 700) cannot be met: the angle to where it is, no time', near(J('campCockpitLead(C, __f, __u).rot'), 0, 1e-9) && J('campCockpitLead(C, __f, __u).t') === 0, J('campCockpitLead(C, __f, __u)'));
   g.run(`__mk(); __sees(); window.__u = __foe(600, 0, 2000, 0);`);
@@ -144,7 +144,7 @@ console.log('G. the lead marker (the scene half, with a graphics that writes dow
   const A = J('C.cockpit.aim'), calls = J('__calls');
   const ring = calls.find(c => c[0] === 'ring'), line = calls.find(c => c[0] === 'line');
   check('a ring is drawn at the lead point of the hostile the guns track (not at the ship): its centre is C.cockpit.aim.x, .y, ahead of the ship along its way', ring && near(ring[1], A.x, 1e-6) && near(ring[2], A.y, 1e-6) && A.y > 0 && A.x > 600 - 1, JSON.stringify([ring, A.x, A.y]));
-  check('thin (1.5 px on the screen), 10 px across the radius at zoom 1, dim while the nose is off the lead point', line && near(line[1], 1.5, 1e-9) && near(ring[3], 10, 1e-9) && near(line[3], 0.45, 1e-9) && !calls.some(c => c[0] === 'dot'), JSON.stringify(calls));
+  check('thin (1.5 px on the screen), 10 px across the radius at zoom 1, dim while the nose is off the lead point', line && near(line[1], 1.5, 1e-9) && near(ring[3], 10, 1e-9) && near(line[3], 0.6, 1e-9) && !calls.some(c => c[0] === 'dot'), JSON.stringify(calls));
   const col = line[2], r = (col >> 16) & 255, gg = (col >> 8) & 255, b = col & 255;
   check('in the mint of the player\'s fire: green over red, blue well up, never gold, amber or pink', gg > r && gg > 200 && b > 140 && b < gg, col.toString(16));
   g.run(`__f.rot = C.cockpit.aim.rot; __tick(1); window.__S = __mkScene(1); campCockpitAimSync(__S);`);

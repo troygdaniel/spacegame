@@ -11,14 +11,14 @@
 //   campCockpitAimSync(scene)      the scene half: the thin mint ring at the lead point, lit while the nose is on it; called by campaignscene every frame
 const campAimRad = d => Math.max(0, +d || 0) * Math.PI / 180;
 const campAimWrap = a => Math.atan2(Math.sin(a), Math.cos(a));
-const CAMP_COCKPIT_AIMDRAW = { r: 10, line: 1.5, dim: 0.45, depth: 9 }; // the ring's radius and line on the SCREEN (px), its alpha while the nose is off the lead point, the depth over the ships (4 and 5), the wing tag (6) and the target's square (8)
+const CAMP_COCKPIT_AIMDRAW = { r: 10, line: 1.5, dim: 0.6, depth: 9 }; // the ring's radius and line on the SCREEN (px), its alpha while the nose is off the lead point, the depth over the ships (4 and 5), the wing tag (6) and the target's square (8)
 
 const campCockpitAimReach = C => (CAMP.fighter.bullet * (C.shot || 1)) * (CAMP_COCKPIT_LIFE / 1000) * (+CAMP.cockpit.aimReach || 0);
 
 // where to point so the shot and a moving ship meet: in the frame of the shot, which keeps campDrift of the fighter's own speed, the ship is at p and moves at v; the shot, at speed s, reaches it at the time t where |p + v t| = s t
 // (the smaller positive root). No such time, or one too far for the shot's flight: where the ship is now.
 function campCockpitLead(C, f, u) {
-  const s = CAMP.fighter.bullet * (C.shot || 1), px = u.x - f.x, py = u.y - f.y, out = { rot: Math.atan2(py, px), t: 0, x: u.x, y: u.y }, k = +CAMP.cockpit.aimLead;
+  const s = CAMP.fighter.bullet * (C.shot || 1), px = u.x - f.x, py = u.y - f.y, out = { rot: Math.atan2(py, px), t: 0, x: u.x, y: u.y }, k = +CAMP.cockpit.aimAhead;
   if (!(k > 0)) return out;
   const vx = (u.vx || 0) - (f.vx || 0) * campDrift, vy = (u.vy || 0) - (f.vy || 0) * campDrift;
   const a = vx * vx + vy * vy - s * s, b = 2 * (px * vx + py * vy), cc = px * px + py * py;
