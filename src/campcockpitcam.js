@@ -32,6 +32,7 @@ function campCamTagAt(ox, oy, w, h, drop, padX, padY) {
   const hx = Math.max(0, w / 2 - padX), hy = Math.max(0, h / 2 - padY), x = Math.max(-hx, Math.min(hx, ox)), y = Math.max(-hy, Math.min(hy, oy + drop));
   return { x, y, clamped: x !== ox || y !== oy + drop };
 }
+const campCamMid = cam => ({ x: camzoomSX(cam) + W / 2, y: camzoomSY(cam) + H / 2 }); // the middle of the view in the world (the camera's scroll is its top left at zoom 1 and the zoom is about the middle: src/campfocus.js campFocusMid)
 function campCamReduced() { try { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches === true; } catch (e) { return false; } }
 
 // ---- the scene's side ----
@@ -45,7 +46,7 @@ function campCamEye(s, e, sp, was) {
   if (typeof campFocusOf === 'function' && campFocusOf(s) && typeof campFocusBreak === 'function') campFocusBreak(s);
   X.ring = ringed ? { kind: taking ? 'in' : 'out', t: 0, id: ringed.id, x: ringed.x, y: ringed.y, still: red } : null;
   if (red || !(CAMPCAM.glide > 0)) { X.glide = null; cam.startFollow(sp, true, CAMPCAM.follow, CAMPCAM.follow); return true; }
-  const mid = typeof campFocusMid === 'function' ? campFocusMid(cam) : { x: (cam.scrollX || 0) + W / 2, y: (cam.scrollY || 0) + H / 2 };
+  const mid = campCamMid(cam);
   cam.stopFollow(); X.glide = { id: e.id, from: { x: mid.x, y: mid.y }, t: 0 }; // (the glide is the camera's own, as the F key's is: the follow starts when it has arrived)
   return true;
 }
@@ -77,7 +78,7 @@ function campCamPaint(s, X, C, cam, z, d) {
   X.tagA = Math.max(0, Math.min(1, X.tagA + (want ? 1 : -1) * d / K.tag.fade));
   if (X.tagA > 0 && s.add && !map) {
     const T = K.tag, tag = X.tag || (X.tag = s.add.text(0, 0, uiText('camp.hud.cruiserauto'), { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontSize: T.size + 'px', fontStyle: '600', color: T.color, backgroundColor: T.fill, padding: { x: 7, y: 3 }, resolution: 2 }).setOrigin(0.5).setDepth(T.depth));
-    const mid = typeof campFocusMid === 'function' ? campFocusMid(cam) : { x: (cam.scrollX || 0) + W / 2, y: (cam.scrollY || 0) + H / 2 }, c = C.carrier, sp = s.sp ? s.sp[c.id] : null;
+    const mid = campCamMid(cam), c = C.carrier, sp = s.sp ? s.sp[c.id] : null;
     const half = (sp && sp.displayWidth > 0 ? sp.displayWidth : 44) * 0.3 * z, at = campCamTagAt((c.x - mid.x) * z, (c.y - mid.y) * z, cam.width || W, cam.height || H, half + T.below, T.pad, T.padY);
     tag.setPosition(mid.x + at.x / z, mid.y + at.y / z).setScale(1 / z).setAlpha(T.a * campCamEase(X.tagA)).setVisible(true);
   } else if (X.tag) X.tag.setVisible(false);
