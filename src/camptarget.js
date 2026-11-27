@@ -35,9 +35,17 @@
 //   campSelUnits(C)             { hostile, friendly, friendlyPost, who, whoShips }: the ships picked now (each a unit or null; friendlyPost is the entry of an outpost, which is no unit; who is the one ship of a pilot, null for All pilots; whoShips every ship WHO is: the three for All pilots); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
 //   campSelOrder(C, verb, how, dry)   W is 'engage' (campWingOrder): the group is WHO's squad (a pilot), else all three; an enemy picked: attack it; a friendly picked: guard it; none: form up on the cruiser ({ verb: 'attack'|'guard', formup }); 'attack' and 'guard' alone are its halves (the target boxes' dry runs)
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
+// The order of the list: nearest the eye first. While a fighter is flown (card space-game-chunk9-pick-from-nose; Troy, 26 Nov 2026: yes) the eye is the fighter and the order is by its NOSE: a hostile's score is its distance
+// times (1 + CAMP.target.nose times its angle off the nose, in radians): one dead ahead scores its distance, one abeam 3.5 times it at 2.5, one behind 4.1 times (so one behind is picked last, not never). In the cruiser it is the plain distance, as it was.
+function campTgtScore(C, u, eye, flown) {
+  const d = campDist(u, eye); if (!flown) return d;
+  const off = Math.abs(((Math.atan2(u.y - eye.y, u.x - eye.x) - eye.rot + 3 * Math.PI) % (2 * Math.PI)) - Math.PI); // 0 dead ahead to PI behind
+  return d * (1 + (CAMP.target.nose == null ? 2.5 : CAMP.target.nose) * off);
+}
 function campTgtList(C) {
   if (!C || !C.carrier) return [];
-  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => campDist(a, campEye(C)) - campDist(b, campEye(C)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const eye = campEye(C), flown = typeof campCockpitFlown === 'function' && !!campCockpitFlown(C), sc = new Map();
+  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => { const sa = sc.has(a) ? sc.get(a) : (sc.set(a, campTgtScore(C, a, eye, flown)), sc.get(a)), sb = sc.has(b) ? sc.get(b) : (sc.set(b, campTgtScore(C, b, eye, flown)), sc.get(b)); return sa - sb || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
 }
 function campTgtNow(C) {
   if (!C || !C.tgt) return null;
