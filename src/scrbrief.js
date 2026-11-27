@@ -47,7 +47,7 @@ const scrNumWord = n => ['zero', 'one', 'two', 'three', 'four', 'five', 'six', '
 const scrCapital = t => t.charAt(0).toUpperCase() + t.slice(1);
 function scrMomentVars(L) {
   const scan = (L.objectives || []).find(o => o.type === 'scan'), caches = (L.objectives || []).find(o => o.type === 'caches'), towers = (L.towers || []).reduce((a, t) => a + (t.n || 1), 0);
-  return { cachesword: scrNumWord(caches ? caches.n : (L.caches || []).length), guardsword: scrCapital(scrNumWord((L.guards || []).length)), towersword: scrCapital(scrNumWord(towers)), wavesword: scrCapital(scrNumWord((L.waves || []).filter(w => !w.secret).length)),
+  return { cachesword: scrNumWord(caches ? caches.n : (L.caches || []).length), guardsword: scrCapital(scrNumWord((L.guards || []).length)), towersword: scrCapital(scrNumWord(towers)), wavesword: scrCapital(scrNumWord((L.waves || []).filter(w => !w.secret && !w.optional).length)),
     hold: L.relic ? L.relic.hold | 0 : 0, scansecs: scan && scan.points && scan.points[0] ? scan.points[0].secs | 0 : 0 };
 }
 function campBriefMoments(level, i) {
