@@ -54,6 +54,8 @@ function campOrderLineNow(C, P) {
   const age = t - st.gaveAt, K = CAMP.orderLine, M = CAMP.mark, m = typeof campMarkNow === 'function' ? campMarkNow(C) : { who: 1, held: 1 };
   const qa = st.q ? t - st.q.at : -1; // a Q order just given, newer than any pick or Enter: the line says "I  fly to the goal  ✓"
   if (st.q && qa >= 0 && qa < M.show + M.fade && st.q.at >= st.pickAt && st.q.at >= st.gaveAt) return { who: { t: uiText('camp.corner.orderline.i'), ghost: false }, verb: { t: campOrderLineLower(st.q.label), kind: 'q' }, target: { t: '', ghost: false, kind: '' }, ok: true, why: '', pick: true, tip: { id: '', text: '' }, a: qa < M.show ? 1 : 1 - (qa - M.show) / M.fade, check: qa < K.check, q: true };
+  const ag = typeof campMinerPilotsLine === 'function' ? campMinerPilotsLine(C, t) : null; // the pilots sent to guard the miners when the stick was taken (1.2, card space-game-b12-c10-12-pilots-guard-miners): each order in turn, newer than a pick or an Enter of his
+  if (ag && C.minerPilotsNote.at >= st.pickAt && C.minerPilotsNote.at >= st.gaveAt) return ag;
   const recent = age >= 0 && age < M.show + M.fade, a = Math.max(m.who, m.held);
   if (!(a > 0) || !(L.pick || recent)) return null;
   return Object.assign(L, { a, check: age >= 0 && age < K.check });
