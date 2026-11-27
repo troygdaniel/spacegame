@@ -1033,3 +1033,29 @@ One pin moved: `tests/campminerguard.mjs` compared the 1.2 run with the miner-gu
 - **Words:** nothing untrue ("Reinforcements"), nothing voiced.
 
 **Pins.** `tests/campreinforcecruiser.mjs` (5 checks: the three rows are `around: 'carrier'`, 1,500 to 1,900 px, with the focus, the two reinforcement groups from opposite sides; with the fighter flown 4,300 px from the cruiser both groups appear 1,200 to 2,200 px from her and over 2,000 from the fighter; a fighter parked on the path does not stop them; the runner's group comes out around her too).
+
+## Mission 2.2: more ships in each reinforcement group (card `space-game-22-longer-more-ships`; Troy, 27 Nov 2026: yes, more ships and NOT more hit points, damage or a later call; ORCH chose size A; base main `d9e2caae`; the sizes were measured on `2199d344` and the built size A re-measured on `d9e2caae` with no `--set`: the same cells)
+
+**The change.** The three wave rows of 2.2 carry more ships, nothing else: the two reinforcement groups of the fourth dead guard now come out as **6 drones and 5 gunships** in all, split in two (group 1: drone 3, gunship 3; group 2: drone 3, gunship 2; were drone 2 gunship 2 and drone 2 gunship 1), and the runner's group as **6 raiders and 4 drones** (was 4 and 3). That is 11 ships from the fourth dead guard and 10 from the runner (were 7 and 7), 21 against 14. No hit point, damage, rate, speed, call or ring changed (`src/campaign.js`, the `ships` of the three rows).
+
+**Sizes tried** (plain, ace and hands-off bots, 32 seeds, `node tools/campaign-bot.mjs --cockpit --level 2 --mission 2 --seeds 32 --cbots plain,ace,sit --skills sharp,steady,rough`, the groups set by `--set`; cells are seconds / cruiser damage at sharp, steady, rough):
+
+| size | ships added | plain | ace | sit | worst won |
+|---|---|---|---|---|---|
+| today | 0 (14) | 54/150, 53/136, 53/118 | 53/138, 52/109, 49/84 | 55/147, 55/136, 55/147 | 100 |
+| C | +4 | 55/132, 55/159, 54/136 | 56/147, 53/121, 50/98 | 56/150, 55/153, 57/167 | 100 |
+| **A (built)** | **+7** | **58/190, 58/190, 58/182** | **60/181, 57/156, 53/153** | **60/204, 60/208, 61/219** | **100** |
+| D | +13 raiders | 61/233, 61/213, 60/202 | 62/205, 57/176, 56/124 | 64/247, 63/239, 64/260 | 100 |
+| B | +13 mixed | 62/254, 61/253, 63/245 | 64/245, 61/211, 56/179 | 64/242, 65/280, 66/283 | 100 |
+| E | +22 raiders | 67/417, 66/409, 66/363 | 66/344, 63/320, 59/227 | 70/438, 70/461, 70/463 | 97 |
+
+The old range, before the two guard groups and the reinforcements around the cruiser (card `tune after reinforce`): plain 68 s / 165, carrier 80 s / 222.
+
+**What it says.**
+- **Ships alone cannot make 2.2 70 to 80 s inside the old damage range.** Each ship added buys about 1 s and costs 10 to 15 cruiser damage, whatever its kind (raiders +14: +10 s and +95 damage; drones +14: +9 s and +213; gunships +5: +10 s and +137; 16 seeds, steady). The groups die within seconds of reaching the cruiser (her turrets meet them as they come), so the clock is the guards, then about 25 s for the groups. 70 s needs about 20 more ships and 330 to 400 damage (size E: 66 s, 409, one sharp seed lost).
+- **A is what fits:** plain 58 s (was 53 to 54), cruiser damage 182 to 190 (was 118 to 150), inside the old range (165 plain, 222 carrier); every skill and every bot wins 100 per cent of 32 seeds, so a careful player still wins every seed.
+- **The fighter's advantage is as it was:** the sweep's rule 2 (the ace bot takes no more than 30 per cent less cruiser damage than the plain bot) passes at all three skills at A (ace 181, 156, 153 against plain 190, 190, 182: 5, 18 and 16 per cent less). At D and E it fails at rough (ace 124 against 202: 39 per cent less; E 227 against 363). Rule 3 (the hands-off bot) passes as before; rule 4 (hull lost, at least 15 per cent in a fight) passes at A (the ace bot loses 22 to 27 per cent of a hull a run); rule 5 (the fighter makes a quarter of plain's kills) fails at all three skills as it did (the ace bot makes 0, 1 and 4 kills: the fighter does little in 2.2), so 2.2 still fails the sweep as a whole, as it did before this.
+- **Not met:** the 70 to 80 s. A is 4 to 5 s longer than today. The way to the rest without more damage is another lever (the groups coming out farther from the cruiser so they arrive later, or more time spent on the guards): not asked here, left for Troy (cloud prompt P20).
+- **Words:** nothing untrue. "More aliens join when the fourth guard dies, from two sides", "A second group, coming in from the far side" and "A third group, from the other side" say nothing of a count; "Seven guards" is the guards, not the reinforcements. Nothing voiced. One shown line changes by itself, because the briefing builds it from the table: 2.2's "Expect 4 raiders, 7 drones, 3 gunships, 7 guards." (`camp.bf.expect`, filled in by `campBriefEnemies`) now reads "Expect 6 raiders, 10 drones, 5 gunships, 7 guards." (no new key, no voicepack rule; it is not voiced).
+
+**Pins.** `tests/campbrief.mjs` (71 checks; the 2.2 "Expect" line above), `tests/campreinforcecruiser.mjs` (5 checks; the groups are 11 and 10 ships now) and `tests/camplevel2calls.mjs` (22 checks; 6 drones and 5 gunships split in two, 6 raiders and 4 drones, "11 ships" for the fourth dead guard's call). `tests/campguardgroups.mjs`, `tests/campfighterrunner.mjs`, `tests/campaign.mjs`, `tests/camppace.mjs`, `tests/campgoalcount.mjs`, `tests/camphunt.mjs`, `tests/camplevel2words.mjs`, `tests/campoutpost.mjs`, `tests/camprunnertell.mjs` and `tests/campfighterjobs.mjs` pass as they were.
