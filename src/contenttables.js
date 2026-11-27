@@ -1317,7 +1317,7 @@ const UI_TEXT = {
   'camp.corner.backon': 'Back on the cruiser.',
   'camp.corner.pod': '{name} ejected. Back in {s} s.',
   'camp.corner.podwait': 'Your pilot is mending: {s} s.',
-  'scr.keys.r.cockpit': "Take a pilot's stick; again hands it back",
+  'scr.keys.r.cockpit': "Pilot's stick: take, give back",
   'camp.corner.lost': 'lost',
   'camp.corner.allshort': 'All',
   'camp.corner.attack': 'Attack {name}',

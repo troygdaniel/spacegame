@@ -99,7 +99,7 @@ console.log('F. the keys page');
   g.run(`CAMP.flags.cockpit = false;`);
   const row = () => J(`(() => { const fly = scrKeysModel().groups.find(gr => gr.id === 'fly'); return !!fly && fly.rows.some(r => r.chips.some(c => c.k === 'C')); })()`);
   const off = row(); g.run(`CAMP.flags.cockpit = true;`); const on = row();
-  check('the new keys page lists C (Take a pilot\'s stick; again hands it back) under FLY AND FIRE only while the switch is on; the old page too', off === false && on === true && J(`scrKeysModel().groups.find(gr => gr.id === 'fly').rows.find(r => r.chips[0].k === 'C').t`) === "Take a pilot's stick; again hands it back" && J(`campKeysPage().some(gr => gr.rows.some(r => r.caps.join() === 'C'))`) === true);
+  check('the new keys page lists C (Pilot\'s stick: take, give back: five words at most, as every row of it) under FLY AND FIRE while the switch is on (it is on for everyone since card space-game-cockpit-default-on); the old page too', off === false && on === true && J(`scrKeysModel().groups.find(gr => gr.id === 'fly').rows.find(r => r.chips[0].k === 'C').t`) === "Pilot's stick: take, give back" && J(`campKeysPage().some(gr => gr.rows.some(r => r.caps.join() === 'C'))`) === true);
   g.run(`CAMP.flags.cockpit = false;`);
 }
 check('the game logged no error', g.errors.length === 0, g.errors.join(' | '));

@@ -1,7 +1,7 @@
 // ---------- Taking the stick of a pilot's fighter (card space-game-fly-fighter-l1; Troy, 26 Nov 2026: "I love how the Long Haul ship flies": fly a pilot's fighter with the Wren's feel and leave the cruiser heavy) ----------
 // The C key takes the stick of a pilot's fighter and hands it back. While he holds it the arrows, Space and Shift fly THAT fighter (the Wren's flight numbers, the pilot's own guns: CAMP.cockpit) and the camera is on it; the
 // cruiser keeps flying its last order (the autopilot, or coasting to a stop) and its turrets fire by themselves (CAMP.cockpit.turrets). W, E, Enter, Q, Z and R work as always (they address the cruiser, the other pilots and
-// the ships you protect: the fighter he flies is left out of "the pilots"). Behind CAMP.flags.cockpit (and the address ?cockpit=1): with it off nothing here runs and the C key does nothing.
+// the ships you protect: the fighter he flies is left out of "the pilots"). Behind CAMP.flags.cockpit, ON for every player since card space-game-cockpit-default-on (the address ?cockpit=0 is the tests' way back): with it off nothing here runs and the C key does nothing.
 // No Phaser here: tests/campcockpit.mjs runs it in Node. The scene writes C.cockpit.input from the keys (src/campaignscene.js); a bot sets the same five fields.
 //   C.cockpit                null, or { id (the fighter), k (the hull multiplier it was taken with), input: { turn (-1 to 1), thrust (0 to 1), brake, boost, fire }, boost: { en, locked, on, until, th, flare, fx } (the store and its
 //                            look: the same fields as the cruiser's C.boost, src/campboost.js), vmax (the top speed now, px/s), nextShot (ms), since (ms) }
