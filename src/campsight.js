@@ -96,8 +96,9 @@ function campSightArrows(C, scroll, W_, H_, zoom, page) {
     const sx = (g.x - scroll.x - W_ / 2) * z + W_ / 2, sy = (g.y - scroll.y - H_ / 2) * z + H_ / 2;
     if (page ? !campEdgeOffscreen(sx, sy, W_, H_, !!(page.was && page.was.hostiles)) : sx > A.margin && sx < W_ - A.margin && sy > A.margin && sy < H_ - A.margin && !(A.keep || []).some(r => sx >= r[0] && sx <= r[2] && sy >= r[1] && sy <= r[3])) return; // on the screen and clear of the HUD: it is seen as it is (page: the pill's rule, no HUD rectangles)
     const e = typeof campNavEdge === 'function' ? campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, A.margin, page ? null : A.keep) : null; if (!e) return; // page: the point where the line from the screen's middle to the group crosses the border, not walked round to a free spot
-    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark });
+    out.push({ x: e.x, y: e.y, angle: e.angle, tx: sx, ty: sy, n: g.n, dist: g.dist, what: campSightWhat(g.kinds, campSightKnown(C, g.x, g.y)), fresh: C.t - g.at < K.mark, runner: !!C.runner && !!C.runner.id && !C.runner.called && !C.runner.off && g.ids.indexOf(C.runner.id) >= 0 });
   });
+  out.sort((a, b) => (b.runner ? 1 : 0) - (a.runner ? 1 : 0)); // the group with the guard that is running to call a group is the first: the page's one edge pill points at it (card space-game-22-runner-tell); the rest stay nearest first
   return out.slice(0, K.arrows);
 }
 
