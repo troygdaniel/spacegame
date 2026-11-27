@@ -52,7 +52,7 @@ check('the card of a mission shown before a retry\'s flight reads MISSION 2: The
 
 // ---- 5. the two waves of mission 2.2 do not say the same line ----
 check('mission 2.2\'s second wave has a line of its own ("A third group, from the other side."), not the first one\'s again; both resolve to words',
-  J('(() => { const w = campMissionRow(2, 1).waves; return [w.length, w[0].say !== w[1].say, uiText(w[0].say), uiText(w[1].say)]; })()').join('|') === '2|true|A second group, coming in from the far side.|A third group, from the other side.');
+  J('(() => { const w = campMissionRow(2, 1).waves; return [w.length, w[1].say == null, uiText(w[0].say), uiText(w[2].say)]; })()').join('|') === '3|true|A second group, coming in from the far side.|A third group, from the other side.'); // (card space-game-b7-level2: the reinforcements are two rows, the two sides, and one line is said for both; the second group is the third row)
 
 // ---- 6. a convoy with a name of its own (the rim run's Transport and Haulers) arrives and is lost as a ship ----
 // "The convoy has reached Transport." and "The convoy to Hauler 2 is lost." read as if Transport and Hauler 2 were places (the lines name the place a convoy flies to: Mars). The rim's convoys are ships:
