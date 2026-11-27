@@ -729,9 +729,9 @@ const CAMP = {
           objectives: [{ type: 'kill', what: 'guards' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
           waves: [{ at: 18, from: [2600, -2200], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l2wave2' }, { at: 40, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves: when, from where, how many of each kind
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
-          start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 14, caches: 0, clear: 650 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
+          start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 20, caches: 0, clear: 650, leash: 800, stand: 200 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 3, from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 24, from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'carrier', say: 'camp.say.l2wave3' }, { at: 42, from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'carrier', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ on: { held: 0 }, ring: [447, -1005], ships: { drone: 4, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 5 }, ring: [-1062, 287], ships: { gunship: 3, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 10 }, ring: [583, 932], ships: { drone: 4, gunship: 2 }, goal: 'relic', say: 'camp.say.l2wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
@@ -887,7 +887,7 @@ function campNew(level, techs, opts) {
     techs: (techs || []).filter(t => CAMP.tech[t]),
     earth: L.defend ? campDefend(level, L.defend) : L.earth === false ? null : { x: 0, y: 0, r: CAMP.earth.radius, shield: CAMP.earth.shield, max: CAMP.earth.shield }, caches: (L.caches || []).map(c => ({ x: c[0], y: c[1], got: false })), cachesGot: 0,
     ore: Math.max(0, Math.min(CAMP.ore.cap, opts.ore != null ? opts.ore : (L.startOre != null ? L.startOre : CAMP.ore.start))), shield: CAMP.carrier.shield, pickups: [], mends: [],
-    relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0 } : null,
+    relic: L.relic ? { x: campPlaces(level)[L.relic.place].x, y: campPlaces(level)[L.relic.place].y, hold: 0, best: 0, entered: false } : null,
     bay: { fighters: CAMP.bay.fighters }, launchQ: [], nextLaunch: 0, tgt: '', sel: 'all', fsel: '', repairs: [], // repairs: the fighters landed and being mended, { kind, until, order, stay } (src/camprepair.js)
     waves: L.waves.map(() => ({ started: false, at: 0 })), convoys: L.convoys.map(() => ({ started: false })), delivered: 0, lost: 0, kills: 0, launched: 0, lostShips: 0, lane: {}, cash: Math.max(0, Math.floor(+opts.credits || 0)), sold: 0, oreBest: 0,
     orders: { launch: 0, attack: 0, escort: 0, guard: 0, recall: 0, mine: 0, repair: 0, mendship: 0, power: 0, balance: 0, emergency: 0, convoy: 0 }, blinkAt: -1e9, motherSpawn: 0, // (the turrets have no clock of their own here: they fire by the carrier's own turret code)
@@ -1225,7 +1225,7 @@ function campSchedule(C) {
     if (!due && !early) return;
     st.started = true; st.at = sec;
     if (w.beat === 'distress' && !campFlag('distress')) return; // the distress call is switched off (the tuning panel): the wave is taken as passed and no pirate comes (src/campbeats.js)
-    const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
+    const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : w.ring && C.relic ? [C.relic.x + w.ring[0], C.relic.y + w.ring[1]] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ring: this far from the relic, wherever the relic is (mission 2.3: a wave comes out of the dark about 1,100 px from the ring and is on it in a few seconds) // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     const away = w.perAway && typeof campMinerAway === 'function' ? campMinerAway(C).length : 0; // the miner's price (card space-game-11-miner-real-price): a wave row's perAway says how many more of a kind come for each pilot that is away at the miner when it spawns (src/campminer.js), so the more pilots go, the more of them come for the transport
     Object.keys(w.ships).forEach(kind => {
       for (let k = 0; k < w.ships[kind] + Math.round(away * ((w.perAway || {})[kind] || 0)); k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
@@ -1312,6 +1312,7 @@ function campWaveOn(C, on) {
   if (on.t != null) return campMissionClock(C) >= on.t;
   if (on.lane != null) return campLane(C, on.convoy) >= on.lane; // the share (0 to 1) of its road a convoy has flown: the one named (on.convoy: its id), else the farthest of them; nothing while no convoy has left
   if (on.cue != null) return C.cues[on.cue] != null; // a named cue a script fired (campCue, src/camppirates.js)
+  if (on.held != null) return !!(C.relic && C.relic.entered && C.relic.best >= on.held); // the relic has been held this many seconds (0: the cruiser has been inside its ring): a wave of 2.3 comes for what the player does, not at a second of the clock (card space-game-23-waves-on-entry; the cloud's brief 7: one on entering, one at 5 s held, one at 10 s held)
   if (on.cleared != null) { const w = /^wave:(\d+)$/.exec(on.cleared); return !!w && !!C.waves[+w[1]] && C.waves[+w[1]].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === +w[1]); } // a wave is cleared: it came and none of it is left (a pirate that ran away is gone, not left)
   return false;
 }
@@ -1437,9 +1438,10 @@ function campCaches(C) {
 function campRelic(C, dt) {
   const L = C.L, r = L.relic; if (!r || !C.relic || C.carrier.hp <= 0) return;
   const R = C.relic, ready = C.cachesGot >= r.caches, near = campDist(C.carrier, R) <= r.radius, clear = !campAliens(C).some(u => campDist(u, R) <= r.clear);
+  if (near && !R.entered) R.entered = true; // the cruiser has been in the ring (a wave waiting for that comes now: campWaveOn, on.held)
   if (ready && near && clear) {
     if (R.hold === 0) campSay(C, 'camp.say.relicon');
-    R.hold += dt;
+    R.hold += dt; if (!(R.best >= R.hold)) R.best = R.hold; // best: the most it has been held so far (a wave that comes at 5 s held comes once, though the hold falls back while the aliens are near)
     if (R.hold >= r.hold) { R.hold = r.hold; campSay(C, 'camp.say.relicdone'); campWin(C, 'relic'); }
   } else if (R.hold > 0) R.hold = Math.max(0, R.hold - dt * 2);
 }
@@ -1548,6 +1550,7 @@ function campAlienAI(C, u, dt) {
     u.hold = false;
   }
   let tgt = null;
+  if (u.goal === 'relic' && C.relic && C.L.relic) return campRelicAlien(C, u, dt); // a wave sent at the relic holds the ring (below)
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
   if (!tgt) { const near = campDogFoe(C, u, campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7)); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
@@ -1564,6 +1567,36 @@ function campAlienAI(C, u, dt) {
   const dog = !isEarth && campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y); // a raider against a fighter is a dogfight (src/campdogfight.js)
   if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
   if (m.fire && dist < def.range + (isEarth ? C.earth.r : 0) && C.t > u.nextShot && Math.abs(campWrap((dog ? m.aim : target) - u.rot)) < def.aim) {
+    u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
+    const n = def.spread || 1;
+    for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
+  }
+}
+// An alien of a wave sent at the RELIC (goal 'relic': mission 2.3; card space-game-23-waves-on-entry, Troy 26 Nov 2026). It flies to the relic's ring and holds it: it fights whatever of yours is within the relic row's `leash` px
+// of the relic (the ship that hit it first, then the nearest, the cruiser among them) and nothing farther; with nothing of yours in the leash, or once it is itself outside it, it goes back to within `stand` px of the relic
+// and waits there. So a fast ship cannot draw the wave off the ring (a fighter that kited the first wave 2 km away won the mission in 16 s while the cruiser sat on the ring): while one of them lives it is within the hold's
+// clear radius or on its way back to it. It fires as every alien does.
+function campRelicAlien(C, u, dt) {
+  const def = u.def, R = C.relic, r = C.L.relic, leash = r.leash || 900, stand = r.stand || 260, mine = C.ships.filter(s => s.team === 'earth' && s.hp > 0 && campDist(s, R) <= leash);
+  let tgt = null;
+  if (campDist(u, R) <= leash) { // on the ring: the one that hit it, else the nearest of yours inside the leash
+    if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0 && mine.indexOf(h) >= 0) tgt = h; }
+    if (!tgt) tgt = campDogFoe(C, u, campNearest(mine, u, leash * 2)) || null;
+    if (tgt && mine.indexOf(tgt) < 0) tgt = campNearest(mine, u, leash * 2) || null; // (a dogfight's partner that has left the leash is let go)
+  }
+  const out = campDist(u, R) > (tgt ? leash : stand); // not on the ring yet (it has just come, or a fight has carried it off): it flies in first, and fires on the way if its nose is on something
+  let aim = u.rot;
+  if (out) campSeek(u, R.x, R.y, dt);
+  else if (!tgt) { const keep = Math.pow(0.4, dt); u.vx *= keep; u.vy *= keep; u.x += u.vx * dt; u.y += u.vy * dt; }
+  if (!tgt) return;
+  const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx), tv = { x: tgt.vx || 0, y: tgt.vy || 0 };
+  let fire = true; aim = target;
+  if (!out) { // on the ring: it fights as every alien does (a raider against a fighter is a dogfight)
+    const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campSteer(C, u, def, dist, target, u.vx - tv.x, u.vy - tv.y);
+    if (dog) campDogMove(C, u, m, dt); else campMove(u, m.ang, m.face, dt);
+    fire = !!m.fire; if (dog) aim = m.aim;
+  }
+  if (fire && dist < def.range && C.t > u.nextShot && Math.abs(campWrap(aim - u.rot)) < def.aim) {
     u.nextShot = C.t + campFightGap(u, campBetween(C, def.shot[0], def.shot[1]));
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
