@@ -244,3 +244,41 @@ Level 1 (12 seeds): shot down in none of the runs at hpK 1 or 0.5 (at 0.25: 1 ru
 **What the table says:** the highest hpK at which the ace is shot down at all is 0.65 (3 percent of 3.2 and 9 percent of 3.3, still winning every run); 0.625 shreds it (3.2: every run, 2.8 times a run; 3.3: 44 percent) and 0.7 shields it entirely. The brief's example, one run in five in the busier missions, is not reachable with this bot: its chance goes from none to nearly all within 0.05 of hpK, because it parks in the towers' reach. **Troy tests it in play:** set "Flown hull" on the N panel (`The flown fighter (C)`, steps of 0.05; the default is 2) and sit Wedge in a tower's reach in 3.2 or 3.3.
 
 What happens to a shot-down pilot (lost for the mission today, a pod and back in 20 s in the brief) is Troy's separate call and is not touched here.
+
+## Rules 4 and 5: "safe and changes little" fails (card `space-game-chunk15-sweep-rule`; brief 8 decision 12)
+Added to the pass rule (`COCKPIT_RULE`, `cockpitVerdict`; tools and docs only, no game change): where plain fights (a fight to speak of: plain's median kills at least 5),
+4. the flown fighter is **shot down in at least 5 percent and no more than 50 percent of the runs** (the sweep's `shot%` column: the share of runs in which it was shot down at least once): never shot down fails, and so does shredded;
+5. the fighter's **own kills** (median a run) are **at least a quarter of plain's** kills: few kills fails.
+Both are n/a where plain does not fight (under 5 kills) or the numbers are missing. The thresholds (5, 50, a quarter, a fight of 5) are mine, for Troy to agree like the rest of the rule. `node tools/campaign-bot.mjs --cockpit` prints the two verdicts in the `shot` and `kills` columns.
+
+**The sweep again, 32 seeds, defaults (`hpK` 2, `rateK` 3, `damageK` 0.5, turrets auto): 0 of 27 mission-skills pass.** The fighter is never shot down in any mission (rule 4 fails in all 27 of the 27: `shot%` is 0 everywhere, which is the finding of card `space-game-chunk4-fighter-shot-down`: with Troy's double hull the bot is too evasive to be hit) and its own kills are few (rule 5 fails in 17 of 27: the median is 0 to 10 against plain's 7 to 21). Rules 1 to 3 on their own fail in 11 of the 27 (16 pass). So "safe and changes little" fails every cell, as the card asks; a retune that makes the fighter matter has to start with kills and being hit, not with speed.
+
+| mission | skill | plain kills | ace shot% | ace kills | time | taken | sit | shot | kills | rule |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1.1 | sharp | 17 | 0 | 1 | pass | pass | n/a | FAIL | FAIL | FAIL |
+| 1.1 | steady | 17 | 0 | 5 | pass | pass | pass | FAIL | pass | FAIL |
+| 1.1 | rough | 17 | 0 | 8 | pass | FAIL | pass | FAIL | pass | FAIL |
+| 1.2 | sharp | 20 | 0 | 2 | pass | n/a | FAIL | FAIL | FAIL | FAIL |
+| 1.2 | steady | 20 | 0 | 5 | pass | pass | FAIL | FAIL | pass | FAIL |
+| 1.2 | rough | 20 | 0 | 10 | pass | pass | FAIL | FAIL | pass | FAIL |
+| 1.3 | sharp | 21 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 1.3 | steady | 21 | 0 | 5 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 1.3 | rough | 21 | 0 | 9 | pass | FAIL | pass | FAIL | pass | FAIL |
+| 2.1 | sharp | 7 | 0 | 0 | pass | n/a | pass | FAIL | FAIL | FAIL |
+| 2.1 | steady | 7 | 0 | 1 | pass | n/a | pass | FAIL | FAIL | FAIL |
+| 2.1 | rough | 7 | 0 | 2 | pass | n/a | pass | FAIL | pass | FAIL |
+| 2.2 | sharp | 21 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 2.2 | steady | 21 | 0 | 2 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 2.2 | rough | 21 | 0 | 6 | pass | FAIL | pass | FAIL | pass | FAIL |
+| 2.3 | sharp | 19 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 2.3 | steady | 19 | 0 | 2 | pass | FAIL | pass | FAIL | FAIL | FAIL |
+| 2.3 | rough | 19 | 0 | 5 | pass | FAIL | pass | FAIL | pass | FAIL |
+| 3.1 | sharp | 10 | 0 | 1 | pass | FAIL | pass | FAIL | FAIL | FAIL |
+| 3.1 | steady | 10 | 0 | 2 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 3.1 | rough | 10 | 0 | 5 | FAIL | FAIL | pass | FAIL | pass | FAIL |
+| 3.2 | sharp | 12 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 3.2 | steady | 12 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 3.2 | rough | 12 | 0 | 3 | FAIL | FAIL | pass | FAIL | pass | FAIL |
+| 3.3 | sharp | 16 | 0 | 1 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 3.3 | steady | 16 | 0 | 2 | pass | pass | pass | FAIL | FAIL | FAIL |
+| 3.3 | rough | 16 | 0 | 3 | pass | pass | pass | FAIL | FAIL | FAIL |
