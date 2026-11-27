@@ -112,7 +112,7 @@ function campSelLabel(id) { // a stop's words in the fleet pick and the corner: 
 const campSelIs = (C, id) => !!C && (id === CAMP_SELALL ? !C.sel || C.sel === CAMP_SELALL : C.sel === id); // is that stop the WHO now (nothing picked is All pilots)
 function campSelPick(C, id, how) { // a row of the fleet pick (W, then a digit): that pilot, or All pilots, is WHO. No order is given; a pilot who is lost (and has nothing in the bay) is no stop
   if (!C || !C.carrier) return campNo('what');
-  const e = campSelList(C).find(x => x.id === id); if (!e) return campNo('nopilot');
+  const e = campSelList(C).find(x => x.id === id); if (!e) { const fl = typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; if (fl && id === CAMP_SELPILOT + fl.squad) return { ok: false, code: 'flying', say: uiText('camp.corner.flying', { name: campSelLabel(id) }) }; return campNo('nopilot'); } // the pilot whose fighter he flies is no stop: said in words (shown, not spoken), nothing is picked
   C.sel = e.id; campMarkTouch(C, true, false); return { ok: true, say: '', who: e.id };
 }
 function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // the first stop of Q: WHO is all three pilots
