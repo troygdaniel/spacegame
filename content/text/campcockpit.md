@@ -8,11 +8,14 @@ The words of taking a pilot's stick (card space-game-fly-fighter-l1; Troy, 26 No
 |---|---|
 | camp.corner.chip.cockpit | Cockpit |
 | camp.corner.chip.cockpitback | Hand back |
+| camp.hud.cruiserauto | CRUISER AUTO |
 | camp.corner.cruiserauto | Cruiser (auto) |
 | camp.corner.comehere | Cruiser, come to me |
 | camp.price.stick | The miners lose a guard while you fly. |
 | camp.corner.comesay | Cruiser on its way to you. |
 | camp.corner.flying | You are flying {name}. |
 | camp.corner.backon | Back on the cruiser. |
+| camp.corner.pod | {name} ejected. Back in {s} s. |
+| camp.corner.podwait | Your pilot is mending: {s} s. |
 | scr.keys.r.cockpit | Take a pilot's stick; again hands it back |
 | camp.nudge.cockpit | {keycockpit} flies a pilot's fighter. {keycockpit} again hands it back. |

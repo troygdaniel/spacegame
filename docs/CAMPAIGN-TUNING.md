@@ -465,6 +465,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 
 **What it says:** the pair gives back what the break took: in 1.2 the cruiser's damage with the fighter out goes from 12 back to **40** (plain 42) and the ace wins every seed; in 1.3 from 24 to 34 (plain 53); the others move a few points. Nothing is won faster, the fighter is never shot down by this bot, kills are the same. The partner rarely reaches the point behind a fighter at full thrust inside 2.5 s (it gives up and attacks from where it is: seen in a muted look, it closed 270 to 160 px in the 2 s); a slower chaser is caught. `pair.ms`, `pair.behind` and `pair.range` are one number each.
 
+## Hurt hostile fighters extend: they run out and come back in (card `space-game-chunk8-enemy-extend`; Troy, 26 Nov 2026, brief 8 proposal A, third behaviour; base: the break and the pair, chunk 7 tip `7644354c`)
+**The rule** (`src/campbreak.js`, `CAMP.break.extend`): a skiff, cutter, raider or drone **under half its hull** with the fighter the player flies within **900 px** runs straight away from it, nose where it flies and no shot, until it is **600 px** from it (or 3.5 s have passed), then goes on as it was, which is back in at the chaser. **Once** for a ship: a ship that has come back fights on (and a pirate under 35 percent of its hull still breaks off for good: that rule, `CAMP.pirate.breakHp`, is the pirates' own and was there before). Steering only. Nothing changes with nobody flying a fighter.
+
+**12 seeds, the cockpit sweep, steady skill, every mission** (old = the break and the pair, chunk 7; new = and the extend; ace flies the fighter):
+
+| mission | ace won | ace time | ace damage taken (old to new) | kills a run | fighter shot down | plain damage |
+|---|---|---|---|---|---|---|
+| 1.1 | 100 to 100 | 306 to 306 | 202 to 202 | 5 to 5 | 0 to 0 | 202 |
+| 1.2 | 100 to 100 | 270 to 270 | 40 to **24** | 5 to 5 | 0 to 0 | 42 |
+| 1.3 | 100 to 100 | 292 to 292 | 34 to 31 | 4 to 3 | 0 to 0 | 53 |
+| 2.1 | 100 to 100 | 32 to 32 | 6 to 6 | 1 to 1 | 0 to 0 | 0 |
+| 2.2 | 100 to 100 | 73 to 71 | 90 to 104 | 2 to 2 | 0 to 0 | 161 |
+| 2.3 | 100 to 100 | 77 to 77 | 97 to 97 | 2 to 2 | 0 to 0 | 252 |
+| 3.1 | 100 to 100 | 75 to 78 | 40 to 37 | 2 to 3 | 0 to 0 | 65 |
+| 3.2 | 100 to 100 | 61 to 60 | 144 to 144 | 1 to 1 | 0 to 0 | 230 |
+| 3.3 | 100 to 100 | 73 to 73 | 450 to 450 | 3 to 3 | 0 to 0 | 461 |
+
+**What it says:** the extend is the smallest of the three: every mission is still won on every seed, times move by at most 3 s, kills by one, and nobody is shot down. The cruiser's damage with the fighter out moves a little both ways (1.2 40 to 24, 2.2 90 to 104, 1.3 34 to 31): a hurt fighter that runs 600 px out stops shooting at the cruiser for those seconds, and the fighter bot, which hunts the nearest foe, follows it out. In muted Chrome a skiff at 40 percent hull 300 px from the flown fighter turned round and ran 296 to 585 px in 2.6 s (the turn takes the first second), 0 game errors. `extend.below`, `out`, `near` and `ms` are one number each.
+
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
 
@@ -787,3 +806,76 @@ Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the grou
 - Why not a higher factor: at 2 the rough ace was 59 / 288 (30 per cent less than plain: at the rule's edge); at 3, 59 / 320. The cruiser bots do not change at any value (they never fly the fighter at a tower).
 
 **Pins.** `tests/campfightergap.mjs` (5 checks: the number is 3; a flown shot deals 30 for 10 to a tower, a wing pilot's 10, and at 1 the flown one 10; against a raider the flown shot deals 10 as a wing pilot's does; one 3.3 tower takes about 7 s of fire (5 to 9); the gap: a ring point is under three towers and under one once the two nearest are dead).
+
+## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`, brief 8)
+`CAMP.cockpit.hpK` stays **2** (Troy's own call: double hull, so he is not shot down in seconds while he learns). The measurement: the ace bot is shot down in no run of any mission at 2; at 0.65 it is shot down in 3 percent of 3.2 and 9 percent of 3.3 and still wins every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The bot is too evasive to show when a human is shot down (it parks out of reach), so Troy judges hpK in play: the "Flown hull" row of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already choose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.
+## Mission 2.2: the guard that runs to call the second group can be caught (card `space-game-fighter-job-22`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base: main `52b6eeaa` plus the pod chunk `57ee0654` and the groups-go-for-the-cruiser tip `00ace28a`)
+
+**The rule** (`campRunner`, a mission row's `runner: { after: 6, far: 2400, rush: 4 }`, the third wave row `on: { runner: true }`): with six of the seven guards dead the last one runs straight away from the cruiser at four times its speed, awake, and calls the second group (the old second wave: 4 raiders and 3 drones) when it is 2,400 px from the cruiser. A ship of yours that kills it first stops the call for good: the group never comes, and `wave:all` counts a group whose call was never made as gone, so the mission is won when everything else is dead. Before this the sixth dead guard called the group at once. No hit-point, damage or ship change. The four-times speed is the existing pace function's `rushK`.
+
+**Why four times, 2,400 px.** Measured on 12 seeds with the log of the run (when the runner is chosen, how it ends): at its own speed it was caught by every bot (the wing's pilots and the cruiser's guns are on it at once, 300 to 1,100 px off); at four times its speed the cruiser with its wing catches it on about two seeds in three (8 of 12), the flown fighter (ace) on 12 of 12, and the cruiser with no wing (the carrier bot) not at all. Faster (six times, 3,200 px) gave the same counts.
+
+**The numbers** (12 seeds, 2.2; won per cent / seconds / cruiser damage; the kills column is the median: 21 means the group came, 14 that it was stopped on at least half of the seeds):
+
+| skill | bot | before (base + `00ace28a`) | after |
+|---|---|---|---|
+| steady | plain | 74 / 182 / 21 | 68 / 165 / 14 |
+| steady | carrier | 88 / 193 / 21 | 80 / 222 / 21 |
+| steady | ace | 71 / 127 / 21 | 67 / 113 / 14 |
+| steady | sit | 74 / 198 / 21 | 69 / 165 / 14 |
+| rough | plain | 73 / 170 / 21 | 67 / 150 / 14 |
+| rough | carrier | 86 / 208 / 21 | 82 / 213 / 21 |
+| rough | ace | 63 / 93 / 21 | 59 / 93 / 14 |
+| rough | sit | 74 / 173 / 21 | 69 / 147 / 14 |
+
+- **What it does to the mission:** a player with pilots out stops the second group on most runs, so 2.2 is about 6 s shorter and the cruiser takes about as much damage; a player without pilots (the carrier bot) still gets the group. Ace against plain, damage: steady 31 per cent less (30 before), rough 38 per cent less (45 before).
+- **Not changed, for Troy:** the run has no tell on the screen (no new line: the group's own line "A third group, from the other side." is said when the call is made). A shown line when the last guard starts to run, and a tag on it, would help a player find it; that is new words and for Troy.
+
+**Pins.** `tests/campfighterrunner.mjs` (6 checks: the row; the runner is chosen, runs away and is awake; left alone it calls within 23 s and the group comes; killed first, no group ever comes and the mission is still won; all seven dead at once; no guard dead and nothing comes by the clock). `tests/camplevel2calls.mjs`: the third wave row is `{ runner: true }`, and the sixth dead guard no longer calls the group.
+## Mission 2.3: an alien held outside the ring by a fighter does not stop the hold (card `space-game-fighter-job-23`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base: main `52b6eeaa` plus the pod chunk `57ee0654`)
+
+**The rule** (`campRelicHeld`, the relic row's `held: 450`): an alien that is OUTSIDE the ring (more than the ring's 240 px from the relic) and within 450 px of the fighter the player FLIES does not count for the hold's "no alien within 650 px of the relic": the nearest one, one alien. The wing's own pilots hold nothing off: a first version let every fighter do it, and the careless pilot of `tests/camprelicwaves.mjs` (the cruiser sits on the ring and never fires) then won with 44 hull left on the wing's work alone, which is the two-sides card's loss undone; it is the player's job. Everything else about the hold is as it was: the cruiser must be in the ring, an alien inside the ring or a second alien at the edge still stops it, and it falls twice as fast otherwise.
+
+**Why it is not the old kite** (the 16 s win of `docs/night/cockpit-sweep.md`): the waves now hold the ring (leash 800 px; `campRelicAlien`), so a fighter cannot draw a wave 2 km off, and one ship frees one alien, not twelve.
+
+**The numbers** (12 seeds, 2.3; won per cent / seconds / cruiser damage; unchanged to the digit: the bots' fighters kill what they fight before it has stood at the ring's edge for long, so the rule does not fire in their runs):
+
+| skill | bot | before = after |
+|---|---|---|
+| steady | plain | 100 / 81 / 252 |
+| steady | carrier | 100 / 79 / 162 |
+| steady | ace | 100 / 77 / 97 |
+| steady | sit | 100 / 85 / 151 |
+| rough | plain | 100 / 78 / 144 |
+| rough | carrier | 100 / 80 / 155 |
+| rough | ace | 100 / 72 / 94 |
+| rough | sit | 100 / 82 / 148 |
+
+- Ace against plain is as it was before this card: 5 per cent faster and 61 per cent less cruiser damage at steady on these 12 seeds (97 against 252), 8 per cent faster and 35 per cent less at rough (94 against 144): the damage is over the sweep's 30 per cent rule at both, a gap this card neither made nor closes (the plain bot's 12 seeds carry a bad one at steady). The new rule is a tool for a player who flies a fighter to the ring's edge on purpose; the bots do not. For Troy to try in play.
+
+**Pins.** `tests/campfighterring.mjs` (7 checks: the row; an alien at the edge with no fighter near stops the hold; with the fighter he flies 215 px off it does not; the flown fighter 700 px off holds nothing; an alien inside the ring is never held off; the flown fighter holds one alien of two; a wing pilot's fighter holds nothing).
+## 3.2: a tower tracking the fighter you fly cannot fire at the cruiser (card `space-game-fighter-job-32`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base main `a3fe84f1`)
+
+**The rule** (`campTowerAI`): a tower that has the fighter the player flies inside its range (800 px) turns on it even when the cruiser is nearer; with no fighter flown, or the fighter out of range, it turns on the nearest of your ships as it always did. So while a tower tracks the fighter every shot it fires goes at the fighter, none at the cruiser: the fighter is a decoy that draws the guns of the towers it can reach, which gives the player a job for it that the cruiser's guns do not do.
+
+**The numbers** (12 seeds; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| mission, skill | bot | before | after |
+|---|---|---|---|
+| 3.2 steady | plain / carrier / ace / sit | 59 / 230, 72 / 403, 60 / 144, 62 / 249 | 59 / 230, 72 / 403, 60 / 151, 62 / 249 |
+| 3.2 rough | plain / carrier / ace / sit | 59 / 270, 72 / 443, 44 / 130, 60 / 277 | 59 / 270, 72 / 443, 44 / 126, 60 / 277 |
+| 3.3 steady | plain / carrier / ace / sit | 70 / 461, 76 / 569, 73 / 450, 77 / 536 | 70 / 461, 76 / 569, 73 / 421, 77 / 536 |
+| 3.3 rough | plain / carrier / ace / sit | 68 / 410, 76 / 504, 68 / 378, 76 / 522 | 68 / 410, 76 / 504, 68 / 403, 76 / 522 |
+
+The bots' fighter flies beside the cruiser, so the rule is noise to them (the other bots are identical). It matters when the player flies the fighter away from the cruiser.
+
+**"Hits the fighter about one pass in three": not tuned, no number changed.** A pass is the fighter inside a tower's range, in to out. Measured, towers only: a straight flyby at 480 or 800 px/s took 0 hits in 80 passes (the gun aims where the fighter is, not ahead); aiming ahead by 0.7 of the lead and firing twice as fast gave 17 per cent, at four times the rate 18 per cent. The ace bot, which hovers and strafes inside the range, took a tower hit in 71 per cent of its passes in 3.2 and 63 per cent in 3.3. One in three lies between the two and depends on how a human strafes; Brief 7 decision 5 (turn times 1.5, shot times 1.3) is in as it was. **The one number to move** if it feels too safe or too deadly in play: `CAMP.tower.flownLead` (0 to 1, the share of the lead a shot needs that the gun aims ahead of the flown fighter; 0 as it was). It moves the flyby case from 0 (lead 0) to its most, about one pass in six (0.7); it does not make the hovering case safer.
+
+**Pins.** `tests/campfightertower.mjs` (6 checks: with no fighter flown the tower faces the nearer cruiser; with the fighter flown 600 px away it faces the fighter and every shot goes at it; the fighter out of range (900 px) is not the target; the stick given back is not either; the gun's lead number is 0 and moving it to 1 turns the first shot ahead of a moving fighter).
+## 3.3's reserve: the idle player is found there too (card `space-game-33-idle-threat`; ORCH, Troy's standing yes of 26 Nov 2026)
+3.3's waves wait for the fourth tower (card `space-game-b7-level3`), so an idle player was never found in it (the old clock lost 6 percent of the idle runs; since then none). Four optional groups on the idle clock, the same mechanism as 3.2's reserve (`on: {{ idle: s, until: 'tower' }}`, `nearCarrier` 1800 px toward the nearest tower): no tower fallen 45 s after arrival and 2 raiders and 2 gunships come for the cruiser, another every 40 s until a tower falls, four at most. Base: main at the landing of the briefing words; 32 seeds, steady.
+- Cruiser bots, plain and carrier, 3.3: unchanged to the number (plain 71 s and 486 damage, carrier 78 s and 608): the groups never come to a player who attacks the towers.
+- Idle bot (900 s, won / lost / timed out): old tables 0 / 0 / 100, now 0 / 78 / 22 (damage taken 1,188; every loss is the cruiser). Passive bot (launches the wing at 45 s, escorts at 81 s, never attacks): 0 / 0 / 100 before, now 34 percent won (137 s) and 66 timed out; with the old clock waves it won 63 percent.
+- Fighter bots (`--cockpit`, 3.3): ace and sit unchanged (ace 79 / 74 / 68 s and 522 / 468 / 396 damage at sharp / steady / rough, plain 70 / 71 / 70 s, sit wins 100 percent); the rule passes in all three skills as before.
+- **A bug found on the way and fixed here:** the briefing's "Expect ..." line (`campBriefEnemies`) and the one-page briefing's wave word (`scrMomentVars`) counted the optional idle groups of 3.1 and 3.2 since level 3 landed ("Expect 18 raiders, 2 drones, 6 gunships", "Seven waves"). They skip `optional` waves now: 3.1 reads 6 raiders, 2 drones, 2 gunships, 3.2 two raiders, four drones, two gunships and four towers, 3.3 two raiders, two drones, four gunships and eight towers. Pinned by `tests/campl3waves.mjs` (section H).
+
