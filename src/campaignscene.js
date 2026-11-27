@@ -34,7 +34,7 @@ function campReachGlow(s, C) {
 }
 const CAMP_MOUNT = { base: 3.2, dot: 1.7, hot: 2.8, aim: [7, 11], width: [1.5, 2.2], flash: 10, flashScale: 0.9, stub: [6.5, 0x9aa0a8] }; // a turret mount, drawn on the hull (it is a third smaller since the carrier is): its dark base, its amber dot (and the dot while it fires), the length of the barrel at rest and on a shot, the barrel's width at rest and on a shot, and how far in front of the mount the muzzle flash is and how big (it was 1.3 on the 140 px carrier and hid the bow of the 98 px one), and the steel barrel a mount with nothing to shoot at points along the carrier's heading (its length and colour: without it a mount was a lit dot and read as a window, the blind critic)
 const CAMP_BLIP = { gap: 70, flash: 90 }; // a turret's shot: at most one sound (sfx('turret', its number), src/audio.js) in gap ms of the battle's clock; the muzzle flash lasts flash ms
-const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
+const CAMP_SND = { blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, cockpit: 100, far: 1600, min: 0.1 }; // the least gap, in ms of the battle's clock, between two sounds of one kind (a kill, a hull hit, a shield hit, a shot on Earth), so a busy fight does not pile them up
 // the pause (card space-game-paused-big; Troy, 23 Nov 2026: "show the word PAUSED much more obviously: a large word on a highlighted band across the middle, the scene dimmed behind"): showPause hands showCard
 // its words with band true and drawPauseBand draws them. veil: how dark the battle goes; lift: the band's middle is this far above the screen's middle; bandH, word (the letters' size), space (between them);
 // gap: the panel under the band starts this far below it and ends this far above the foot; panelW, size (the help's letters), wrap, lineSpacing: the help in the panel; pad: the panel's top margin; hintRoom: the foot line's room
@@ -377,6 +377,7 @@ class Campaign extends Phaser.Scene {
     if ((typeof this.pn !== 'object' || typeof this.pn.lit !== 'object') && typeof campPanelNew === 'function') this.pn = campPanelNew(); // made in create (campPanelsInstall); a stand-in scene in a test has none, and answers any property
     const listOpen = typeof campPanelOpen === 'function' && !!campPanelOpen(this.pn);
     if (campKeyCodes('pause').indexOf(c) >= 0) { if (listOpen) campPanelKey(this.pn, C, c, (this.time && this.time.now) || 0); else if (this.mp) campMapClose(this); else this.showPause(); return; } // Esc goes back ONE step in the lists (a target sub-list to its list, a list a part's row opened to Q or P, a list its own key opened closes: src/camppanel.js), then closes the map; it pauses only when nothing is open
+    if (this.mp && campKeyIs('cockpit', c)) return; // the open map has the keys: C (take or give the stick) waits until it is shut (card space-game-b7-hud-q-cockpit)
     if (this.mp && typeof campMapKey === 'function' && campMapKey(this, c, e.shiftKey)) return; // the open map has the arrows and Enter: Up and Down step the marks, Left and Right the groups, Enter flies there, X clears the trip (src/campmapdraw.js)
     if (this.mp && !typing && (CAMP_PANELS.panels.some(p => p.code && p.code === c) || campKeyIs('missile', c) || campKeyIs('order', c))) { if (campKeyIs('missile', c) || campKeyIs('order', c)) return; campMapClose(this); } // a list's key over the map: the map closes and the list opens; Enter is never the order, nor M a missile, over the map
     if (!typing && campKeyIs('focus', c)) { const pk = typeof campPeekBreak === 'function' && campPeekBreak(this); if (typeof campFocusPress === 'function') campFocusPress(this); if (pk && typeof campPeekHome === 'function') campPeekHome(this); return; } // F: the camera to the selected ship (a sub-list's candidate, a squad's leader, the target), or back to the cruiser with none (src/campfocus.js); it works with a list open and the ship flies on
@@ -423,7 +424,14 @@ class Campaign extends Phaser.Scene {
     this.tweens.add({ targets: f, alpha: 0, scale: CAMP_MOUNT.flashScale * 0.4, duration: B.flash, onComplete: () => f.destroy() });
     if (!(C.t - this.blipAt < B.gap) && !campHas(C, 'beam')) { this.blipAt = C.t; sfx('turret', e.i); } // with the Beam turrets the hum is the sound (src/audio.js beamHum), not a pew a shot
   }
+  cockpitShot(e) { // the gun the player flies (card space-game-fly-fighter-fire-rate; Troy, 26 Nov 2026: three times the rate, a shot every 183 ms): the wing's soft pew but always heard (not faded by the cruiser's distance), at 0.7, at most one in CAMP_SND.cockpit ms of the battle's clock so a rate dialled up on the N panel stays a stream and not a drone, and a small flash at its nose, one a shot, gone in 60 ms
+    this.battleSound('cockpit', 'wingShot', 0.7);
+    const u = this.camp.by && this.camp.by[e.id]; if (!u) return;
+    const f = this.add.image(u.x + Math.cos(u.rot) * 11, u.y + Math.sin(u.rot) * 11, 'ember').setBlendMode('ADD').setTint(typeof slookGunTone === 'function' ? slookGunTone(0xffe9a0) : 0xffe9a0).setScale(0.45).setDepth(7);
+    this.tweens.add({ targets: f, alpha: 0, scale: 0.2, duration: 60, onComplete: () => f.destroy() });
+  }
   wingShot(e) { // a fighter's shot: a quieter, farther pew, softer the farther the ship is from the carrier (CAMP_SND.far px and it is gone), at most one in CAMP_SND.wing ms
+    if (this.camp.cockpit && this.camp.cockpit.id === e.id) return this.cockpitShot(e); // the player's own gun has its own sound and flash
     const c = campEye(this.camp), near = 1 - Math.hypot(e.x - c.x, e.y - c.y) / CAMP_SND.far; if (near >= CAMP_SND.min) this.battleSound('wing', 'wingShot', near);
   }
   battleSound(kind, name, arg) { // one of the battle's sounds, no more often than CAMP_SND[kind] ms of the battle's clock

@@ -204,7 +204,7 @@ console.log('G4. the explosions and the hits');
   `);
   check('the scene plays them: a small kill and a big kill their own blast (a second kill within 45 ms is not played again), a hit on the carrier\'s hull the clank (once in 90 ms; a hit that did not get through plays none), a shot on the shield the zap, a shot on Earth the thump (once in 250 ms); a hit on an alien plays nothing (the turret\'s pew is its sound)', J('__plays').join() === 'blastSmall,blastBig,hullHit,shieldHit,shieldHit,earthHit,earthHit', J('__plays').join());
   const sc = src('src/campaignscene.js');
-  check('the game\'s boom is no longer the Campaign\'s kill sound, and the gaps are one table in the scene (CAMP_SND)', !/e\.type === 'boom'\) \{[^}]*sfx\('boom'\)/.test(sc) && /const CAMP_SND = \{ blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, far: 1600, min: 0\.1 \}/.test(sc));
+  check('the game\'s boom is no longer the Campaign\'s kill sound, and the gaps are one table in the scene (CAMP_SND)', !/e\.type === 'boom'\) \{[^}]*sfx\('boom'\)/.test(sc) && /const CAMP_SND = \{ blast: 45, hull: 90, shield: 90, earth: 250, wing: 55, cockpit: 100, far: 1600, min: 0\.1 \}/.test(sc)); // (cockpit: the flown fighter's own pew, card space-game-fly-fighter-fire-rate)
   check('their reverb: the big blast 0.4 (under the dock\'s 0.45: the kill, the jump, the arrival and the dock keep the longest tails), the small one 0.3, the Earth thump 0.3, the zap 0.15, the clank 0.1', J('SOUND.send.blastBig') === 0.4 && J('SOUND.send.blastSmall') === 0.3 && J('SOUND.send.earthHit') === 0.3 && J('SOUND.send.shieldHit') === 0.15 && J('SOUND.send.hullHit') === 0.1);
 }
 

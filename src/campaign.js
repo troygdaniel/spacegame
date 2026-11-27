@@ -285,8 +285,8 @@ const CAMP = {
     fall: 900,                             // px/s each second the top speed comes down after the boost (the Wren's BOOST.fall): a fade, not a wall
     store: { max: 100, drain: 25, pause: 1000, regen: 17, back: 0.25 }, // the boost store (the Wren's src/boost.js BOOST and its first booster tier): units, units a second while boosting, ms before it refills, units a second refilling, the share that unlocks it after it ran dry
     hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
-    damageK: 1,                            // times the pilot's shot damage (CAMP.fighter.damage)
-    rateK: 1,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this)
+    damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
+    rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
     turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
