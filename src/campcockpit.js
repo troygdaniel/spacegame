@@ -49,7 +49,7 @@ function campCockpitTake(C, id) {
   if (C.cockpit) { if (C.cockpit.id === u.id) return true; campCockpitGive(C, 'hand'); }
   const K = CAMP.cockpit, k = campCockpitHull();
   C.cockpit = { id: u.id, k, input: campCockpitInput(), boost: { en: K.store.max, locked: false, on: false, until: 0, th: 0, flare: 0, fx: 0 }, vmax: K.speed, nextShot: C.t, since: C.t };
-  C.flights = null; // the flights of the tick are made again without this ship
+  C.flights = null; C.cockpitTaken = true; // the flights of the tick are made again without this ship; cockpitTaken: once taken, the first-minute tip is not shown
   u.cockpit = true; u.hp *= k; u.maxHp = (u.maxHp || u.hp / k) * k; // the hull is the pilot's times hpK, from where it is
   const m = u.mate && C.by[u.mate]; if (m && m.mate === u.id) m.mate = null; u.mate = null; u.run = null; // out of any duel: nobody is paired with a ship the pilot's own AI is not flying
   C.events.push({ type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y });

@@ -27,7 +27,7 @@ function campTdispSubject(C, P, now) { // the ONE target box (bottom right): a s
   return h.unit && h.unit.hp > 0 && !h.unit.gone ? { u: h.unit, side: h.kind === 'hostile' ? 'hostile' : 'friend', held: true } : null;
 }
 function campTdispPostInfo(C, e) {
-  const km = campNavKm(campDist(e, C.carrier)), type = uiText('camp.tdisp.type.post');
+  const km = campNavKm(campDist(e, campEye(C))), type = uiText('camp.tdisp.type.post');
   return { id: e.id, side: 'friend', kind: 'post', name: e.name, type, hull: null, shield: null, km, doing: '', key: [e.id, 'post', e.name, km].join('|') };
 }
 function campTdispOrder(C, verb) {
@@ -100,7 +100,7 @@ function campTdispShield(C, u) { // the rival has a shield of its own; the cruis
   return null;
 }
 function campTdispInfo(C, u, side) {
-  const hull = campTdispHull(u), shield = campTdispShield(C, u), km = campNavKm(campDist(u, C.carrier)), doing = campTdispDoing(C, u), name = campTdispName(u);
+  const hull = campTdispHull(u), shield = campTdispShield(C, u), km = campNavKm(campDist(u, campEye(C))), doing = campTdispDoing(C, u), name = campTdispName(u);
   const sd = u.team === 'alien' ? (u.faction === 'pirate' ? 'pirate' : 'alien') : u.team === 'neutral' ? 'neutral' : 'earth';
   const what = uiText('camp.nav.k.' + (u.kind || '')), type = uiText('camp.tdisp.type', { side: uiText('camp.tdisp.side.' + sd), what: (what.indexOf('camp.nav.k.') === 0 ? String(u.kind || '') : what).toLowerCase() });
   return { id: u.id, side, kind: u.kind, name, type, hull, shield, km, doing, key: [u.id, side, name, hull.now, hull.max, shield ? shield.now + '/' + shield.max : '-', km, doing].join('|') };
