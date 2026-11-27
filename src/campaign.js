@@ -1856,6 +1856,7 @@ function campMissileTarget(C, from) { // the mothership if it is in reach, else 
 }
 function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles (it leaves the ship he flies: the cruiser, or the fighter whose stick he holds, card space-game-fly-fighter-l4)
   const k = CAMP.missile, c = campEye(C);
+  (C.keysUsed || (C.keysUsed = {})).missile = true; // a missile has been fired: the key row's teaching chip for Z goes quiet (src/campteach.js, card space-game-b10-c8-teach-z)
   C.missiles--; C.nextRocket = C.t + k.delay; // (the magazine does not fill itself any more: at 0 the ship builds one for ore, R builds the rack; src/campmissilebuild.js)
   const m = { id: 'missile-' + (++C.rocketId), x: c.x + Math.cos(c.rot) * c.r, y: c.y + Math.sin(c.rot) * c.r, rot: c.rot, sp: k.launch, vx: 0, vy: 0, life: k.life, target: tg ? tg.id : '' };
   C.rockets.push(m); C.events.push({ type: 'missile', x: m.x, y: m.y, id: m.id });
