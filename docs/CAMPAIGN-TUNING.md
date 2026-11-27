@@ -465,6 +465,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 
 **What it says:** the pair gives back what the break took: in 1.2 the cruiser's damage with the fighter out goes from 12 back to **40** (plain 42) and the ace wins every seed; in 1.3 from 24 to 34 (plain 53); the others move a few points. Nothing is won faster, the fighter is never shot down by this bot, kills are the same. The partner rarely reaches the point behind a fighter at full thrust inside 2.5 s (it gives up and attacks from where it is: seen in a muted look, it closed 270 to 160 px in the 2 s); a slower chaser is caught. `pair.ms`, `pair.behind` and `pair.range` are one number each.
 
+## Hurt hostile fighters extend: they run out and come back in (card `space-game-chunk8-enemy-extend`; Troy, 26 Nov 2026, brief 8 proposal A, third behaviour; base: the break and the pair, chunk 7 tip `7644354c`)
+**The rule** (`src/campbreak.js`, `CAMP.break.extend`): a skiff, cutter, raider or drone **under half its hull** with the fighter the player flies within **900 px** runs straight away from it, nose where it flies and no shot, until it is **600 px** from it (or 3.5 s have passed), then goes on as it was, which is back in at the chaser. **Once** for a ship: a ship that has come back fights on (and a pirate under 35 percent of its hull still breaks off for good: that rule, `CAMP.pirate.breakHp`, is the pirates' own and was there before). Steering only. Nothing changes with nobody flying a fighter.
+
+**12 seeds, the cockpit sweep, steady skill, every mission** (old = the break and the pair, chunk 7; new = and the extend; ace flies the fighter):
+
+| mission | ace won | ace time | ace damage taken (old to new) | kills a run | fighter shot down | plain damage |
+|---|---|---|---|---|---|---|
+| 1.1 | 100 to 100 | 306 to 306 | 202 to 202 | 5 to 5 | 0 to 0 | 202 |
+| 1.2 | 100 to 100 | 270 to 270 | 40 to **24** | 5 to 5 | 0 to 0 | 42 |
+| 1.3 | 100 to 100 | 292 to 292 | 34 to 31 | 4 to 3 | 0 to 0 | 53 |
+| 2.1 | 100 to 100 | 32 to 32 | 6 to 6 | 1 to 1 | 0 to 0 | 0 |
+| 2.2 | 100 to 100 | 73 to 71 | 90 to 104 | 2 to 2 | 0 to 0 | 161 |
+| 2.3 | 100 to 100 | 77 to 77 | 97 to 97 | 2 to 2 | 0 to 0 | 252 |
+| 3.1 | 100 to 100 | 75 to 78 | 40 to 37 | 2 to 3 | 0 to 0 | 65 |
+| 3.2 | 100 to 100 | 61 to 60 | 144 to 144 | 1 to 1 | 0 to 0 | 230 |
+| 3.3 | 100 to 100 | 73 to 73 | 450 to 450 | 3 to 3 | 0 to 0 | 461 |
+
+**What it says:** the extend is the smallest of the three: every mission is still won on every seed, times move by at most 3 s, kills by one, and nobody is shot down. The cruiser's damage with the fighter out moves a little both ways (1.2 40 to 24, 2.2 90 to 104, 1.3 34 to 31): a hurt fighter that runs 600 px out stops shooting at the cruiser for those seconds, and the fighter bot, which hunts the nearest foe, follows it out. In muted Chrome a skiff at 40 percent hull 300 px from the flown fighter turned round and ran 296 to 585 px in 2.6 s (the turn takes the first second), 0 game errors. `extend.below`, `out`, `near` and `ms` are one number each.
+
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
 
