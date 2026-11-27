@@ -58,3 +58,10 @@ function campBreakSteer(C, u, m) {
   if (P) { P.flank = { until: t + K.pair.ms, cool: t + K.pair.ms + K.pair.cool, f: F.id }; C.flanks = (C.flanks | 0) + 1; }
   return Object.assign({}, m, { ang: b.h, face: b.h, fire: false });
 }
+// THE LEAD (card space-game-b10-c1-lead-shots; BRIEF 10 chunk 1, Troy, 27 Nov 2026: yes): a hostile fighter (the break's kinds) aims at where the fighter THE PLAYER FLIES will be when its shot gets there, not where it is, so a fast fighter can really be hit; at any other ship it aims as it did.
+// The same lead maths the wing's fighters use (campDogLead, src/campdogfight.js: where the shot and a moving ship meet, none if it is more than 2.5 s off). CAMP.cockpit.leadK is how much of that lead it takes: 1 all of it, 0 none (aims where it is, as before), between is the knob. Aim only: no hit points, damage, rate or speed change.
+//   campLeadAt(C, u, tgt, bs, target)   the bearing the ship's nose and its fire gate use: `target` (the bearing to tgt, which the caller has) unless tgt is the flown fighter, u is one of the break's kinds and leadK is on; bs is the speed of its shot
+function campLeadAt(C, u, tgt, bs, target) {
+  const K = CAMP.cockpit, B = CAMP.break; if (!K || !(K.leadK > 0) || !B || B.kinds.indexOf(u.kind) < 0 || !C.cockpit || !tgt || tgt.id !== C.cockpit.id) return target;
+  return campDogLead(u, tgt, bs, Math.min(1, K.leadK));
+}
