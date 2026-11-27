@@ -11,9 +11,11 @@
 //   campCockpitStep(C, dt)   once a tick, from campTick right after the cruiser: the fighter's own flight (the Wren's: thrust only while the key is down, the boost store, the drag), its guns, and the hand-back if it was lost
 //   campEye(C)               the ship the camera is on and the page HUD reads: the fighter he flies, else the cruiser
 //   campCockpitAuto(C)       true while the cruiser's turrets should fire by themselves (he is away and CAMP.cockpit.turrets is 'auto'): campTurrets reads it
+//   AUTO-TARGET (card space-game-fly-fighter-aim-help; src/campcockpitaim.js): the gun finds a hostile within CAMP.cockpit.aimCone degrees of the nose and sends each shot along the lead point to it (C.cockpit.aim, set every tick)
 // The fighter's hull is CAMP.cockpit.hpK times the pilot's while he flies it, and the current hull is scaled by the same ratio at both ends (taking at 20 of 36 gives 40 of 72, giving at 40 of 72 gives 20 of 36): the stick
 // can neither heal nor hurt a pilot. Events (for the scene): { type: 'cockpit', stage: 'take' | 'give' | 'dry', id, why }.
 const CAMPCOCKPIT = { addr: 'cockpit', memo: { s: null, v: null } };
+const CAMP_COCKPIT_LIFE = 1400; // ms a flown shot flies (the guns' reach, src/campcockpitaim.js, is its flight)
 function campCockpitAddrVal(search) { // the value of ?cockpit in the address, lower case: null when it is not there, '' for a bare ?cockpit (the last one counts); the page's own address is read again only when it changed
   try {
     const own = typeof search !== 'string', s = own ? (typeof location !== 'undefined' && location && typeof location.search === 'string' ? location.search : '') : search, M = CAMPCOCKPIT.memo;
@@ -94,11 +96,12 @@ function campCockpitStep(C, dt) {
   const keep = Math.pow(inp.brake ? K.brakeDrag : K.drag, dt); u.vx *= keep; u.vy *= keep;
   const sp = Math.hypot(u.vx, u.vy); if (sp > S.vmax) { u.vx *= S.vmax / sp; u.vy *= S.vmax / sp; }
   u.x += u.vx * dt; u.y += u.vy * dt;
-  if (inp.fire && C.t >= S.nextShot) { // the pilot's own gun: his damage and rate (times damageK, rateK), one shot a mean delay, straight along the nose
-    const F = CAMP.fighter;
+  const A = typeof campCockpitAim === 'function' ? campCockpitAim(C) : null; // the hostile the guns track now, if the auto-target finds one in its cone (src/campcockpitaim.js; the cone 0: none steers)
+  if (inp.fire && C.t >= S.nextShot) { // the pilot's own gun: his damage and rate (times damageK, rateK), one shot a mean delay, along the nose, or along the lead point to the hostile the auto-target tracks
+    const F = CAMP.fighter, helped = !!(A && A.steer);
     const gap = (F.delay[0] + F.delay[1]) / 2 / Math.max(0.1, +K.rateK || 1);
     S.nextShot = Math.max(S.nextShot + gap, C.t); // on a schedule of one gap, so the rate does not depend on the tick (never a burst after a pause: not before now)
-    campBullet(C, u, u.rot, F.bullet * C.shot, F.damage * (u.str || 1) * (+K.damageK || 1), 1400, 'earth', 14);
+    campBullet(C, u, helped ? A.rot : u.rot, F.bullet * C.shot, F.damage * (u.str || 1) * (+K.damageK || 1) * (helped ? (+K.aimK || 1) : 1), CAMP_COCKPIT_LIFE, 'earth', 14);
     C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id });
   }
 }
