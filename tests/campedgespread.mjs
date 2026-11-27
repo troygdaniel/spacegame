@@ -122,7 +122,7 @@ console.log('C. the scene');
   check('one group alone has its label where it always had it: behind its arrow, level with it (no slide for nothing)', L1.length === 1 && Math.abs(L1[0][1] - 360) < 1 && L1[0][0] > M + 12, JSON.stringify(L1));
   // the goal's arrow keeps out of the sight arrows' rectangles (paintHud: Campaign.prototype with a stand-in)
   const paint = src('src/campaignscene.js');
-  check('the goal\'s arrow in paintHud asks the spread, with the sight arrows\' rectangles taken (scene.hud.sight.boxes) and the same keep rectangles', /fillSpread\(\[\{ x: ar\.x, y: ar\.y, angle: ar\.angle, w: aw, h: ah, want \}\], \{ keep: this\.arrowKeep\(\), W, H, m: CAMP\.nav\.arrow\.margin, tri: 13, boxes: this\.hud\.sight && this\.hud\.sight\.boxes/.test(paint));
+  check('the goal\'s arrow in paintHud asks the spread, with the sight arrows\' rectangles taken (scene.hud.sight.boxes) AND the page\'s edge pills and panels (this.pageHud.pillBoxes: card space-game-b12-c2-3-pills) and the same keep rectangles', /fillSpread\(\[\{ x: ar\.x, y: ar\.y, angle: ar\.angle, w: aw, h: ah, want \}\], \{ keep: this\.arrowKeep\(\), W, H, m: CAMP\.nav\.arrow\.margin, tri: 13, boxes: \(this\.hud\.sight && this\.hud\.sight\.boxes \? this\.hud\.sight\.boxes : \[\]\)\.concat\(this\.pageHud && this\.pageHud\.pillBoxes/.test(paint));
 }
 
 console.log('D. the calls');
