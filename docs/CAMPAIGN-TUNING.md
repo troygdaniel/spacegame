@@ -584,3 +584,47 @@ The one taken is the longest and the hardest on the cruiser, and the player has 
 **Words.** Nothing becomes untrue: "Enter the ring", "Hold 20 seconds", "Keep aliens off", "Aliens arrive fast"; no line changed in this card.
 
 **Pins.** `tests/camprelicwaves.mjs` (18 checks): the second wave at 10 s held, the third 8 s behind it from the opposite side; the pilot who never aims now loses (he won); a cruiser alone loses at least 3 seeds of 4. `tests/campaign.mjs`: the rows' triggers are the hold or "behind". `tests/camppace.mjs`: words only (the 60 s floor holds).
+
+## Missions 2.1 and 2.2: the aliens come on what the player does, and a threat comes to a player who does nothing (card `space-game-b7-level2`; Troy, 26 Nov 2026: "yes", with his calls below; the cloud's brief 7, decisions 1 and 6; base `b14a4131`, the 2.3 two-sides tip)
+
+**What was wrong.** 2.1's one wave came at 20 s and 2.2's two at 18 and 40 s of the mission's clock, so a quick player never met 2.2's reinforcements (the plain bot won 2.2 in 73 s, the cruiser took 153), and a player who only waited was never touched in 2.1: it ended in nothing (the tool's idle bot never arrives, so it shows 0 won, 0 lost).
+
+**2.1 Resources** (`src/campaign.js`, wave rows with `on: { caches: n }` and `at: 'cache'`; a mission row's `hunt`, `campHunt`):
+- **Troy's call: it keeps TWO caches** (not three), so "Gather two resource caches." and the briefing's "Find 2 of the 3 resource pods" stay true. Par stays 100 s.
+- **The first cache taken calls the group** (the old wave's 4 raiders and 3 drones) to the nearest cache still to take, where it waits (a guard: it wakes when a ship of yours is in reach). The mission also needs that group dead (`{ type: 'kill', what: 'wave:all' }`, words "Destroy the attackers.").
+- **The threat for a player who takes no cache** (Troy: yes): 45 s after arriving, a party of 3 raiders and 2 drones comes from the west for the cruiser; another every 45 s, each 2 ships larger (5 and 3, 6 and 4 ...), with no upper limit; a cache taken stops them for good. Ship kinds and hit points are as they are. A party must be dead to win.
+
+**2.2 The guards** (wave rows with `on: { guardsDead: n }`; `hunt` with `restart: 'guard'`):
+- **Reinforcements when the fourth guard dies, from two sides at once** (the old first wave's ships split in two: 2 drones and 2 gunships from the north-east, 2 drones and a gunship from the other side); **the last guard calls a second group** (the old second wave's ships, 4 raiders and 3 drones) when the sixth guard dies, with one left. No ship was added or taken away. The mission needs the guards AND the groups they call dead.
+- **The threat for a player who kills no guard** (Troy: yes): 40 s after arriving with no guard dead, a patrol of 2 drones and a gunship from the north-east; another every 40 s, each 2 ships larger; a guard killed starts the 40 s again; the patrols are not guards (they do not count for the fourth guard) and must be dead to win; none comes once the guards are all dead.
+- The bots now fly at waiting guards and at the groups a cache or a dead guard calls (`tools/campaign-bot.mjs`: no clock brings the fight to a cruiser that sits); that is why the no-wing "carrier" bot wins 2.2 on every seed now (59 and 66 per cent before: it was only ever fed by the clock's waves).
+
+**The numbers** (`node tools/campaign-bot.mjs --level 2 --mission <1|2> --seeds 32 --bots plain,carrier,ace,sit --skill <s>`; won per cent / seconds / cruiser damage / kills; hull 600 at the end except where said):
+
+| mission | skill | bot | before (`b14a4131`) | after |
+|---|---|---|---|---|
+| 2.1 | steady | plain | 100 / 42 / 15 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | steady | carrier | 100 / 43 / 15 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | steady | ace | 100 / 43 / 0 / 7 | 100 / 32 / 9 / 7 |
+| 2.1 | steady | sit | 100 / 43 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | plain | 100 / 42 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | carrier | 100 / 43 / 13 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | rough | ace | 100 / 42 / 0 / 7 | 100 / 32 / 13 / 7 |
+| 2.1 | rough | sit | 100 / 43 / 9 / 7 | 100 / 33 / 15 / 7 |
+| 2.2 | steady | plain | 100 / 73 / 153 / 16 | 100 / 76 / 162 / 21 |
+| 2.2 | steady | carrier | **59** / 92 / 265 / 21 | 100 / 85 / 216 / 21 (hull 597) |
+| 2.2 | steady | ace | 100 / 81 / 130 / 21 | 100 / 72 / 112 / 21 |
+| 2.2 | steady | sit | 100 / 79 / 167 / 15 | 100 / 80 / 182 / 21 |
+| 2.2 | rough | plain | 100 / 76 / 144 / 17 | 100 / 76 / 147 / 21 |
+| 2.2 | rough | carrier | **66** / 95 / 257 / 21 | 100 / 86 / 208 / 21 |
+| 2.2 | rough | ace | 100 / 76 / 104 / 21 | 100 / 68 / 75 / 21 |
+| 2.2 | rough | sit | 100 / 79 / 153 / 15 | 100 / 81 / 165 / 21 |
+
+- **About as hard as today for the cruiser bots:** 2.1 is as easy as it was (about 33 s, was 42: the group is smaller than the clock's wave was a trip behind it; damage 9 to 15); 2.2 is the same length (68 to 86 s against 73 to 95) with the cruiser's damage at or above what it was (112 to 216 against 130 to 265), and now every bot meets all 21 ships (the plain bot met 16, the sit bot 15).
+- **Not met, for Troy: the fighter bot in 2.2.** Against the plain bot the ace bot is 5 per cent faster and takes 31 per cent less cruiser damage at steady skill, and 11 per cent faster and 49 per cent less at rough (75 against 147). The sweep's rule is 15 per cent faster and 30 per cent less (docs/night/cockpit-sweep.md): the damage is over it at both. Before this card it was 15 per cent less at steady (130 against 153) and 28 per cent at rough (104 against 144). Why: the two reinforcement groups come on the fourth dead guard, which a flown fighter kills early, while the plain bot's cruiser takes the groups' fire as it arrives. No hit-point or damage number was changed; Troy to say whether to leave it.
+- **The idle player** (flown in the sim: the cruiser arrives, sits at the mission's place and brakes, its wing guarding; 8 seeds, 600 s). 2.1: before, neither won nor lost on any seed; now **lost on 8 of 8 at 281 to 356 s** (6 to 7 parties came; none is in 33 s of any bot's play). If it also fires at what comes near, it holds out the 600 s against 13 parties of up to 29 ships (the cruiser's guns beat each party as it comes). 2.2: before, a cruiser that does not fire was beaten by the guards in 46 to 65 s and one that does won on 8 of 8; now it is beaten in 70 to 96 s, and one that fires won 6 of 8 (the other two ended with no result at 600 s: the sim's sitter does not fly at aliens beyond 1,200 px, so what lost its target waits unseen; a player flies). In 2.2 the patrols never came in these runs because the wing killed a guard inside every 40 s; the guards themselves are the threat to a sitter there.
+- **The tool's own idle bot** still shows 0 won and 0 lost on both: it never makes the trip to the mission's place, so nothing is called. Not changed.
+
+**Words** (Troy approved both new lines, 26 Nov: shown only, not voiced): `camp.bf.2.1.w3` "Aliens come from the west after 20 seconds." is now "Taking the first pod calls aliens to the next one."; `camp.bf.2.2.w2` "More aliens join after 18 seconds, from the north-east." is now "More aliens join when the fourth guard dies, from two sides." Left as they were and still true: `camp.m.2.1.b1` "Gather two resource caches." (a voiced line), `camp.bf.2.1.w1`, the moments "Find two caches", "Anyone can collect", "Aliens from west" (true again for the hunting party, which comes from the west), "Kill them all", "Reinforcements", "Clear them all". Nothing voiced changed.
+
+**Pins.** `tests/camplevel2calls.mjs` (new, 20 checks: the rows, nothing for the clock, a cache and a dead guard call their groups, the sides, the win needs the groups dead, the hunting party and the patrol with their numbers, the triggers). `tests/campaign.mjs` (2.1's wave comes on the first cache, not at 20 s; the guards alone no longer win 2.2), `campgoalcount.mjs`, `camphunt.mjs` (2.2's reinforcements are two rows and one line), `camplevel2words.mjs`, `scrbriefings.mjs` (the reinforcements are called by the fourth guard), `campbrief.mjs` (the two reworded lines). The bot's tool rule: guards and called groups are flown at.
