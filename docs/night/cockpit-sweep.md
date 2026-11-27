@@ -305,3 +305,16 @@ The rule (`campLeadAt`, `src/campbreak.js`; the knob `CAMP.cockpit.leadK`, 1): a
 - **It is shot down in no run, in any of the 27 mission-skills, before and after.** The ace hands the stick back under 30 percent hull, as a player would, and a hull of 216 (hpK 2) cannot go from above 30 percent to nothing in a step. So the stop rule (shot down in most runs) is not met: nothing needs the partial lead (`leadK` 0.5 to 0.8) and the default is the full lead, 1. `shot%` (rule 4) is still 0, so the pass rule still passes 0 of 27; it needs a different measure to show that the fighter is hit (hull lost, hand-backs), which is for ORCH to propose.
 - **Nothing else moved much:** the ace wins every cell it won before (1.1 and 1.2 sharp 92 percent as before), win time within 6 s (3.1 steady 78 to 72 s, 1.2 270 to 268), its kills within one, the cruiser damage the same or lower (2.2 138 to 109, 2.3 97 to 79; 3.3 396 to 432). The hands-off bot (`sit`, the stick taken and nothing done) now loses 1.2 rough in 2 runs of 12 where it lost none; its steady and sharp cells did not move.
 
+## Pirates near the flown fighter shoot it, and rule 4 is hull lost (card `space-game-b10-c15-tune-11`, brief 10 chunk 15; Troy, 27 Nov 2026: yes)
+
+The rule's fourth part (the flown fighter "is shot down now and then, 5 to 50 percent of the runs") could not be met by the ace bot in any mission it plays: it hands the stick back under 30 percent hull, a hull of 216 (hpK 2) cannot go from above 30 percent to nothing in a step, and in 1.1 the pirates fire about 25 shots a run at the convoy's side, 0 to 3 of them at the fighter. Now: rule 4 is **the fighter loses a median of at least 15 percent of one hull a run in a fight** (`COCKPIT_RULE.hurtMin`; the table column `hurt`), and **shot down in more than half the runs still fails** (`shotMax` 50). Rules 1, 2, 3 and 5 are as they were. And a pirate within 500 px of the flown fighter shoots at it (`CAMP.cockpit.baitR`). The 1.1 rows, before and after, are in `docs/CAMPAIGN-TUNING.md` (card section "Pirates near the flown fighter shoot it").
+
+1.1 on the aim card's main (`2199d344`), 32 seeds, ace (hurt = median hull lost %, conv = median convoy hull lost %):
+
+| skill | rule 4 before (shot%) | hurt before to after | won before to after | rule 2 (cruiser damage) | whole rule |
+|---|---|---|---|---|---|
+| sharp | FAIL (0) | 2 to 42 pass | 91 to 97 | pass | FAIL (rule 5: 1 kill of 5) |
+| steady | FAIL (0) | 5 to 26 pass | 94 to 94 | pass | FAIL (rule 3: sit 88 against 94) |
+| rough | FAIL (0) | 2 to 23 pass | 97 to 100 | FAIL to pass (137 to 202 against 222) | FAIL (rule 3: sit 84 against 97) |
+
+The sweep now prints `conv%` for every bot (the convoy ships' hull lost, median a run). A run's `convHurt` is in the bot's result.
