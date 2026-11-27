@@ -244,6 +244,16 @@ function campPageHudPanelRects(R, r, k) {
   });
   return out;
 }
+// the cruiser while he flies a fighter and she is off the screen: ONE pill at the edge like the ships you protect, in his pale blue, "Cruiser \u00b7 3.2 km" (card space-game-b12-c2-3-pills, BRIEF 12 chunk 2). It stands where the canvas's CRUISER AUTO tag used to be pinned half off the screen or under a panel (src/campcockpitcam.js hides that tag while this pill is up). It rides in the friends' list (id 'carrier', no digit), so it is placed clear of the hostiles' pill, the panels and the others like any of them; null when he flies the cruiser, she is dead or she is on the screen
+function campPageHudCruiserEdge(C, view) {
+  if (!view || !C || !C.carrier || !(C.carrier.hp > 0) || typeof campCockpitFlown !== 'function' || typeof campEdgeOffscreen !== 'function' || typeof campNavEdge !== 'function') return null;
+  const f = campCockpitFlown(C), c = C.carrier; if (!f || f === c) return null;
+  const W_ = campPageW(), H_ = campPageH(), z = view.zoom > 0 ? view.zoom : 1, sx = (c.x - view.x - W_ / 2) * z + W_ / 2, sy = (c.y - view.y - H_ / 2) * z + H_ / 2;
+  if (!campEdgeOffscreen(sx, sy, W_, H_, !!(view.was && view.was.carrier))) return null; // the pill's own rule: off the screen only (the others': campSightFriends)
+  const e = campNavEdge(sx - W_ / 2, sy - H_ / 2, W_, H_, CAMP.nav.arrow.margin, null); if (!e) return null;
+  const km = uiText('camp.tdisp.km', { km: campNavKm(campDist(c, f)) }), name = uiText('camp.corner.chip.cruiser'), text = name + ' \u00b7 ' + km; // (the chip's word, "Cruiser": no new key)
+  return Object.assign({ id: 'carrier', n: '', name, km, text, label: text, hot: false, cruiser: true, angle: e.angle, x: e.x, y: e.y, tx: sx, ty: sy }, campPageHudPillSize(text));
+}
 // the ships you protect that are off the screen: ONE pill each at the edge, in the amber of the ships you protect (the canvas drew an amber arrow for the ones in trouble only; the miner had none): the arrow, its E digit, its name and how far, "2 Miner \u00b7 12 km"; `hot` is the bar's: under attack or nearly lost. Nearest the cruiser first, at most CAMP_PAGEHUD.fedges; slid along the edge off each other and off the hostiles' pill; empty when the camera is not known
 function campPageHudFriendEdges(C, view, edge) {
   if (!view || typeof campSightFriends !== 'function' || typeof campFriNumbered !== 'function') return [];
@@ -252,9 +262,10 @@ function campPageHudFriendEdges(C, view, edge) {
     const e = num[a.id], km = uiText('camp.tdisp.km', { km: campNavKm(a.dist) }), text = e.number + ' ' + e.name + ' \u00b7 ' + km, label = e.name + ' \u00b7 ' + km; // text: the whole line (its width is the pill's); label: what the pill writes after the digit's ring (card space-game-b3-d-panel-cap-pill-goal)
     return Object.assign({ id: a.id, n: e.number, name: e.name, km, text, label, hot: !!a.hot, angle: a.angle, x: a.x, y: a.y, tx: a.tx, ty: a.ty }, campPageHudPillSize(text));
   });
+  const cr = campPageHudCruiserEdge(C, view); if (cr) list.unshift(cr); // the cruiser's, first: it keeps its place, the friends slide off it
   const ed = edge === undefined ? campPageHudEdge(C, view) : edge, fixed = ed ? [Object.assign({ x: Math.max(70, Math.min(campPageW() - 70, ed.x)), y: Math.max(30, Math.min(campPageH() - 30, ed.y)) }, campPageHudPillSize(ed.n + ' \u00b7 ' + ed.km))] : [];
   const put = campPageHudEdgeFit(list, fixed);
-  return list.map((f, i) => ({ id: f.id, n: f.n, name: f.name, km: f.km, text: f.text, label: f.label, hot: f.hot, x: put[i].x, y: put[i].y, angle: f.tx != null ? Math.atan2(f.ty - put[i].y, f.tx - put[i].x) : f.angle, tx: f.tx, ty: f.ty })); // it points at its ship from where it ends (slid along the edge or kept whole on the screen: not the way the arrow's point on the border pointed)
+  return list.map((f, i) => ({ id: f.id, n: f.n, name: f.name, km: f.km, text: f.text, label: f.label, hot: f.hot, cruiser: !!f.cruiser, x: put[i].x, y: put[i].y, angle: f.tx != null ? Math.atan2(f.ty - put[i].y, f.tx - put[i].x) : f.angle, tx: f.tx, ty: f.ty })); // it points at its ship from where it ends (slid along the edge or kept whole on the screen: not the way the arrow's point on the border pointed)
 }
 // the places in view: one pill each, in place of the two labels the world draws (the place and its outpost): "Ceres · Occator Works"; game px of the pill (above the place); only near enough to read (not at the far marks' zoom)
 function campPageHudPlaces(C, view) {
@@ -437,7 +448,7 @@ function campPageHudPaint(R, M, doc) {
   R.edgeShown = !!M.edge;
   if (M.edge) { set(E.text, 'text', M.edge.n + ' \u00b7 ' + M.edge.km); set(E.ic, '--a', String(Math.round(M.edge.angle * 180 / Math.PI)) + 'deg'); }
   while (R.fedges.length < M.fedges.length) { const el = campPageHudEl(doc, 'div', 'ph-p ph-edge ph-fedge', R.root), ic = campPageHudEl(doc, 'span', 'ph-icw ph-edgeic', el); ic.innerHTML = CAMP_PAGEHUD_ICON.arrowF; const num = campPageHudEl(doc, 'span', 'ph-fnum', el); R.fedges.push({ el, ic, num, text: campPageHudEl(doc, 'span', '', el) }); }
-  R.fedges.forEach((p, i) => { const f = M.fedges[i]; set(p.el, 'display', f ? '' : 'none'); if (f) { set(p.el, 'cls', 'ph-p ph-edge ph-fedge' + (f.hot ? ' hot' : '')); set(p.num, 'text', String(f.n)); set(p.text, 'text', f.label); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
+  R.fedges.forEach((p, i) => { const f = M.fedges[i]; set(p.el, 'display', f ? '' : 'none'); if (f) { set(p.el, 'cls', 'ph-p ph-edge ph-fedge' + (f.hot ? ' hot' : '') + (f.cruiser ? ' ph-fcruiser' : '')); set(p.num, 'text', f.cruiser ? '' : String(f.n)); set(p.text, 'text', f.label); set(p.ic, '--a', String(Math.round(f.angle * 180 / Math.PI)) + 'deg'); } });
   set(F.mother.el, 'display', M.mother ? '' : 'none'); if (M.mother) campPageHudPaintMeter(F.mother, M.mother);
   const FI = R.first, fm = M.first; set(FI.el, 'display', fm ? '' : 'none');
   if (fm) { while (FI.items.length < fm.items.length) { const grp = campPageHudEl(doc, 'div', 'ph-fc', FI.el); FI.items.push({ el: grp, key: campPageHudEl(doc, 'span', 'ph-k', grp), word: campPageHudEl(doc, 'span', 'ph-lab', grp), note: campPageHudEl(doc, 'span', 'ph-note', grp) }); } set(FI.el, 'opacity', String(Math.round(0.72 * fm.a * 100) / 100)); FI.items.forEach((it, i) => { const x = fm.items[i]; set(it.el, 'display', x ? '' : 'none'); if (x) { set(it.key, 'text', x.key); set(it.word, 'text', x.word); set(it.el, 'cls', 'ph-fc' + (x.lit ? ' lit' : '')); set(it.note, 'text', x.note || ''); set(it.note, 'display', x.note ? '' : 'none'); } }); } // (a pair with no chip now, the Enter one when no order can be given, is hidden, not left with the old words)

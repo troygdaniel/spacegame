@@ -144,6 +144,10 @@
 .ph-fedge { background: rgba(52, 36, 8, .7); border-color: rgba(255, 180, 84, .45); color: #ffd37a; max-width: 22em; overflow: hidden; }
 .ph-fedge.hot { background: rgba(78, 44, 6, .86); border-color: rgba(255, 180, 84, .95); }
 .ph-fedge span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* the cruiser's pill while he flies a fighter and she is off the screen (card space-game-b12-c2-3-pills): the friends' pill in his pale blue (the ring's #6fd6ff, the canvas tag's #9fd8ff), no digit */
+.ph-fcruiser { background: rgba(14, 30, 48, .78); border-color: rgba(111, 214, 255, .5); color: #9fd8ff; }
+.ph-fcruiser .ph-arrow { fill: #6fd6ff; }
+.ph-fnum:empty { display: none; }
 /* the digit of the ship the pill is for (the E key's number), in a small ring in the pill's amber, as the left panel's pilots wear theirs (card space-game-b3-d-panel-cap-pill-goal: "2 Miner" read as two miners) */
 .ph-fnum { display: inline-grid; place-items: center; box-sizing: border-box; flex: none; width: 1.55em; height: 1.55em; border-radius: 50%; border: 1px solid currentColor; font-size: .8em; font-weight: 600; line-height: 1; }
 /* the open Q list (card space-game-lists-panel-look; the browser batch on main 922b7a92, item 1): the cruiser's order list as a panel under the left panel and its chips, in this look: a row is its digit in a chip, its words, and at the right what it does or why it cannot (warm); the order in force has a bar at its left,
