@@ -1519,6 +1519,7 @@ const UI_TEXT = {
   'camp.bf.2.1.w2': 'Any ship of yours that flies close picks one up.',
   'camp.bf.2.1.w3': 'Taking the first pod calls aliens to the next one.',
   'camp.bf.2.1.w4': 'Kill them too: the pods alone do not finish it.',
+  'camp.bf.2.1.w5': '8 guards wait at the second pod: a hard fight.',
   'camp.bf.2.2.w1': '7 guards hold the system. Destroy them all.',
   'camp.bf.2.2.w2': 'More aliens join when the fourth guard dies, from two sides.',
   'camp.bf.2.2.w3': 'Missiles ({keymissile}) help against the heavy ones.',
