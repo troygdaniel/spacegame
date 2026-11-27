@@ -288,6 +288,7 @@ const CAMP = {
     hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72, so he is not shot down in seconds while he learns; brief 8 asked for it to be lower so the fighter is shot down now and then: the bot is too evasive to show when a human is, so Troy judges it in play; 0.65 is where the ace bot starts to die in 3.2 and 3.3, 3 and 9 percent of the runs: docs/night/cockpit-sweep.md); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
     damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
     rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
+    pod: true,                             // THE POD (card space-game-chunk5-pod-eject; Troy, 26 Nov 2026): the fighter he flies, shot down, loses no pilot: a pod leaves the wreck, the view goes back to the cruiser, the pilot mends CAMP.repair.time (20 s: the rule of a hurt pilot) and C waits for him; nothing is charged (no kill, no ship lost). false: today's death (the pilot is lost for the mission)
     turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
@@ -322,7 +323,14 @@ const CAMP = {
     turn: 1.5708,                          // rad: the heading it breaks to, off the line from the chaser to it (a right angle: across the chaser's nose)
     turnK: 1.6,                            // times its own turn rate, while it breaks (a hard turn)
     ms: 700,                               // how long it breaks
-    cool: 3000                             // ms after it, before it can break again (so it does not jitter)
+    cool: 3000,                            // ms after it, before it can break again (so it does not jitter)
+    pair: {                                // THE PAIR (card space-game-chunk7-enemy-pair; brief 8 proposal A, second behaviour): when a hostile fighter breaks, the nearest other one comes round behind the chaser instead of going on as it was
+      range: 500,                          // px: a hostile fighter this near the one that breaks is its partner
+      ms: 2500,                            // how long the partner comes round (it gives up then, and goes on as it was)
+      behind: 220,                         // px: the point it flies to, dead astern of the chaser (its six o'clock)
+      reach: 140,                          // px: near this to the point, it has come round: it goes on as it was (and attacks)
+      cool: 4000                           // ms after it, before it can be sent round again
+    }
   },
   dog: {                                   // DOGFIGHTS (card space-game-fighter-dogfights; src/campdogfight.js): how the fighters (the wing's, and the aliens' raiders) fly a duel, as the Vipers do: the engine pushes along the nose, so a ship turns to where it means to go, swoops past, breaks, comes round again, and flips to fire back at one on its tail
     kinds: ['fighter', 'raider'],          // who flies it (and the pirates whose base is the raider: the skiff): they fight one another this way; against a drone, a gunship, an escort, the mothership or Earth they keep the pirates' own circle and pass
@@ -1034,6 +1042,7 @@ function campHurt(C, u, dmg, byId, ang) {
   if (u.hp <= 0) { u.killer = byId; campKill(C, u); }
 }
 function campKill(C, u) {
+  if (u.cockpit && typeof campCockpitEject === 'function' && campCockpitEject(C, u)) return; // the fighter he flies: a pod, no pilot lost (src/campcockpit.js)
   u.hp = 0;
   C.events.push({ type: 'boom', x: u.x, y: u.y, big: u.kind === 'carrier' || u.kind === 'mother', id: u.id, kind: u.kind, team: u.team, fac: u.faction, by: u.killer }); // team, fac, by: who died and who fired the last shot, for the kill's colour and the pilot's ring (the picture only, src/campmoments.js)
   if (u.team === 'alien') {
