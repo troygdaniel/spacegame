@@ -700,3 +700,26 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 **Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
+
+## Mission 2.3: an alien held outside the ring by a fighter does not stop the hold (card `space-game-fighter-job-23`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base: main `52b6eeaa` plus the pod chunk `57ee0654`)
+
+**The rule** (`campRelicHeld`, the relic row's `held: 450`): an alien that is OUTSIDE the ring (more than the ring's 240 px from the relic) and within 450 px of one of your fighters (the wing's pilots or the one he flies) does not count for the hold's "no alien within 650 px of the relic", one alien for each fighter (the nearest to it). Everything else about the hold is as it was: the cruiser must be in the ring, an alien inside the ring or a second alien at the edge still stops it, and it falls twice as fast otherwise.
+
+**Why it is not the old kite** (the 16 s win of `docs/night/cockpit-sweep.md`): the waves now hold the ring (leash 800 px; `campRelicAlien`), so a fighter cannot draw a wave 2 km off, and one fighter frees one alien, not twelve.
+
+**The numbers** (12 seeds, 2.3; won per cent / seconds / cruiser damage; unchanged to the digit: the bots' fighters kill what they fight before it has stood at the ring's edge for long, so the rule does not fire in their runs):
+
+| skill | bot | before = after |
+|---|---|---|
+| steady | plain | 100 / 81 / 252 |
+| steady | carrier | 100 / 79 / 162 |
+| steady | ace | 100 / 77 / 97 |
+| steady | sit | 100 / 85 / 151 |
+| rough | plain | 100 / 78 / 144 |
+| rough | carrier | 100 / 80 / 155 |
+| rough | ace | 100 / 72 / 94 |
+| rough | sit | 100 / 82 / 148 |
+
+- Ace against plain is as it was before this card: 5 per cent faster and 61 per cent less cruiser damage at steady on these 12 seeds (97 against 252), 8 per cent faster and 35 per cent less at rough (94 against 144): the damage is over the sweep's 30 per cent rule at both, a gap this card neither made nor closes (the plain bot's 12 seeds carry a bad one at steady). The new rule is a tool for a player who flies a fighter to the ring's edge on purpose; the bots do not. For Troy to try in play.
+
+**Pins.** `tests/campfighterring.mjs` (7 checks: the row; an alien at the edge with no fighter near stops the hold; with a fighter 215 px off it does not; a fighter 700 px off holds nothing; an alien inside the ring is never held off; one fighter holds one alien of two; two fighters hold two).
