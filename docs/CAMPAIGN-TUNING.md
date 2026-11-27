@@ -495,3 +495,37 @@ What it does, from the 32-seed bot tables (`node tools/campaign-bot.mjs --level 
 - What a larger view changes: nothing in the rules (what is seen is the sensor's range, `CAMP.sensor`, not the screen; the route-fit zoom `campZoomFit` is worked out for 1280 by 720 always). The eye sees more of the battle on a larger screen.
 - Landing B (card `space-game-fill-window-b-screens`, 26 Nov 2026, base main `008095ae`): the title, the ready room (its pick and briefing), the warp, Settings over them and the Tab map keep the window too, at the same `FILL.k`. Each keeps its 1280 by 720 layout in the middle (the safe area); the title's sky covers the window; a dimming layer (a 1280 by 720 rectangle in the middle) is stretched over the window. The window is given back `FILL.idle: 2` steps of the game after the last scene asked for it (a scene of the Long Haul: 1280 by 720, as it was). The Tab map's card does not grow: it sits in the safe area.
 - The clipping card (`space-game-fill-window-clipping`, Troy's 3705 by 1558 px window, 26 Nov 2026): the canvas HUD was cut at the safe area's border (the Q list showed its last row). Its camera is the whole window now and its numbers are moved to the safe area by the camera's scroll; the corner lists go out to the page panels at the window's corners (`CAMP_CORNER_SHIFTX`); the goal arrow, the edge labels and the ship marks use the whole view, so a ship in the extra room has its ring and no edge label. The game's size is read from the element FIT fits to, not the window's inner size.
+
+## Mission 2.3: the waves come on the hold, and hold the ring (card `space-game-23-waves-on-entry`; Troy, 26 Nov 2026: "yes"; the cloud's brief 7, decision 2; base `gate-next` `0d2137f6`, which is main `591969a8` with the cockpit bots)
+
+**What was wrong.** The three waves came at 3, 24 and 42 s of the mission's clock and flew at the cruiser, turning on whatever hit them. A flown fighter drew the first wave 2 km off the ring; the cruiser sat on it for its 14 s and the mission was won in 16 s, cruiser untouched, the other two waves never seen (`docs/night/cockpit-sweep.md`).
+
+**What changed** (`src/campaign.js`; the hold's own rule is NOT changed: it counts while the CRUISER is in the ring and no alien is within 650 px of the RELIC, and falls twice as fast otherwise):
+- **The waves come on the hold**, not the clock: a wave row's `on: { held: n }` (`campWaveOn`) is true once the relic has been held `n` seconds at best (`C.relic.best`); `held: 0` is the cruiser's first time inside the ring. 2.3's rows: `held: 0`, `held: 5`, `held: 10`. A cruiser that never enters the ring meets nothing.
+- **The hold is 20 s** (`relic.hold` 14 to 20): longer than the last wave's mark, so the third wave always comes before the relic answers.
+- **Each wave comes out of the dark about 1,100 px from the relic** (a wave row's `ring: [dx, dy]`, from the relic's own place: north, west, south-east) and is inside the clear radius in under 8 s. They came from 2,900 to 3,900 px away.
+- **The wave holds the ring** (goal `'relic'`, `campRelicAlien`): it flies to the relic and fights only what is within `relic.leash` (800 px) of the relic: the ship that hit it if that ship is inside the leash, else the nearest of yours there. With nothing of yours inside the leash, or once outside it itself, it flies back to within `relic.stand` (200 px) of the relic. So while one of a wave lives it is inside the clear radius or on its way back, and the hold cannot run.
+
+**Why the hold's seconds and not "a third and two thirds" or "after the last wave is beaten":** it is the brief's rule, and it is the one the player can read off the ring's arc. Because an alien inside 650 px empties the hold, the second wave can only come once the first is dead or driven out, and the third likewise: the three fights follow each other, and the last 20 s are the quiet hold.
+
+**The numbers** (`node tools/campaign-bot.mjs --level 2 --mission 3 --seeds 32 --bots plain,carrier,ace --skill <s>`; won per cent / seconds / cruiser damage taken / kills; hull 600 of 600 at the end in every row, before and after):
+
+| skill | bot | before | after |
+|---|---|---|---|
+| steady | plain | 100 / 73 s / 141 / 17 | 100 / 87 s / 72 / 19 |
+| steady | carrier | 100 / 94 s / 295 / 19 | 100 / 87 s / 76 / 19 |
+| steady | ace | 100 / **16 s** / 0 / 0 | 100 / 86 s / 54 / 19 |
+| sharp | plain | 100 / 73 s / 137 / 17 | 100 / 87 s / 69 / 19 |
+| sharp | carrier | 100 / 92 s / 280 / 19 | 100 / 87 s / 90 / 19 |
+| sharp | ace | 100 / **16 s** / 0 / 0 | 100 / 87 s / 68 / 19 |
+| rough | plain | 100 / 88 s / 144 / 19 | 100 / 87 s / 82 / 19 |
+| rough | carrier | 100 / 92 s / 262 / 19 | 100 / 88 s / 80 / 19 |
+| rough | ace | 100 / **16 s** / 0 / 1 | 100 / 81 s / 57 / 19 |
+
+- The three bots now take the same time (the fighter no longer changes the mission), every wave is fought (19 kills), and about 43 s of the 87 are the hold itself with no alien alive (5 + 10 + 20 s, less what overlaps a wave's flight in).
+- **Not met: the old cruiser damage, and "can still be lost".** The cruiser takes about half what it did (72 against 141 for the plain bot), because the waves no longer overlap: one wave at a time fights it. The mission was not lost by any bot on any seed before the change either (hull 600 of 600 in every old row: the shield mends faster than one wave hurts), and a cruiser that sits on the ring alone and never fires is not hurt in 400 s (it does not win: the wave stays on the ring). Making 2.3 losable needs a call from Troy (more ships in a wave, or the second and third wave together from two sides); no hit-point or damage number was changed here.
+- The idle bot does not win and is not attacked (it never enters the ring).
+
+**Words.** The four moments of 2.3 stay true: "Enter the ring", "Hold {hold} seconds" (it reads the row: now 20), "Keep aliens off", "Aliens arrive fast" (truer: under 8 s from the call to the ring). One line changed, shown only, not voiced: `camp.bf.2.3.w2` "Hold there 14 seconds ..." is now "Hold there 20 seconds with no alien near the relic."
+
+**Pins.** `tests/camprelicwaves.mjs` (new, 16 checks: the rows, nothing for the clock, the waves at 0, 5 and 10 s held, a wave on the ring within 8 s, the kite: a fighter that hits the wave and runs 2,500 px off draws no alien past 1,300 px and the hold never runs). `tests/campaign.mjs`: the hold is 20 and the waves have no clock second. `tests/scrbriefings.mjs`: "Hold 20 seconds", and the first wave comes on entering. The rows keep `from` only for the Tab map's extent (its zoom limit is unchanged, `tests/campzoom.mjs`). `tests/camppace.mjs`: 2.3's floor is 60 s at both paces (the 12 s exception for Calm, which was the 16 s win, is gone).
