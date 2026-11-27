@@ -980,27 +980,29 @@ No number changed. While the last guard of 2.2 runs to call the second group (`C
 
 **Pins.** `tests/campguardedcache.mjs` (6 checks: eight guards of the right kinds at the second cache and asleep, clear of the other two; they stay put for 20 s and wake when a ship comes within 400 px; the first cache calls its group and does not wake them; the hunting party still comes at 45 s; two caches without the guarded one still win). `tests/campaign.mjs` (the row has eight guards; the called group is counted by its wave), `tests/camplevel2calls.mjs` (the party's own ships), `tests/campbrief.mjs` passes with the fifth step.
 
-## Mission 2.2: the reinforcements come out around the cruiser (card `space-game-b10-c2-22-reinforce-cruiser`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 2; base main `968594da`, on top of chunk 16 `c9ac0210`, the focus: called groups are not drawn off the cruiser)
+## Mission 2.2: the reinforcements come out around the cruiser (card `space-game-b10-c2-22-reinforce-cruiser`; Troy, 27 Nov 2026: yes, BRIEF 10 chunk 2; base main `54115462`, which has chunk 6's two guard groups, on top of chunk 16 `c9ac0210`, the focus: called groups are not drawn off the cruiser)
 
 **The change.** The three wave rows of 2.2 (the two reinforcement groups of the fourth dead guard and the second group the runner calls) used to come out of the dark at fixed points 3,000 to 4,000 px from the place, so a flown fighter that went to meet them met them before they reached the cruiser. They now come out about **1,700 px from the CRUISER** (`around: 'carrier'` with `ring: [dx, dy]` in a wave row, an offset from her: `src/campaign.js`, the wave's origin), wherever the fighter is: the two reinforcement groups from opposite sides of her (north-east and south-west), the second group from the west-north-west. With chunk 16's focus they go for her and are not drawn off by a fighter that hits or passes them. No hit-point, ship or damage change; the `from` of each row is kept for the Tab map's extent.
 
 **Distances tried** (plain / ace bots, 12 seeds, steady, seconds / cruiser damage; today plain 68 / 165, ace 66 / 138): 1,200 px: plain 59 / 136, ace 63 / 133; **1,700 px: plain 60 / 118, ace 60 / 121 (taken)**; 2,700 px: plain 64 / 159, ace 64 / 98. At 1,700 the flown fighter takes no advantage over the plain bot at steady (3 per cent MORE damage); farther, the fighter meets them on the way again.
 
-**The numbers** (12 seeds, 2.2; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+**The numbers** (12 seeds, 2.2, on the landed two guard groups; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
 
-| skill | bot | before (`968594da`) | after |
+| skill | bot | before (`54115462`) | after |
 |---|---|---|---|
-| steady | plain | 68 / 165 | 60 / 118 |
-| steady | carrier | 80 / 222 | 82 / 248 |
-| steady | ace | 66 / 138 | 60 / 121 |
-| steady | sit | 69 / 165 | 59 / 138 |
-| rough | plain | 67 / 150 | 60 / 130 |
-| rough | carrier | 82 / 213 | 85 / 259 |
-| rough | ace | 60 / 81 | 53 / 72 |
-| rough | sit | 69 / 147 | 71 / 151 |
+| steady | plain | 63 / 127 | 54 / 150 |
+| steady | carrier | 67 / 193 | 60 / 138 |
+| steady | ace | 61 / 124 | 52 / 121 |
+| steady | sit | 64 / 188 | 56 / 118 |
+| rough | plain | 62 / 150 | 53 / 104 |
+| rough | carrier | 68 / 188 | 59 / 144 |
+| rough | ace | 55 / 70 | 48 / 64 |
+| rough | sit | 64 / 165 | 56 / 144 |
 
-- **Ace against plain, cruiser damage:** steady 16 per cent less before, **3 per cent more after** (gap closed); rough 46 per cent less before, 45 per cent less after (72 against 130): over the sweep's 30 per cent rule at rough only, as before.
-- **Not met:** the groups arrive sooner, so 2.2 is about 8 s SHORTER (plain 60 s, was 68; the old 83), against the wish that it be longer. The carrier bot (no pilots) takes a little more damage (248, was 222).
+(The distances above were tried on the old guard placement, plain / ace steady: 1,200 px 59 / 136 and 63 / 133; 1,700 px 60 / 118 and 60 / 121; 2,700 px 64 / 159 and 64 / 98. At 2,700 the fighter meets the groups on the way again.)
+
+- **Ace against plain, cruiser damage:** steady 2 per cent less before, 19 per cent less after (121 against 150); rough 53 per cent less before, 38 per cent less after (64 against 104): inside the sweep's 30 per cent rule at steady, over it at rough but nearer than before. Time: ace 4 to 10 per cent faster.
+- **Not met:** the groups arrive sooner, so 2.2 is 8 to 10 s SHORTER (plain 54 s; the old 83), against the wish that it be longer: chunk 6 and chunk 2 together put it at 52 to 60 s.
 - **The page's test** (take the stick, kill four guards far from the cruiser): checked in muted Chrome with the fighter 2,400 px from her: both groups (7 ships) appeared 1,450 px from the cruiser and 3,800 from the fighter, the page HUD's one edge pill ("3 · 120 km") pointed toward the cruiser's side, and the groups closed on her.
 - **Words:** nothing untrue ("Reinforcements"), nothing voiced.
 
