@@ -241,9 +241,9 @@ g.run(`(() => {
     const ck0 = B.cockpit && typeof campCockpitTake === 'function' ? { on: CAMP.flags.cockpit, hpK: CAMP.cockpit.hpK, turrets: CAMP.cockpit.turrets } : null; // the table as it was: a cockpit bot sets its own and puts it back
     if (ck0) { CAMP.flags.cockpit = true; if (B.hpK != null) CAMP.cockpit.hpK = B.hpK; if (B.turrets) CAMP.cockpit.turrets = B.turrets; }
     const st = {}, total = maxSec * 30, hull0 = C.carrier.hp;
-    let wavesSeen = 0, started = false, prevAl = 0;
+    let wavesSeen = 0, started = false, prevAl = 0; const fr = {}; // fr: the hull each convoy ship had at most and at least (what the raiders did to the convoys: card space-game-b10-c15-tune-11)
     for (let i = 0; i < total && !C.result; i++) {
-      const s = i / 30;
+      const s = i / 30; if (i % 5 === 0) for (const u of C.ships) if (u.hp > 0 && typeof u.id === 'string' && u.id.indexOf('freighter-') === 0) { const f = fr[u.id] || (fr[u.id] = { max: u.maxHp || u.hp, min: u.hp }); if (u.hp < f.min) f.min = u.hp; }
       __botStep(C, s, B, sk, st); __fly(C, B, sk, st); __cockpit(C, B, sk, st, M);
       // where Earth's damage will come from this step: the alien shots that cross the planet
       const E = C.earth, before = E ? E.shield : 0, hits = [];
@@ -268,6 +268,7 @@ g.run(`(() => {
       torp: Object.assign({ launched: 0, shot: 0, hit: 0 }, C.torpStat || {}), // the torpedoes of the run: launched, shot down, gone off on a ship (card space-game-fighter-job-11)
       caches: C.cachesGot, towers: C.ships.filter(u => u.kind === 'tower').length, waves: M.waves, idle: Math.round(M.idle), first: M.first, recalls: M.recalls,
       hitC: Object.fromEntries(Object.entries(M.hitC).map(([k, v]) => [k, Math.round(v)])), drainE: Object.fromEntries(Object.entries(M.drainE).map(([k, v]) => [k, Math.round(v * 10) / 10])), orders: Object.assign({}, C.orders), calls: ((C.call && C.call.log) || []).map(l => l.id + ':' + l.pick + ':' + l.way) };
+    { const ks = Object.keys(fr); r.convHurt = ks.length ? Math.round(ks.reduce((a, k) => a + (fr[k].max - fr[k].min), 0) / ks.reduce((a, k) => a + fr[k].max, 0) * 1000) / 1000 : 0; r.convDead = C.lost | 0; }
     window.__M = null; return r;
   };
 })()`);
@@ -295,7 +296,7 @@ export function summarise(rs) {
  minHull: med(rs.map(r => r.minHull)), earth: med(rs.map(r => r.earth)), kills: med(rs.map(r => r.kills)), shipsLost: med(rs.map(r => r.shipsLost)), mended: med(rs.map(r => r.mended)), delivered: med(rs.map(r => r.delivered)), allHome: pct(rs, r => r.convoyLost === 0 && r.result === 'won'), idle: med(rs.map(r => r.idle)),
     shotRuns: pct(rs, r => (r.cockDeaths || 0) > 0), // the share of the runs (percent) in which the flown fighter was shot down at least once (card space-game-chunk4-fighter-shot-down: the ace used to be shot down in none)
     gun: ['cockShots', 'cockHits', 'cockDmg', 'cockFire', 'cockSec'].reduce((o, k) => { o[k] = rs.reduce((a, r) => a + (r[k] || 0), 0); return o; }, {}), // the flown gun over all the seeds (card space-game-fly-fighter-aim-help): shots, hits, hit points taken off hostiles, seconds Space was held, seconds in the cockpit
-    cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), cockHurt: Math.round(med(rs.map(r => r.cockHurt || 0)) * 100), cockBacks: Math.round(rs.reduce((a, r) => a + (r.cockBacks || 0), 0) / Math.max(1, rs.length) * 100) / 100, // hurt: the median share of ONE full hull of the flown fighter lost in a run, percent (it can pass 100: a hull mended or a second fighter); backs: the hand-backs for a low hull a run. The cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
+    cockSec: med(rs.map(r => r.cockSec)), cockKills: med(rs.map(r => r.cockKills)), cockDeaths: Math.round(rs.reduce((a, r) => a + (r.cockDeaths || 0), 0) / Math.max(1, rs.length) * 100) / 100, awayTaken: med(rs.map(r => r.awayTaken)), convHurt: Math.round(med(rs.map(r => r.convHurt || 0)) * 100), cockHurt: Math.round(med(rs.map(r => r.cockHurt || 0)) * 100), cockBacks: Math.round(rs.reduce((a, r) => a + (r.cockBacks || 0), 0) / Math.max(1, rs.length) * 100) / 100, // hurt: the median share of ONE full hull of the flown fighter lost in a run, percent (it can pass 100: a hull mended or a second fighter); backs: the hand-backs for a low hull a run. The cockpit bots' columns (card space-game-fly-fighter-l3): seconds in the cockpit, its kills, its deaths a run, the cruiser's damage while he was away
     torp: ['launched', 'shot', 'hit'].reduce((o, k) => { o[k] = Math.round(rs.reduce((a, r) => a + ((r.torp && r.torp[k]) || 0), 0) / Math.max(1, rs.length) * 10) / 10; return o; }, {}), // the torpedoes a seed has, on average: launched, shot down, gone off on a ship
     why, hitC: sum('hitC'), drainE: sum('drainE'), waves: rs[0] && rs[0].waves };
 }
@@ -331,16 +332,16 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && !process.
 //     1. ace is not faster than plain by more than 15 percent: its median win time is at least 85 percent of plain's;
 //     2. ace does not take less cruiser damage than plain by more than 30 percent: its median is at least 70 percent of plain's;
 //     3. sit (turrets auto) loses no mission plain wins: where plain wins at least 90 percent of the seeds, sit wins at least plain's rate less one seed in 32 (3 points).
-//     4. (a fight: plain's median kills at least 5) the flown fighter is shot down in at least 5 percent of the runs and in no more than 50 percent: never shot down fails ("safe and changes little"), so does shredded;
+//     4. (a fight: plain's median kills at least 5) the flown fighter is really hit: it loses a median of at least 15 percent of a hull a run (card space-game-b10-c15-tune-11, Troy, 27 Nov 2026; it was "shot down in 5 to 50 percent of the runs", which a bot that hands the stick back under 30 percent cannot meet): never hit fails ("safe and changes little"), and so does shot down in more than half the runs (shredded);
 //     5. (a fight) the fighter's own kills, median a run, are at least a quarter of plain's: few kills fails.
 //   A rule's number is judged only where plain's own number is big enough to mean something (win time over 20 s, damage over 30): under that it is 'n/a' (no verdict), and the raw numbers stay in the table.
-export const COCKPIT_RULE = { faster: 0.85, softer: 0.7, sitSlack: 3, sitFrom: 90, minTime: 20, minTaken: 30, minFight: 5, shotMin: 5, shotMax: 50, killsShare: 0.25 }; // (4 and 5, card space-game-chunk15-sweep-rule, brief 8 decision 12: minFight is the kills of plain's run that make it a fight to speak of; shotMin and shotMax the share of runs, percent, in which the flown fighter is shot down; killsShare the share of plain's kills the fighter itself must make)
+export const COCKPIT_RULE = { faster: 0.85, softer: 0.7, sitSlack: 3, sitFrom: 90, minTime: 20, minTaken: 30, minFight: 5, hurtMin: 15, shotMax: 50, killsShare: 0.25 }; // (4 and 5, card space-game-chunk15-sweep-rule, brief 8 decision 12; rule 4 re-made by card space-game-b10-c15-tune-11, Troy, 27 Nov 2026: minFight is the kills of plain's run that make it a fight to speak of; hurtMin the median share of ONE full hull of the flown fighter lost in a run, percent; shotMax the share of runs, percent, in which it is shot down, above which it is shredded; killsShare the share of plain's kills the fighter itself must make)
 export function cockpitVerdict(p, a, s) { // p, a, s: the summaries of plain, ace and sit (turrets auto) for one mission at one skill (summarise's shape)
-  const R = COCKPIT_RULE, v = { time: 'n/a', taken: 'n/a', sit: 'n/a', shot: 'n/a', kills: 'n/a' };
+  const R = COCKPIT_RULE, v = { time: 'n/a', taken: 'n/a', sit: 'n/a', hurt: 'n/a', kills: 'n/a' };
   if (p.tWin != null && a.tWin != null && p.tWin >= R.minTime) v.time = a.tWin >= p.tWin * R.faster ? 'pass' : 'FAIL';
   if (p.taken != null && a.taken != null && p.taken >= R.minTaken) v.taken = a.taken >= p.taken * R.softer ? 'pass' : 'FAIL';
   if (p.won >= R.sitFrom) v.sit = s.won >= p.won - R.sitSlack ? 'pass' : 'FAIL';
-  if (p.kills != null && p.kills >= R.minFight && a.shotRuns != null) v.shot = a.shotRuns >= R.shotMin && a.shotRuns <= R.shotMax ? 'pass' : 'FAIL'; // 4. in a fight, the flown fighter is shot down now and then, and not in more than half the runs: "safe and changes little" (never shot down) fails, so does a shredded one
+  if (p.kills != null && p.kills >= R.minFight && a.cockHurt != null) v.hurt = a.cockHurt >= R.hurtMin && !(a.shotRuns > R.shotMax) ? 'pass' : 'FAIL'; // 4. in a fight, the flown fighter is really hit: it loses a median of at least 15 percent of a hull a run (it was "shot down in 5 to 50 percent of the runs" until card space-game-b10-c15-tune-11: a bot that hands the stick back under 30 percent cannot be shot down by shots of 2 percent); "safe and changes little" fails, and so does a fighter shot down in more than half the runs (shredded)
   if (p.kills != null && p.kills >= R.minFight && a.cockKills != null) v.kills = a.cockKills >= p.kills * R.killsShare ? 'pass' : 'FAIL'; // 5. and the fighter itself makes a fair share of the kills (median a run, at least a quarter of plain's): few kills fails
   v.ok = !Object.values(v).includes('FAIL'); return v;
 }
@@ -361,11 +362,11 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.a
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
   else {
     console.log(`\nTHE COCKPIT SWEEP  ${SEEDS} seeds a mission, pace ${PACE}, cockpit table ${g.run('JSON.stringify({ hpK: CAMP.cockpit.hpK, damageK: CAMP.cockpit.damageK, rateK: CAMP.cockpit.rateK, turrets: CAMP.cockpit.turrets })')}${SETS.length ? ', set ' + SETS.join(' ') : ''}`);
-    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%  hurt%  backs   rule: time  taken  sit  shot  kills');
+    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%  hurt%  backs  conv%   rule: time  taken  sit  hurt  kills');
     for (const key of tab) {
       const S = out[key], [mk, skill] = key.split(' ');
       botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths, x.shotRuns, x.cockHurt, x.cockBacks], v = S.verdict;
-        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), String(c[5]).padStart(6), String(c[6]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)} ${String(v.shot).padStart(5)} ${String(v.kills).padStart(5)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
+        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), String(c[5]).padStart(6), String(c[6]).padStart(6), String(x.convHurt).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)} ${String(v.hurt).padStart(5)} ${String(v.kills).padStart(5)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
     }
     const fails = tab.filter(k => !out[k].verdict.ok);
     console.log(`\n${tab.length - fails.length} of ${tab.length} mission-skills pass the rule${fails.length ? '; fail: ' + fails.join(', ') : ''}`);

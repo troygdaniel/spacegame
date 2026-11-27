@@ -54,9 +54,16 @@ function campPirateMinerGuarded(C, m) {
   const f = C.cockpit && C.by ? C.by[C.cockpit.id] : null;
   return !!f && f.hp > 0 && !f.docked && campDist(f, m) <= R;
 }
+// THE BAIT (card space-game-b10-c15-tune-11; BRIEF 10 chunk 15, Troy, 27 Nov 2026: yes): a pirate (a skiff, a cutter, a brute) with the fighter THE PLAYER FLIES within CAMP.cockpit.baitR px (500) shoots at it, not at the hauler its wave names, so a fighter sent among the raiders is shot at and a convoy is spared while it is there.
+// Choice only, made again every tick (the fighter flies off and it goes back to its hauler): no hit point, damage, rate or speed changes. With nobody flying a fighter (no C.cockpit), baitR 0, or the fighter docked or dead, nothing runs. Torpedo boats choose their own prey (src/camptorpedo.js) and are not asked.
+function campPirateBait(C, u) {
+  const R = CAMP.cockpit && CAMP.cockpit.baitR; if (!(R > 0) || u.boat || !C.cockpit || !C.by) return null; // (a torpedo boat chooses its own prey)
+  const f = C.by[C.cockpit.id]; return f && f.hp > 0 && !f.docked && campDist(u, f) < R ? f : null;
+}
 // what a pirate attacks: the hauler its wave names, else (for a while) whatever hit it, else the best by prey weight
 function campPirateTarget(C, u) {
   const K = CAMP.pirate;
+  const fl = campPirateBait(C, u); if (fl) return fl; // the fighter the player flies, near it: it is the one it shoots at, before its wave's hauler
   if (u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) return f; }
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) return h; }
   const lg = campPirateGuarded(C, u); // a raid that leaves a hauler alone while a fighter of yours is near her (card space-game-fighter-job-13): she is not prey now
