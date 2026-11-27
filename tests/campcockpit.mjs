@@ -120,7 +120,7 @@ console.log('E. the guns');
   g.run(`__reset(); __mk(); campCockpitTake(C); C.cockpit.input.fire = false; __run(2);`);
   check('no Space, no shot', (J('__ev.wingshot') || 0) === 0);
   g.run(`__mk(); CAMP.cockpit.turrets = 'off'; campCockpitTake(C); __alone(); __still(__fly()); __dummy(300, 0, 'raider', __fly()); C.cockpit.input.fire = true; __run(3); __reset();`);
-  check('a shot at an alien in front of it hits: its hit points come down by the damage', J('__a.hp') < 1e6 && near((1e6 - J('__a.hp')) / (8 * (J('__fly().str') || 1)), Math.round((1e6 - J('__a.hp')) / (8 * (J('__fly().str') || 1))), 1e-6), J('__a.hp'));
+  check('a shot at an alien in front of it hits: its hit points come down by the damage (the auto-target sends the shot, so each is aimK of the pilot\'s: card space-game-fly-fighter-aim-help)', J('__a.hp') < 1e6 && near((1e6 - J('__a.hp')) / (8 * J('CAMP.cockpit.aimK') * (J('__fly().str') || 1)), Math.round((1e6 - J('__a.hp')) / (8 * J('CAMP.cockpit.aimK') * (J('__fly().str') || 1))), 1e-6), J('__a.hp'));
 }
 
 console.log('F. the cruiser while he is away');

@@ -592,6 +592,7 @@ class Campaign extends Phaser.Scene {
       if (typeof campZoomShipScale === 'function' && this.cameras && this.cameras.main && sp.width) { const look = CAMP_LOOK[u.kind] || CAMP_LOOK.drone, k = campZoomShipScale(this.cameras.main.zoom, typeof campZoomHull === 'function' ? campZoomHull(u.kind, sp.width * (sp._ls || look.scale)) : sp.width * (sp._ls || look.scale)); if (sp._k !== k) { sp._k = k; sp.setScale((sp._ls || look.scale) * k); } } // zoomed far out a ship is drawn no smaller than its least size (CAMPZOOM.view.leastSmall and leastBig, src/campzoom.js; the hull's length, campZoomHull)
     });
     Object.keys(this.sp).forEach(id => { if (!seen[id]) { this.sp[id].destroy(); delete this.sp[id]; } });
+    if (typeof campCockpitAimSync === 'function') campCockpitAimSync(this); // the thin mint ring at the lead point of the hostile the flown fighter's guns track (src/campcockpitaim.js)
     if (typeof campWingTagSync === 'function') campWingTagSync(this); // the tag under the fighter he flies: what the other two pilots are doing (src/campwingtag.js)
     this.syncWorldLeast();
     this.squadMarks();
