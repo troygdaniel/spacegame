@@ -167,6 +167,10 @@
 .ph-first { left: 50%; bottom: 1.1em; transform: translateX(-50%); display: flex; align-items: center; gap: 1.2em; padding: .4em 1em; border-radius: 2em; white-space: nowrap; opacity: .72; }
 .ph-fc { display: flex; align-items: center; gap: .45em; }
 .ph-first .ph-lab { font-size: .68em; }
+/* a teaching chip (card space-game-chunk12-teach-q): lit at the left end of the row while its key first matters, with its note beside it; the row's own dimming stays */
+.ph-fc.lit .ph-k { background: #fff; box-shadow: 0 0 .8em var(--ph-shield); }
+.ph-fc.lit .ph-lab { color: var(--ph-ink); font-weight: 600; }
+.ph-note { font-size: .68em; color: var(--ph-good); font-weight: 600; }
 /* the picked target's hull and shield meters and what it does (card space-game-page-hud-target-details), inside the hostiles panel, in the look of the cruiser's meters */
 .ph-tg { display: flex; flex-direction: column; gap: .35em; margin-top: .15em; padding-top: .4em; border-top: 1px solid var(--ph-line); }
 .ph-tgm { align-items: flex-start; gap: .8em; }
