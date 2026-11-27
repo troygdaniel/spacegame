@@ -161,8 +161,8 @@ console.log('H. the hand-back');
 {
   g.run(`__mk(); window.P = campPanelNew();`);
   check('the C key takes the stick (a pilot picked or Red 1), and a second press hands it back', J(`(() => { const a = campPanelKey(P, C, 'KeyC', 0), t = !!C.cockpit, b = campPanelKey(P, C, 'KeyC', 1000); return [a.used, a.ran, a.ok, t, b.ran, !!C.cockpit]; })()`).join() === 'true,true,true,true,true,false');
-  g.run(`{ campCockpitTake(C, 'fighter-6'); const u = C.by['fighter-6']; u.hp = 0; campKill(C, u); const lost0 = C.lostShips; window.__lost0 = lost0; __run(0.1); }`);
-  check('his fighter is lost: the pilot is lost as always (a ship lost, the boom), the stick is handed back by itself, the eye is the cruiser again', J('C.cockpit') === null && J('campEye(C).id') === 'carrier-1' && J('__ev["cockpit:give"]') >= 1 && J('C.lostShips') >= 1, J('[C.cockpit, __ev]'));
+  g.run(`{ CAMP.cockpit.pod = false; campCockpitTake(C, 'fighter-6'); const u = C.by['fighter-6']; u.hp = 0; campKill(C, u); const lost0 = C.lostShips; window.__lost0 = lost0; __run(0.1); CAMP.cockpit.pod = true; }`); // (the pod, card space-game-chunk5-pod-eject, is off here: this is TODAY'S death path, kept for the switch; tests/campcockpitpod.mjs holds the pod)
+  check('his fighter is lost (the pod off): the pilot is lost as always (a ship lost, the boom), the stick is handed back by itself, the eye is the cruiser again', J('C.cockpit') === null && J('campEye(C).id') === 'carrier-1' && J('__ev["cockpit:give"]') >= 1 && J('C.lostShips') >= 1, J('[C.cockpit, __ev]'));
   g.run(`__mk(); campCockpitTake(C); campEnd(C, 'lost', 'carrier');`);
   check('the mission ends (lost): the cockpit is cleared at once, whatever the reason', J('C.cockpit') === null && J(`C.ships.some(u => u.cockpit)`) === false);
   g.run(`__mk(); campCockpitTake(C); campEnd(C, 'won', 'mother');`);
