@@ -9,11 +9,11 @@ const g = nodeGame(), J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`
 g.run(`window.__mk = (m, seed) => { const C = window.C = campNew(3, ['shield', 'plating'], { seed: seed || 1, mission: m }); C.arrivedAt = 0; return C; };
   window.__run = (secs) => { for (let i = 0; i < secs * 30; i++) { campStep(C, 1 / 30); C.events.length = 0; } };
   window.__alive = () => C.ships.filter(u => u.team === 'alien' && u.hp > 0).length;
-  window.__started = () => C.waves.map(w => !!w.started);`);
+  window.__started = () => C.waves.filter((w, k) => !C.L.waves[k].optional).map(w => !!w.started); // (the idle threat's waves are optional: section G has them)`);
 
 console.log('A. 3.1: a scan and its wave');
 g.run('__mk(0)');
-check('three waves, one for each scan, none of them on a clock: each waits for its scan to begin (on.scanning 0, 1, 2)', J('C.L.waves.map(w => w.on && w.on.scanning).join()') === '0,1,2' && J('C.L.waves.every(w => w.at == null)'));
+check('three waves, one for each scan, none of them on a clock: each waits for its scan to begin (on.scanning 0, 1, 2)', J('C.L.waves.slice(0, 3).map(w => w.on && w.on.scanning).join()') === '0,1,2' && J('C.L.waves.every(w => w.at == null)'));
 check('nothing comes while no ship of ours is in a ring', (g.run('__run(40)'), J('__started().join()') === 'false,false,false' && J('__alive()') === 0));
 g.run('{ const p = C.scan[0]; C.carrier.x = p.x; C.carrier.y = p.y; C.carrier.vx = C.carrier.vy = 0; } __run(1);');
 check('the first scan begins the moment the cruiser is in its ring: its wave starts then (not when the scan is done), the others do not', J('__started().join()') === 'true,false,false' && J('C.scan[0].began') === true && J('C.scan[0].t') > 0 && J('C.scan[1].began') === false, J('__started().join()') + ' ' + J('C.scan[0].t'));
@@ -21,7 +21,7 @@ g.run('{ const p = C.scan[1]; C.carrier.x = p.x; C.carrier.y = p.y; } __run(1);'
 check('the second scan\'s wave comes when the second begins', J('__started().join()') === 'true,true,false');
 g.run('{ const p = C.scan[2]; C.carrier.x = p.x; C.carrier.y = p.y; } __run(1);');
 check('and the third\'s', J('__started().join()') === 'true,true,true');
-check('the waves come out at their own side of the field, each at its own place (not one spot)', J('(() => { const f = C.L.waves.map(w => w.from.join()); return new Set(f).size === 3; })()'));
+check('the waves come out at their own side of the field, each at its own place (not one spot)', J('(() => { const f = C.L.waves.slice(0, 3).map(w => w.from.join()); return new Set(f).size === 3; })()'));
 
 console.log('B. a scan stops while the cruiser is hit');
 g.run('__mk(0, 2); C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; }); { const p = C.scan[0]; C.carrier.x = p.x; C.carrier.y = p.y; C.carrier.vx = C.carrier.vy = 0; } __run(2);');
@@ -39,7 +39,7 @@ check('only a hit on the cruiser stops it (the pause is 2 s in the mission\'s ro
 
 console.log('C. 3.2: each tower that falls calls a group');
 g.run('__mk(1, 3)');
-check('four towers, three groups (on 1, 2 and 3 towers down), each out from behind a tower: nearTower', J('C.towerN') === 4 && J('C.L.waves.map(w => w.on.towers).join()') === '1,2,3' && J('C.L.waves.every(w => w.nearTower > 0)'));
+check('four towers, three groups (on 1, 2 and 3 towers down), each out from behind a tower: nearTower', J('C.towerN') === 4 && J('C.L.waves.slice(0, 3).map(w => w.on.towers).join()') === '1,2,3' && J('C.L.waves.slice(0, 3).every(w => w.nearTower > 0)'));
 check('no group while all four stand', (g.run('__run(5)'), J('__started().join()') === 'false,false,false'));
 g.run('{ const t = C.ships.filter(u => u.kind === "tower"); t[0].hp = 0; campKill(C, t[0]); } __run(0.1);');
 check('the first tower falls: the first group comes, the others wait', J('__started().join()') === 'true,false,false');
@@ -71,6 +71,33 @@ const tf = J('__probe(true, true)'), tn = J('__probe(false, true)'), sf = J('__p
 check('the tower turns 1.5 times as fast at the flown fighter as at the same fighter on its own', tn.turned > 0 && Math.abs(tf.turned / tn.turned - 1.5) < 0.02, JSON.stringify([tf, tn]));
 check('and its shot flies 1.3 times as fast (the tower\'s own 440 px/s, 572 at the flown fighter)', sf.speed != null && sn.speed != null && Math.abs(sf.speed / sn.speed - 1.3) < 0.02 && Math.abs(sn.speed - 440) < 2, JSON.stringify([sf, sn]));
 check('the two numbers are in the tower table: CAMP.tower.flownTurn 1.5 and flownSpeed 1.3', J('[CAMP.tower.flownTurn, CAMP.tower.flownSpeed]').join() === '1.5,1.3');
+
+console.log('G. the idle threats (Troy\'s yes, 26 Nov: 3.1 the picket, 3.2 the reserve)');
+g.run(`window.__kill = () => C.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; }); window.__idleN = () => C.waves.map((w, k) => (w.started && C.L.waves[k].optional) ? 1 : 0).join(''); // (one digit a wave: the three scan waves first, then the four idle ones)`);
+g.run('__mk(0, 7); __run(59);');
+check('3.1: four optional waves on the idle clock (60, 100, 140, 180 s, until a scan has begun), after the three scan waves', J('C.L.waves.slice(3).map(w => w.on.idle + w.on.until + w.optional).join()') === '60scantrue,100scantrue,140scantrue,180scantrue' && J('C.L.waves.slice(0, 3).every(w => !w.optional)'));
+check('59 s in with no scan begun: nothing yet', J('C.waves.slice(3).every(w => !w.started)'));
+g.run('__run(2);');
+check('at 60 s the picket leaves: 3 raiders and a gunship, for the cruiser, born about 1,800 px from it toward the planet', J('C.waves[3].started') === true && J('(() => { const a = C.ships.filter(u => u.team === "alien" && u.wave === 3); return a.length === 4 && a.filter(u => u.kind === "raider").length === 3 && a.filter(u => u.kind === "gunship").length === 1 && a.every(u => u.goal === "carrier"); })()') && J('(() => { const a = C.ships.filter(u => u.team === "alien" && u.wave === 3), c = C.carrier; return a.every(u => { const d = Math.hypot(u.x - c.x, u.y - c.y); return d > 1200 && d < 2400; }); })()'));
+check('it comes from the planet\'s side: its middle is nearer the planet than the cruiser is', J('(() => { const a = C.ships.filter(u => u.team === "alien" && u.wave === 3), c = C.carrier, mx = a.reduce((s, u) => s + u.x, 0) / a.length, my = a.reduce((s, u) => s + u.y, 0) / a.length; return Math.hypot(mx, my) < Math.hypot(c.x, c.y); })()'));
+g.run('__kill(); { const p = C.scan[0]; C.carrier.x = p.x; C.carrier.y = p.y; C.carrier.vx = C.carrier.vy = 0; C.arrivedAt = 0; } __run(1);');
+g.run('__run(45);');
+check('once a scan has begun no more patrols come (the one due at 100 s never does)', J('C.scan[0].began') === true && J('__idleN()') === '0001000', J('__idleN()'));
+g.run('__mk(0, 8); C.arrivedAt = 0; __run(2); __kill(); __run(100); __kill(); __run(100); __kill(); __run(100); __kill(); __run(100);');
+check('with no scan ever begun: four patrols and no more (at 400 s, the four waves have come, there is no fifth)', J('__idleN()') === '0001111' && J('C.waves.length') === 7);
+g.run('__mk(0, 9); C.arrivedAt = null; __run(150);');
+check('a cruiser that never reaches the place: the clock starts 120 s after the start (nothing at 150 s)...', J('C.waves.slice(3).every(w => !w.started)'));
+g.run('__run(32);');
+check('...and the picket finds it at 180 s (60 s on the idle clock)', J('C.waves[3].started') === true && J('CAMP.mission.idleTrip') === 120);
+g.run('__mk(0, 10); C.arrivedAt = 0; for (let i = 0; i < 3; i++) { C.scan[i].got = true; C.scan[i].began = true; C.waves[i].started = true; } C.ships.forEach(u => { if (u.team === "alien") u.hp = 0; });');
+check('a player who scans never has to beat the idle waves: "clear" is met by the scan waves alone', J('campObjectives(C).find(o => o.type === "clear").done') === true && J('C.waves.slice(3).every(w => !w.started)'));
+g.run('__mk(1, 11); C.arrivedAt = 0; __run(44);');
+check('3.2: the reserve waits for 45 s (nothing at 44 s)', J('C.L.waves.slice(3).map(w => w.on.idle + w.on.until).join()') === '45tower,85tower,125tower,165tower' && J('C.waves.slice(3).every(w => !w.started)'));
+g.run('__run(2);');
+check('at 45 s with no tower fallen: 2 drones and 2 gunships for the cruiser, born toward the nearest tower', J('C.waves[3].started') === true && J('(() => { const a = C.ships.filter(u => u.team === "alien" && u.wave === 3); return a.length === 4 && a.filter(u => u.kind === "drone").length === 2 && a.filter(u => u.kind === "gunship").length === 2 && a.every(u => u.goal === "carrier"); })()'));
+g.run('{ const t = C.ships.find(u => u.kind === "tower"); t.hp = 0; campKill(C, t); } __kill(); __run(45);');
+check('a tower falls: the reserve stops (the one due at 85 s does not come)', J('C.waves[4].started') === false && J('C.waves[5].started') === false);
+check('3.2 needs the tower groups cleared only: the optional waves are not required for "clear"', J('C.L.waves.slice(3).every(w => w.optional)') && J('C.L.waves.slice(0, 3).every(w => !w.optional)'));
 
 console.log('F. the cruiser\'s own game is the same where it should be');
 check('a tower\'s shot at the cruiser is the old one (turn 3 rad/s, 440 px/s: the factors are for the flown fighter only)', J('[CAMP.tower.turn, CAMP.tower.bullet]').join() === '3,440');
