@@ -427,6 +427,25 @@ With the new ship look on for everyone, the two front turret mounts (`CAMP.carri
 - *Exact end states* (`campsystems.mjs`, section B): the carrier, the shield, the kills, the missiles and the turrets' times are the same; level 1 ends with 34 turret shots (it had 11), level 3 with 63 (it had 105) and one ship fewer.
 - *Geometry* (`camplook-size.mjs`, `camplook-cruiser.mjs`): the mounts are 8 px apart at the front (they were 14), and the mouth sits just in front of the flat-cut hull's launch tube, not the old picture's.
 
+## Hostile fighters break when the fighter you fly is on their tail (card `space-game-chunk6-enemy-break`; Troy, 26 Nov 2026, brief 8 proposal A, first behaviour only; base main `654702eb`)
+**The rule** (`src/campbreak.js`, the table `CAMP.break`): a skiff, cutter, raider or drone (not a torpedo boat, a gunship, a brute, a tower) with **the fighter the player flies** within **300 px**, dead astern of it (within 0.9 rad) and with its nose on it (within 0.7 rad) turns hard across the chaser's nose: for **0.7 s** it heads at a right angle off the line from the chaser to it, turning at 1.6 times its own rate, and does not fire; then it steers as before and cannot break again for **3 s** (no jitter). Steering only: no hit points, damage or speed. **Which fighter:** only the one the player flies (`C.cockpit`), not "any of the player's fighters": the wing's fighters already have their own dogfight moves (`CAMP.dog`: break, flip, jink) and the flown fighter is the one that is excluded from them and was flown straight at. No pair and no extend (the later chunks).
+
+**12 seeds, the cockpit sweep, steady skill, every mission** (`node tools/campaign-bot.mjs --cockpit --seeds 12 --skills steady`; old = main `654702eb`, new = the break; won percent, win time in s, the cruiser's damage; the plain and sit bots do not fly a fighter, so they only change where the idle fighter happens to be on a tail: in 3.1):
+
+| mission | ace won | ace time | ace damage taken (old to new) | the fighter's kills a run | the fighter shot down | plain (damage) |
+|---|---|---|---|---|---|---|
+| 1.1 | 100 to 100 | 306 to 306 | 222 to **197** | 4 to 5 | 0 to 0 | 202 to 202 |
+| 1.2 | 92 to 92 | 273 to 271 | 21 to **12** | 5 to 4 | 0 to 0 | 42 to 42 |
+| 1.3 | 100 to 100 | 292 to 292 | 56 to **24** | 4 to 4 | 0 to 0 | 53 to 53 |
+| 2.1 | 100 to 100 | 32 to 32 | 6 to 6 | 1 to 1 | 0 to 0 | 0 to 0 |
+| 2.2 | 100 to 100 | 74 to 73 | 104 to **93** | 2 to 2 | 0 to 0 | 161 to 161 |
+| 2.3 | 100 to 100 | 77 to 77 | 97 to 97 | 2 to 2 | 0 to 0 | 252 to 252 |
+| 3.1 | 100 to 100 | 72 to 74 | 0 to 0 | 2 to 2 | 0 to 0 | 19 to 19 |
+| 3.2 | 100 to 100 | 44 to 44 | 54 to 54 | 0 to 0 | 0 to 0 | 162 to 162 |
+| 3.3 | 100 to 100 | 59 to 59 | 407 to 400 | 0 to 0 | 0 to 0 | 407 to 407 |
+
+**What it says:** nothing is won faster or lost more; the cruiser's win rate with the cruiser bots is **identical** to the last digit (nobody flies a fighter, nothing breaks). With a fighter out the cruiser takes **less** damage in the three level 1 missions (1.1: 11 percent less, 1.2: 43, 1.3: 57), because the hostile fighters that peel off the chaser spend those 0.7 s not shooting at the cruiser or what it guards; kills are the same (4 to 5, 5 to 4, 4 to 4) and the fighter is never shot down (the bot flies a Wren-fast fighter; a human may differ). That is the damage rule of `docs/night/cockpit-sweep.md` pushed a step further in the wrong direction for level 1 (the flown fighter makes the cruiser's fight easier): a number for Troy to weigh with the other chunks, not a bug of this one (a shorter break, `ms` 700, or a longer cool-down, `cool` 3000, is one number each).
+
 ## The miner's call has a real price (card `space-game-11-miner-real-price`; Troy, 26 Nov 2026: "yes"; base main with the quicker cruiser, `6f1672ff`)
 The finding that led here (the quicker-handling card): on 32 seeds a torpedo got through on 9, 10 and 9 of them for the three answers (ignore, one pilot, all three), and the transport's mean hull was 175, 171 and 171. The call had a reward (the miner) but no steady price; the old three-seed pins only looked like one.
 
