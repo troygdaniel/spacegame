@@ -82,6 +82,7 @@ function campPageModel(C, view) {
     return Object.assign(campPageHudRing(name, i + 1, frac, up, !!now && (now.kind === 'all' || now.id === r.who), true), !up && typeof campRepairProgress === 'function' && campRepairProgress(C, String(r.who).replace(CAMP_SELPILOT, '')) >= 0 ? { color: 'good' } : {}, { id: r.who, pulse: !!(view && view.pulse && u && view.pulse[u.id] > (view.now || 0)) }); // pulse: this pilot's shot ended a ship a moment ago (the kill's picture, src/campmoments.js: the ring brightens, 0.45 s); pick: the ring has its outline and the digit is lit (All pilots outlines every one: card space-game-w4-all-lit); on: out in space (dim is resting, in the bay)
   });
   const open = typeof campCornerPanelId === 'function' ? campCornerPanelId() || '' : '', ships = campPageHudShips(C), edge = campPageHudEdge(C, view), fedges = campPageHudFriendEdges(C, view, edge); // open: the pick that is open now, '' none (the rings of that group grow in place)
+  if (edge) C.edgeSeen = true; // a wave has been off the screen (the hostiles' pill is up): the key row teaches Tab, the map, once (src/campteach.js, card space-game-b10-c10-teach-tab)
   const was = {}; if (edge) was.hostiles = true; fedges.forEach(f => { was[f.id] = true; }); // the pills that show now: the next look at the ships (view.was) keeps them a little longer (campEdgeOffscreen: no flicker at the edge)
   return { first: campPageHudFirst(C), ship, goal: campPageHudGoal(C), stock: campPageHudStock(C), foes: campPageHudFoes(C), mother: campPageHudMother(C), hint: campPageHudHint(C), edge: edge, fedges, was, places: campPageHudPlaces(C, view),
     pilots: { key: campCornerCap('who'), items, open: open === 'fleet' },
@@ -238,7 +239,7 @@ function campPageHudPanelRects(R, r, k) {
   els.forEach(el => {
     const cls = String(el.className || ''); if (!/(^|\s)ph-p(\s|$)/.test(cls) || /(^|\s)ph-(edge|place)(\s|$)/.test(cls) || (el.style && el.style.display === 'none') || typeof el.getBoundingClientRect !== 'function') return;
     const rc = el.getBoundingClientRect(), x0 = (rc.left - r.left) / k, y0 = (rc.top - r.top) / k, w = rc.width / k, h = rc.height / k;
-    if (!(w > 0) || !(h > 0) || w > W * 0.6 || h > H * 0.6) return;
+    if (!(w > 0) || !(h > 0) || w > W * 0.98 || h > H * 0.6) return; // (0.98, not 0.6: the bottom key row is a panel too and is wide when its teaching chips are lit, 824 of 1280 px with three and about 1220 with the most that can be up at once, and the pills must keep clear of it; only a rectangle as wide as the screen is no panel: cards space-game-b10-c9-teach-r and -c10-teach-tab)
     out.push({ x: x0 + w / 2, y: y0 + h / 2, w, h });
   });
   return out;

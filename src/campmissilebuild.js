@@ -45,6 +45,7 @@ function campMissileState(C) {
 
 // the order 'reload' (R, the Q list's row, "reload missiles"): the refusals in words, else one more missile is queued (and starts at once when nothing is building)
 function campReloadDo(C, dry) {
+  if (!dry) (C.keysUsed || (C.keysUsed = {})).reload = true; // R has been pressed (the key or the Q list's row; a refusal too): the key row's teaching chip for it goes quiet (src/campteach.js, card space-game-b10-c9-teach-r)
   const P = campReloadPlan(C);
   if (P.missing <= 0) return campNo('rackfull');
   if (P.free <= 0) return campNo('reloading'); // every empty slot has a missile on its way already

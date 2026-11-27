@@ -46,13 +46,21 @@ function campPirateGuarded(C, u) {
   const h = C.by['freighter-' + W.along]; if (!h || h.hp <= 0) return null;
   return C.ships.some(s => s.team === 'earth' && s.kind === 'fighter' && s.hp > 0 && !s.docked && campDist(s, h) <= W.guard) ? h : null;
 }
+// a mission row may carry minerGuard (px): 1.2's job for the fighter the player flies (card space-game-b10-c11-12-miner-guard, BRIEF 10 chunk 11; Troy: yes). A neutral miner is the raiders' prey only while the fighter he flies (C.cockpit, alive,
+// not docked) is farther than minerGuard px from him; inside it the raid goes for something else by the usual weights (the other miner, the fighter that is there, the cruiser) and comes back when the fighter leaves: the choice is made again every tick.
+// Only the fighter he flies guards: the pilots' own fighters (they have the guard orders) and the cruiser do not. A mission without the field never asks. Torpedo boats choose their own prey (src/camptorpedo.js) and are not affected.
+function campPirateMinerGuarded(C, m) {
+  const R = C.L && C.L.minerGuard; if (!(R > 0) || !m || m.kind !== 'miner' || m.team !== 'neutral') return false;
+  const f = C.cockpit && C.by ? C.by[C.cockpit.id] : null;
+  return !!f && f.hp > 0 && !f.docked && campDist(f, m) <= R;
+}
 // what a pirate attacks: the hauler its wave names, else (for a while) whatever hit it, else the best by prey weight
 function campPirateTarget(C, u) {
   const K = CAMP.pirate;
   if (u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) return f; }
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) return h; }
   const lg = campPirateGuarded(C, u); // a raid that leaves a hauler alone while a fighter of yours is near her (card space-game-fighter-job-13): she is not prey now
-  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && s !== lg);
+  const all = C.ships.filter(s => s.hp > 0 && (s.team === 'earth' || s.team === 'neutral') && s !== lg && !campPirateMinerGuarded(C, s)); // (and a neutral miner with the flown fighter close: minerGuard)
   const want = u.prey || 'any';
   let pool = want === 'any' ? all : all.filter(s => campPreyOf(want, campPreyKind(s)));
   if (!pool.length) pool = all;

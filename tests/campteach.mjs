@@ -4,6 +4,9 @@
 //   C. (card space-game-chunk13-teach-space-c) Space and C at the first hostiles: the row's own chips lit where they stand with a note, quiet once used, 45 s, C only with the cockpit switch on
 //   D. (card space-game-chunk14-teach-e-enter) E and Enter at the 1.1 miner's call: E added lit "then 2: the miner", Enter lit "send a pilot" once it reads Guard (the miner picked), quiet once the friends' list is opened / an order is given, 90 s, gone when the call is over
 //   E. (card space-game-b10-c7-teach-shift) Shift when the ship you escort is more than 150 km off: the boost chip lit "catch up" (1.1: about 30 s after she leaves), quiet once Shift is held or you are beside her, 120 s
+//   F. (card space-game-b10-c8-teach-z) Z when a torpedo boat or the pirate leader is inside missile range (2400 px) and there is a missile: the missile chip lit "in range", quiet once a missile is fired, 90 s
+//   G. (card space-game-b10-c9-teach-r) R when the missile rack is empty for the first time: the R chip is added to the row, lit "rack is empty", quiet once R is pressed, 60 s
+//   H. (card space-game-b10-c10-teach-tab) Tab when a wave arrives off the screen (the hostiles' edge pill is up): the map chip added to the row, lit "wave off screen", once, 45 s, quiet once the map is opened
 //   B. the rest: the row is as it was before 5 s and in 1.2 and 1.3; the hints switch turns the row (and the chip) off; the sim remembers the lists opened; no letter is written in the file
 // Run: node tests/campteach.mjs   (exit code 1 on a failed check)
 import { readFileSync } from 'node:fs';
@@ -127,6 +130,102 @@ console.log('E. Shift when the ship you escort is far ahead (card space-game-b10
   check('a mission that has ended lights nothing; the hints off turns the whole row off', J('campTeachLights(C).boost') === null && J('(() => { C.result = null; CAMP.flags.hints = false; try { return campPageHudFirst(C) === null; } finally { CAMP.flags.hints = true; } })()'));
   check('the note is a content key, shown never said (no letter is written for the key: the chip is the row\'s own)', J("uiText('camp.corner.chip.teachboost')") === 'catch up' && J("VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.teachboost') && r.why && !r.spoken)") === true);
   check('the sim\'s own rules are as they were: the transport\'s road does not change because a chip is lit (same position at 40 s with and without asking)', J(`(() => { const a = (__idle(40), Math.round(campConvoys(C)[0].x)); const b = (__idle(40), campTeachLights(C), campPageHudFirst(C), Math.round(campConvoys(C)[0].x)); return a === b; })()`) === true);
+}
+
+console.log('F. Z when a torpedo boat or the pirate leader is in missile range (card space-game-b10-c8-teach-z; the cloud\'s BRIEF 10 chunk 8)');
+{
+  g.run(`window.__big = (kind, d, sec) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = (sec == null ? 10 : sec) * 1000; C.ships = C.ships.filter(u => u.team === 'earth'); window.__b = campSpawn(C, kind, C.carrier.x + d, C.carrier.y); __b.team = 'alien'; __b.hold = true; return C; };`);
+  const zLit = () => J('campPageHudFirst(C).items.filter(i => i.lit && i.id === "missile").map(i => i.key + ":" + i.word + ":" + i.note)');
+  g.run(`__big('skiff', 800);`);
+  check('a skiff in range is not a moment for Z: nothing is lit (only a torpedo boat or the leader)', zLit().length === 0 && J('campTeachLights(C).missile') === null);
+  g.run(`__big('tboat', 2000);`);
+  check('a torpedo boat inside the missile lock range (2400 px) lights the Z chip where it stands, "in range" (key from the table)', J('!!__b.boat') && zLit().join() === 'Z:Missile:in range', zLit().join());
+  g.run(`__big('tboat', 2600);`);
+  check('the same boat just outside the lock range lights nothing', zLit().length === 0);
+  g.run(`__big('pirateleader', 1500);`);
+  check('the pirate leader in range lights it too', J('__b.kind') === 'pirateleader' && zLit().join() === 'Z:Missile:in range', zLit().join());
+  g.run(`__big('tboat', 2000); C.missiles = 0;`);
+  check('with the rack empty there is nothing to fire: no light (R is the key to teach then)', zLit().length === 0);
+  g.run(`__big('tboat', 2000); campTeachLights(C); C.keysUsed = {}; campFire(C, __b);`);
+  check('a missile fired (campFire: Z, the order, a click) notes it (C.keysUsed.missile) and the chip goes quiet', J('C.keysUsed.missile') === true && zLit().length === 0);
+  g.run(`__big('tboat', 2000); campTeachLights(C); __b.x = C.carrier.x + 3000;`);
+  check('lit only while one is in range: out of range again, the light goes (and it does not need the ship to be picked)', zLit().length === 0);
+  g.run(`__big('tboat', 2000); campTeachLights(C); C.t += 91000;`);
+  check('it ends 90 s after the first time, even if the boat is still there', zLit().length === 0);
+  g.run(`__big('tboat', 2000); C.cockpit = null; CAMP.flags.hints = false;`);
+  check('with the hints off the row is gone, the light with it', J('campPageHudFirst(C) === null') === true);
+  g.run(`CAMP.flags.hints = true; __big('tboat', 2000); C.result = 'won';`);
+  check('a mission that has ended lights nothing', J('campTeachLights(C).missile') === null);
+  // THE PAGE'S TEST, as it works: stay with the transport (idle, the boats come for her and are 700 km from the cruiser, out of range)
+  g.run(`window.__stay = (stay) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; window.__first = null; window.__wasTb = -1; while (C.t < 130000) { campTick(C, 0.1); const f = campConvoys(C)[0]; if (stay && f && C.t > 6000) { C.carrier.x = f.x - 150; C.carrier.y = f.y; } if (__first === null && campTeachLights(C).missile) __first = Math.round(C.t / 1000); } return C; };`);
+  g.run(`__stay(true);`);
+  const t1 = J('__first');
+  check('THE PAGE\'S TEST, corrected: start 1.1 and STAY WITH THE TRANSPORT; the boats come at about 1 min 45 s (106 s) and the Z chip lights "in range"', t1 !== null && t1 >= 100 && t1 <= 112, t1);
+  g.run(`__stay(false);`);
+  check('(the page says "wait for the boats": with the cruiser left idle they come for the transport, 700 km off, and Z is not lit: the page\'s test needs you beside her)', J('__first') === null, J('__first'));
+  check('the new word is in the table, shown never said', J("uiText('camp.corner.chip.teachmissile')") === 'in range' && J("VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.teachmissile') && r.why && !r.spoken)") === true);
+}
+
+console.log('G. R when the missile rack is empty for the first time (card space-game-b10-c9-teach-r; the cloud\'s BRIEF 10 chunk 9)');
+{
+  g.run(`window.__rack = (n) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = 10000; C.missiles = n; return C; };`);
+  const rLit = () => J('campTeachChips(C).filter(c => c.id === "r").map(c => c.key + ":" + c.word + ":" + c.note + ":" + c.lit)');
+  g.run(`__rack(2);`);
+  check('with missiles left there is nothing to teach: no R chip, the row as it was', rLit().length === 0 && J('campPageHudFirst(C).items.map(i => i.id).filter(x => ["fly", "fire", "boost", "missile"].indexOf(x) >= 0).join()') === 'fly,fire,boost,missile' && J('campPageHudFirst(C).items.every(i => i.id !== "r")'));
+  g.run(`__rack(0);`);
+  check('the first time the rack is empty the R chip is ADDED to the row, lit, with the key table\'s key (R), the word Reload and the note "rack is empty"', rLit().join() === 'R:Reload:rack is empty:true', rLit().join());
+  check('it is among the added chips at the left end of the row (after Q\'s, which is up at 10 s in 1.1), before the row\'s own chips, which are unchanged', J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).filter(x => x !== "enter").join()') === 'q*,r*,fly,fire,boost,missile'); // (Q's chip is there at 10 s in 1.1; the added chips come before the row's own, in the order of the table)
+  g.run(`__rack(0); campTeachChips(C); C.missiles = 3;`);
+  check('it is lit while the rack is not full and goes with the rack full (loot or a build): here 3 of 6 it still is', rLit().length === 1);
+  g.run(`C.missiles = C.magazine;`);
+  check('the rack full again: no chip', rLit().length === 0);
+  g.run(`__rack(0); campTeachChips(C); C.t += 61000;`);
+  check('it ends 60 s after the first time, even if the rack is still empty', rLit().length === 0);
+  g.run(`__rack(0); campOrder(C, 'reload', '', 'key');`);
+  check('R pressed (a refusal for ore counts too: campReloadDo, the key or the Q list\'s row) notes it (C.keysUsed.reload) and the chip goes quiet', J('C.keysUsed.reload') === true && rLit().length === 0);
+  g.run(`__rack(0); campReloadDo(C, true);`);
+  check('a dry run (the Q list asking whether the row can run) is not a press: the chip stays', J('!!(C.keysUsed && C.keysUsed.reload)') === false && rLit().length === 1);
+  g.run(`__rack(0); CAMP.flags.hints = false;`);
+  check('the hints off: the row is gone, the chip with it', J('campPageHudFirst(C) === null') === true);
+  g.run(`CAMP.flags.hints = true; __rack(0); C.result = 'won';`);
+  check('a mission that has ended lights nothing', rLit().length === 0);
+  // THE PAGE'S TEST: start 1.1, press Z six times at anything: works from the first skiffs (about 38 s: nothing is in range before), one press every 0.8 s (the launcher cycles in 0.7 s)
+  g.run(`window.__six = (from) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; window.P = campPanelNew(); window.__n = 0; for (let t = 0; t < 12 && C.missiles > 0; t++) { while (C.t < (from + t * 0.8) * 1000) campTick(C, 0.1); const m0 = C.missiles; campPanelKey(P, C, 'KeyZ', C.t); if (C.missiles < m0) __n++; } return C; };`);
+  g.run(`__six(1);`);
+  check('THE PAGE\'S TEST, as it works: pressing Z at the very start does nothing (no hostile in range: "No big ship in missile range"), so no chip', J('__n') === 0 && J('C.missiles') === J('C.magazine') && rLit().length === 0);
+  g.run(`__six(38);`);
+  check('pressing Z at the first skiffs (from about 38 s), six times, 0.8 s apart: the rack is empty and the R chip is lit "rack is empty"', J('C.missiles') === 0 && J('__n') === 6 && rLit().join() === 'R:Reload:rack is empty:true', J('[C.missiles, __n]') + ' ' + rLit().join());
+  check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.reload')") === 'Reload' && J("uiText('camp.corner.chip.teachr')") === 'rack is empty' && ['reload', 'teachr'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
+  check('no key is written for R: the cap is the key table\'s (campCornerCap)', !/'R'/.test(readFileSync(join(ROOT, 'src/campteach.js'), 'utf8').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n').replace(/\s\/\/ .*$/gm, '')));
+}
+
+console.log('H. Tab when a wave arrives off the screen (card space-game-b10-c10-teach-tab; the cloud\'s BRIEF 10 chunk 10)');
+{
+  g.run(`window.__wave = (d) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; C.t = 40000; C.ships = C.ships.filter(u => u.team === 'earth'); window.__w = d == null ? null : campSpawn(C, 'skiff', C.carrier.x + d, C.carrier.y); if (__w) { __w.team = 'alien'; __w.hold = true; } window.__view = { x: C.carrier.x - W / 2, y: C.carrier.y - H / 2, zoom: 1 }; return C; };`);
+  const tLit = () => J('campTeachChips(C).filter(c => c.id === "tab").map(c => c.key + ":" + c.word + ":" + c.note + ":" + c.lit)');
+  g.run(`__wave(null); campPageModel(C, __view);`);
+  check('no hostile at all: no chip (nothing is off the screen)', tLit().length === 0 && J('!!C.edgeSeen') === false);
+  g.run(`__wave(300); campPageModel(C, __view);`);
+  check('a hostile ON the screen (300 px) is no wave off it: the edge pill is not up, no chip', J('campPageModel(C, __view).edge') === null && tLit().length === 0 && J('!!C.edgeSeen') === false);
+  g.run(`__wave(2600); campPageModel(C, __view);`);
+  check('a wave off the screen (2600 px: the hostiles\' edge pill is up) lights the Tab chip, ADDED to the row: the key table\'s key (Tab), the word Map, the note "wave off screen"', J('campPageModel(C, __view).edge') !== null && tLit().join() === 'Tab:Map:wave off screen:true', tLit().join());
+  check('it is among the added chips at the left end (after Q\'s, which is up at 40 s in 1.1), before the row\'s own, unchanged', J('campPageHudFirst(C).items.map(i => i.id).filter(x => x !== "enter").slice(0, 2).join()') === 'q,tab' && J('campPageHudFirst(C).items.filter(i => ["fly", "boost", "missile"].indexOf(i.id) >= 0).every(i => !i.lit)'), J('campPageHudFirst(C).items.map(i => i.id + (i.lit ? "*" : "")).join()'));
+  g.run(`__w.x = C.carrier.x + 300; campPageModel(C, __view);`);
+  check('ONCE: the wave came on the screen again, the chip is still there for its 45 s (it does not wait for the pill)', tLit().length === 1);
+  g.run(`C.t += 46000;`);
+  check('and it ends 45 s after the first time: it does not come back with the next wave', tLit().length === 0 && (g.run(`__w.x = C.carrier.x + 2600; campPageModel(C, __view);`), tLit().length === 0));
+  g.run(`__wave(2600); campPageModel(C, __view); try { campMapOpen({ camp: C, mp: null }); } catch (e) { /* the map is drawn with Phaser: the note is made before that */ }`);
+  check('opening the map (Tab: campMapOpen) notes it (C.keysUsed.map) and the chip goes quiet', J('C.keysUsed.map') === true && tLit().length === 0);
+  g.run(`__wave(2600); campPageModel(C, __view); CAMP.flags.hints = false;`);
+  check('the hints off: the row is gone, the chip with it', J('campPageHudFirst(C) === null') === true);
+  g.run(`CAMP.flags.hints = true; __wave(2600); campPageModel(C, __view); C.result = 'won';`);
+  check('a mission that has ended lights nothing', tLit().length === 0);
+  // THE PAGE'S TEST: start 1.1, wait for the first skiffs: the Tab chip lights with "map" beside the wave's edge pill
+  g.run(`window.__first = (stay) => { const C = window.C = campNew(1, [], { seed: 1, mission: 0 }); C.arrivedAt = 0; window.__t1 = null; window.__view = { x: 0, y: 0, zoom: 1 }; while (C.t < 80000 && __t1 === null) { campTick(C, 0.1); __view.x = C.carrier.x - W / 2; __view.y = C.carrier.y - H / 2; campPageModel(C, __view); if (campTeachChips(C).some(c => c.id === 'tab')) __t1 = Math.round(C.t / 1000); } return C; };`);
+  g.run(`__first();`);
+  const t1 = J('__t1');
+  check('THE PAGE\'S TEST works as written: start 1.1, wait for the first skiffs (the cruiser idle, the camera on it): the Tab chip lights at about 40 s, with the hostiles\' edge pill up', t1 !== null && t1 >= 36 && t1 <= 44, t1);
+  check('the new words are in the table, shown never said', J("uiText('camp.corner.chip.map')") === 'Map' && J("uiText('camp.corner.chip.teachtab')") === 'wave off screen' && ['map', 'teachtab'].every(k => J(`VOICEPACK_FAMILIES.some(r => r.re.test('camp.corner.chip.${k}') && r.why && !r.spoken)`) === true));
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
