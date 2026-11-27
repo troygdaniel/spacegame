@@ -1101,3 +1101,27 @@ Also tried, no better: one group nearer and the other farther (3,000 and 4,400, 
 - **Words:** nothing untrue and nothing voiced. "More aliens join when the fourth guard dies, from two sides", "A second group, coming in from the far side" and "A third group, from the other side" say nothing of a distance. The comment in `src/campaign.js` that said 1,700 px now says 3,800.
 
 **Pins.** `tests/campreinforcecruiser.mjs` (5 checks; the rows 3,500 to 4,100 px from her, the groups 3,400 to 4,200 px from the cruiser and farther than 2,000 from a fighter flown 4,300 px off, the runner's group 3,300 to 4,200).
+
+
+## 3.2 and 3.3: a tower's first shot at the fighter you fly comes a second late (card `space-game-b12-c9-tower-delay`, the cloud's BRIEF 12 chunk 9, Troy, 27 Nov 2026: yes)
+
+**The change.** `CAMP.tower.flownDelay` 1000 ms (0 is no delay; `src/campaign.js`, `campTowerAI`). When a tower turns on the fighter the player flies (a tick ago it was on nothing, or on another ship), its first shot comes that long after it began to turn on it. For that second a thin red ring closes on the tower (a `towertell` event, drawn by `towerTell` in `src/campaignscene.js`), so the shot is seen coming. It is a warning, not a weaker tower: every shot after the first is as it was (1.3 to 1.9 s apart, the same damage and speed). A fighter that leaves the tower's 800 px range and comes back is turned on again and gets the second again; the cruiser and a wing fighter nobody flies are shot at as before. It applies wherever there are towers: 3.2 has four and 3.3 eight at the start, no other mission has any.
+
+**The size.** The cloud's 1 s is the starting point. The 12-seed explorations at steady (3.2 and 3.3, plain, ace and hands-off bots, `cockpit.damageK` 0.425 as the player-damage card has it) at 0, 700, 1000 and 1500 ms did not separate the sizes by the bots' numbers: every bot wins every seed at all four, and the ace bot's fighter loses 73 per cent of a hull a run in 3.2 at every size (83 to 100 in 3.3). So the size is a judgement of what a person can see: 700 ms is under a beat (a ring that closes in 0.7 s is gone before it is read), 1,500 ms is a pause, and 1,000 ms is the cloud's number: **1000 kept.** Troy can move it with `CAMP.tower.flownDelay`.
+
+**The table** (32 seeds, sharp / steady / rough, the cockpit sweep, `cockpit.damageK` 0.425; won per cent / seconds / cruiser damage; the plain bot, the hands-off bot and the carrier-alone bot are the same to the digit before and after, because none of them flies a fighter; the last column of the ace bot is the share of a hull the flown fighter loses a run, the sweep's rule 4 asks for at least 15):
+
+| mission | skill | plain: won / s / cruiser damage | ace before (delay 0): won / s / damage / hull lost % | ace after (delay 1000) | rules that changed (ace) |
+|---|---|---|---|---|---|
+| 3.2 | sharp | 100/59/245 | 100/59/130/73 | 100/59/177/73 | taken fail to pass |
+| 3.2 | steady | 100/59/230 | 100/59/162/73 | 100/59/169/73 | none |
+| 3.2 | rough | 100/60/238 | 100/45/148/75 | 100/45/166/73 | none |
+| 3.3 | sharp | 100/70/544 | 100/76/482/75 | 100/78/432/92 | none |
+| 3.3 | steady | 100/71/486 | 100/75/446/83 | 100/76/479/97 | none |
+| 3.3 | rough | 100/70/443 | 100/68/371/92 | 100/68/392/97 | none |
+
+- **A careful player still wins every seed:** plain, ace and hands-off bot 100 per cent in all 18 cells, before and after; win times the same except the ace bot's 3.3 at sharp (76 to 78 s) and steady (75 to 76 s). The carrier bot (the cruiser alone, `--bots plain,carrier`): 100 per cent, 72 s and 407 damage at 3.2 steady, 78 s and 608 at 3.3 steady, the same before and after (all six cells identical).
+- **Towers still matter:** the flown fighter loses 73 to 75 per cent of a hull a run in 3.2 and 75 to 92 in 3.3 before, 73 and 92 to 97 after: the delay does not take the towers' bite off the fighter, it moves it (rule 4, at least 15 per cent, passes everywhere).
+- **The sweep's rules:** the ace bot's fails go from 8 to 7: 3.2 at sharp rule 2 (the fighter may not make the cruiser's fight more than 30 per cent softer) goes from fail (130 against the plain bot's 245) to pass (177); in 3.2 the ace bot's cruiser takes more damage with the delay at all three skills (130 to 177, 162 to 169, 148 to 166) and in 3.3 less at sharp (482 to 432) and more at steady and rough (446 to 479, 371 to 392): the sweep does not say why, and 32 seeds do not make the small moves certain. The rest do not move; rule 5 (the fighter's share of the kills) fails at both as before.
+- **Words:** nothing says how a tower fires or when; nothing is voiced; none untrue.
+- **Pins:** `tests/camptowerdelay.mjs` (13 checks: the table, the first shot at 1 to 1.4 s with one tell, the rhythm after it, delay 0 the old tower, a tower on the cruiser or an unflown fighter no tell, the lock held, left and re-entered, the scene's hook); `tests/campl3waves.mjs`'s one-tick probe of the shot's speed runs with the delay at 0.
