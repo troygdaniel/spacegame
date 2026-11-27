@@ -82,7 +82,7 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.2.2.w2 | More aliens join after 18 seconds, from the north-east. |
 | camp.bf.2.2.w3 | Missiles ({keymissile}) help against the heavy ones. |
 | camp.bf.2.3.w1 | Fly the cruiser into the relic's ring at Proxima. |
-| camp.bf.2.3.w2 | Hold there 14 seconds with no alien near the relic. |
+| camp.bf.2.3.w2 | Hold there 20 seconds with no alien near the relic. |
 | camp.bf.2.3.w3 | Leave the ring, or let aliens close, and it loses ground. |
 | camp.bf.2.3.w4 | Aliens come from the north-east after 3 seconds. |
 | camp.bf.3.1.w1 | Fly to each of the 3 marked rings on the map. |
