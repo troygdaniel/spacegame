@@ -146,9 +146,8 @@ g.run(`(() => {
       const fs = campWing(C, 'fighter');
       if (!st.landAt && fs.length >= 3 && Math.round(s * 30) % 60 === 0 && fs.reduce((a, u) => a + u.hp / u.maxHp, 0) / fs.length < B.cycle && C.carrier.hp > 0) { ord(C, 'recall'); st.landAt = s + 14; st.recalls = (st.recalls || 0) + 1; }
     }
-    const TK = B.tuck || (C.L && C.L.torpReach > 0 ? 'torp' : false); // a mission whose torpedoes can only be shot down from close in (the row's torpReach, card space-game-fighter-job-11) teaches every bot the answer a cruiser has: the convoy order Tuck in, against the boats only
-    if (TK && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
-      const big = x => TK !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
+    if (B.tuck && typeof campConvoyShips === 'function' && Math.round(s * 30) % 15 === 0) { // the convoy orders: tuck in while a hostile is near an escorted ship, carry on when it is clear
+      const big = x => B.tuck !== 'torp' || x.kind === 'tboat' || x.kind === 'lancer' || x.kind === 'pirateleader'; // tuck: 'torp': only against the boats and the leader, the threats a tucked ship is safe from (the skiffs of a distress call are the fighters' to deal with, and the cruiser goes to the miner)
       const cs = campConvoyShips(C), threat = cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 1600)), clear = !cs.some(f => campAliens(C).some(a => big(a) && !a.hold && campDist(a, f) < 2600));
       if (threat && !st.tuck) { st.tuck = true; ord(C, 'convoy', 'tuck in'); } else if (clear && st.tuck) { st.tuck = false; ord(C, 'convoy', 'carry on'); }
     }
@@ -210,12 +209,7 @@ g.run(`(() => {
       if (u.hp < u.maxHp * COCK.lowHull) { campCockpitGive(C, 'hand'); K.hold = s + COCK.wait; K.q.length = 0; return; } // a human hands a hurt one back
       const F = CAMP.fighter, c = C.carrier, foes = campAliens(C).filter(a => !a.hold && a.hp > 0 && !a.docked), reach = F.range * COCK.fire;
       let a = null, best = 1e9; foes.forEach(x => { const d = campDist(x, u); if (d < best) { best = d; a = x; } });
-      const TP = C.L && C.L.torpReach > 0 ? (C.torpedoes || []).filter(t0 => !t0.dead) : []; // a mission whose torpedoes can be shot down only from close in (the row's torpReach, card space-game-fighter-job-11): a torpedo in flight is the fighter's first target, fired at from inside that reach
-      if (TP.length) { let bt = 1e9; TP.forEach(t0 => { const d0 = campDist(t0, u); if (d0 < bt) { bt = d0; a = t0; } }); }
-      else {
-        if (C.L && C.L.torpReach > 0) { const bs = foes.filter(x => x.boat); if (bs.length) { let bb = 1e9; bs.forEach(x => { const d0 = campDist(x, u); if (d0 < bb) { bb = d0; a = x; } }); } } // no torpedo up, but a boat that will fire one: a pilot kills it first (60 hit points, slow, and it fires nothing if it dies arming)
-        if (a && !a.boat && campDist(a, c) > 3200) a = null; // not far out past the cruiser
-      }
+      if (a && campDist(a, c) > 3200) a = null; // not far out past the cruiser
       let goal = a, lead = 0;
       if (a) lead = COCK.lead[sk.name] != null ? COCK.lead[sk.name] : 0.6; else goal = { x: c.x, y: c.y };
       K.err = K.err * 0.97 + (C.rng() - 0.5) * sk.noise * 0.25;
@@ -223,7 +217,7 @@ g.run(`(() => {
       const gx = goal.x + (a ? (a.vx || 0) * t : 0), gy = goal.y + (a ? (a.vy || 0) * t : 0), dist = Math.hypot(gx - u.x, gy - u.y);
       const want = Math.atan2(gy - u.y, gx - u.x) + K.err, d = Math.atan2(Math.sin(want - u.rot), Math.cos(want - u.rot));
       const now = { turn: clampi(d * sk.gain), thrust: 0, brake: false, boost: false, fire: false };
-      if (a) { now.thrust = (TP.length || dist > 260) && Math.abs(d) < 1.3 ? 1 : 0; now.brake = !TP.length && dist < 150; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; now.fire = dist < (TP.length ? Math.min(reach, C.L.torpReach - 20) : reach) && Math.abs(d) < sk.thr; } // (after a torpedo it does not slow down: it is a shot to be caught, and it fires from inside the reach)
+      if (a) { now.thrust = dist > 260 && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < 150; now.boost = dist > COCK.chase && Math.abs(d) < 0.35; now.fire = dist < reach && Math.abs(d) < sk.thr; }
       else { now.thrust = dist > COCK.home && Math.abs(d) < 1.3 ? 1 : 0; now.brake = dist < COCK.home * 0.6; now.boost = dist > COCK.chase * 1.5 && Math.abs(d) < 0.35; }
       K.q.push(now); if (K.q.length > COCK.react) Object.assign(inp, K.q.shift()); else Object.assign(inp, { turn: 0, thrust: 0, brake: false, boost: false, fire: false }); // (what its hands do is what it decided a moment ago)
       return;
