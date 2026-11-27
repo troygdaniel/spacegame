@@ -63,6 +63,7 @@ const BOTS = {
   ace1: { name: 'ace1', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'ace', hpK: 1 },
   sit: { name: 'sit', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit' },
   sitoff: { name: 'sitoff', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sit', turrets: 'off' },
+  sitg: { name: 'sitg', launch: false, cockpit: 'sit' },                                                       // sit, and no order of any kind (no launch, no mine, no attack): the stick taken at 1 s and nothing else, the player the 1.2 rule is for: the other two pilots guard a miner each when he takes the stick (card space-game-b12-c10-12-pilots-guard-miners)
   sitm: { name: 'sitm', launchAt: 1, escort: [9], attackFrom: 12, attackEvery: 5, cockpit: 'sitm' }                // sit, beside a miner (card space-game-b10-c11-12-miner-guard): the stick taken, flown to the nearest neutral miner and parked there, no gun; only a mission with miners (1.2) means anything
 };
 const SKILLS = { sharp: { gain: 3, thr: 0.15, noise: 0 }, steady: { gain: 2, thr: 0.22, noise: 0.1 }, rough: { gain: 1.5, thr: 0.3, noise: 0.2 } };
