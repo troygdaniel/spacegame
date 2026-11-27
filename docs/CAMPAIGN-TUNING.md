@@ -766,3 +766,26 @@ Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the grou
 
 ## Is the flown fighter ever shot down? (card `space-game-chunk4-fighter-shot-down`, brief 8)
 `CAMP.cockpit.hpK` stays **2** (Troy's own call: double hull, so he is not shot down in seconds while he learns). The measurement: the ace bot is shot down in no run of any mission at 2; at 0.65 it is shot down in 3 percent of 3.2 and 9 percent of 3.3 and still wins every run; 0.625 shreds it in 3.2 and 3.3, 0.7 shields it. The bot is too evasive to show when a human is shot down (it parks out of reach), so Troy judges hpK in play: the "Flown hull" row of the N panel steps by 0.05 now (min 0.25). No AI changed: the aliens already choose the flown fighter like any pilot. The tables and the reasoning: `docs/night/cockpit-sweep.md`.
+## Mission 2.2: the guard that runs to call the second group can be caught (card `space-game-fighter-job-22`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base: main `52b6eeaa` plus the pod chunk `57ee0654` and the groups-go-for-the-cruiser tip `00ace28a`)
+
+**The rule** (`campRunner`, a mission row's `runner: { after: 6, far: 2400, rush: 4 }`, the third wave row `on: { runner: true }`): with six of the seven guards dead the last one runs straight away from the cruiser at four times its speed, awake, and calls the second group (the old second wave: 4 raiders and 3 drones) when it is 2,400 px from the cruiser. A ship of yours that kills it first stops the call for good: the group never comes, and `wave:all` counts a group whose call was never made as gone, so the mission is won when everything else is dead. Before this the sixth dead guard called the group at once. No hit-point, damage or ship change. The four-times speed is the existing pace function's `rushK`.
+
+**Why four times, 2,400 px.** Measured on 12 seeds with the log of the run (when the runner is chosen, how it ends): at its own speed it was caught by every bot (the wing's pilots and the cruiser's guns are on it at once, 300 to 1,100 px off); at four times its speed the cruiser with its wing catches it on about two seeds in three (8 of 12), the flown fighter (ace) on 12 of 12, and the cruiser with no wing (the carrier bot) not at all. Faster (six times, 3,200 px) gave the same counts.
+
+**The numbers** (12 seeds, 2.2; won per cent / seconds / cruiser damage; the kills column is the median: 21 means the group came, 14 that it was stopped on at least half of the seeds):
+
+| skill | bot | before (base + `00ace28a`) | after |
+|---|---|---|---|
+| steady | plain | 74 / 182 / 21 | 68 / 165 / 14 |
+| steady | carrier | 88 / 193 / 21 | 80 / 222 / 21 |
+| steady | ace | 71 / 127 / 21 | 67 / 113 / 14 |
+| steady | sit | 74 / 198 / 21 | 69 / 165 / 14 |
+| rough | plain | 73 / 170 / 21 | 67 / 150 / 14 |
+| rough | carrier | 86 / 208 / 21 | 82 / 213 / 21 |
+| rough | ace | 63 / 93 / 21 | 59 / 93 / 14 |
+| rough | sit | 74 / 173 / 21 | 69 / 147 / 14 |
+
+- **What it does to the mission:** a player with pilots out stops the second group on most runs, so 2.2 is about 6 s shorter and the cruiser takes about as much damage; a player without pilots (the carrier bot) still gets the group. Ace against plain, damage: steady 31 per cent less (30 before), rough 38 per cent less (45 before).
+- **Not changed, for Troy:** the run has no tell on the screen (no new line: the group's own line "A third group, from the other side." is said when the call is made). A shown line when the last guard starts to run, and a tag on it, would help a player find it; that is new words and for Troy.
+
+**Pins.** `tests/campfighterrunner.mjs` (6 checks: the row; the runner is chosen, runs away and is awake; left alone it calls within 23 s and the group comes; killed first, no group ever comes and the mission is still won; all seven dead at once; no guard dead and nothing comes by the clock). `tests/camplevel2calls.mjs`: the third wave row is `{ runner: true }`, and the sixth dead guard no longer calls the group.
