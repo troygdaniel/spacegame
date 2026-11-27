@@ -49,5 +49,8 @@ const g2 = J(`(() => { const C = T.six(3); T.step(C, 0.2); const R = C.runner; f
   return out; })()`);
 check('with nobody to stop it (the cruiser alone, the pilots away) it gets away within 12 s, makes its call, the group comes, and it is an ordinary guard again at its own speed', g2.called === true && g2.off === false && g2.waves.slice(2) === '1' && g2.rush === 1, JSON.stringify(g2));
 
+const h = J(`(() => { const C = T.six(3); T.step(C, 0.2); const R = C.runner, u = C.by[R.id]; let held = 0; for (let i = 0; i < 30 * 30 && !R.called && !C.result; i++) { u.x = C.carrier.x + 500; u.y = C.carrier.y; u.vx = 0; u.vy = 0; campStep(C, 1 / 30); C.carrier.hp = 1e6; held = i; } campStep(C, 1 / 30); return { called: R.called, secs: Math.round(held / 30), within: C.L.runner.within, waves: T.waves(C) }; })()`);
+check('a cruiser that keeps pace with it (held 500 px off, as the plain bot\'s does at Calm) does not keep the call from being made: after 20 s of running the group comes', h.within === 20 && h.called === true && h.secs >= 19 && h.secs <= 21 && h.waves.slice(2) === '1', JSON.stringify(h));
+
 console.log(failed ? `\n${failed} of ${n} checks FAILED` : `\nCAMP FIGHTER RUNNER OK (${n} checks)`);
 process.exit(failed ? 1 : 0);
