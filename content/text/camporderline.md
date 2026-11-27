@@ -11,6 +11,8 @@ The order as a sentence (card space-game-orders-f1-sentence; Troy, 27 Nov 2026, 
 | camp.corner.orderline.me | me |
 | camp.corner.enter.doit | Do it |
 | camp.corner.enter.mine | Mine |
+| camp.corner.enter.escort | Escort |
+| camp.corner.orderline.wing | Wing |
 | camp.tdisp.type.field | Rock field |
 | camp.corner.qrow.goal | Goal |
 | camp.corner.qrow.target | Target |
