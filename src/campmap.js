@@ -137,7 +137,7 @@ function campMapMarks(C, whole, rings) { // whole: the far places too (the whole
   C.ships.forEach(u => {
     if (u.hp <= 0 || (u.team === 'alien' && typeof campSeen === 'function' && !campSeen(C, u))) return; // a hostile out of the sensors' sight is not on the map (src/campsight.js)
     const type = u.kind === 'carrier' ? 'carrier' : u.kind === 'freighter' ? 'convoy' : u.kind === 'mother' ? 'mother' : u.kind === 'tower' ? 'tower' : u.rival ? 'rival' : u.boat ? 'tboat' : u.faction === 'pirate' ? 'pirate' : u.team === 'alien' ? 'alien' : u.team === 'neutral' ? (u.kind === 'patrol' ? 'patrol' : 'miner') : 'wing';
-    const m = { type, id: u.id, kind: u.kind, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) }; // kind: the ship's own (the new ship look draws its signal shape from it)
+    const m = { type, id: u.id, kind: u.kind, x: u.x, y: u.y, rot: u.rot, color: campDotColor(u) }; if (u.cockpit) m.you = true; // you: the fighter whose stick he holds (card space-game-fly-fighter-l4): a small triangle with a cyan outline, as the cruiser's. kind: the ship's own (the new ship look draws its signal shape from it)
     if (type === 'wing' && u.squad && rings && rings.indexOf(u.squad) >= 0) m.squad = u.squad; // a fighter's squad (card space-game-fighter-squads) only while that squad is in focus (card space-game-squad-rings): the map draws its dot in the squad's colour, as the ring does in flight; the others are plain wing dots
     if (type === 'convoy' && u.dest) m.to = { x: u.dest.x, y: u.dest.y };
     if (care[u.id]) { m.hull = care[u.id].hull; m.band = care[u.id].band; m.hit = care[u.id].hit; m.loud = care[u.id].loud; } // a bar over the mark (campmapdraw): a thin line, the full bar while the ship is under attack

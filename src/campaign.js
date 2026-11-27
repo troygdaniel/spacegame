@@ -1087,7 +1087,7 @@ function campDo(C, name, arg, dry, how) {
     if (C.t < C.nextRocket) return campNo('missilewait');
     const named = t && t.kind === 'mother', mother = named && campTarget(C, t);
     if (named && !mother) return campNo('nomother');
-    if (named && campDist(mother, C.carrier) > CAMP.missile.lock) return campNo('range');
+    if (named && campDist(mother, campEye(C)) > CAMP.missile.lock) return campNo('range');
     const tg = named ? mother : campMissileTarget(C); if (!tg) return campNo('nobig');
     if (dry) return campYes(tg.kind === 'mother' ? 'missilesmother' : 'missiles');
     campFire(C, tg); C.orders.missiles++; return campYes(tg.kind === 'mother' ? 'missilesmother' : 'missiles');
@@ -1705,12 +1705,12 @@ function campBullets(C, dt) {
 // A missile goes for its target, turning at most `turn` rad/s; when the target is gone it takes the mothership or the nearest big ship in reach, else it flies on until its fuel is out.
 // Its fuze goes off near a big ship (never a raider or a drone on the way) OR near the ship it was fired at, whatever its size (card space-game-missiles-miss: a missile fired at a raider or a skiff flew through it and never went off: 0 hits in 10), and every alien within `blast` is hurt: a big ship `big`, any other `small`.
 const campBig = u => CAMP.missile.bigKinds.indexOf(u.kind) >= 0;
-function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the carrier unless a missile asks)
-  const p = from || C.carrier, big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
+function campMissileTarget(C, from) { // the mothership if it is in reach, else the nearest big alien in reach (of `from`: the ship he flies, the cruiser unless he holds a fighter's stick: card space-game-fly-fighter-l4; a missile in flight asks from itself)
+  const p = from || campEye(C), big = campAliens(C).filter(u => campBig(u) && campDist(u, p) <= CAMP.missile.lock);
   return big.find(u => u.kind === 'mother') || (typeof campTorpedoLock === 'function' && campTorpedoLock(C, p)) || campNearest(big, p) || null; // a torpedo inside torp.lock goes before the nearest big ship (src/camptorpedo.js)
 }
-function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles
-  const k = CAMP.missile, c = C.carrier;
+function campFire(C, tg) { // one missile out of the tube: the magazine is a missile less, the launcher cycles (it leaves the ship he flies: the cruiser, or the fighter whose stick he holds, card space-game-fly-fighter-l4)
+  const k = CAMP.missile, c = campEye(C);
   C.missiles--; C.nextRocket = C.t + k.delay; // (the magazine does not fill itself any more: at 0 the ship builds one for ore, R builds the rack; src/campmissilebuild.js)
   const m = { id: 'missile-' + (++C.rocketId), x: c.x + Math.cos(c.rot) * c.r, y: c.y + Math.sin(c.rot) * c.r, rot: c.rot, sp: k.launch, vx: 0, vy: 0, life: k.life, target: tg ? tg.id : '' };
   C.rockets.push(m); C.events.push({ type: 'missile', x: m.x, y: m.y, id: m.id });

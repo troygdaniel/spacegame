@@ -10,3 +10,4 @@ The words of taking a pilot's stick (card space-game-fly-fighter-l1; Troy, 26 No
 | camp.corner.chip.cockpitback | Hand back |
 | camp.corner.cruiserline | Cruiser {hull}/{max} · shield {shield} |
 | scr.keys.r.cockpit | Take a pilot's stick; again hands it back |
+| camp.nudge.cockpit | {keycockpit} flies a pilot's fighter. {keycockpit} again hands it back. |

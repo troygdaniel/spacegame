@@ -136,7 +136,7 @@ function campPageHudMother(C) {
 }
 function campPageHudFoesAlone(C) {
   const m = campPageHudMotherShip(C); if (!m || !C.carrier) return null;
-  const c = C.carrier, g = { kinds: { mother: 1 }, x: m.x, y: m.y, dist: Math.hypot(m.x - c.x, m.y - c.y) };
+  const c = campEye(C), g = { kinds: { mother: 1 }, x: m.x, y: m.y, dist: Math.hypot(m.x - c.x, m.y - c.y) };
   return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campPageHudWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }), target: null };
 }
 // the second line of the goal panel (item 10 of the brief): what the canvas wrote under the goal at the top centre in amber, the hint to dock where an outpost is in reach and worth it (ore to sell, a hurt hull) and the retreat line when the hull is low with no ship left
@@ -152,7 +152,7 @@ function campPageHudHint(C) {
 }
 function campPageHudFoes(C) {
   const gs = typeof campSightGroups === 'function' ? campSightGroups(C, true) : [], t = campPageHudTarget(C); if (!gs.length && !t) return campPageHudFoesAlone(C);
-  const c = C.carrier, g = gs[0] || { kinds: { [t.u.kind]: 1 }, x: t.u.x, y: t.u.y, dist: Math.hypot(t.u.x - c.x, t.u.y - c.y) }; // a picked ship nothing groups (a tower: always seen) is its own group
+  const c = campEye(C), g = gs[0] || { kinds: { [t.u.kind]: 1 }, x: t.u.x, y: t.u.y, dist: Math.hypot(t.u.x - c.x, t.u.y - c.y) }; // a picked ship nothing groups (a tower: always seen) is its own group
   return { key: campCornerCap('hostiles'), label: uiText('camp.corner.hostiles'), enter: campPageHudEnter(C, 'attack'), what: campPageHudWhat(g.kinds, typeof campSightKnown === 'function' ? campSightKnown(C, g.x, g.y) : false), dir: campSightDir(g.x - c.x, g.y - c.y), km: uiText('camp.tdisp.km', { km: campNavKm(g.dist) }), target: t };
 }
 // how dangerous a kind of hostile is, read from the game's own tables (card space-game-b3-d-panel-cap-pill-goal): its hull (a rival ship's: hull and shield) times what one volley takes off: a shot's damage times the shots of a spread, or a torpedo boat's torpedoes' damage times its tubes; 0 for a kind no table has

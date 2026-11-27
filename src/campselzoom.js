@@ -79,7 +79,7 @@ function campPeekHome(s) {
 // the pick of a ship: 'screen' when it is on the screen (nothing moves), 'peek' when a peek began or began again on it, 'home' when a peek was on and the ship is on the home screen (the camera goes home at once)
 function campPeekPick(s, u) {
   const C = s.camp, cam = s.cameras.main, p = campPeekOf(s);
-  const home = p ? { mid: { x: C.carrier.x, y: C.carrier.y }, z: campPeekBase(s) } : { mid: campPeekMid(cam), z: CAMZOOM.want > 0 ? CAMZOOM.want : (cam.zoom > 0 ? cam.zoom : 1) };
+  const home = p ? { mid: { x: campEye(C).x, y: campEye(C).y }, z: campPeekBase(s) } : { mid: campPeekMid(cam), z: CAMZOOM.want > 0 ? CAMZOOM.want : (cam.zoom > 0 ? cam.zoom : 1) };
   if (campPeekOnScreen(home.mid, home.z, u)) return p && campPeekBack(s) ? 'home' : 'screen';
   campPeekGo(s, u); return 'peek';
 }
@@ -119,7 +119,7 @@ function campPeekFrame(s, dt) {
     put(p.pt, p.pt, 1); p.t += dtc;
     if (p.t >= K.hold) campPeekBack(s);
   } else {
-    p.t += dtc; put(p.from, { x: C.carrier.x, y: C.carrier.y }, ease(p.t / glide));
+    p.t += dtc; put(p.from, { x: campEye(C).x, y: campEye(C).y }, ease(p.t / glide));
     if (p.t >= glide) { campPeekEnd(s); return false; }
   }
   return true;
