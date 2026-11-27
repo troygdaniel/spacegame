@@ -152,11 +152,12 @@ function campFeelLeadStep(L, tx, ty, dt) {
   if (Math.abs(tx - L.x) < 0.5) L.x = tx; if (Math.abs(ty - L.y) < 0.5) L.y = ty;
   return L;
 }
-// the lead on the camera: scene.camLead = { x, y } (world px, ahead positive: 5-GEN's frame, src/campmoments.js, sums it with its own nudge and sets the follow's offset), and when that frame is not there the offset is set here
+// the lead on the camera: scene.camLead = { x, y } (world px, ahead positive) and the follow's offset (the other way: Phaser follows the ship minus it): with 5-GEN's frame there (src/campmoments.js campMomentsOffset) the offset is its sum of the kill's nudge and the lead, else the lead alone
 function campFeelLeadApply(scene, cam, L) {
   scene.camLead = { x: L.x, y: L.y };
-  if (typeof campMomentsOffset === 'function' || typeof cam.setFollowOffset !== 'function') return;
-  const o = cam.followOffset; if (!o || o.x !== -L.x || o.y !== -L.y) cam.setFollowOffset(-L.x, -L.y);
+  if (typeof cam.setFollowOffset !== 'function') return;
+  const want = typeof campMomentsOffset === 'function' ? campMomentsOffset(scene) : { x: -L.x, y: -L.y }, o = cam.followOffset; // with the moments' frame there (src/campmoments.js) the offset is its sum of the kill's nudge and this lead, which it sets itself only while a nudge is live: the lead is put on every frame here, by its own sum
+  if (!o || o.x !== want.x || o.y !== want.y) cam.setFollowOffset(want.x, want.y);
 }
 // once a frame, on the scene's postupdate event BEFORE camzoomFrame (src/camzoom.js; the scene installs this first): the boost's share eases, the base zoom (camzoom's c.base, 1 unless something else moves the zoom) takes the multiplier
 // that camzoomFrame then multiplies by the player's zoom, and the follow's lerp drops while boosting. Nothing happens with the feel off, the cruiser gone, or the camera not on the cruiser's follow: the share goes back to 0

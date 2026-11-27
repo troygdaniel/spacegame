@@ -73,8 +73,8 @@ console.log('B. the lead on the camera');
   function l2Lead() { return J('(l2.camLead && l2.camLead.x) || l2.cameras.main.followOffset.x') !== 0; }
   g.run(`window.l3 = __ls(); CAMP.flags.feel = false; __go(l3, 240); CAMP.flags.feel = true; window.l4 = __ls(); l4.dead = true; __go(l4, 240); window.l5 = __ls(); l5._cz.anchor = { wx: 0, wy: 0, sx: 0, sy: 0 }; __go(l5, 240);`);
   check('with the feel off, a dead cruiser, a leaving scene or a zoom about a point: no lead', J('(l3.camLead ? l3.camLead.x : 0) === 0 && l3.cameras.main.followOffset.x === 0') && J('l4.cameras.main.followOffset.x') === 0 && J('l5.cameras.main.followOffset.x') === 0);
-  g.run(`window.l6 = __ls(); window.campMomentsOffset = () => 0; __go(l6, 240); delete window.campMomentsOffset;`);
-  check('when 5-GEN\'s frame (campMomentsOffset) is there it sums camLead and sets the offset: the lead is set on the scene and the offset is left to it', J('l6.camLead.x') > 200 && J('l6.cameras.main.followOffset.x') === 0);
+  g.run(`window.l6 = __ls(); window.campMomentsOffset = s => ({ x: -s.camLead.x - 3, y: 1 }); __go(l6, 240); delete window.campMomentsOffset;`);
+  check('when 5-GEN\'s frame (campMomentsOffset) is there the offset is ITS sum of the nudge and camLead (here the lead and 3 px of nudge), put on every frame, since that frame sets it only while a nudge is live', J('l6.camLead.x') > 200 && near(J('l6.cameras.main.followOffset.x'), -J('l6.camLead.x') - 3, 1e-9) && J('l6.cameras.main.followOffset.y') === 1);
   g.run(`window.l7 = __ls(); l7.camp.cockpit = { id: 'f', boost: { on: true } }; l7.camp.by.f = { id: 'f', kind: 'fighter', hp: 50, maxHp: 50, vx: 800, vy: 0, cockpit: true }; l7.sp.f = { id: 'f', x: 0, y: 0 }; l7.cameras.main._follow = l7.sp.f; __go(l7, 300);`);
   check('in a fighter the lead is the fighter\'s: along its own flight, up to a fifth of the (closer) screen: the base zoom is 3 times 0.9, so 1280 / 2.7 = 474 px seen, 95 px plus its lag (98)', J('l7.camLead.x') > 150 && J('l7.camLead.x') < 0.2 * 474 + 100 + 1, J('l7.camLead.x'));
 }
