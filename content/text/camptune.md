@@ -39,6 +39,7 @@ The words of the Campaign's tuning panel (card space-game-tuning-panel; Troy, 22
 | camp.ui.tune.row.cockpitrate | Flown rate of fire (times) |
 | camp.ui.tune.row.cockpitaim | Auto-target cone (degrees, 0 is off) |
 | camp.ui.tune.row.cockpitaimk | Auto-target shot damage (times) |
+| camp.ui.tune.row.cockpitmend | Cruiser mends your fighter |
 | camp.ui.tune.row.cockpitturrets | Cruiser turrets on their own |
 | camp.ui.tune.row.cruiseraccel | Cruiser thrust |
 | camp.ui.tune.row.boostspeed | Boost top speed |

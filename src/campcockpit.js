@@ -96,6 +96,7 @@ function campCockpitStep(C, dt) {
   const keep = Math.pow(inp.brake ? K.brakeDrag : K.drag, dt); u.vx *= keep; u.vy *= keep;
   const sp = Math.hypot(u.vx, u.vy); if (sp > S.vmax) { u.vx *= S.vmax / sp; u.vy *= S.vmax / sp; }
   u.x += u.vx * dt; u.y += u.vy * dt;
+  if (typeof campCockpitMendTick === 'function') campCockpitMendTick(C, dt); // the cruiser slowly mends him while he is beside her (src/campcockpitmend.js)
   const A = typeof campCockpitAim === 'function' ? campCockpitAim(C) : null; // the hostile the guns track now, if the auto-target finds one in its cone (src/campcockpitaim.js; the cone 0: none steers)
   if (inp.fire && C.t >= S.nextShot) { // the pilot's own gun: his damage and rate (times damageK, rateK), one shot a mean delay, along the nose, or along the lead point to the hostile the auto-target tracks
     const F = CAMP.fighter, helped = !!(A && A.steer);
