@@ -70,6 +70,9 @@ function campPirateAI(C, u, dt) {
   }
   if (u.hp < u.maxHp * (u.breakAt != null ? u.breakAt : K.breakHp)) { campPirateBreakOne(C, u, 'hurt'); return campPirateRun(C, u, dt); }
   const def = u.def, tgt0 = campPirateTarget(C, u) || C.carrier, tgt = tgt0 && campDogFoe(C, u, tgt0); // a skiff that picked one of your fighters flies at its partner (src/campdogfight.js)
+  if (u.wave != null && tgt0 && C.waves[u.wave] && !C.waves[u.wave].told) { // THE ALONE LINES (card space-game-13-alone-lines-guarded; Troy, 26 Nov 2026: yes): 1.3's two rear raids' VOICED lines ("Pirates on the last hauler. She is alone back there." and "More of them, on the last hauler again.") play only when a pirate of the raid really goes for her: it has picked the hauler the row names (`along`), and that happens only while no fighter of yours is within `guard` px of her (campPirateGuarded). A raid that finds her guarded says nothing (no new line, no rewording); one that comes on her later, when the fighter has left, says it then, once.
+    const W = C.L.waves[u.wave]; if (W && W.say && W.guard > 0 && W.along && tgt0.id === 'freighter-' + W.along) { C.waves[u.wave].told = true; campSay(C, W.say, { n: u.wave + 1 }); }
+  }
   if (!tgt) return;
   const dx = tgt.x - u.x, dy = tgt.y - u.y, dist = Math.hypot(dx, dy), target = Math.atan2(dy, dx);
   const dog = campDogOn(C, u, tgt), m = dog ? campDogSteer(C, u, tgt, def.bullet * C.shot) : campBreakSteer(C, u, campSteer(C, u, def, dist, target, u.vx - (tgt.vx || 0), u.vy - (tgt.vy || 0))); // a skiff against a fighter is a dogfight; with the player's flown fighter on its tail it breaks (src/campbreak.js)

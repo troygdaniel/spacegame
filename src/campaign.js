@@ -1274,7 +1274,7 @@ function campSchedule(C) {
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
     C.events.push({ type: 'wave', i, x: org[0], y: org[1] }); // a wave has come out of the dark at (x, y): the picture glows the edge it comes from (src/campmoments.js); no rule reads it
-    if (w.say) campSay(C, w.say, { n: i + 1 }); // (a wave with no line is silent)
+    if (w.say && !(w.guard > 0 && w.along)) campSay(C, w.say, { n: i + 1 }); // (a wave with no line is silent; a raid on a hauler that a fighter may be guarding (guard, along) says its line when it really goes for her: src/camppirates.js, card space-game-13-alone-lines-guarded)
   });
   L.waves.forEach((w, i) => { const st = C.waves[i]; if (w.say2 && st.started && !st.said2 && sec - st.at >= (w.say2At || 5)) { st.said2 = true; campSay(C, w.say2, { n: i + 1 }); } }); // a second line, some seconds after the wave came
   if (L.hunt) campHunt(C, sec);
