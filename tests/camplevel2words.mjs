@@ -11,7 +11,7 @@ const J = e => JSON.parse(g.run(`JSON.stringify(${e}) ?? 'null'`));
 const before = J(`campStory(2, 'before', false)`);
 check('1  the level 2 card (shown after the warp cinematic) does not talk of the warp as to come: no "ready", no "Next star"', before.length === 2 && !/ready|next star/i.test(before.join(' ')) && /Alpha Centauri/.test(before.join(' ')), before.join(' | '));
 check('1  it is short enough to be spoken (12 words or fewer a line)', before.every(l => l.split(/\s+/).length <= 12), before.join(' | '));
-const says = J(`CAMP.levels[2].missions.map(m => (m.waves || []).map(w => w.say))`);
+const says = J(`CAMP.levels[2].missions.map(m => (m.waves || []).map(w => w.say).filter(Boolean))`); // (a row with no line is the second side of a group that is announced once: 2.2's reinforcements, card space-game-b7-level2)
 check('2  every mission of level 2 says its own lines: no key is shared between missions (the difficulty pass gave missions 2 and 3 more waves: card space-game-wrapup-difficulty); the two waves of mission 2 are announced differently (card space-game-night-hunt-l2-l3), the three at the relic say the same news', says.length === 3 && new Set(says.flat()).size === 4 && says.every((m, i) => says.every((o, k) => k === i || !m.some(x => o.includes(x)))) && new Set(says[1]).size === 2 && new Set(says[0]).size === 1 && new Set(says[2]).size === 1, JSON.stringify(says));
 check('2  every one of them is a real line (not the key), at most 12 words', says.flat().every(k => { const t = J(`uiText(${JSON.stringify(k)})`); return t !== k && t.split(/\s+/).length <= 12; }));
 check('2  mission 3\'s line does not say "second group"', !/second group/i.test(J(`uiText(CAMP.levels[2].missions[2].waves[0].say)`)));

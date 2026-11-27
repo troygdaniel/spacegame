@@ -18,6 +18,7 @@ const CAMPFX = {
   glow: { rise: 850, fall: 200, r: 0.17, a: 0.3, color: 0x6fd6ff, hot: 0xcfe6ff },   // the engine that builds from nothing to full in 850 ms (the heavy ship's, BURN.rise.heavy) and drops in 200; the disc's radius as a share of the length, and its opacity at full burn
   vel: { s: 0.35, min: 30, w: 1.5, a: 0.45, dot: 2.5, dotA: 0.75, color: 0x6fd6ff },  // the line: 0.35 s of travel ahead, over 30 px/s, 1.5 px wide on the screen, the dot 2.5 px at its end (feelSpace)
   streak: { n: 46, w: 1.3, a: 0.26, len: [30, 90], slide: 4, on: 0.6, rate: 7, color: 0x9fe9ff, depth: -8 }, // 46 lines (installLookFx), 1.5 px wide, opacity 0.35 at full strength, a length of 30 + 90 times the line's own factor (0.5 to 1.5), sliding against the flight at `slide` times the cruiser's speed on the screen, shown from `on` of the boost's top speed up; rate: how fast the strength eases (per second)
+  edge: { w: 2, a: 0.35, inset: [20, 18], color: 0x6fd6ff },                          // the two thin speed lines at the screen's edges while boosting (BRIEF 7, decision 10; card space-game-b7-torpedo-boost-beat): 2 px, 0.35 at full strength (the streaks' own strength k), the pale blue of the cruiser's glow, inset 20 and 18 px from the border
   punch: { zoom: 1.3, ms: 900 },                                                      // the launch punch: 1.3 times closer, eased out over 900 ms (feelLaunch: 1.6 and 900)
   depth: { light: 4.45, puff: 4.2 }
 };
@@ -111,6 +112,16 @@ function campFxStreaksStep(list, W, H, dx, dy, sp, dt, k) {
 // the strength the streaks aim at: the boost's own share (campFlameState.boost) once the cruiser is going fast enough (the share `on` of the boost's top speed), or 1 on the map's Fast burn; sp the cruiser's speed, top the boost's top speed
 const campFxStreakTarget = (boost, fast, sp, top) => campFxClamp(Math.max(campFxClamp(boost, 0, 1), fast ? 1 : 0) * campFxClamp((sp / Math.max(1, top) - CAMPFX.streak.on) / (1 - CAMPFX.streak.on), 0, 1), 0, 1);
 
+// the two thin pale-blue speed lines at the screen's edges while boosting (pure): the flight's more horizontal on the screen and they are the top and the bottom edge's, the more vertical and they are the left and the right's; each runs the
+// length of its edge, inside the inset. W and H the screen (the bg camera's), (dx, dy) the unit direction of the flight; the answer is a list of two { x0, y0, x1, y1 } that the next call writes again (read it at once)
+const CAMPFX_EDGE = [{ x0: 0, y0: 0, x1: 0, y1: 0 }, { x0: 0, y0: 0, x1: 0, y1: 0 }];
+function campFxEdgeLines(W, H, dx, dy) {
+  const K = CAMPFX.edge, o = CAMPFX_EDGE, horiz = Math.abs(dx) / (W > 0 ? W : 1) >= Math.abs(dy) / (H > 0 ? H : 1), a = K.inset[0], b = K.inset[1];
+  if (horiz) { o[0].x0 = a; o[0].x1 = W - a; o[0].y0 = o[0].y1 = b; o[1].x0 = a; o[1].x1 = W - a; o[1].y0 = o[1].y1 = H - b; }
+  else { o[0].y0 = a; o[0].y1 = H - a; o[0].x0 = o[0].x1 = b; o[1].y0 = a; o[1].y1 = H - a; o[1].x0 = o[1].x1 = W - b; }
+  return o;
+}
+
 // the launch punch: the multiplier of the camera's base zoom p seconds... p is the share left (1 at the launch, 0 when done); a Sine ease out as the Long Haul's zoomTo
 const campFxPunchK = p => 1 + (CAMPFX.punch.zoom - 1) * Math.sin(campFxClamp(p, 0, 1) * Math.PI / 2);
 
@@ -139,6 +150,7 @@ function campFxDraw(scene, S, u, noz, f, dw, z, t, dt, C, look) {
   if (F.k > 0.02 && sp > 1) {
     const cam = scene._cz && scene._cz.bg ? scene._cz.bg : scene.cameras.main, W2 = cam.width || 1280, H2 = cam.height || 720; if (!F.streaks) F.streaks = campFxStreaksNew(K.streak.n);
     campFxStreaksStep(F.streaks, W2, H2, u.vx / sp, u.vy / sp, sp * K.streak.slide * Math.max(z, 0.3), dt, F.k).forEach(l => { st.lineStyle(l.w, K.streak.color, l.a); st.lineBetween(l.x0, l.y0, l.x1, l.y1); });
+    campFxEdgeLines(W2, H2, u.vx / sp, u.vy / sp).forEach(l => { st.lineStyle(K.edge.w, K.edge.color, K.edge.a * F.k); st.lineBetween(l.x0, l.y0, l.x1, l.y1); }); // the two thin lines at the edges (BRIEF 7): they come and go with the streaks' own strength
   }
 }
 function campFxHide(S) { ['fxG', 'fxP', 'fxS'].forEach(k => { if (S && S[k]) S[k].setVisible(false); }); if (S && S.fxs) { S.fxs.dots.length = 0; S.fxs.puffs.length = 0; S.fxs.k = 0; S.fxs.rotPrev = null; } }

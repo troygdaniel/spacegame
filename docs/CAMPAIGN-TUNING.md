@@ -529,3 +529,199 @@ What it does, from the 32-seed bot tables (`node tools/campaign-bot.mjs --level 
 **Words.** The four moments of 2.3 stay true: "Enter the ring", "Hold {hold} seconds" (it reads the row: now 20), "Keep aliens off", "Aliens arrive fast" (truer: under 8 s from the call to the ring). One line changed, shown only, not voiced: `camp.bf.2.3.w2` "Hold there 14 seconds ..." is now "Hold there 20 seconds with no alien near the relic."
 
 **Pins.** `tests/camprelicwaves.mjs` (new, 16 checks: the rows, nothing for the clock, the waves at 0, 5 and 10 s held, a wave on the ring within 8 s, the kite: a fighter that hits the wave and runs 2,500 px off draws no alien past 1,300 px and the hold never runs). `tests/campaign.mjs`: the hold is 20 and the waves have no clock second. `tests/scrbriefings.mjs`: "Hold 20 seconds", and the first wave comes on entering. The rows keep `from` only for the Tab map's extent (its zoom limit is unchanged, `tests/campzoom.mjs`). `tests/camppace.mjs`: 2.3's floor is 60 s at both paces (the 12 s exception for Calm, which was the 16 s win, is gone).
+
+## The flown fighter fires three times as fast, at half the damage (card `space-game-fly-fighter-fire-rate`, Troy, 26 Nov 2026; base: main at the landing of the cockpit's scene half)
+Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the first thing he asked for: the fire rate is too slow. The pilots' gun is 8 damage every 450 to 650 ms (14.5 a second); the Long Haul Wren fires every 160 ms for 15 (94 a second, which equals the whole wing).
+- `CAMP.cockpit.rateK: 1 -> 3`: one shot every mean delay over it, a steady 183 ms (550 / 3), no random gap, on a schedule of one gap so the rate does not depend on the tick (at 30 ticks a second a shot lands on the tick after its time: gaps of 167 to 200 ms, 27 shots in five seconds).
+- `CAMP.cockpit.damageK: 1 -> 0.5`: each shot 4 damage (times the pilot's strength). The stream is 22 a second, about 1.5 times a pilot's and under a quarter of the Wren's. To land on exactly 170 ms (the Wren's feel) dial `rateK` to 3.25 on the N panel: 169 ms, 24 a second.
+- Both are live rows of the group "The flown fighter (C)" on the N panel (`cockpitrate`, `cockpitdamage`, step 0.25). `CAMP.fighter` (the pilots' own guns: 8 damage, 450 to 650 ms, 700 px/s, 420 range) is untouched: the AI pilots fire as before.
+- **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
+- Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
+
+## Mission 2.3: waves two and three together, from two sides (card `space-game-23-two-sides`; Troy, 26 Nov 2026: "yes"; base: the tip of the section above, `b76e9867`)
+
+**Why.** With the waves on the hold one after another, the cruiser took about half the old damage and a cruiser fighting the ring alone still won two times in three. Troy: the second and third wave arrive together from two sides, so 2.3 can be lost. No hit-point, damage or ship count changed.
+
+**What changed** (the wave rows of 2.3 and one rule in `campWaveOn`, `src/campaign.js`):
+- The second wave comes at **10 s held** (was 5), from the west of the relic.
+- The third comes **8 s behind the second**, from the EAST, the opposite side (`on: { behind: 1, secs: 8 }`: this many seconds after wave 1 of the rows came; it was 10 s held, from the south-east). The second wave is still on the ring when it arrives: twelve ships from two sides.
+- The first wave (on entering), the 20 s hold, the 1,100 px spawn distance and the ring-holding rule are as in the section above.
+
+**Picked by the tables** (32 seeds, steady; seconds / cruiser damage for plain, carrier, ace, sit):
+
+| the two waves | plain | carrier | ace | sit |
+|---|---|---|---|---|
+| one after another, 5 s and 10 s held (the base) | 87 / 72 | 87 / 76 | 86 / 54 | 92 / 75 |
+| both at 5 s held | 72 / 134 | 74 / 177 | 71 / 97 | 80 / 140 |
+| both at 10 s held | 78 / 122 | 79 / 158 | 78 / 108 | 84 / 133 |
+| second at 5 s held, third 8 s behind | 75 / 140 | 75 / 159 | 73 / 112 | 80 / 137 |
+| second at 5 s held, third 14 s behind | 77 / 123 | 77 / 162 | 75 / 97 | 79 / 166 |
+| **second at 10 s held, third 8 s behind (taken)** | **80 / 191** | **80 / 180** | **79 / 122** | **85 / 148** |
+
+The one taken is the longest and the hardest on the cruiser, and the player has ten seconds of hold to lose when they come.
+
+**The numbers** (won per cent / seconds / cruiser damage / kills; 32 seeds):
+
+| skill | bot | before this card (`b76e9867`) | after |
+|---|---|---|---|
+| steady | plain | 100 / 87 / 72 / 19 | 100 / 80 / 191 / 19 |
+| steady | carrier | 100 / 87 / 76 / 19 | 100 / 80 / 180 / 19 |
+| steady | ace | 100 / 86 / 54 / 19 | 100 / 79 / 122 / 19 |
+| steady | sit | 100 / 92 / 75 / 19 | 100 / 85 / 148 / 19 |
+| sharp | plain | 100 / 87 / 69 / 19 | 100 / 80 / 158 / 19 |
+| sharp | carrier | 100 / 87 / 90 / 19 | 100 / 82 / 180 / 19 |
+| sharp | ace | 100 / 87 / 68 / 19 | 100 / 80 / 137 / 19 |
+| sharp | sit | not run | 100 / 84 / 155 / 19 |
+| rough | plain | 100 / 87 / 82 / 19 | 100 / 80 / 162 / 19 |
+| rough | carrier | 100 / 88 / 80 / 19 | 100 / 80 / 165 / 19 |
+| rough | ace | 100 / 81 / 57 / 19 | 100 / 74 / 97 / 19 |
+| rough | sit | 100 / 90 / 93 / 19 | 100 / 82 / 144 / 19 |
+
+**Careless players** (not bots of the tool: flown in the sim on 12 seeds, 300 s each, the cruiser sitting on the ring):
+
+| player | before this card | after |
+|---|---|---|
+| the wing guards, the cruiser never fires | lost 12 of 12 | lost 12 of 12 |
+| the cruiser fires at the nearest, its wing lost | won 8, lost 4 | **lost 12 of 12** |
+| the cruiser never fires, its wing lost (the first wave is never beaten, so the others never come) | neither in 300 s, least hull 384 | the same |
+
+- **Met:** the damage is back in the old range (122 to 191 against the old 137 to 295; ace 97 at rough), and the mission can be lost: a cruiser without its wing is beaten on every seed, and the test's pilot who sits on the ring and never aims is beaten by the two waves together.
+- **Not met:** the time is about 80 s, not 90 to 100 (two fights at once are shorter than two in a row; a longer hold would add only quiet seconds). And no BOT of the tool loses a seed, rough and sit among them: they all keep the wing out and aim. To make the sit or rough bot lose would take more ships or more damage, which this card rules out.
+- The ace bot is 1 to 8 per cent faster than plain and takes 13 to 40 per cent less cruiser damage (rough: 97 against 162, over the sweep's 30 per cent rule; steady 36 per cent; sharp 13).
+
+**Words.** Nothing becomes untrue: "Enter the ring", "Hold 20 seconds", "Keep aliens off", "Aliens arrive fast"; no line changed in this card.
+
+**Pins.** `tests/camprelicwaves.mjs` (18 checks): the second wave at 10 s held, the third 8 s behind it from the opposite side; the pilot who never aims now loses (he won); a cruiser alone loses at least 3 seeds of 4. `tests/campaign.mjs`: the rows' triggers are the hold or "behind". `tests/camppace.mjs`: words only (the 60 s floor holds).
+
+## Missions 2.1 and 2.2: the aliens come on what the player does, and a threat comes to a player who does nothing (card `space-game-b7-level2`; Troy, 26 Nov 2026: "yes", with his calls below; the cloud's brief 7, decisions 1 and 6; base `b14a4131`, the 2.3 two-sides tip)
+
+**What was wrong.** 2.1's one wave came at 20 s and 2.2's two at 18 and 40 s of the mission's clock, so a quick player never met 2.2's reinforcements (the plain bot won 2.2 in 73 s, the cruiser took 153), and a player who only waited was never touched in 2.1: it ended in nothing (the tool's idle bot never arrives, so it shows 0 won, 0 lost).
+
+**2.1 Resources** (`src/campaign.js`, wave rows with `on: { caches: n }` and `at: 'cache'`; a mission row's `hunt`, `campHunt`):
+- **Troy's call: it keeps TWO caches** (not three), so "Gather two resource caches." and the briefing's "Find 2 of the 3 resource pods" stay true. Par stays 100 s.
+- **The first cache taken calls the group** (the old wave's 4 raiders and 3 drones) to the nearest cache still to take, where it waits (a guard: it wakes when a ship of yours is in reach). The mission also needs that group dead (`{ type: 'kill', what: 'wave:all' }`, words "Destroy the attackers.").
+- **The threat for a player who takes no cache** (Troy: yes): 45 s after arriving, a party of 3 raiders and 2 drones comes from the west for the cruiser; another every 45 s, each 2 ships larger (5 and 3, 6 and 4 ...), with no upper limit; a cache taken stops them for good. Ship kinds and hit points are as they are. A party must be dead to win.
+
+**2.2 The guards** (wave rows with `on: { guardsDead: n }`; `hunt` with `restart: 'guard'`):
+- **Reinforcements when the fourth guard dies, from two sides at once** (the old first wave's ships split in two: 2 drones and 2 gunships from the north-east, 2 drones and a gunship from the other side); **the last guard calls a second group** (the old second wave's ships, 4 raiders and 3 drones) when the sixth guard dies, with one left. No ship was added or taken away. The mission needs the guards AND the groups they call dead.
+- **The threat for a player who kills no guard** (Troy: yes): 40 s after arriving with no guard dead, a patrol of 2 drones and a gunship from the north-east; another every 40 s, each 2 ships larger; a guard killed starts the 40 s again; the patrols are not guards (they do not count for the fourth guard) and must be dead to win; none comes once the guards are all dead.
+- The bots now fly at waiting guards and at the groups a cache or a dead guard calls (`tools/campaign-bot.mjs`: no clock brings the fight to a cruiser that sits); that is why the no-wing "carrier" bot wins 2.2 on every seed now (59 and 66 per cent before: it was only ever fed by the clock's waves).
+
+**The numbers** (`node tools/campaign-bot.mjs --level 2 --mission <1|2> --seeds 32 --bots plain,carrier,ace,sit --skill <s>`; won per cent / seconds / cruiser damage / kills; hull 600 at the end except where said):
+
+| mission | skill | bot | before (`b14a4131`) | after |
+|---|---|---|---|---|
+| 2.1 | steady | plain | 100 / 42 / 15 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | steady | carrier | 100 / 43 / 15 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | steady | ace | 100 / 43 / 0 / 7 | 100 / 32 / 9 / 7 |
+| 2.1 | steady | sit | 100 / 43 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | plain | 100 / 42 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | carrier | 100 / 43 / 13 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | rough | ace | 100 / 42 / 0 / 7 | 100 / 32 / 13 / 7 |
+| 2.1 | rough | sit | 100 / 43 / 9 / 7 | 100 / 33 / 15 / 7 |
+| 2.2 | steady | plain | 100 / 73 / 153 / 16 | 100 / 76 / 162 / 21 |
+| 2.2 | steady | carrier | **59** / 92 / 265 / 21 | 100 / 85 / 216 / 21 (hull 597) |
+| 2.2 | steady | ace | 100 / 81 / 130 / 21 | 100 / 72 / 112 / 21 |
+| 2.2 | steady | sit | 100 / 79 / 167 / 15 | 100 / 80 / 182 / 21 |
+| 2.2 | rough | plain | 100 / 76 / 144 / 17 | 100 / 76 / 147 / 21 |
+| 2.2 | rough | carrier | **66** / 95 / 257 / 21 | 100 / 86 / 208 / 21 |
+| 2.2 | rough | ace | 100 / 76 / 104 / 21 | 100 / 68 / 75 / 21 |
+| 2.2 | rough | sit | 100 / 79 / 153 / 15 | 100 / 81 / 165 / 21 |
+
+- **About as hard as today for the cruiser bots:** 2.1 is as easy as it was (about 33 s, was 42: the group is smaller than the clock's wave was a trip behind it; damage 9 to 15); 2.2 is the same length (68 to 86 s against 73 to 95) with the cruiser's damage at or above what it was (112 to 216 against 130 to 265), and now every bot meets all 21 ships (the plain bot met 16, the sit bot 15).
+- **Not met, for Troy: the fighter bot in 2.2.** Against the plain bot the ace bot is 5 per cent faster and takes 31 per cent less cruiser damage at steady skill, and 11 per cent faster and 49 per cent less at rough (75 against 147). The sweep's rule is 15 per cent faster and 30 per cent less (docs/night/cockpit-sweep.md): the damage is over it at both. Before this card it was 15 per cent less at steady (130 against 153) and 28 per cent at rough (104 against 144). Why: the two reinforcement groups come on the fourth dead guard, which a flown fighter kills early, while the plain bot's cruiser takes the groups' fire as it arrives. No hit-point or damage number was changed; Troy to say whether to leave it.
+- **The idle player** (flown in the sim: the cruiser arrives, sits at the mission's place and brakes, its wing guarding; 8 seeds, 600 s). 2.1: before, neither won nor lost on any seed; now **lost on 8 of 8 at 281 to 356 s** (6 to 7 parties came; none is in 33 s of any bot's play). If it also fires at what comes near, it holds out the 600 s against 13 parties of up to 29 ships (the cruiser's guns beat each party as it comes). 2.2: before, a cruiser that does not fire was beaten by the guards in 46 to 65 s and one that does won on 8 of 8; now it is beaten in 70 to 96 s, and one that fires won 6 of 8 (the other two ended with no result at 600 s: the sim's sitter does not fly at aliens beyond 1,200 px, so what lost its target waits unseen; a player flies). In 2.2 the patrols never came in these runs because the wing killed a guard inside every 40 s; the guards themselves are the threat to a sitter there.
+- **The tool's own idle bot** still shows 0 won and 0 lost on both: it never makes the trip to the mission's place, so nothing is called. Not changed.
+
+**Words** (Troy approved both new lines, 26 Nov: shown only, not voiced): `camp.bf.2.1.w3` "Aliens come from the west after 20 seconds." is now "Taking the first pod calls aliens to the next one."; `camp.bf.2.2.w2` "More aliens join after 18 seconds, from the north-east." is now "More aliens join when the fourth guard dies, from two sides." Left as they were and still true: `camp.m.2.1.b1` "Gather two resource caches." (a voiced line), `camp.bf.2.1.w1`, the moments "Find two caches", "Anyone can collect", "Aliens from west" (true again for the hunting party, which comes from the west), "Kill them all", "Reinforcements", "Clear them all". Nothing voiced changed.
+
+**Pins.** `tests/camplevel2calls.mjs` (new, 20 checks: the rows, nothing for the clock, a cache and a dead guard call their groups, the sides, the win needs the groups dead, the hunting party and the patrol with their numbers, the triggers). `tests/campaign.mjs` (2.1's wave comes on the first cache, not at 20 s; the guards alone no longer win 2.2), `campgoalcount.mjs`, `camphunt.mjs` (2.2's reinforcements are two rows and one line), `camplevel2words.mjs`, `scrbriefings.mjs` (the reinforcements are called by the fourth guard), `campbrief.mjs` (the two reworded lines). The bot's tool rule: guards and called groups are flown at.
+
+## The flown fighter fires three times as fast, at half the damage (card `space-game-fly-fighter-fire-rate`, Troy, 26 Nov 2026; base: main at the landing of the cockpit's scene half)
+Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the first thing he asked for: the fire rate is too slow. The pilots' gun is 8 damage every 450 to 650 ms (14.5 a second); the Long Haul Wren fires every 160 ms for 15 (94 a second, which equals the whole wing).
+- `CAMP.cockpit.rateK: 1 -> 3`: one shot every mean delay over it, a steady 183 ms (550 / 3), no random gap, on a schedule of one gap so the rate does not depend on the tick (at 30 ticks a second a shot lands on the tick after its time: gaps of 167 to 200 ms, 27 shots in five seconds).
+- `CAMP.cockpit.damageK: 1 -> 0.5`: each shot 4 damage (times the pilot's strength). The stream is 22 a second, about 1.5 times a pilot's and under a quarter of the Wren's. To land on exactly 170 ms (the Wren's feel) dial `rateK` to 3.25 on the N panel: 169 ms, 24 a second.
+- Both are live rows of the group "The flown fighter (C)" on the N panel (`cockpitrate`, `cockpitdamage`, step 0.25). `CAMP.fighter` (the pilots' own guns: 8 damage, 450 to 650 ms, 700 px/s, 420 range) is untouched: the AI pilots fire as before.
+- **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
+- Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
+
+## Mission 2.2: the called groups and the patrols go for the cruiser (card `space-game-chunk16-22-fighter-gap`; ORCH, 26 Nov 2026 night: option 2; base `654702eb`)
+
+**Why.** In 2.2 the flown-fighter (ace) bot took 31 to 49 per cent less cruiser damage than the plain bot (rule: 30). I measured where it comes from (12 seeds, rough, damage by phase, plain against ace): before the fourth guard 31 against 13, after the reinforcements 24 against 9, after the sixth 122 against 78: lower in every phase, so it is not when the groups arrive (a clock floor would move it by about 5 s: the ace's first group comes at about 19 s, plain's at about 24 s) but the fighter's own gun, and a fighter that flies past or hits a group draws it off the cruiser.
+
+**What changed** (`src/campaign.js`): a wave row's or a hunt's `focus: 'carrier'` (campAlienAI): the aliens of a group so marked go for the cruiser and are not drawn off by a ship of yours that flies by or hits them. On the three wave rows and the patrol of 2.2 only (the guards, and every other mission, are as they were). No hit-point, damage, ship or timing change.
+
+**The numbers** (12 seeds; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| skill | bot | before (`654702eb`) | after |
+|---|---|---|---|
+| steady | plain | 74 / 161 | 74 / 182 |
+| steady | carrier | 88 / 193 | 88 / 193 |
+| steady | ace | 74 / 104 | 71 / 127 |
+| steady | sit | 75 / 182 | 74 / 198 |
+| rough | plain | 75 / 165 | 73 / 170 |
+| rough | carrier | 86 / 208 | 86 / 208 |
+| rough | ace | 65 / 81 | 63 / 93 |
+| rough | sit | 81 / 164 | 74 / 173 |
+
+- Ace against plain, damage: steady 35 per cent less before, **30 per cent after** (127 against 182); rough 51 per cent less before, **45 per cent after** (93 against 170). The rule (docs/night/cockpit-sweep.md) is 30. Time: ace 0 to 4 per cent faster at steady (rule 15), 14 per cent at rough (63 against 73).
+- **Not closed:** at rough the ace still takes 45 per cent less. The rest is the flown fighter's own gun (the same 12 seeds with the guards also going for the cruiser: 182 against 114, 37 per cent less): the fighter is better in 2.2, as intended; for Troy to judge in play.
+- The wing's pilots under the cruiser's orders do not change (carrier and the plain bot keep their numbers within noise).
+
+**Pins.** `tests/camplevel2calls.mjs` (22 checks): the rows carry the flag, and a raider with a fighter on its far side that has just hit it still flies at the cruiser while the same raider without the flag is drawn onto the fighter.
+
+## Level 3 comes on what the player does (card `space-game-b7-level3`; brief 7 decisions 1, 3, 5 and 6; Troy said yes to all of it on 26 Nov 2026)
+Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK` 0.5, `hpK` 2, turrets 'auto'); old tables from main just before the card (`e0bee48d`, the level 3 sim identical), new from the card's branch. Every number of the waves is a first try, measured with the bots: 32 seeds a mission, skill steady, pace Brisk; `node tools/campaign-bot.mjs --level 3 --seeds 32 --bots idle,carrier,plain,troy --json` for the cruiser bots, `--max 900` for the idle ones, `--cockpit --level 3` for the fighter bots.
+
+**What changed (the table, `src/campaign.js`):**
+- 3.1 *Approach*: three waves, one for each scan (`on: { scanning: k }`: a ship of ours is in the ring): 2 raiders; 2 raiders, a drone and a gunship; the same again. A scan stands still while the cruiser is hit and goes on 2 s after (`pause: 2` on the scan objective; the points stay 7 s: the briefing says 7). The mission wants every wave beaten (`clear`).
+- 3.2 *Outer ring*: three groups, one for each of the first three towers to fall (`on: { towers: k }`), each born 700 px behind the tower nearest the cruiser (`nearTower`): 2 drones; 2 drones and a gunship; 2 raiders and a gunship. `clear` too. (The wave of 25 s is gone.)
+- 3.3 *Inner ring*: two waves together at the fourth tower (`on: { towers: 4 }`): 2 raiders and 2 gunships from the north-west, 2 drones and 2 gunships from the south-east; `clear`; par and the swift bonus 150 to 180 s. (The waves of 20 s and 75 s are gone.)
+- `CAMP.tower.flownTurn` 1.5 and `flownSpeed` 1.3: a tower turns and shoots faster at the ship the player flies (`campTowerAI`); the cruiser's own game is as it was.
+- The idle threats (3.1 the picket, 3.2 the reserve), below.
+
+**The cruiser bots** (won% / win time s / hull left / damage taken; median of 32): the plain bot and the carrier bot (the carrier bot never launches the wing).
+
+| mission | bot | old | new |
+|---|---|---|---|
+| 3.1 | plain | 100 / 69 / 900 / 19 | 100 / 80 / 900 / 65 |
+| 3.1 | carrier | 100 / 70 / 900 / 59 | 100 / 85 / 900 / 81 |
+| 3.2 | plain | 100 / 44 / 900 / 162 | 100 / 59 / 870 / 230 |
+| 3.2 | carrier | 100 / 82 / 670 / 461 | 100 / 72 / 695 / 407 |
+| 3.3 | plain | 100 / 61 / 667 / 436 | 100 / 71 / 623 / 486 |
+| 3.3 | carrier | 100 / 56 / 626 / 461 | 100 / 78 / 508 / 608 |
+
+3.1 is about four times as hard in damage (the brief: "three scans with almost no opposition: 12 damage in the whole mission"), 3.2 about 40 percent, 3.3 about 10 percent; every mission is still won by every cruiser bot, every seed. 3.2's carrier bot is a little easier and quicker (72 s against 82); I did not find out why (probably the groups come to it by the tower it is shooting at).
+
+**The idle player** (the idle bot gives no order at all; the passive bot is Troy's first try: it launches the wing at 45 s, escorts at 81 s and never attacks; 900 seconds of play; won% / lost% / timed out%):
+
+| mission | bot | old | new |
+|---|---|---|---|
+| 3.1 | idle (does nothing) | 0 / 0 / 100 | 0 / 78 / 22 |
+| 3.1 | passive (launches, never attacks) | 0 / 0 / 100 | 0 / 0 / 100 |
+| 3.2 | idle (does nothing) | 0 / 0 / 100 | 0 / 9 / 91 |
+| 3.2 | passive (launches, never attacks) | 0 / 0 / 100 | 0 / 0 / 100 |
+| 3.3 | idle (does nothing) | 0 / 6 / 94 | 0 / 0 / 100 |
+| 3.3 | passive (launches, never attacks) | 63 / 0 / 38 | 0 / 0 / 100 |
+
+3.1 and 3.2 can be lost by an idle player now: **the picket** (no scan begun 60 s after arrival: 3 raiders and a gunship come for the cruiser, another every 40 s until a scan begins, four at most) and **the reserve** (no tower fallen 45 s after arrival: 2 drones and 2 gunships, same rhythm). The idle bot loses 78 percent of 3.1 in fifteen minutes (66 percent in seven) and 9 percent of 3.2; the passive bot, who launches the wing, is hurt (113 damage in 3.1, 396 in 3.2) and neither wins nor loses. The reserve is weaker against the pilots; to make 3.2 lose more often, give it a third gunship or a fifth group. **3.3 has the old problem the other way round:** its waves now wait for the fourth tower, so an idle player is never found (the old clock lost 6 percent of the idle runs) and the passive bot no longer wins (63 percent before: the waves used to come to it). A third idle threat there would be the same mechanism (`on: { idle: s, until: 'tower' }`).
+
+**The fighter bots** (`--cockpit`, `hpK` 2, `damageK` 0.5, `rateK` 3; win time s / cruiser damage; the rule is `docs/night/cockpit-sweep.md`'s): old = main before the card, new = the card's branch.
+
+| mission | skill | plain old | plain new | ace old | ace new (and kills) | sit new won% | rule |
+|---|---|---|---|---|---|---|---|
+| 3.1 | sharp | 69 / 31 | 79 / 78 | 74 / 9 | 82 / 47 / 1 | 100 | FAIL -> FAIL |
+| 3.1 | steady | 69 / 19 | 80 / 65 | 71 / 9 | 76 / 47 / 2 | 100 | PASS -> PASS |
+| 3.1 | rough | 69 / 21 | 81 / 68 | 66 / 0 | 67 / 12 / 5 | 100 | PASS -> FAIL |
+| 3.2 | sharp | 44 / 144 | 59 / 245 | 44 / 54 | 60 / 173 / 1 | 100 | FAIL -> PASS |
+| 3.2 | steady | 44 / 162 | 59 / 230 | 44 / 54 | 60 / 166 / 1 | 100 | FAIL -> PASS |
+| 3.2 | rough | 44 / 144 | 60 / 238 | 30 / 36 | 46 / 151 / 3 | 100 | FAIL -> FAIL |
+| 3.3 | sharp | 55 / 468 | 70 / 544 | 60 / 353 | 79 / 522 / 1 | 100 | PASS -> PASS |
+| 3.3 | steady | 61 / 436 | 71 / 486 | 59 / 378 | 74 / 468 / 2 | 100 | PASS -> PASS |
+| 3.3 | rough | 60 / 436 | 70 / 443 | 51 / 270 | 68 / 396 / 3 | 100 | FAIL -> PASS |
+
+**6 of 9 mission-skills pass the rule (was 4).** Fixed: 3.2 sharp and steady (the ace took a third of the plain bot's damage because a tower could not track a fast fighter: now 166 against 230) and 3.3 rough. Still failing: 3.1 sharp (ace 47 damage against plain's 78: probably the fighter meets each wave before it reaches the cruiser), 3.1 rough (67 s against 81, and 12 damage against 68: probably with no hit the scan never stands still, so the fighter's cover makes the scans quicker), 3.2 rough (46 s against 60: probably three times the rate shoots a tower down quickly). The rough skill is the ace's widest cone; at sharp and steady the rule holds in 3.2 and 3.3 and in 3.1 steady. What might move the rest (not tried): a second 3.1 wave that comes to the cruiser from the far side (a fighter cannot meet both), or fewer scan pauses. Not done: Troy agrees the rule before any retune.
+
+**Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
+
+Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).

@@ -31,6 +31,7 @@ const campCockpitInput = () => ({ turn: 0, thrust: 0, brake: false, boost: false
 const campCockpitHull = () => Math.max(0.1, +CAMP.cockpit.hpK || 1); // the hull multiplier a take uses (never zero or negative)
 function campEye(C) { const S = C && C.cockpit, u = S && C.by ? C.by[S.id] : null; return u && u.hp > 0 ? u : (C ? C.carrier : null); }
 const campEyeSprite = s => { const C = s && s.camp, e = C && C.carrier ? campEye(C) : null; return s && s.sp && e ? s.sp[e.id] || null : null; }; // the sprite of the ship the camera is on (the cruiser's, or the fighter's while he holds its stick): where a camera that comes home (a drag, F, a peek) goes back to
+const campCockpitFlown = C => { const S = C && C.cockpit, u = S && C.by ? C.by[S.id] : null; return u && u.hp > 0 ? u : null; }; // the fighter he flies, or null
 const campCockpitAuto = C => !!C && !!C.cockpit && CAMP.cockpit.turrets === 'auto';
 
 // the fighter a take with no id names: the pilot the W pick holds (his squad's first ship out), else Red 1 (Wedge), else the first fighter that is out
@@ -52,7 +53,9 @@ function campCockpitTake(C, id) {
   C.flights = null; C.cockpitTaken = true; // the flights of the tick are made again without this ship; cockpitTaken: once taken, the first-minute tip is not shown
   u.cockpit = true; u.hp *= k; u.maxHp = (u.maxHp || u.hp / k) * k; // the hull is the pilot's times hpK, from where it is
   const m = u.mate && C.by[u.mate]; if (m && m.mate === u.id) m.mate = null; u.mate = null; u.run = null; // out of any duel: nobody is paired with a ship the pilot's own AI is not flying
-  C.events.push({ type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y });
+  const ev = { type: 'cockpit', stage: 'take', id: u.id, x: u.x, y: u.y };
+  if (C.level === 1 && C.L && C.L.mid === 'mine' && !C.pricePaid) { C.pricePaid = true; ev.price = 'camp.price.stick'; } // 1.2 only: taking a pilot has a price here (a miner is lost when a pilot leaves the wing) and nothing said so: the first time, once a mission, the scene shows one line (card space-game-chunk11-12-price-line; BRIEF 8 decision 10); shown only, never voiced
+  C.events.push(ev);
   return true;
 }
 
@@ -97,4 +100,14 @@ function campCockpitStep(C, dt) {
     campBullet(C, u, u.rot, F.bullet * C.shot, F.damage * (u.str || 1) * (+K.damageK || 1), 1400, 'earth', 14);
     C.events.push({ type: 'wingshot', x: u.x, y: u.y, kind: u.kind, id: u.id });
   }
+}
+
+// Q 7 FROM A FIGHTER: "Cruiser, come to me" (card space-game-b7-hud-q-cockpit; Troy, 26 Nov 2026): the cruiser is on its own while he flies, so its list's last row (Form up on me: the pilots form up on the cruiser) means the other way round: the cruiser flies to the fighter and keeps station
+// alongside it (the autopilot's trip to a moving ship of yours, CAMP.nav.stopFriend). how: 'key' (the toast is the caller's), dry: only say whether it can be done. campNo codes and the words of the refusals are the Q list's own (`there`: it is already beside him).
+function campCockpitCome(C, how, dry) {
+  const f = campCockpitFlown(C); if (!f) return campNo('what');
+  if (campDist(f, C.carrier) <= CAMP.nav.stopFriend + (C.carrier.r || 0) + (f.r || 0) + 40) return campNo('there');
+  if (dry) return { ok: true, say: '' };
+  campNavGo(C, { id: 'ship:' + f.id, of: 'ship:' + f.id, kind: 'ship', ref: f.id, name: typeof campNavUnitName === 'function' ? campNavUnitName(f) : f.id, moving: true, x: f.x, y: f.y }, false);
+  return { ok: true, code: 'comehere', say: uiText('camp.corner.comesay') };
 }

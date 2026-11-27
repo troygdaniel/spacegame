@@ -76,10 +76,10 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.1.3.w3 | Pirates keep coming. Cover the haulers: pick one ({keyfriendlies}), then {keyorder}. |
 | camp.bf.2.1.w1 | Find 2 of the 3 resource pods in the system. |
 | camp.bf.2.1.w2 | Any ship of yours that flies close picks one up. |
-| camp.bf.2.1.w3 | Aliens come from the west after 20 seconds. |
+| camp.bf.2.1.w3 | Taking the first pod calls aliens to the next one. |
 | camp.bf.2.1.w4 | Kill them too: the pods alone do not finish it. |
 | camp.bf.2.2.w1 | 7 guards hold the system. Destroy them all. |
-| camp.bf.2.2.w2 | More aliens join after 18 seconds, from the north-east. |
+| camp.bf.2.2.w2 | More aliens join when the fourth guard dies, from two sides. |
 | camp.bf.2.2.w3 | Missiles ({keymissile}) help against the heavy ones. |
 | camp.bf.2.3.w1 | Fly the cruiser into the relic's ring at Proxima. |
 | camp.bf.2.3.w2 | Hold there 20 seconds with no alien near the relic. |
@@ -87,13 +87,13 @@ The words of the big briefing in the ready room (card space-game-campaign-briefi
 | camp.bf.2.3.w4 | Aliens come from the north-east after 3 seconds. |
 | camp.bf.3.1.w1 | Fly to each of the 3 marked rings on the map. |
 | camp.bf.3.1.w2 | Any ship of yours inside a ring scans it: 7 seconds. |
-| camp.bf.3.1.w3 | Aliens answer your first scan. Keep the wing close. |
+| camp.bf.3.1.w3 | Aliens answer each scan. Keep the wing close. |
 | camp.bf.3.1.w4 | Finish by destroying every alien that comes. |
 | camp.bf.3.2.w1 | Destroy all 4 defence towers around the target. |
 | camp.bf.3.2.w2 | Approach with the wing ahead of the cruiser. |
-| camp.bf.3.2.w3 | More aliens arrive after 25 seconds, from the north-east. |
+| camp.bf.3.2.w3 | Each tower that falls calls a group to the next one. |
 | camp.bf.3.3.w1 | Destroy all 8 defence towers of the inner ring. |
-| camp.bf.3.3.w2 | Two waves come: at 20 seconds and at 75. |
+| camp.bf.3.3.w2 | Two waves come together when the fourth tower falls. |
 | camp.bf.3.3.w3 | Approach with the wing ahead of the cruiser. |
 | camp.bf.at.relic | RELIC |
 | camp.bf.at.tower | DEFENCE TOWERS |

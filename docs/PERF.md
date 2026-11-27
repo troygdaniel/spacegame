@@ -323,7 +323,17 @@ Nothing is added per frame that the two cards before did not: the ribbons, the l
 ## The moments of a fight: the hit, the kill, the wave (card `space-game-b7-hit-kill-wave`, 26 Nov 2026)
 What it adds: at a hit, three pooled sprites (30 at most), a white fill on the ship's sprite for 34 ms and a note for the hull arc; at a kill, one pooled record of eight sprites for 0.6 s (six records at most: 48 sprites, made once, at the first kill that needs them) and a camera follow offset for 180 ms; at a wave, a few class and style writes on four page elements and CSS keyframes (nothing runs while no wave comes). A quiet frame does one early return and three `for in` loops over empty books: nothing is allocated (the shard and spark poses are written into two results the file keeps).
 
-**What was measured, and what was not.** The Chrome series (`node tools/perfcampaign.mjs frames busy1` with the effects off and on, as the cards before) was NOT taken: Chrome waits for ORCH's word while Troy may be flying. What is here is the cost of this file's own JavaScript in plain Node with stand-in sprites (every Phaser setter is a free call there, so these numbers are the arithmetic and the bookkeeping only, not the drawing). `tests/campmoments.mjs` pins the caps.
+**What was measured.** First the cost of this file's own JavaScript in plain Node with stand-in sprites (every Phaser setter is a free call there, so these numbers are the arithmetic and the bookkeeping only, not the drawing; `tests/campmoments.mjs` pins the caps). Then, once ORCH said Chrome was free, the busiest fight in Chrome: `PERF_ADDR='&pagehud=1&shiplook=1' node tools/perfcampaign.mjs frames busy1`, eight runs alternating off, on, on, off, off, on, on, off, 26 Nov, the Mac at load 12.6 to 16 (other agents). Off is the same page with `campMomentsHit`, `campMomentsKill`, `campMomentsWave`, `campMomentsNote` and `campMomentsFrame` replaced by do-nothing functions (`PERF_PATCH`, applied after the fight is set up: the scene then draws today's puffs and the ship look's kill); on is the code as it is. The fight is the one the tool keeps going: in 720 frames of `busy1` (Node count, 120 warm and 600 measured) there are 145 hits and 19 kills and no wave, so about 36 sparks and one kill record are up at any moment: well under the caps (30 sparks, 6 kills). The wave's glow is page CSS and is not in this series.
+
+| mean ms of a stepped frame, `busy1` | off (4 runs) | on (4 runs) |
+|---|---|---|
+| the frame of JavaScript | 1.32, 1.38, 1.16, 1.18 (median 1.25) | 1.44, 1.37, 1.17, 1.31 (median 1.34) |
+| the update | 0.79, 0.83, 0.80, 0.82 | 0.79, 0.81, 0.79, 0.86 |
+| the drawing | 0.41, 0.42, 0.24, 0.24 | 0.53, 0.43, 0.26, 0.33 |
+| p95 of the frame | 2.4, 2.4, 2.1, 2.3 | 2.3, 2.3, 2.2, 2.5 |
+| the heap | 11.05 to 11.09 MB | 11.06 MB |
+
+No difference outside the noise of a shared Mac (a run differs from the next by more than the two columns differ): the update is the same to a hundredth of a millisecond, the drawing is at most 0.1 ms more with the effects on, which the Node numbers below explain (the pooled sprites' setters). The longest single frames (60 to 105 ms in some runs of both columns) are the first frame's one-off costs, the same with and without. Pictures of each moment, and of the pilot's ring, are kept by ORCH outside the repository (taken 26 Nov, muted, under the lock).
 
 | | per frame | per event |
 |---|---|---|
@@ -335,3 +345,19 @@ Counting the Phaser setters the busiest case makes (about 480 calls of `setPosit
 ## The view leads a boosting ship; the stick's glide, ring and pill (card `space-game-b7-camera-lead-stick`, 26 Nov 2026)
 Each frame: the lead is one function of five numbers and a two-number ease (a few multiplications), a write to the camera's follow offset only when it changed; the glide is a camera scroll write for 0.4 s after a take or a hand-back; the ring is one Graphics (cleared, one circle) for 0.45 s; the pill is one Text object made once and moved each frame while he is away (a scale, a position, an alpha). Nothing is allocated per frame after the first, no tween, no particle.
 **Not measured in Chrome yet**: the numbers belong next to the card's picture; expected well inside the noise of the 0.63 and 0.66 ms frame of the card before (the pill's Text is the one new draw call while he is away).
+## The torpedo, the boost and the end of a mission (card `space-game-b7-torpedo-boost-beat`, 26 Nov 2026)
+What it adds: for each live torpedo a dashed line (at most 40 `lineBetween` calls on the Graphics that is cleared and drawn every frame already) and one more `strokeCircle` for the target's ring; while boosting two more lines on the streaks' Graphics; the ribbon's segments, fewer of them when the store runs low (the dashes leave some out); for 0.8 s at a mission's end, one pooled image (the ring) and a camera follow offset written when it changes. The torpedo's burst is a kill's pooled record (five shards visible of the six).
+
+**What was measured.** Pictures of each piece were taken in Chrome on 26 Nov (muted, under the lock: a torpedo with its dashed line and the amber ring on the freighter, the mint burst, the boost's edge lines and the ribbon with a full and a nearly empty store, a win's gold ring and a loss's pink ring), and they are kept by ORCH outside the repository. The Chrome frame series of the busiest fight was NOT taken for this card: `busy1` has no torpedoes, never boosts and does not end, so it would not exercise any of it. What was timed in Chrome is the one piece that has real Phaser Graphics calls in a loop: `campTorpedoSync` with four live torpedoes (each 550 to 700 px from its freighter, so the 40 dashes are all drawn), 3000 calls, the page's own `slookOn` replaced by `() => false` for the old look: **28.8 and 29.7 microseconds a call with the new look (dashes and the target's ring), 28.8 and 28.3 with the old (solid line)**: the same within the noise of the timer (the smoke puffs and the flames a torpedo already has are most of it). The rest is the cost of each piece's own JavaScript in plain Node with stand-in graphics (every Phaser setter is a free call there; two runs each):
+
+| piece | one call |
+|---|---|
+| the dashed line of one torpedo, 40 dashes (the most) | 5.8 and 6.2 microseconds (plus its 40 `lineBetween` calls) |
+| the target ring's radius | 0.15 microseconds |
+| the two edge lines of the boost | 0.35 and 0.37 microseconds |
+| the ribbon's segments (the store full, 40 points) | 31.7 and 32.1 microseconds (the same as before this card) |
+| the ribbon's segments (the store empty: dashed) | 12.8 and 12.6 microseconds (fewer segments are made, and drawn) |
+| the beat's shape, once a frame for 0.8 s | 0.5 microseconds |
+
+So the new dashes make the ribbon cheaper when the store is low, and the torpedo's line is the one real addition: a handful of torpedoes, 40 short lines each. Nothing here is allocated per frame except the segments the ribbon already made. The Chrome series and the pictures are for the batch.
+

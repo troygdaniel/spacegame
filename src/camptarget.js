@@ -35,9 +35,17 @@
 //   campSelUnits(C)             { hostile, friendly, friendlyPost, who, whoShips }: the ships picked now (each a unit or null; friendlyPost is the entry of an outpost, which is no unit; who is the one ship of a pilot, null for All pilots; whoShips every ship WHO is: the three for All pilots); what the camera, the brackets and the displays read (src/campselzoom.js, src/camptargetdraw.js, src/camptdisp.js)
 //   campSelOrder(C, verb, how, dry)   W is 'engage' (campWingOrder): the group is WHO's squad (a pilot), else all three; an enemy picked: attack it; a friendly picked: guard it; none: form up on the cruiser ({ verb: 'attack'|'guard', formup }); 'attack' and 'guard' alone are its halves (the target boxes' dry runs)
 const CAMP_TGT = '@target'; // the arg of campOrder(C, 'attack' | 'missiles', CAMP_TGT): the picked target (campDo in src/campaign.js)
+// The order of the list: nearest the eye first. While a fighter is flown (card space-game-chunk9-pick-from-nose; Troy, 26 Nov 2026: yes) the eye is the fighter and the order is by its NOSE: a hostile's score is its distance
+// times (1 + CAMP.target.nose times its angle off the nose, in radians): one dead ahead scores its distance, one abeam 3.5 times it at 2.5, one behind 4.1 times (so one behind is picked last, not never). In the cruiser it is the plain distance, as it was.
+function campTgtScore(C, u, eye, flown) {
+  const d = campDist(u, eye); if (!flown) return d;
+  const off = Math.abs(((Math.atan2(u.y - eye.y, u.x - eye.x) - eye.rot + 3 * Math.PI) % (2 * Math.PI)) - Math.PI); // 0 dead ahead to PI behind
+  return d * (1 + (CAMP.target.nose == null ? 2.5 : CAMP.target.nose) * off);
+}
 function campTgtList(C) {
   if (!C || !C.carrier) return [];
-  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => campDist(a, campEye(C)) - campDist(b, campEye(C)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const eye = campEye(C), flown = typeof campCockpitFlown === 'function' && !!campCockpitFlown(C), sc = new Map();
+  return campAliens(C).filter(u => typeof campSeen !== 'function' || campSeen(C, u)).slice().sort((a, b) => { const sa = sc.has(a) ? sc.get(a) : (sc.set(a, campTgtScore(C, a, eye, flown)), sc.get(a)), sb = sc.has(b) ? sc.get(b) : (sc.set(b, campTgtScore(C, b, eye, flown)), sc.get(b)); return sa - sb || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
 }
 function campTgtNow(C) {
   if (!C || !C.tgt) return null;
@@ -112,7 +120,7 @@ function campSelLabel(id) { // a stop's words in the fleet pick and the corner: 
 const campSelIs = (C, id) => !!C && (id === CAMP_SELALL ? !C.sel || C.sel === CAMP_SELALL : C.sel === id); // is that stop the WHO now (nothing picked is All pilots)
 function campSelPick(C, id, how) { // a row of the fleet pick (W, then a digit): that pilot, or All pilots, is WHO. No order is given; a pilot who is lost (and has nothing in the bay) is no stop
   if (!C || !C.carrier) return campNo('what');
-  const e = campSelList(C).find(x => x.id === id); if (!e) return campNo('nopilot');
+  const e = campSelList(C).find(x => x.id === id); if (!e) { const fl = typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; if (fl && id === CAMP_SELPILOT + fl.squad) return { ok: false, code: 'flying', say: uiText('camp.corner.flying', { name: campSelLabel(id) }) }; return campNo('nopilot'); } // the pilot whose fighter he flies is no stop: said in words (shown, not spoken), nothing is picked
   C.sel = e.id; campMarkTouch(C, true, false); return { ok: true, say: '', who: e.id };
 }
 function campSelAll(C) { if (C && C.carrier) { C.sel = CAMP_SELALL; campMarkTouch(C, true, false); } return C ? C.sel : ''; } // the first stop of Q: WHO is all three pilots
@@ -228,5 +236,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
     return campWingOrder(C, group, 'attack', h ? h.id : near ? near.id : null, how || 'key', dry);
   }
   if (verb === 'formup') return campWingOrder(C, 'fighters', 'guard', null, how || 'key', dry); // the Q list's last row (card space-game-keys7-trim, Troy): ALL pilots form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
-  const fr = campFriNow(C); return campWingOrder(C, group, 'guard', fr ? fr.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser
+  const fr = campFriNow(C), fl = !fr && typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; // fl: while a fighter is flown and no friend is picked, "the cruiser" is the wrong place to form up: the two other pilots form up on the fighter he flies (card space-game-chunk10-enter-forms-on-you, Troy 26 Nov 2026: yes, BRIEF 8 decision 8)
+  return campWingOrder(C, group, 'guard', fr ? fr.id : fl ? fl.id : null, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser, or the fighter flown
 }

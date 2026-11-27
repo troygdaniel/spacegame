@@ -173,3 +173,45 @@ Median over 32 seeds. won: percent of seeds won. t(win): seconds, median of the 
 |  |  | ace1 | 100 | 61 | 306 | 130 | 36 | 2 | 0.03 |  |
 |  |  | sit | 100 | 66 | 450 | 450 | 65 | 0 | 0 |  |
 |  |  | sitoff | 13 | 130 | 1167 | 1166 | 122 | 0 | 0 |  |
+
+## After the fire-rate change (card `space-game-fly-fighter-fire-rate`, 26 Nov 2026)
+
+Troy flew the fighter and asked for a faster gun, so the defaults became `rateK` 3 and `damageK` 0.5 (a steady shot every 183 ms, half a pilot's damage a shot; was 1 and 1). The same sweep, the same 32 seeds, the same rule, with `hpK` 2 and turrets 'auto': **13 of 27 mission-skills pass (was 15)**. Fail now: 1.1 rough, 1.2 rough, 1.2 sharp, 1.2 steady, 1.3 rough, 2.2 rough, 2.3 rough, 2.3 sharp, 2.3 steady, 3.1 sharp, 3.2 rough, 3.2 sharp, 3.2 steady, 3.3 rough.
+
+- **Newly failing:** 2.2 rough, 3.3 rough. **Newly passing:** none.
+- The faster gun makes the bot's wide-cone skills (rough) hit more: it takes less cruiser damage out of the cockpit (2.2 rough 81 against plain's 144, 3.3 rough 270 against 436, 1.3 rough 32 against 77) and kills more (1.2 rough 10 kills, 1.2 steady 5 instead of 3). Win times are about the same except 3.2 rough (30 s against 44).
+- 2.3 is unchanged (16 s at every skill): it is the kiting, not the gun.
+- `sit` and `sitoff` do not use the gun, so their rows are as before: 1.2 still fails rule 3 at every skill.
+- ace1 (hpK 1) differs from ace, as before, in 3.2 and 3.3 where the thinner hull gets hit.
+
+ace, before and after: win time / cruiser damage / the fighter's kills (median of 32); plain's win time / damage is the base. The rule is judged on ace's two numbers against plain's.
+
+| mission | skill | plain t / taken | ace before (rateK 1, damageK 1) | ace after (rateK 3, damageK 0.5) | rule |
+|---|---|---|---|---|---|
+| 1.1 | sharp | 306 / 207 | 306 / 212 / 2 | 306 / 217 / 1 | PASS -> PASS |
+| 1.1 | steady | 306 / 207 | 306 / 222 / 4 | 306 / 202 / 5 | PASS -> PASS |
+| 1.1 | rough | 306 / 212 | 306 / 105 / 7 | 306 / 105 / 8 | FAIL -> FAIL |
+| 1.2 | sharp | 266 / 29 | 287 / 16 / 1 | 292 / 9 / 2 | FAIL -> FAIL |
+| 1.2 | steady | 266 / 35 | 272 / 21 / 3 | 273 / 33 / 5 | FAIL -> FAIL |
+| 1.2 | rough | 267 / 33 | 270 / 33 / 9 | 269 / 24 / 10 | FAIL -> FAIL |
+| 1.3 | sharp | 292 / 63 | 292 / 56 / 1 | 292 / 56 / 1 | PASS -> PASS |
+| 1.3 | steady | 292 / 58 | 292 / 53 / 4 | 292 / 50 / 5 | PASS -> PASS |
+| 1.3 | rough | 292 / 77 | 292 / 39 / 8 | 292 / 32 / 9 | FAIL -> FAIL |
+| 2.1 | sharp | 42 / 17 | 43 / 6 / 1 | 44 / 6 / 1 | PASS -> PASS |
+| 2.1 | steady | 42 / 15 | 43 / 0 / 1 | 43 / 6 / 1 | PASS -> PASS |
+| 2.1 | rough | 42 / 17 | 42 / 0 / 3 | 42 / 6 / 3 | PASS -> PASS |
+| 2.2 | sharp | 73 / 132 | 80 / 101 / 1 | 81 / 118 / 0 | PASS -> PASS |
+| 2.2 | steady | 73 / 153 | 81 / 130 / 2 | 79 / 115 / 1 | PASS -> PASS |
+| 2.2 | rough | 76 / 144 | 76 / 104 / 5 | 76 / 81 / 6 | PASS -> FAIL |
+| 2.3 | sharp | 73 / 137 | 16 / 0 / 0 | 16 / 0 / 0 | FAIL -> FAIL |
+| 2.3 | steady | 73 / 141 | 16 / 0 / 0 | 16 / 0 / 0 | FAIL -> FAIL |
+| 2.3 | rough | 88 / 144 | 16 / 0 / 1 | 16 / 0 / 1 | FAIL -> FAIL |
+| 3.1 | sharp | 69 / 31 | 74 / 9 / 1 | 74 / 9 / 1 | FAIL -> FAIL |
+| 3.1 | steady | 69 / 19 | 73 / 9 / 2 | 71 / 9 / 1 | PASS -> PASS |
+| 3.1 | rough | 69 / 21 | 70 / 0 / 5 | 66 / 0 / 6 | PASS -> PASS |
+| 3.2 | sharp | 44 / 144 | 44 / 54 / 0 | 44 / 54 / 0 | FAIL -> FAIL |
+| 3.2 | steady | 44 / 162 | 44 / 54 / 0 | 44 / 54 / 0 | FAIL -> FAIL |
+| 3.2 | rough | 44 / 144 | 33 / 54 / 1 | 30 / 36 / 3 | FAIL -> FAIL |
+| 3.3 | sharp | 55 / 468 | 60 / 353 / 1 | 60 / 353 / 0 | PASS -> PASS |
+| 3.3 | steady | 61 / 436 | 62 / 378 / 1 | 59 / 378 / 1 | PASS -> PASS |
+| 3.3 | rough | 60 / 436 | 54 / 317 / 2 | 51 / 270 / 2 | PASS -> FAIL |

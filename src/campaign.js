@@ -233,7 +233,8 @@ const CAMP = {
     hit: 28                                // px on the SCREEN: the radius of the circle a click hits around a ship (a ship's own radius is never smaller), so it grows in the world as the view zooms out and a small far ship can be hit
   },
   target: {                                // the hostiles' key (card space-game-keys4-onekey; src/camptarget.js campTgtCycle)
-    restart: 2000                          // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
+    restart: 2000,                         // ms (the game's own clock) with no press of ] or \ after which the next ] starts again from the nearest hostile; a press within it steps on to the next one
+    nose: 2.5                               // while a fighter is flown: ] and \ order the hostiles by distance times (1 + nose times the angle off the fighter's nose, in radians): 0 is the plain distance, 2.5 puts one dead ahead before one twice as near abeam (card space-game-chunk9-pick-from-nose). In the cruiser the plain distance, as it was
   },
   charge: {                                // the health bar on every ship you protect (cards space-game-protected-health and space-game-health-bar-quiet; Troy, 22 Nov 2026: bars on the transport, the haulers and the miners, a thin line until the ship is under attack; src/campcharge.js, src/campchargescene.js)
     amber: 0.6,                            // the hull share at or under which the bar turns from green to amber
@@ -285,8 +286,8 @@ const CAMP = {
     fall: 900,                             // px/s each second the top speed comes down after the boost (the Wren's BOOST.fall): a fade, not a wall
     store: { max: 100, drain: 25, pause: 1000, regen: 17, back: 0.25 }, // the boost store (the Wren's src/boost.js BOOST and its first booster tier): units, units a second while boosting, ms before it refills, units a second refilling, the share that unlocks it after it ran dry
     hpK: 2,                                // times the pilot's hit points while he flies it (Troy, 26 Nov 2026: double, 72); the hull is scaled back by the same ratio when he hands it back, so taking and giving cannot heal or hurt
-    damageK: 1,                            // times the pilot's shot damage (CAMP.fighter.damage)
-    rateK: 1,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this)
+    damageK: 0.5,                          // times the pilot's shot damage (CAMP.fighter.damage): half, with three times the rate (Troy, 26 Nov 2026, after flying it: the fire rate was too slow) the flown gun deals about 1.5 times a pilot's, not the Wren's 94 a second (which equals the whole wing)
+    rateK: 3,                              // times the pilot's rate of fire (CAMP.fighter.delay: one shot every mean delay over this, steady, no random gap): 3 is a shot every 183 ms against the pilot's 550 (the Wren fires every 160); the pilots' own guns, CAMP.fighter, are unchanged
     turrets: 'auto'                        // the cruiser's turrets while he is away: 'auto' fire by themselves at what threatens it (aliens and torpedoes, not rocks), 'off' fire only while Space is held (Space is the fighter's gun then, so none)
   },
   wing: {                                  // the wing's groups, verbs and targets (card space-game-campaign-wing-targets; src/campwing.js): campWingOrder(C, group, verb, target, how)
@@ -545,7 +546,9 @@ const CAMP = {
     delay: [1300, 1900],                   // ms between shots
     bullet: 440,                           // px/s of a shot
     range: 800,                            // px it shoots from
-    turn: 3                                // rad/s the gun turns
+    turn: 3,                               // rad/s the gun turns
+    flownTurn: 1.5,                        // times the turn against the fighter the player flies (card space-game-b7-level3, brief 7 decision 5: a tower could not track a fast fighter)
+    flownSpeed: 1.3                        // times the shot's speed against the fighter the player flies
   },
   cache: {
     radius: 160                            // px: any of your ships this close to a resource cache collects it (level 2)
@@ -560,7 +563,8 @@ const CAMP = {
     hauler: 100                            // points lost for each hauler or transport lost (a convoy ship: card space-game-l1-rim-missions; it is not a ship of the wing, and a mission can still be won with some of them lost)
   },
   mission: {                               // where a mission happens (docs/CAMPAIGN.md, Mission places)
-    arrive: 3000                           // px: the cruiser within this of the mission's place has arrived; the mission's clock (waves, haulers, par, the hold) starts then, not before
+    arrive: 3000,                          // px: the cruiser within this of the mission's place has arrived; the mission's clock (waves, haulers, par, the hold) starts then, not before
+    idleTrip: 120                          // s: the idle threat's clock (level 3's missions 1 and 2) counts from arrival; a cruiser that never reaches the place is found this many seconds after the start, plus the same wait, so a player who stops playing meets it too
   },
   moons: [                                 // moons and small worlds a level may show (its row says which, `moons: [ids]`): id; of: the place of the level it goes round; name; at: where from it, px (the real offsets of docs/SOL.md at the Campaign's scale would put a moon on its planet, so they are lengthened); kind, seed, r: the picture; outpost: the dock the debrief returns you to
     { id: 'luna', of: 'earth', name: 'Luna', at: [1500, -900], kind: 'rock', seed: 3, r: 45, outpost: 'Imbrium Dock' },
@@ -721,17 +725,19 @@ const CAMP = {
       ],
       missions: [
         { id: 'resources', kind: 'recon', par: 100, hpScale: 1.5, dmgScale: 1.8, place: 'alpha-cen-b', dock: 'proxima-w',  // M1 at Alpha Centauri B's world (a trip of about 7 s by Fast)               // M1: gather two of the three resource caches, with the aliens that followed through the warp
-          caches: [[-1500, 900], [800, 1600], [1600, -700]], rocks: [{ at: [-900, -1100], n: 5, spread: 260 }, { at: [1100, 600], n: 5, spread: 260 }], objectives: [{ type: 'caches', n: 2 }, { type: 'kill', what: 'wave:0' }],  // the resource caches
+          caches: [[-1500, 900], [800, 1600], [1600, -700]], rocks: [{ at: [-900, -1100], n: 5, spread: 260 }, { at: [1100, 600], n: 5, spread: 260 }], objectives: [{ type: 'caches', n: 2 }, { type: 'kill', what: 'wave:all' }],  // the resource caches: two of the three (Troy, 26 Nov 2026: it keeps two), and the group the first one calls
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'wreck' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 20, from: [-3000, 1200], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave1' }] },  // the waves: when, from where, how many of each kind
+          hunt: { every: 45, from: [-3000, 1200], ships: { raider: 3, drone: 2 }, more: { raider: 1, drone: 1 }, until: { caches: 1 }, say: 'camp.say.l2wave1' },  // the threat that comes to a player who takes no cache (campHunt): a party from the west every 45 s, each two ships larger, until the first cache is taken
+          waves: [{ on: { caches: 1 }, at: 'cache', from: [-3000, 1200], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave1' }] },  // the wave comes on what the player does (card space-game-b7-level2; Troy, 26 Nov 2026): the first cache taken calls the group (the old wave's ships) to the nearest cache still to take, and it waits there (guards: they wake when a ship of yours comes within reach). It came at 20 s of the clock. at: 'cache' is where it comes out; `from` is kept for the Tab map's extent alone
         { id: 'guards', kind: 'attack', par: 100, hpScale: 2, dmgScale: 2.4, place: 'proxima-d', dock: 'proxima-w',  // M2 at Proxima d (a trip of about 11 s by Fast): the relic's guards                  // M2: five guards wait round the relic until your ships come within reach
           guards: [{ kind: 'gunship', at: [900, -300] }, { kind: 'gunship', at: [-700, 500] }, { kind: 'gunship', at: [1100, 700] }, { kind: 'drone', at: [-300, -700] }, { kind: 'drone', at: [300, 900] }, { kind: 'drone', at: [-1000, -200] }, { kind: 'drone', at: [700, -900] }],  // the guards (kind, offset from Proxima d)
-          objectives: [{ type: 'kill', what: 'guards' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
-          waves: [{ at: 18, from: [2600, -2200], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l2wave2' }, { at: 40, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves: when, from where, how many of each kind
+          objectives: [{ type: 'kill', what: 'guards' }, { type: 'kill', what: 'wave:all' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
+          hunt: { every: 40, from: [2600, -2200], ships: { drone: 2, gunship: 1 }, more: { drone: 1, gunship: 1 }, until: { guardsDead: 7 }, restart: 'guard', focus: 'carrier' },  // the threat that comes to a player who kills no guard (campHunt): a patrol from the north-east when no guard has died for 40 s, each two ships larger, until the guards are all dead
+          waves: [{ on: { guardsDead: 4 }, from: [2600, -2200], ships: { drone: 2, gunship: 2 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2' }, { on: { guardsDead: 4 }, from: [-2500, 2000], ships: { drone: 2, gunship: 1 }, goal: 'carrier', focus: 'carrier' }, { on: { guardsDead: 6 }, from: [-2500, 2000], ships: { raider: 4, drone: 3 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves come on what the player does (card space-game-b7-level2): the reinforcements (the old first wave, split in two) when the fourth guard dies, from two sides at once; a second group (the old second wave) when the sixth dies: the last guard calls it. They came at 18 and 40 s of the clock
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
           start: 'proxima', startAt: [-600, 300], relic: { place: 'proxima', radius: 240, hold: 20, caches: 0, clear: 650, leash: 800, stand: 200 }, objectives: [{ type: 'relic' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'echo' }, { id: 'swift', type: 'time', secs: 90 }, { id: 'hull', type: 'hull', pct: 70 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { held: 0 }, ring: [447, -1005], from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 5 }, ring: [-1062, 287], from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 10 }, ring: [583, 932], from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'relic', say: 'camp.say.l2wave3' }] }  // the waves: on what (the hold), where they come out (ring: from the relic), how many of each kind. `from` is no longer where they come from (ring wins): it is kept so the Tab map's extent and its zoom limit are what they were (campMapBounds)
+          waves: [{ on: { held: 0 }, ring: [447, -1005], from: [2800, -2800], ships: { drone: 4, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { held: 10 }, ring: [-1062, 287], from: [-2500, 1800], ships: { gunship: 3, raider: 3 }, goal: 'relic', say: 'camp.say.l2wave3' }, { on: { behind: 1, secs: 8 }, ring: [1062, -287], from: [2200, 2400], ships: { drone: 4, gunship: 2 }, goal: 'relic', say: 'camp.say.l2wave3' }] }  // the waves: on what (the hold), where they come out (ring: from the relic), how many of each kind. `from` is no longer where they come from (ring wins): it is kept so the Tab map's extent and its zoom limit are what they were (campMapBounds)
       ]
     },
     3: {                                                          // the alien home world: scan the approach, break the outer ring, break the inner ring
@@ -753,17 +759,28 @@ const CAMP = {
       ],
       missions: [
         { id: 'approach', kind: 'recon', par: 120, hpScale: 2.2, dmgScale: 2.6, place: 'kolga', dock: 'tyr',  // M1 at Kolga, a moon of the alien home world (a trip of about 10 s by Fast)                // M1: three points on the way in; defenders come when the first is scanned
-          objectives: [{ type: 'scan', points: [{ at: [-1500, 800], r: 420, secs: 7 }, { at: [100, 1400], r: 420, secs: 7 }, { at: [1500, -500], r: 420, secs: 7 }] }, { type: 'kill', what: 'wave:0' }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
+          objectives: [{ type: 'scan', pause: 2, points: [{ at: [-1500, 800], r: 420, secs: 7 }, { at: [100, 1400], r: 420, secs: 7 }, { at: [1500, -500], r: 420, secs: 7 }] }, { type: 'clear' }],  // what the mission asks (scan points: where, how close, how many seconds; a scan stops while the cruiser is hit and goes on 2 s after, brief 7 decision 1), all of it: every wave comes and none is left
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'nest' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { scanned: 1 }, from: [-2500, 1800], ships: { raider: 5, drone: 3 }, goal: 'carrier', say: 'camp.say.l3wave1' }] },  // the waves: when, from where, how many of each kind
+          waves: [{ on: { scanning: 0 }, from: [-2500, 1800], ships: { raider: 2, drone: 0 }, goal: 'carrier', say: 'camp.say.l3wave1' },    // a scan's wave arrives when that scan starts, at its ring (brief 7 decision 1; the numbers are a first try)
+                  { on: { scanning: 1 }, from: [-700, 2900], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
+                  { on: { scanning: 2 }, from: [2900, -1500], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier', say: 'camp.say.l3wave3' },  // (a wave of level 3: card space-game-b7-level3)
+                  // the picket finds an idle player (Troy's yes, 26 Nov): no scan begun 60 s after arrival and a patrol of 3 raiders and a gunship leaves the planet for the cruiser, another every 40 s until a scan begins, four at most; optional: a player who scans never meets it
+                  { on: { idle: 60, until: 'scan' }, optional: true, nearCarrier: 1800, toward: 'home', ships: { raider: 3, gunship: 1 }, goal: 'carrier' }, { on: { idle: 100, until: 'scan' }, optional: true, nearCarrier: 1800, toward: 'home', ships: { raider: 3, gunship: 1 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
+                  { on: { idle: 140, until: 'scan' }, optional: true, nearCarrier: 1800, toward: 'home', ships: { raider: 3, gunship: 1 }, goal: 'carrier' }, { on: { idle: 180, until: 'scan' }, optional: true, nearCarrier: 1800, toward: 'home', ships: { raider: 3, gunship: 1 }, goal: 'carrier' }] },  // the waves: when, from where, how many of each kind
         { id: 'outer', kind: 'attack', par: 120, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'ran', dock: 'tyr',  // M2 at Ran, the second moon (a trip of about 8 s by Fast): the four tougher towers round it;   // M2: the four outer towers (they are the tougher ones)
-          start: 'home', startAt: [-3300, 1900], towers: [{ place: 'ran', r: 1100, n: 4, phase: 0.7, hp: 260 }], objectives: [{ type: 'kill', what: 'towers' }],  // where the cruiser starts, and the relic
+          start: 'home', startAt: [-3300, 1900], towers: [{ place: 'ran', r: 1100, n: 4, phase: 0.7, hp: 260 }], objectives: [{ type: 'kill', what: 'towers' }, { type: 'clear' }],  // where the cruiser starts, and the relic
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'vault' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'hull', type: 'hull', pct: 60 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 25, from: [2800, -2800], ships: { drone: 4, gunship: 3 }, goal: 'carrier', say: 'camp.say.l3wave2' }] },  // the waves: when, from where, how many of each kind
-        { id: 'inner', kind: 'attack', par: 150, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'home', dock: 'tyr',  // M3 at the alien world itself (the cruiser starts there): the eight inner towers, the last reserves;   // M3: the eight inner towers, with the last reserves
-          start: 'home', startAt: [-2400, 1300], towers: [{ place: 'home', r: 1000, n: 8, phase: 0.2 }], objectives: [{ type: 'kill', what: 'towers' }],  // where the cruiser starts, and the relic
-          bonus: [{ id: 'find', type: 'anomaly', anomaly: 'core' }, { id: 'swift', type: 'time', secs: 150 }, { id: 'hull', type: 'hull', pct: 50 }, { id: 'clean', type: 'lost', n: 2 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ at: 20, from: [-2500, -3000], ships: { raider: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }, { at: 75, early: 20, from: [2800, -2800], ships: { drone: 3, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' }] }  // the waves: when, from where, how many of each kind
+          waves: [{ on: { towers: 1 }, nearTower: 700, ships: { drone: 2 }, goal: 'carrier' },    // each tower that falls calls a group to the next one, out from behind it (brief 7 decision 1; a first try)
+                  { on: { towers: 2 }, nearTower: 700, ships: { drone: 2, gunship: 1 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
+                  { on: { towers: 3 }, nearTower: 700, ships: { raider: 2, gunship: 1 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
+                  // the reserve finds an idle player (Troy's yes, 26 Nov): no tower fallen 45 s after arrival and 2 drones and 2 gunships leave the nearest tower for the cruiser, another every 40 s until one falls, four at most; optional
+                  { on: { idle: 45, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { drone: 2, gunship: 2 }, goal: 'carrier' }, { on: { idle: 85, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { drone: 2, gunship: 2 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
+                  { on: { idle: 125, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { drone: 2, gunship: 2 }, goal: 'carrier' }, { on: { idle: 165, until: 'tower' }, optional: true, nearCarrier: 1800, toward: 'tower', ships: { drone: 2, gunship: 2 }, goal: 'carrier' }] },  // the waves: when, from where, how many of each kind
+        { id: 'inner', kind: 'attack', par: 180, hpScale: 2.4, dmgScale: 3, win: 'towers', place: 'home', dock: 'tyr',  // M3 at the alien world itself (the cruiser starts there): the eight inner towers, the last reserves;   // M3: the eight inner towers, with the last reserves
+          start: 'home', startAt: [-2400, 1300], towers: [{ place: 'home', r: 1000, n: 8, phase: 0.2 }], objectives: [{ type: 'kill', what: 'towers' }, { type: 'clear' }],  // where the cruiser starts, and the relic
+          bonus: [{ id: 'find', type: 'anomaly', anomaly: 'core' }, { id: 'swift', type: 'time', secs: 180 }, { id: 'hull', type: 'hull', pct: 50 }, { id: 'clean', type: 'lost', n: 2 }],  // bonus objectives: each met earns CAMP.score.bonus
+          waves: [{ on: { towers: 4 }, from: [-3000, -2300], ships: { raider: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave2' },    // the two waves come together, from opposite sides of the world, when the fourth tower falls (brief 7 decision 3; par 180 s; a first try)
+                  { on: { towers: 4 }, from: [3000, 2300], ships: { drone: 2, gunship: 2 }, goal: 'carrier', say: 'camp.say.l3wave3' }] }  // the waves: when, from where, how many of each kind
       ]
     }
   }
@@ -815,6 +832,7 @@ function campMissionRow(level, i) {
     if (row.guards) row.guards = row.guards.map(g => Object.assign({}, g, { at: sh(g.at) }));
     if (row.traffic) row.traffic = row.traffic.map(t => Object.assign({}, t, t.at ? { at: sh(t.at) } : {}, Array.isArray(t.field) ? { field: sh(t.field) } : {})); // the neutral ships (src/camppirates.js): a row with `at` or `field` points is an offset from the mission's place; one with `place` + `off` is not
     row.waves = row.waves.map(w => Object.assign({}, w, w.from ? { from: sh(w.from) } : {}, w.mother ? { mother: sh(w.mother) } : {}));
+    if (row.hunt) row.hunt = Object.assign({}, row.hunt, { from: sh(row.hunt.from) }); // (the hunting parties' side, as a wave's)
     if (row.objectives) row.objectives = row.objectives.map(o => o.type === 'scan' ? Object.assign({}, o, { points: o.points.map(q => Object.assign({}, q, { at: sh(q.at) })) }) : o);
   }
   return row;
@@ -906,13 +924,14 @@ function campNew(level, techs, opts) {
   const p = campPlaces(level)[L.start], c = campSpawn(C, 'carrier', p.x + L.startAt[0], p.y + L.startAt[1]);
   C.carrier = c; c.rot = 0;
   C.power = campPowerNew(opts.power); C.shield = campShieldMax(C); // the ship's systems: the saved setting (or 2 / 2 / 2), and a full shield for its cap (150 at the default)
-  C.scan = ((L.objectives || []).find(o => o.type === 'scan') || { points: [] }).points.map(q => ({ x: q.at[0], y: q.at[1], r: q.r || 260, secs: q.secs || 5, t: 0, got: false })); // recon: the points to scan
+  const scanO = (L.objectives || []).find(o => o.type === 'scan') || { points: [] }; C.scanPause = scanO.pause || 0; // a scan stops while the cruiser is hit and goes on this many seconds after (brief 7: 3.1, 2 s); 0 in every other mission
+  C.scan = scanO.points.map(q => ({ x: q.at[0], y: q.at[1], r: q.r || 260, secs: q.secs || 5, t: 0, got: false, began: false })); // recon: the points to scan (began: a ship of yours has come into its ring, which is a wave's cue)
   C.turretRng = campRng((opts.seed == null ? 1 : opts.seed) * 4243 + 29); // the turrets' jitter has a stream of its own, so it never changes how a fight flies
   C.turrets = CAMP.carrier.mounts.map((m, i) => ({ x: 0, y: 0, aim: 0, target: '', slot: 0, at: 0, shotAt: -1e9 })); C.turrets.forEach((tu, i) => { tu.at = campTurretAt(C, i, 0); }); campTurretPlace(C); // the turrets: where each is, which way it aims, at whom, when it may fire next and when it last did (the scene draws them)
   C.charge = CAMP.tank.max; C.chargeLow = false; // the turrets' charge (campLaserStep, campLaserSpend), full at the start of a battle
   (L.towers || []).forEach(g => { // rings of towers round a place, facing outward
     const at = campPlaces(level)[g.place];
-    for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; }
+    for (let i = 0; i < g.n; i++) { const a = (g.phase || 0) + i / g.n * 2 * Math.PI, t = campSpawn(C, 'tower', at.x + Math.cos(a) * g.r, at.y + Math.sin(a) * g.r); t.rot = a; if (g.hp) t.hp = t.maxHp = g.hp; C.towerN = (C.towerN || 0) + 1; }
   });
   const rr = campRng((opts.seed == null ? 1 : opts.seed) * 7919 + 13); // the rocks have a stream of their own, so ore never changes how a fight flies
   C.rocks = []; C.lasers = []; C.laserNow = []; C.laserLog = {}; // C.lasers: the beams firing now, [{ from: the ship's id, to: the rock's or the alien's id, kind: 'rock' | 'alien', since: C.t when this beam began without a break }] (data for the beam hum, src/campaign.js campBeamState of card space-game-campaign-sounds)
@@ -1206,7 +1225,7 @@ function campAhead(C, w) { // where a wave with `ahead` comes from: that far in 
   return { x: f.x + dx * k, y: f.y + dy * k };
 }
 function campSchedule(C) {
-  if (C.arrivedAt == null) return; // nothing comes before the cruiser is at the mission's place
+  if (C.arrivedAt == null && !(C.L.waves || []).some(w => w.on && w.on.idle != null)) return; // nothing comes before the cruiser is at the mission's place (but the idle threat: a cruiser that never goes there is found, level 3's missions 1 and 2)
   const L = C.L, sec = campMissionClock(C);
   L.convoys.forEach((cv, i) => {
     if (C.convoys[i].started || sec < cv.at) return;
@@ -1226,17 +1245,20 @@ function campSchedule(C) {
     if (!due && !early) return;
     st.started = true; st.at = sec;
     if (w.beat === 'distress' && !campFlag('distress')) return; // the distress call is switched off (the tuning panel): the wave is taken as passed and no pirate comes (src/campbeats.js)
-    const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, org = ahead ? [ahead.x, ahead.y] : w.ring && C.relic ? [C.relic.x + w.ring[0], C.relic.y + w.ring[1]] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ring: this far from the relic, wherever the relic is (mission 2.3: a wave comes out of the dark about 1,100 px from the ring and is on it in a few seconds) // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
+    const nt = w.nearTower != null ? campNearest(C.ships.filter(u => u.kind === 'tower' && u.hp > 0), C.carrier) : null; // nearTower: the wave comes out this many px behind the tower the cruiser is nearest (the next one to break), seen from the cruiser: a group called to it (brief 7)
+    const nc = w.nearCarrier != null ? (w.toward === 'tower' ? campNearest(C.ships.filter(u => u.kind === 'tower' && u.hp > 0), C.carrier) : campPlaces(C.level)[w.toward || C.L.place] || { x: 0, y: 0 }) : null; // nearCarrier: the wave is born that many px from the cruiser toward `toward` (a place of the level, or 'tower' for the nearest tower; the mission's place by default): the idle threat has to find a cruiser that is nowhere near its post (a leash: campPursuit)
+    const goal = w.goal || 'earth', ahead = w.ahead != null ? campAhead(C, w) : null, next = w.at === 'cache' ? campNearest(C.caches.filter(k => !k.got && !k.carried), C.carrier) : null, org = ahead ? [ahead.x, ahead.y] : nc ? (a => [C.carrier.x + Math.cos(a) * w.nearCarrier, C.carrier.y + Math.sin(a) * w.nearCarrier])(Math.atan2(nc.y - C.carrier.y, nc.x - C.carrier.x)) : nt ? (a => [nt.x + Math.cos(a) * w.nearTower, nt.y + Math.sin(a) * w.nearTower])(Math.atan2(nt.y - C.carrier.y, nt.x - C.carrier.x)) : next ? [next.x, next.y] : w.ring && C.relic ? [C.relic.x + w.ring[0], C.relic.y + w.ring[1]] : (w.from || [C.carrier.x + 2500, C.carrier.y]); // ring: this far from the relic, wherever the relic is (mission 2.3: a wave comes out of the dark about 1,100 px from the ring and is on it in a few seconds) // ahead: the wave comes out of the dark this many px in front of a convoy (its heading), the one named (along) or the first flying
     const away = w.perAway && typeof campMinerAway === 'function' ? campMinerAway(C).length : 0; // the miner's price (card space-game-11-miner-real-price): a wave row's perAway says how many more of a kind come for each pilot that is away at the miner when it spawns (src/campminer.js), so the more pilots go, the more of them come for the transport
     Object.keys(w.ships).forEach(kind => {
-      for (let k = 0; k < w.ships[kind] + Math.round(away * ((w.perAway || {})[kind] || 0)); k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
+      for (let k = 0; k < w.ships[kind] + Math.round(away * ((w.perAway || {})[kind] || 0)); k++) { const a = campSpawn(C, kind, org[0] + campBetween(C, -300, 300), org[1] + campBetween(C, -300, 300)); if (a) { a.goal = goal; a.wave = i; if (w.focus) a.focus = w.focus; if (next) { a.hold = true; a.post = { x: next.x, y: next.y }; } a.rot = ahead ? Math.atan2(ahead.y - a.y, ahead.x - a.x) : Math.atan2(-a.y, -a.x); if (a.faction === 'pirate' || a.boat) { a.prey = w.prey || 'any'; if (w.breakAt != null && a.faction === 'pirate') a.breakAt = w.breakAt; } } }
     });
     if (w.mother) { const m = campSpawn(C, 'mother', w.mother[0], w.mother[1]); m.goal = 'earth'; m.wave = i; const hp = campMissionPlace(C) || { x: 0, y: 0 }; m.rot = Math.atan2(hp.y - m.y, hp.x - m.x); }
     if (w.ambush) C.events.push({ type: 'alarm' }); // the surprise: the scene sounds the alarm
     C.events.push({ type: 'wave', i, x: org[0], y: org[1] }); // a wave has come out of the dark at (x, y): the picture glows the edge it comes from (src/campmoments.js); no rule reads it
-    campSay(C, w.say, { n: i + 1 });
+    if (w.say) campSay(C, w.say, { n: i + 1 }); // (a wave with no line is silent)
   });
   L.waves.forEach((w, i) => { const st = C.waves[i]; if (w.say2 && st.started && !st.said2 && sec - st.at >= (w.say2At || 5)) { st.said2 = true; campSay(C, w.say2, { n: i + 1 }); } }); // a second line, some seconds after the wave came
+  if (L.hunt) campHunt(C, sec);
 }
 
 // ---------- the ship's systems: power to weapons, shields and engines (card space-game-campaign-systems; docs/CAMPAIGN.md "Ship systems") ----------
@@ -1308,13 +1330,21 @@ function campLaserStep(C, dt) {
 
 const campLane = (C, id) => id ? (C.lane[id] || 0) : Object.keys(C.lane).reduce((a, k) => Math.max(a, C.lane[k]), 0);
 // when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
+const campIdleClock = C => C.arrivedAt != null ? (C.t - C.arrivedAt) / 1000 : Math.max(0, C.t / 1000 - CAMP.mission.idleTrip); // seconds since arrival; a cruiser that never reaches the mission's place is found CAMP.mission.idleTrip s after the start plus the same clock
+const campIdleStop = (C, until) => until === 'scan' ? C.scan.some(p => p.began) : until === 'tower' ? (C.towerN || 0) - C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length >= 1 : false;
 function campWaveOn(C, on) {
   if (on.scanned != null) return C.scan.filter(p => p.got).length >= on.scanned;
+  if (on.idle != null) return campIdleClock(C) >= on.idle && !campIdleStop(C, on.until); // the idle threat (brief 7 decision 6, Troy's yes of 26 Nov): a group comes for the cruiser on.idle seconds in, unless the player has begun what the mission asks (until: 'scan', a scan has begun; 'tower', a tower has fallen)
+  if (on.scanning != null) return !!(C.scan[on.scanning] && C.scan[on.scanning].began); // scan k (0 is the first) has begun: a ship of yours is in its ring (brief 7: a scan's wave arrives when it starts)
+  if (on.towers != null) return C.towerN - C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length >= on.towers; // k towers have fallen (brief 7: each tower that falls calls a group)
   if (on.delivered != null) return C.delivered >= on.delivered;
   if (on.t != null) return campMissionClock(C) >= on.t;
   if (on.lane != null) return campLane(C, on.convoy) >= on.lane; // the share (0 to 1) of its road a convoy has flown: the one named (on.convoy: its id), else the farthest of them; nothing while no convoy has left
   if (on.cue != null) return C.cues[on.cue] != null; // a named cue a script fired (campCue, src/camppirates.js)
   if (on.held != null) return !!(C.relic && C.relic.entered && C.relic.best >= on.held); // the relic has been held this many seconds (0: the cruiser has been inside its ring): a wave of 2.3 comes for what the player does, not at a second of the clock (card space-game-23-waves-on-entry; the cloud's brief 7: one on entering, one at 5 s held, one at 10 s held)
+  if (on.caches != null) return C.cachesGot >= on.caches; // this many caches taken (2.1: each cache taken calls the aliens to the next one; card space-game-b7-level2, the cloud's brief 7)
+  if (on.guardsDead != null) return !!C.guardsStart && (C.L.guards || []).length - C.ships.filter(u => u.guard && u.hp > 0).length >= on.guardsDead; // this many of the mission's guards are dead (2.2: the fourth calls the reinforcements, the sixth, with one guard left, a second group)
+  if (on.behind != null) { const st = C.waves[on.behind]; return !!st && st.started && campMissionClock(C) - st.at >= (on.secs || 0) * CAMP.time.waves; } // right behind another wave: this many seconds after wave `behind` came (2.3: the third wave, from the other side, while the second is still on the ring; card space-game-23-two-sides)
   if (on.cleared != null) { const w = /^wave:(\d+)$/.exec(on.cleared); return !!w && !!C.waves[+w[1]] && C.waves[+w[1]].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === +w[1]); } // a wave is cleared: it came and none of it is left (a pirate that ran away is gone, not left)
   return false;
 }
@@ -1542,8 +1572,9 @@ function campConvoyAI(C, u, dt) {
 // an alien: goes for its goal (Earth, or a convoy), turns on whatever hits it for a few seconds, else on the nearest ship of yours that comes close
 function campTowerAI(C, u, dt) { // a gun on a post: turns on the nearest of your ships inside its range and fires
   const k = CAMP.tower, tgt = campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, k.range); if (!tgt) return;
-  const aim = Math.atan2(tgt.y - u.y, tgt.x - u.x); u.rot = campRot(u.rot, aim, k.turn * dt);
-  if (C.t > u.nextShot && Math.abs(campWrap(aim - u.rot)) < 0.12) { u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]); campBullet(C, u, u.rot, k.bullet, k.damage * C.dmgS, 1900, 'alien', u.r); }
+  const aim = Math.atan2(tgt.y - u.y, tgt.x - u.x), flown = !!C.cockpit && C.cockpit.id === tgt.id; // the ship the player flies: the gun turns and the shot flies faster (brief 7 decision 5)
+  u.rot = campRot(u.rot, aim, k.turn * (flown ? k.flownTurn : 1) * dt);
+  if (C.t > u.nextShot && Math.abs(campWrap(aim - u.rot)) < 0.12) { u.nextShot = C.t + campBetween(C, k.delay[0], k.delay[1]); campBullet(C, u, u.rot, k.bullet * (flown ? k.flownSpeed : 1), k.damage * C.dmgS, 1900, 'alien', u.r); }
 }
 function campAlienAI(C, u, dt) {
   const def = u.def;
@@ -1556,6 +1587,7 @@ function campAlienAI(C, u, dt) {
   if (u.hitBy && u.distractedUntil > C.t) { const h = C.by[u.hitBy]; if (h && h.hp > 0) tgt = h; }
   if (!tgt && u.goal && u.goal.indexOf('convoy:') === 0) { const f = C.by['freighter-' + u.goal.slice(7)]; if (f && f.hp > 0) tgt = f; }
   if (!tgt) { const near = campDogFoe(C, u, campNearest(C.ships.filter(s => s.team === 'earth' && s.hp > 0), u, def.engage * 0.7)); if (near) { tgt = near; if (near !== C.carrier) u.lost = false; } } // one of your other ships in reach: it is on that ship (the carrier is the leash's: campPursuit)
+  if (u.focus === 'carrier' && C.carrier && C.carrier.hp > 0) tgt = C.carrier; // a group a mission calls (a wave row's or a hunt's `focus`; card space-game-chunk16-22-fighter-gap, Troy: yes) goes for the cruiser itself: a ship of yours that flies past it, or hits it, does not draw it away (a flown fighter used to drag the called groups off the cruiser in 2.2)
   if (campPursuit(C, u, tgt)) { // it has lost you: it goes back to its post (a guard) or settles where it is and guards (the rest), and an Earth wave goes on to Earth
     if (!C.earth) { // no Earth here: a guard goes back to its post and holds there again; the rest come to rest where they are, out of it until the carrier comes within the leash again (campPursuit clears it)
       if (u.post && campDist(u, u.post) > 90) { campSeek(u, u.post.x, u.post.y, dt); return; }
@@ -1603,6 +1635,22 @@ function campRelicAlien(C, u, dt) {
     const n = def.spread || 1;
     for (let i = 0; i < n; i++) campBullet(C, u, u.rot + (i - (n - 1) / 2) * 0.17, def.bullet * C.shot, def.dmg * C.dmgS, 1800, 'alien', 14);
   }
+}
+// THE HUNTING PARTIES (a mission row's `hunt`; card space-game-b7-level2, the cloud's brief 7, decision 6; Troy, 26 Nov 2026: yes to the 2.1 party). A threat that comes to a player who does nothing: while the row's
+// `until` (a wave's trigger: campWaveOn) is not true, a party comes for the cruiser from `from` every `every` seconds of the mission's clock, the first after `every`; party k has the row's `ships` and `more` of each kind
+// k times over (2.1: 3 raiders and 2 drones, then 4 and 3, 5 and 4 ... no upper limit: a player who only sits is beaten in the end). Once `until` is true no more come, for good. A party's ships carry u.hunt (its number),
+// not u.wave: the objective 'wave:all' counts them (they must be dead to win), a wave's own triggers do not, and they are not guards. `say` is said for the first party alone.
+// 2.2 (Troy, 26 Nov 2026: yes): a patrol of 2 drones and a gunship from the north-east when no guard has died for 40 s, each two ships larger, `restart: 'guard'`, until every guard is dead.
+function campHunt(C, sec) {
+  const h = C.L.hunt, H = C.hunt || (C.hunt = { n: 0, last: 0, off: false }); if (H.off || C.result) return;
+  if (campWaveOn(C, h.until)) { H.off = true; return; }
+  if (h.restart === 'guard') { const alive = C.ships.filter(u => u.guard && u.hp > 0).length; if (H.alive != null && alive < H.alive) H.last = sec; H.alive = alive; } // each guard killed starts the wait again (2.2: the patrols come to a player who is not killing guards)
+  if (sec - H.last < h.every * CAMP.time.waves) return;
+  Object.keys(h.ships).forEach(kind => {
+    for (let k = 0; k < h.ships[kind] + H.n * ((h.more || {})[kind] || 0); k++) { const a = campSpawn(C, kind, h.from[0] + campBetween(C, -300, 300), h.from[1] + campBetween(C, -300, 300)); if (a) { a.goal = 'carrier'; a.hunt = H.n; if (h.focus) a.focus = h.focus; a.rot = Math.atan2(C.carrier.y - a.y, C.carrier.x - a.x); } }
+  });
+  if (H.n === 0 && h.say) campSay(C, h.say, { n: 1 });
+  H.n++; H.last = sec;
 }
 // pursuit: an alien that was on the carrier (it targeted it within the leash) and has been beyond the leash for loseAfter ms has lost it. Returns true while it has. A burn does it (every top speed is under the burn's,
 // and the aliens' are all over the carrier's regular speed, so at regular speed nothing is lost); an alien that has never been near (it is coming from afar) is not lost, it has nothing to lose.
@@ -1859,13 +1907,14 @@ function campObjectives(C) {
       else if (o.what === 'towers') got = C.flags.towers ? 1 : 0;
       else if (o.what === 'guards') got = C.guardsStart && !C.ships.some(u => u.guard && u.hp > 0) ? 1 : 0;
       else if (/^rival:/.test(o.what)) got = campRivalDone(C, o.what.slice(6)) ? 1 : 0; // the rival is dead or has got away (src/camprival.js)
+      else if (o.what === 'wave:all') got = C.waves.length && C.waves.every(w => w.started) && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && (u.wave != null || u.hunt != null)) ? 1 : 0; // every wave of the mission has come and none of them is left, nor any of a hunting party (campHunt) (2.1 and 2.2: the groups the player's own deeds call; its words are the one wave's, "Destroy the attackers.")
       else if (/^wave:/.test(o.what)) { const w = parseInt(o.what.slice(5), 10); got = C.waves[w] && C.waves[w].started && !C.ships.some(u => u.team === 'alien' && u.hp > 0 && u.wave === w) ? 1 : 0; }
     } else if (o.type === 'hold') { need = o.secs; got = Math.min(o.secs, Math.floor(campMissionClock(C))); }
     else if (o.type === 'ore') { need = o.n; got = Math.min(o.n, Math.floor(C.oreBest)); } // the store held this much at some time (selling it afterwards does not undo it)
     else if (o.type === 'cashin') { need = o.n || 1; got = Math.min(need, Math.floor(C.sold)); aboard = Math.max(0, Math.floor(C.ore || 0)); } // got: this much ore SOLD at a market outpost (campSell); aboard: the ore in the store, which a dock sells all at once
     else if (o.type === 'relic') got = C.flags.relic ? 1 : 0;
     else if (o.type === 'caches') { need = o.n; got = Math.min(o.n, C.cachesGot); }
-    else if (o.type === 'clear') got = C.waves.length && C.waves.every(w => w.started) && !campAliens(C).length ? 1 : 0;
+    else if (o.type === 'clear') got = C.waves.length && C.waves.every((w, k) => w.started || (C.L.waves[k] && C.L.waves[k].optional)) && !campAliens(C).length ? 1 : 0; // (a wave marked optional, the idle threat's, need not have come: a player who is not idle never meets it)
     return { i, type: o.type, what: o.what, word: o.word, got, need, aboard, done: got >= need };
   });
 }
@@ -1876,9 +1925,12 @@ function campMissions_tick(C, dt) {
   if (C.arrivedAt == null) { const p = campMissionPlace(C); if (!p || Math.hypot(C.carrier.x - p.x, C.carrier.y - p.y) <= CAMP.mission.arrive) { C.arrivedAt = C.t; if (C.nav && p && C.nav.id === 'place:' + C.L.place && typeof campNavClear === 'function') campNavClear(C, 'mission'); C.events.push({ type: 'arrived', place: p ? p.name : '' }); campSay(C, 'camp.say.arrived', { name: p ? p.name : '' }); } return; } // the mission begins when the cruiser is there (the autopilot lets go without a line of its own: the ship's "Arrived at X." says it once)
   if (!C.L.objectives) return;
   const mine = C.ships.filter(u => u.team === 'earth' && u.hp > 0 && u.kind !== 'freighter');
+  const scanHit = C.scanPause > 0 && C.t - (C.carrier.hurtAt === undefined ? -1e9 : C.carrier.hurtAt) < C.scanPause * 1000; // the cruiser was hit lately: the scans stand still
   C.scan.forEach(p => {
     if (p.got) return;
     if (!mine.some(u => Math.hypot(u.x - p.x, u.y - p.y) <= p.r)) return;
+    p.began = true;
+    if (scanHit) return;
     p.t += dt;
     if (p.t >= p.secs) { p.got = true; C.events.push({ type: 'scanned', x: p.x, y: p.y, n: C.scan.filter(q => q.got).length, of: C.scan.length }); campSay(C, 'camp.say.scanned', { n: C.scan.filter(q => q.got).length, of: C.scan.length }); }
   });
