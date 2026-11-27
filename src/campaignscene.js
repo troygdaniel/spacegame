@@ -369,7 +369,7 @@ class Campaign extends Phaser.Scene {
     if (this.mode === 'play' && typeof campCornerKey === 'function') campCornerKey(C, c); // a key of a corner panel opens its details (src/campcorner.js: Q W FLEET, and the keys of the corners other cards add)
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.afterIntro(); } return; }
     if (this.mode === 'brief') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
-    if (this.mode === 'debrief') { if (c === 'Enter') { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
+    if (this.mode === 'debrief') { if (c === 'Enter' || (c === 'Escape' && campCardEsc(this))) { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
     if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
     if (this.mode === 'refit') { this.refitKey(c); return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
