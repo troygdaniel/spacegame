@@ -145,6 +145,7 @@ const VOICEPACK_FAMILIES = [
   { re: /^camp\.nav\./, why: 'the autopilot\'s toasts, the HUD line, the edge arrow and the names in the map\'s list: on the screen' },
   { re: /^camp\.(b|o|obj)\./, why: 'the objectives and bonus objectives: the HUD, the briefing and debrief cards (the briefing\'s two lines are said, these are the list)' },
   { re: /^camp\.nudge\./, why: 'the first-minute hints: a toast' },
+  { re: /^camp\.price\./, why: 'the price of taking a pilot\'s stick (mission 1.2, brief 8 decision 10): one toast on the radio panel, once a mission, shown only and never said' },
   { re: /^camp\.win\./, why: 'the won card\'s result line: shown under the story, which is what is said' },
   { re: /^camp\.(hub|keys|map|hud|tech|ui|room)\./, why: 'the words of a screen: the ready room and its overlays, the key page, the map, the HUD, the tech cards and every card\'s title and hint' },
   { re: /^(chatter|hint|keys|listen|music|spoken|title|toast)\./, why: 'Settings, the title screen, Long Haul\'s hints and toasts: shown (the ship\'s voice speaks its own event lines, VOICE_LINES, not these)' }
