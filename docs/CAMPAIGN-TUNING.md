@@ -529,6 +529,7 @@ What it does, from the 32-seed bot tables (`node tools/campaign-bot.mjs --level 
 **Words.** The four moments of 2.3 stay true: "Enter the ring", "Hold {hold} seconds" (it reads the row: now 20), "Keep aliens off", "Aliens arrive fast" (truer: under 8 s from the call to the ring). One line changed, shown only, not voiced: `camp.bf.2.3.w2` "Hold there 14 seconds ..." is now "Hold there 20 seconds with no alien near the relic."
 
 **Pins.** `tests/camprelicwaves.mjs` (new, 16 checks: the rows, nothing for the clock, the waves at 0, 5 and 10 s held, a wave on the ring within 8 s, the kite: a fighter that hits the wave and runs 2,500 px off draws no alien past 1,300 px and the hold never runs). `tests/campaign.mjs`: the hold is 20 and the waves have no clock second. `tests/scrbriefings.mjs`: "Hold 20 seconds", and the first wave comes on entering. The rows keep `from` only for the Tab map's extent (its zoom limit is unchanged, `tests/campzoom.mjs`). `tests/camppace.mjs`: 2.3's floor is 60 s at both paces (the 12 s exception for Calm, which was the 16 s win, is gone).
+
 ## The flown fighter fires three times as fast, at half the damage (card `space-game-fly-fighter-fire-rate`, Troy, 26 Nov 2026; base: main at the landing of the cockpit's scene half)
 Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the first thing he asked for: the fire rate is too slow. The pilots' gun is 8 damage every 450 to 650 ms (14.5 a second); the Long Haul Wren fires every 160 ms for 15 (94 a second, which equals the whole wing).
 - `CAMP.cockpit.rateK: 1 -> 3`: one shot every mean delay over it, a steady 183 ms (550 / 3), no random gap, on a schedule of one gap so the rate does not depend on the tick (at 30 ticks a second a shot lands on the tick after its time: gaps of 167 to 200 ms, 27 shots in five seconds).
@@ -591,6 +592,58 @@ The one taken is the longest and the hardest on the cruiser, and the player has 
 **Words.** Nothing becomes untrue: "Enter the ring", "Hold 20 seconds", "Keep aliens off", "Aliens arrive fast"; no line changed in this card.
 
 **Pins.** `tests/camprelicwaves.mjs` (18 checks): the second wave at 10 s held, the third 8 s behind it from the opposite side; the pilot who never aims now loses (he won); a cruiser alone loses at least 3 seeds of 4. `tests/campaign.mjs`: the rows' triggers are the hold or "behind". `tests/camppace.mjs`: words only (the 60 s floor holds).
+
+## Missions 2.1 and 2.2: the aliens come on what the player does, and a threat comes to a player who does nothing (card `space-game-b7-level2`; Troy, 26 Nov 2026: "yes", with his calls below; the cloud's brief 7, decisions 1 and 6; base `b14a4131`, the 2.3 two-sides tip)
+
+**What was wrong.** 2.1's one wave came at 20 s and 2.2's two at 18 and 40 s of the mission's clock, so a quick player never met 2.2's reinforcements (the plain bot won 2.2 in 73 s, the cruiser took 153), and a player who only waited was never touched in 2.1: it ended in nothing (the tool's idle bot never arrives, so it shows 0 won, 0 lost).
+
+**2.1 Resources** (`src/campaign.js`, wave rows with `on: { caches: n }` and `at: 'cache'`; a mission row's `hunt`, `campHunt`):
+- **Troy's call: it keeps TWO caches** (not three), so "Gather two resource caches." and the briefing's "Find 2 of the 3 resource pods" stay true. Par stays 100 s.
+- **The first cache taken calls the group** (the old wave's 4 raiders and 3 drones) to the nearest cache still to take, where it waits (a guard: it wakes when a ship of yours is in reach). The mission also needs that group dead (`{ type: 'kill', what: 'wave:all' }`, words "Destroy the attackers.").
+- **The threat for a player who takes no cache** (Troy: yes): 45 s after arriving, a party of 3 raiders and 2 drones comes from the west for the cruiser; another every 45 s, each 2 ships larger (5 and 3, 6 and 4 ...), with no upper limit; a cache taken stops them for good. Ship kinds and hit points are as they are. A party must be dead to win.
+
+**2.2 The guards** (wave rows with `on: { guardsDead: n }`; `hunt` with `restart: 'guard'`):
+- **Reinforcements when the fourth guard dies, from two sides at once** (the old first wave's ships split in two: 2 drones and 2 gunships from the north-east, 2 drones and a gunship from the other side); **the last guard calls a second group** (the old second wave's ships, 4 raiders and 3 drones) when the sixth guard dies, with one left. No ship was added or taken away. The mission needs the guards AND the groups they call dead.
+- **The threat for a player who kills no guard** (Troy: yes): 40 s after arriving with no guard dead, a patrol of 2 drones and a gunship from the north-east; another every 40 s, each 2 ships larger; a guard killed starts the 40 s again; the patrols are not guards (they do not count for the fourth guard) and must be dead to win; none comes once the guards are all dead.
+- The bots now fly at waiting guards and at the groups a cache or a dead guard calls (`tools/campaign-bot.mjs`: no clock brings the fight to a cruiser that sits); that is why the no-wing "carrier" bot wins 2.2 on every seed now (59 and 66 per cent before: it was only ever fed by the clock's waves).
+
+**The numbers** (`node tools/campaign-bot.mjs --level 2 --mission <1|2> --seeds 32 --bots plain,carrier,ace,sit --skill <s>`; won per cent / seconds / cruiser damage / kills; hull 600 at the end except where said):
+
+| mission | skill | bot | before (`b14a4131`) | after |
+|---|---|---|---|---|
+| 2.1 | steady | plain | 100 / 42 / 15 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | steady | carrier | 100 / 43 / 15 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | steady | ace | 100 / 43 / 0 / 7 | 100 / 32 / 9 / 7 |
+| 2.1 | steady | sit | 100 / 43 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | plain | 100 / 42 / 17 / 7 | 100 / 33 / 15 / 7 |
+| 2.1 | rough | carrier | 100 / 43 / 13 / 7 | 100 / 33 / 13 / 7 |
+| 2.1 | rough | ace | 100 / 42 / 0 / 7 | 100 / 32 / 13 / 7 |
+| 2.1 | rough | sit | 100 / 43 / 9 / 7 | 100 / 33 / 15 / 7 |
+| 2.2 | steady | plain | 100 / 73 / 153 / 16 | 100 / 76 / 162 / 21 |
+| 2.2 | steady | carrier | **59** / 92 / 265 / 21 | 100 / 85 / 216 / 21 (hull 597) |
+| 2.2 | steady | ace | 100 / 81 / 130 / 21 | 100 / 72 / 112 / 21 |
+| 2.2 | steady | sit | 100 / 79 / 167 / 15 | 100 / 80 / 182 / 21 |
+| 2.2 | rough | plain | 100 / 76 / 144 / 17 | 100 / 76 / 147 / 21 |
+| 2.2 | rough | carrier | **66** / 95 / 257 / 21 | 100 / 86 / 208 / 21 |
+| 2.2 | rough | ace | 100 / 76 / 104 / 21 | 100 / 68 / 75 / 21 |
+| 2.2 | rough | sit | 100 / 79 / 153 / 15 | 100 / 81 / 165 / 21 |
+
+- **About as hard as today for the cruiser bots:** 2.1 is as easy as it was (about 33 s, was 42: the group is smaller than the clock's wave was a trip behind it; damage 9 to 15); 2.2 is the same length (68 to 86 s against 73 to 95) with the cruiser's damage at or above what it was (112 to 216 against 130 to 265), and now every bot meets all 21 ships (the plain bot met 16, the sit bot 15).
+- **Not met, for Troy: the fighter bot in 2.2.** Against the plain bot the ace bot is 5 per cent faster and takes 31 per cent less cruiser damage at steady skill, and 11 per cent faster and 49 per cent less at rough (75 against 147). The sweep's rule is 15 per cent faster and 30 per cent less (docs/night/cockpit-sweep.md): the damage is over it at both. Before this card it was 15 per cent less at steady (130 against 153) and 28 per cent at rough (104 against 144). Why: the two reinforcement groups come on the fourth dead guard, which a flown fighter kills early, while the plain bot's cruiser takes the groups' fire as it arrives. No hit-point or damage number was changed; Troy to say whether to leave it.
+- **The idle player** (flown in the sim: the cruiser arrives, sits at the mission's place and brakes, its wing guarding; 8 seeds, 600 s). 2.1: before, neither won nor lost on any seed; now **lost on 8 of 8 at 281 to 356 s** (6 to 7 parties came; none is in 33 s of any bot's play). If it also fires at what comes near, it holds out the 600 s against 13 parties of up to 29 ships (the cruiser's guns beat each party as it comes). 2.2: before, a cruiser that does not fire was beaten by the guards in 46 to 65 s and one that does won on 8 of 8; now it is beaten in 70 to 96 s, and one that fires won 6 of 8 (the other two ended with no result at 600 s: the sim's sitter does not fly at aliens beyond 1,200 px, so what lost its target waits unseen; a player flies). In 2.2 the patrols never came in these runs because the wing killed a guard inside every 40 s; the guards themselves are the threat to a sitter there.
+- **The tool's own idle bot** still shows 0 won and 0 lost on both: it never makes the trip to the mission's place, so nothing is called. Not changed.
+
+**Words** (Troy approved both new lines, 26 Nov: shown only, not voiced): `camp.bf.2.1.w3` "Aliens come from the west after 20 seconds." is now "Taking the first pod calls aliens to the next one."; `camp.bf.2.2.w2` "More aliens join after 18 seconds, from the north-east." is now "More aliens join when the fourth guard dies, from two sides." Left as they were and still true: `camp.m.2.1.b1` "Gather two resource caches." (a voiced line), `camp.bf.2.1.w1`, the moments "Find two caches", "Anyone can collect", "Aliens from west" (true again for the hunting party, which comes from the west), "Kill them all", "Reinforcements", "Clear them all". Nothing voiced changed.
+
+**Pins.** `tests/camplevel2calls.mjs` (new, 20 checks: the rows, nothing for the clock, a cache and a dead guard call their groups, the sides, the win needs the groups dead, the hunting party and the patrol with their numbers, the triggers). `tests/campaign.mjs` (2.1's wave comes on the first cache, not at 20 s; the guards alone no longer win 2.2), `campgoalcount.mjs`, `camphunt.mjs` (2.2's reinforcements are two rows and one line), `camplevel2words.mjs`, `scrbriefings.mjs` (the reinforcements are called by the fourth guard), `campbrief.mjs` (the two reworded lines). The bot's tool rule: guards and called groups are flown at.
+
+## The flown fighter fires three times as fast, at half the damage (card `space-game-fly-fighter-fire-rate`, Troy, 26 Nov 2026; base: main at the landing of the cockpit's scene half)
+Troy flew a pilot's fighter (C key, `src/campcockpit.js`) and liked it; the first thing he asked for: the fire rate is too slow. The pilots' gun is 8 damage every 450 to 650 ms (14.5 a second); the Long Haul Wren fires every 160 ms for 15 (94 a second, which equals the whole wing).
+- `CAMP.cockpit.rateK: 1 -> 3`: one shot every mean delay over it, a steady 183 ms (550 / 3), no random gap, on a schedule of one gap so the rate does not depend on the tick (at 30 ticks a second a shot lands on the tick after its time: gaps of 167 to 200 ms, 27 shots in five seconds).
+- `CAMP.cockpit.damageK: 1 -> 0.5`: each shot 4 damage (times the pilot's strength). The stream is 22 a second, about 1.5 times a pilot's and under a quarter of the Wren's. To land on exactly 170 ms (the Wren's feel) dial `rateK` to 3.25 on the N panel: 169 ms, 24 a second.
+- Both are live rows of the group "The flown fighter (C)" on the N panel (`cockpitrate`, `cockpitdamage`, step 0.25). `CAMP.fighter` (the pilots' own guns: 8 damage, 450 to 650 ms, 700 px/s, 420 range) is untouched: the AI pilots fire as before.
+- **Sound and flash** (`src/campaignscene.js`, `cockpitShot`): the flown gun's shot is its own case in the scene. Before, it went through the wing's rule (a pew softer the farther from the cruiser, none past 1,600 px, one in 55 ms shared with every pilot), so a fighter flown 2 km out was silent and the pilots' shots could swallow it. Now: the wing's own soft pew (`sfx('wingShot')`, random 6 percent detune each shot) at 0.7 whatever the distance, at most one in `CAMP_SND.cockpit` = 100 ms of the battle's clock (at 183 ms every shot sounds; dial the rate past 5.5 and it plays every other one, a stream and not a buzz), and one small flash at the nose per shot (the 'ember' image, 11 px ahead, the friend blue, 0.45 scale, gone in 60 ms: two alive at most). No new sound is made.
+- Pinned by `tests/campcockpitfire.mjs` (the rate and its steadiness, the damage, the AI pilots' unchanged, the scene's pew and flash), `tests/campcockpit.mjs` (the defaults) and `tests/campsounds.mjs` (the table line). The cockpit sweep was run again with these defaults: `docs/night/cockpit-sweep.md`.
 
 ## Level 3 comes on what the player does (card `space-game-b7-level3`; brief 7 decisions 1, 3, 5 and 6; Troy said yes to all of it on 26 Nov 2026)
 Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK` 0.5, `hpK` 2, turrets 'auto'); old tables from main just before the card (`e0bee48d`, the level 3 sim identical), new from the card's branch. Every number of the waves is a first try, measured with the bots: 32 seeds a mission, skill steady, pace Brisk; `node tools/campaign-bot.mjs --level 3 --seeds 32 --bots idle,carrier,plain,troy --json` for the cruiser bots, `--max 900` for the idle ones, `--cockpit --level 3` for the fighter bots.
