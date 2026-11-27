@@ -321,13 +321,17 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && !process.
 //     1. ace is not faster than plain by more than 15 percent: its median win time is at least 85 percent of plain's;
 //     2. ace does not take less cruiser damage than plain by more than 30 percent: its median is at least 70 percent of plain's;
 //     3. sit (turrets auto) loses no mission plain wins: where plain wins at least 90 percent of the seeds, sit wins at least plain's rate less one seed in 32 (3 points).
+//     4. (a fight: plain's median kills at least 5) the flown fighter is shot down in at least 5 percent of the runs and in no more than 50 percent: never shot down fails ("safe and changes little"), so does shredded;
+//     5. (a fight) the fighter's own kills, median a run, are at least a quarter of plain's: few kills fails.
 //   A rule's number is judged only where plain's own number is big enough to mean something (win time over 20 s, damage over 30): under that it is 'n/a' (no verdict), and the raw numbers stay in the table.
-export const COCKPIT_RULE = { faster: 0.85, softer: 0.7, sitSlack: 3, sitFrom: 90, minTime: 20, minTaken: 30 };
+export const COCKPIT_RULE = { faster: 0.85, softer: 0.7, sitSlack: 3, sitFrom: 90, minTime: 20, minTaken: 30, minFight: 5, shotMin: 5, shotMax: 50, killsShare: 0.25 }; // (4 and 5, card space-game-chunk15-sweep-rule, brief 8 decision 12: minFight is the kills of plain's run that make it a fight to speak of; shotMin and shotMax the share of runs, percent, in which the flown fighter is shot down; killsShare the share of plain's kills the fighter itself must make)
 export function cockpitVerdict(p, a, s) { // p, a, s: the summaries of plain, ace and sit (turrets auto) for one mission at one skill (summarise's shape)
-  const R = COCKPIT_RULE, v = { time: 'n/a', taken: 'n/a', sit: 'n/a' };
+  const R = COCKPIT_RULE, v = { time: 'n/a', taken: 'n/a', sit: 'n/a', shot: 'n/a', kills: 'n/a' };
   if (p.tWin != null && a.tWin != null && p.tWin >= R.minTime) v.time = a.tWin >= p.tWin * R.faster ? 'pass' : 'FAIL';
   if (p.taken != null && a.taken != null && p.taken >= R.minTaken) v.taken = a.taken >= p.taken * R.softer ? 'pass' : 'FAIL';
   if (p.won >= R.sitFrom) v.sit = s.won >= p.won - R.sitSlack ? 'pass' : 'FAIL';
+  if (p.kills != null && p.kills >= R.minFight && a.shotRuns != null) v.shot = a.shotRuns >= R.shotMin && a.shotRuns <= R.shotMax ? 'pass' : 'FAIL'; // 4. in a fight, the flown fighter is shot down now and then, and not in more than half the runs: "safe and changes little" (never shot down) fails, so does a shredded one
+  if (p.kills != null && p.kills >= R.minFight && a.cockKills != null) v.kills = a.cockKills >= p.kills * R.killsShare ? 'pass' : 'FAIL'; // 5. and the fighter itself makes a fair share of the kills (median a run, at least a quarter of plain's): few kills fails
   v.ok = !Object.values(v).includes('FAIL'); return v;
 }
 if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.argv.includes('--cockpit')) {
@@ -347,11 +351,11 @@ if (process.argv[1] && process.argv[1].endsWith('campaign-bot.mjs') && process.a
   if (arg('json', false)) console.log(JSON.stringify(out, null, 1));
   else {
     console.log(`\nTHE COCKPIT SWEEP  ${SEEDS} seeds a mission, pace ${PACE}, cockpit table ${g.run('JSON.stringify({ hpK: CAMP.cockpit.hpK, damageK: CAMP.cockpit.damageK, rateK: CAMP.cockpit.rateK, turrets: CAMP.cockpit.turrets })')}${SETS.length ? ', set ' + SETS.join(' ') : ''}`);
-    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%   rule: time  taken  sit');
+    console.log('mission skill    bot     won%  t(win)  taken  cruiser-away  cockpit-s  kills  deaths  shot%   rule: time  taken  sit  shot  kills');
     for (const key of tab) {
       const S = out[key], [mk, skill] = key.split(' ');
       botList.forEach((b, i) => { const x = S[b], c = b === 'plain' ? ['-', '-', '-', '-', '-'] : [x.awayTaken, x.cockSec, x.cockKills, x.cockDeaths, x.shotRuns], v = S.verdict;
-        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
+        console.log((i ? '' : mk).padEnd(8), (i ? '' : skill).padEnd(8), b.padEnd(7), String(x.won).padStart(4), String(x.tWin == null ? '-' : x.tWin).padStart(7), String(x.taken).padStart(6), String(c[0]).padStart(13), String(c[1]).padStart(10), String(c[2]).padStart(6), String(c[3]).padStart(7), String(c[4]).padStart(6), b === 'ace' ? `   ${v.time.padStart(10)} ${v.taken.padStart(6)} ${v.sit.padStart(4)} ${String(v.shot).padStart(5)} ${String(v.kills).padStart(5)}   ${v.ok ? 'PASS' : 'FAIL'}` : ''); });
     }
     const fails = tab.filter(k => !out[k].verdict.ok);
     console.log(`\n${tab.length - fails.length} of ${tab.length} mission-skills pass the rule${fails.length ? '; fail: ' + fails.join(', ') : ''}`);

@@ -18,6 +18,15 @@ check('the rule: sit may lose one seed in 32 (3 points) of a mission plain wins,
 check('the rule: a mission plain does not win (under 90 percent) has no sit verdict', cockpitVerdict(S(50, 100, 100), plain, S(0, null, 0)).sit === 'n/a');
 check('the rule: plain\'s own number must mean something: under 20 s or under 30 damage is n/a, whatever ace did', cockpitVerdict(S(100, 15, 20), S(100, 5, 1), plain).time === 'n/a' && cockpitVerdict(S(100, 15, 20), S(100, 5, 1), plain).taken === 'n/a');
 check('the rule: ok is false when any verdict is FAIL and true when none is', !cockpitVerdict(plain, S(100, 50, 100), plain).ok && cockpitVerdict(plain, plain, plain).ok);
+// rules 4 and 5 (card space-game-chunk15-sweep-rule, brief 8 decision 12): the flown fighter is shot down now and then and makes a fair share of the kills, or the sweep says "safe and changes little"
+const F = (kills, cockKills, shotRuns) => Object.assign(S(100, 100, 100), { kills, cockKills, shotRuns });
+const fplain = F(12, null, null);
+check('rule 4: in a fight, never shot down (0 percent) fails; 5 percent passes; 50 percent passes; 51 percent (shredded) fails', cockpitVerdict(fplain, F(12, 6, 0), plain).shot === 'FAIL' && cockpitVerdict(fplain, F(12, 6, 5), plain).shot === 'pass' && cockpitVerdict(fplain, F(12, 6, 50), plain).shot === 'pass' && cockpitVerdict(fplain, F(12, 6, 51), plain).shot === 'FAIL');
+check('rule 5: in a fight, the fighter\'s own kills at least a quarter of plain\'s (3 of 12) pass; 2 of 12 fail', cockpitVerdict(fplain, F(12, 3, 10), plain).kills === 'pass' && cockpitVerdict(fplain, F(12, 2, 10), plain).kills === 'FAIL');
+check('rules 4 and 5 judge only a fight: plain with under 5 kills (or none counted) gives n/a, whatever the fighter did', cockpitVerdict(F(4, null, null), F(4, 0, 0), plain).shot === 'n/a' && cockpitVerdict(F(4, null, null), F(4, 0, 0), plain).kills === 'n/a' && cockpitVerdict(plain, plain, plain).shot === 'n/a');
+check('"safe and changes little" fails the rule as a whole: a fighter that is as fast and as hard on the cruiser as plain but never shot down and with a kill or two', !cockpitVerdict(fplain, F(12, 1, 0), plain).ok);
+check('a fighter that is shot down now and then and makes its share passes the whole rule where the old numbers pass', cockpitVerdict(fplain, F(12, 5, 10), plain).ok);
+check('the new numbers are the card\'s: a fight is 5 kills, shot down 5 to 50 percent of the runs, a quarter of plain\'s kills', COCKPIT_RULE.minFight === 5 && COCKPIT_RULE.shotMin === 5 && COCKPIT_RULE.shotMax === 50 && COCKPIT_RULE.killsShare === 0.25);
 check('the rule\'s numbers are the proposal\'s: 15 percent, 30 percent, 3 points, from 90 percent', COCKPIT_RULE.faster === 0.85 && COCKPIT_RULE.softer === 0.7 && COCKPIT_RULE.sitSlack === 3 && COCKPIT_RULE.sitFrom === 90);
 
 // ---- the bots (once src/campcockpit.js is in the game) ----
