@@ -725,3 +725,27 @@ Base: main at the landing of the flown fighter's fire rate (`rateK` 3, `damageK`
 **Briefing lines made untrue, then reworded (card `space-game-l3-briefing-words`; they are shown-only, none is voiced):** 3.1 "Aliens answer your first scan." is now "Aliens answer each scan."; 3.2 "More aliens arrive after 25 seconds, from the north-east." is now "Each tower that falls calls a group to the next one."; 3.3 "Two waves come: at 20 seconds and at 75." is now "Two waves come together when the fourth tower falls." The allowance in `tests/campbrief.mjs` for the old numbers is gone.
 
 Pinned by `tests/campl3waves.mjs` (39 checks: the cues, the scan pause, the groups, the two waves, the flown-fighter factors, the idle threats), `tests/campaign.mjs` and `tests/campbrief.mjs` (the moved pins).
+
+## 3.3: the fighter clears the towers on one side so the cruiser comes in from there (card `space-game-fighter-job-33`; Troy, 26 Nov 2026: yes, BRIEF 8 proposal C; base main `a3fe84f1`)
+
+**What was in the way.** The fighter could never clear a tower: 3.3's towers have 480 hit points and the flown fighter's gun deals 4 a shot at a shot every 183 ms (22 a second): about 22 s of fire for one tower, while a tower kills the fighter's 72 hull (Troy's double) in three hits. So the rule is about the fighter's gun against a tower, nothing else.
+
+**The rule** (`CAMP.cockpit.towerK`, applied where a shot hits, `campBullets`): the fighter the player flies deals **three times** its damage to a TOWER: 12 a shot, 36 a second, one tower in about 7 s of fire. Its shots at anything else, the wing pilots' shots and the cruiser's are as they were. The fighter's hull stays at Troy's double (`hpK` 2); no tower number changed. The gap itself needs no code: 3.3's eight towers stand 765 px apart on a ring at 1,000 px and each reaches 800, so a ring point is under the guns of three of them; with the two nearest dead it is under one (pinned).
+
+**The numbers** (12 seeds, 3.3; won per cent / seconds / cruiser damage; 100 per cent won everywhere):
+
+| skill | bot | before | after |
+|---|---|---|---|
+| steady | plain | 70 / 461 | 70 / 461 |
+| steady | carrier | 76 / 569 | 76 / 569 |
+| steady | ace | 73 / 450 | 74 / 457 (one pilot's fighter lost in the 12 runs) |
+| steady | sit | 77 / 536 | 77 / 536 |
+| rough | plain | 68 / 410 | 68 / 410 |
+| rough | carrier | 76 / 504 | 76 / 504 |
+| rough | ace | 68 / 378 | 59 / 320 |
+| rough | sit | 76 / 522 | 76 / 522 |
+
+- Ace against plain: steady 1 per cent less damage, 4 per cent slower (74 against 70); rough 22 per cent less damage and 13 per cent faster (59 against 68). The sweep's rule is 15 per cent faster and 30 per cent less damage: inside it at both.
+- Why not a higher factor: at 2 the rough ace was 59 / 288 (30 per cent less than plain: at the rule's edge); at 3, 59 / 320. The cruiser bots do not change at any value (they never fly the fighter at a tower).
+
+**Pins.** `tests/campfightergap.mjs` (5 checks: the number is 3; a flown shot deals 30 for 10 to a tower, a wing pilot's 10, and at 1 the flown one 10; against a raider the flown shot deals 10 as a wing pilot's does; one 3.3 tower takes about 7 s of fire (5 to 9); the gap: a ring point is under three towers and under one once the two nearest are dead).
