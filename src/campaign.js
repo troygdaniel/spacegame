@@ -777,7 +777,7 @@ const CAMP = {
         { id: 'guards', kind: 'attack', par: 100, hpScale: 2, dmgScale: 2.4, place: 'proxima-d', dock: 'proxima-w',  // M2 at Proxima d (a trip of about 11 s by Fast): the relic's guards                  // M2: five guards wait round the relic until your ships come within reach
           guards: [{ kind: 'gunship', at: [-400, 1050] }, { kind: 'drone', at: [-100, 1250] }, { kind: 'gunship', at: [-300, 1350] }, { kind: 'drone', at: [-100, 1000] }, { kind: 'gunship', at: [-1300, -100] }, { kind: 'drone', at: [-1050, 150] }, { kind: 'drone', at: [-1200, -150] }],  // the guards (kind, offset from Proxima d): seven in TWO groups 1,500 px apart, one each side of the gate at Proxima b, about 750 px from it and 1,200 from where the cruiser arrives (card space-game-b10-c6-22-two-guard-groups, BRIEF 10 chunk 6: one pass cannot kill them all): four (two gunships, two drones) south of the place and three (a gunship, two drones) west of it. Both stay within the gate's clear distance, so it is hot while either lives (tests/campoutpost.mjs). The fourth-guard call, the runner and the patrol count the guards of both
           objectives: [{ type: 'kill', what: 'guards' }, { type: 'kill', what: 'wave:all' }], bonus: [{ id: 'find', type: 'anomaly', anomaly: 'ghost' }, { id: 'swift', type: 'time', secs: 100 }, { id: 'hull', type: 'hull', pct: 70 }, { id: 'clean', type: 'lost', n: 1 }],  // what the mission asks (scan points: where, how close, how many seconds), all of it
-          runner: { after: 6, far: 2400, rush: 4 },  // the guard that runs to call the second group (campRunner): with six of the seven guards dead the last runs straight away from the cruiser and calls the group when it is 2,400 px from it, at four times its speed; killed first, no group comes
+          runner: { after: 6, far: 2400, rush: 3, within: 20 },  // the guard that runs to call the second group (campRunner): with six of the seven guards dead the last runs straight away from the cruiser and calls the group when it is 2,400 px from it, or has run for 20 s (a cruiser that keeps pace with it, as the plain bot's does at Calm, would never let it get 2,400 px off), at three times its speed (four until card space-game-b12-c6-22-runner-stake: with the fight pace off it, four was too quick for the flown fighter: it stopped the runner in 2 runs of 16, at three in 8 of 16, at two and a half in 13 of 16); killed first, by the fighter the player flies and no other ship (card space-game-b12-c6-22-runner-stake), no group comes
           hunt: { every: 40, from: [2600, -2200], ships: { drone: 2, gunship: 1 }, more: { drone: 1, gunship: 1 }, until: { guardsDead: 7 }, restart: 'guard', focus: 'carrier' },  // the threat that comes to a player who kills no guard (campHunt): a patrol from the north-east when no guard has died for 40 s, each two ships larger, until the guards are all dead
           waves: [{ on: { guardsDead: 4 }, from: [2600, -2200], around: 'carrier', ring: [2900, -2450], ships: { drone: 3, gunship: 3 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2' }, { on: { guardsDead: 4 }, from: [-2500, 2000], around: 'carrier', ring: [-2900, 2450], ships: { drone: 3, gunship: 2 }, goal: 'carrier', focus: 'carrier' }, { on: { runner: true }, from: [-2500, 2000], around: 'carrier', ring: [-3500, -1500], ships: { raider: 6, drone: 4 }, goal: 'carrier', focus: 'carrier', say: 'camp.say.l2wave2b' }] },  // the waves come on what the player does (card space-game-b7-level2): the reinforcements (the old first wave, split in two) when the fourth guard dies, from two sides at once; THEY COME OUT OF THE DARK ABOUT 3,800 PX FROM THE CRUISER (`around: 'carrier'` with `ring`, an offset from her: card space-game-b10-c2-22-reinforce-cruiser, BRIEF 10 chunk 2; 1,700 px until card space-game-22-farther-ring: Troy found 2.2 too short at 58 s, and farther out they take longer to arrive, which more ships did not do: docs/CAMPAIGN-TUNING.md 'Mission 2.2: farther out'), wherever the flown fighter is, and go for her; a second group (the old second wave) when the sixth dies: the last guard calls it. They came at 18 and 40 s of the clock
         { id: 'relic', kind: 'defend', par: 90, hpScale: 2.6, dmgScale: 3, win: 'relic', place: 'proxima', dock: 'proxima-w',  // M3 at Proxima b, the relic's world (the cruiser starts there)      // M3: hold the carrier on the relic's ring until it answers, with no alien near it
@@ -936,7 +936,7 @@ function campFightPace(C) {
   for (let i = 0; i < ships.length; i++) {
     const u = ships[i]; if (!u.base || u.hp <= 0 || u.boat || u.cockpit) continue; // a torpedo boat is a slow hull, not a dogfighter: at half its speed the turrets kill it before it can launch, so it flies and arms as it always did
     let fp = 1;
-    if (F !== 1 && !u.running) { // a runner (a pirate that has broken off, src/camppirates.js) flees at its full run speed: slowed by the carrier at its heels, it could never get away
+    if (F !== 1 && !u.running && !u.runner) { // a runner (a pirate that has broken off, src/camppirates.js; the guard that runs to call a group, campRunner, too: card space-game-b12-c6-22-runner-stake) flees at its full run speed: slowed by the carrier at its heels, it could never get away
       let best = Infinity; const al = u.team === 'alien';
       for (let j = 0; j < ships.length; j++) { const o = ships[j]; if (o.hp <= 0 || (o.team === 'alien') === al || o.running) continue; const dx = o.x - u.x, dy = o.y - u.y, d2 = dx * dx + dy * dy; if (d2 < best) best = d2; } // a runner is not a foe to slow for: the wing chasing it must be quicker than it, as it was
       const t = best === Infinity ? 1 : Math.max(0, Math.min(1, (Math.sqrt(best) - r0) / (r1 - r0)));
@@ -1050,6 +1050,9 @@ const campFunds = C => Math.floor(C.cash || 0) + Math.floor(C.ore);
 function campPay(C, cost) { const c = Math.min(C.cash || 0, cost); C.cash = (C.cash || 0) - c; C.ore -= cost - c; }
 const campAlive = C => C.ships.filter(u => u.hp > 0);
 const campAliens = C => C.ships.filter(u => u.team === 'alien' && u.hp > 0);
+// the aliens the cruiser's turrets and the AI pilots pick as a foe: every one but THE GUARD THAT RUNS while it runs (u.runner, campRunner; card space-game-b12-c6-22-runner-stake, BRIEF 12 chunk 6; Troy, 27 Nov 2026: yes). It is the flown fighter's to stop:
+// the turrets let it go and no pilot chases it (campHurt takes no hit on it from any ship but the one the player flies, so a stray shot does nothing either). campAliens stays every alien: the win, the sight and the flown fighter's aim count it.
+const campFoes = C => C.ships.filter(u => u.team === 'alien' && u.hp > 0 && !u.runner);
 const campWing = (C, kind) => C.ships.filter(u => u.team === 'earth' && u.hp > 0 && (kind ? u.kind === kind : u.kind === 'fighter'));
 const campConvoys = C => C.ships.filter(u => u.kind === 'freighter' && u.hp > 0);
 function campNearest(list, p, max) { let best = null, bd = max == null ? Infinity : max; list.forEach(u => { const d = campDist(u, p); if (d < bd) { bd = d; best = u; } }); return best; }
@@ -1064,6 +1067,7 @@ function campHurt(C, u, dmg, byId, ang) {
     if (campHas(C, 'shield')) dmg *= CAMP.tech.shield.taken; if (C.god) dmg = 0;
     if (C.shield > 0 && dmg > 0) { const take = Math.min(C.shield, dmg); C.shield -= take; dmg -= take; C.shieldHitAt = C.t; C.events.push({ type: 'shieldhit', x: u.x, y: u.y, a: ang !== undefined ? ang : campHitAngle(C, u, byId) }); } // the shield first
   }
+  if (u.runner && !(C.cockpit && byId && byId === C.cockpit.id)) dmg = 0; // the guard that runs (campRunner) takes a hit only from the fighter the player flies: the cruiser's turrets and the pilots' guns glance off it (card space-game-b12-c6-22-runner-stake)
   if (u.rival) dmg = campRivalHurt(C, u, dmg); // a rival's shield takes the hit first, as the carrier's does; with it down every hit goes through, and harder (src/camprival.js)
   u.hp -= dmg; u.hurtAt = C.t;
   const sh = byId && C.by ? C.by[byId] : null; // who fired, if the sim knows (the picture only: the hit's sparks are the firing side's colour, src/campmoments.js; nothing here reads it back)
@@ -1450,7 +1454,7 @@ function campTurretAt(C, i, slot) {
 // A turret fires only at its own slot: when the slot comes it shoots if it has an alien in reach and Space is held, and goes on to the next slot either way (a slot it could not use is
 // let go, so there is no catch-up burst when Space is pressed or an alien comes into reach). One shot per turret per cycle, whatever the stagger: the shots a second are the same.
 function campTurrets(C) {
-  const c = C.carrier, k = CAMP.carrier, beam = campHas(C, 'beam'), reach = campReach(C), dmg = k.pd * (beam ? CAMP.tech.beam.damage : 1) * (C.turretMul || 1), al = campAliens(C); // turretMul: the heavier turret of a looted cache (src/campanomaly.js)
+  const c = C.carrier, k = CAMP.carrier, beam = campHas(C, 'beam'), reach = campReach(C), dmg = k.pd * (beam ? CAMP.tech.beam.damage : 1) * (C.turretMul || 1), al = campFoes(C); // turretMul: the heavier turret of a looted cache (src/campanomaly.js)
   campTurretPlace(C);
   C.turrets.forEach((tu, i) => {
     let best = null, bd = reach; al.forEach(u => { const d = campDist(u, tu) - u.r; if (d <= bd) { bd = d; best = u; } });
@@ -1706,18 +1710,19 @@ function campRelicAlien(C, u, dt) {
   }
 }
 // THE GUARD THAT RUNS (a mission row's `runner`; card space-game-fighter-job-22, BRIEF 8 proposal C; Troy, 26 Nov 2026: yes). When `after` of the mission's guards are dead (2.2: six of seven) the last one runs: it flies for the call point
-// away from the cruiser at its own speed and, when it is `far` px from the cruiser, has made its call, and the group of the wave row with `on: { runner: true }` comes (campWaveOn). A ship of yours that kills it first (a fighter is
-// fast enough to catch it; the cruiser is not) stops the call for good: the group never comes, and 'wave:all' counts it as gone. If the guards are all dead before one could run, the call is not made either.
+// away from the cruiser at its own speed and, when it is `far` px from the cruiser, has made its call, and the group of the wave row with `on: { runner: true }` comes (campWaveOn). ONLY THE FIGHTER THE PLAYER FLIES CAN STOP IT
+// (card space-game-b12-c6-22-runner-stake, BRIEF 12 chunk 6; Troy, 27 Nov 2026: yes; before, the cruiser's turrets killed it in 24 of 24 median runs, at 140 to 570 px, and the group was never fought): while it runs the turrets and the pilots do not pick it (campFoes) and
+// every hit but the flown fighter's does nothing (campHurt). Killed by that fighter first, the call is stopped for good: the group never comes, and 'wave:all' counts it as gone. Away, it makes the call and the group must be fought. If the guards are all dead before one could run, the call is not made either.
 function campRunner(C) {
   const r = C.L.runner, R = C.runner || (C.runner = { id: '', called: false, off: false }); if (R.called || R.off || C.result) return;
   if (!R.id) {
     const live = C.ships.filter(u => u.guard && u.hp > 0);
     if (!live.length) { R.off = true; return; }
     if ((C.L.guards || []).length - live.length < r.after) return;
-    const u = live[0]; R.id = u.id; u.runner = true; u.hold = false; u.rushK = r.rush || 1; return; // (it runs at `rush` times its speed: out of the turrets' reach in a second or two, so only a ship close behind it can stop the call)
+    const u = live[0]; R.id = u.id; R.at = C.t; u.runner = true; u.hold = false; u.rushK = r.rush || 1; u.fp = 1; campPaceShip(C, u); return; // (it runs at `rush` times its speed: out of the turrets' reach in a second or two, so only a ship close behind it can stop the call)
   }
   const u = C.by[R.id]; if (!u || u.hp <= 0) { R.off = true; return; }
-  if (campDist(u, C.carrier) >= r.far) { R.called = true; u.runner = false; } // the call is made: it is an ordinary guard again
+  if (campDist(u, C.carrier) >= r.far || (r.within && C.t - R.at >= r.within * 1000)) { R.called = true; u.runner = false; u.rushK = 1; campPaceShip(C, u); } // the call is made: it is an ordinary guard again
 }
 // THE HUNTING PARTIES (a mission row's `hunt`; card space-game-b7-level2, the cloud's brief 7, decision 6; Troy, 26 Nov 2026: yes to the 2.1 party). A threat that comes to a player who does nothing: while the row's
 // `until` (a wave's trigger: campWaveOn) is not true, a party comes for the cruiser from `from` every `every` seconds of the mission's clock, the first after `every`; party k has the row's `ships` and `more` of each kind
@@ -1768,7 +1773,7 @@ function campMotherAI(C, u, dt) {
 
 // a ship of yours, by its order (the fighters)
 function campWingAI(C, u, dt) {
-  const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campAliens(C);
+  const k = CAMP[u.kind], c = C.carrier, o = u.order || { type: 'guard', at: { kind: 'carrier' } }, aliens = campFoes(C);
   let foe = null, home = null, anchor = c; // anchor: what the pilot guards (the leash is measured from it): the cruiser unless the guard order says another ship, a place or a point
   const towed = campTowSet(C, u, aliens); // a burn takes the wing with it (src/campnav.js has the rule): a ship with no hostile near is towed
   if (campRepairRun(C, u, dt)) return; // a fighter under 30 percent hull breaks off, flies home and lands to be mended, whatever its order (src/camprepair.js)
