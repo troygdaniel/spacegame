@@ -1196,6 +1196,7 @@ function campStep(C, sec) {
 }
 function campTick(C, dt) {
   C.t += dt * 1000; C.dt = dt; C.laserNow.length = 0;
+  if (C.input.fire || (C.cockpit && C.cockpit.input && C.cockpit.input.fire)) (C.keysUsed || (C.keysUsed = {})).fire = true; // Space has been held (the cruiser's turrets or the flown fighter's gun): the key row's teaching chip for it goes quiet (src/campteach.js, card space-game-chunk13-teach-space-c)
   campSchedule(C);
   if (typeof campNavTick === 'function') campNavTick(C); // a burn that began by itself ends by itself when a hostile comes near (src/campnav.js)
   if (typeof campNavDrive === 'function') campNavDrive(C, dt); // the autopilot (src/campnav.js), when it is on, sets the carrier's input

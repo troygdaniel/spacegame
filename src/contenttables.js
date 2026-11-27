@@ -1294,6 +1294,8 @@ const UI_TEXT = {
   'camp.corner.chip.cockpitback': 'Hand back',
   'camp.corner.chip.cruiser': 'Cruiser',
   'camp.corner.chip.teachq': 'then 1: stay with her',
+  'camp.corner.chip.teachfire': 'hold to fire',
+  'camp.corner.chip.teachc': 'take a fighter',
   'camp.corner.cruiserauto': 'Cruiser (auto)',
   'camp.corner.comehere': 'Cruiser, come to me',
   'camp.price.stick': 'The miners lose a guard while you fly.',

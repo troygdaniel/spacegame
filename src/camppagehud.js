@@ -102,6 +102,7 @@ function campPageHudFirst(C) {
   const items = (typeof campTeachChips === 'function' ? campTeachChips(C) : []).concat(F.ids.map(id => ({ id, key: campCornerCap(id), word: uiText('camp.corner.chip.' + id) })).filter(x => x.key)), en = campPageHudEnterNow(C); // a teaching chip is lit at the left end while its moment lasts (src/campteach.js, card space-game-chunk12-teach-q)
   if (en) items.push({ id: 'enter', key: en.key, word: en.word, verb: en.verb }); // a fourth chip, Enter and its verb, only while an Enter action is available; it follows the pick (card space-game-bottom-row-enter-chip)
   if (typeof campCockpitOn === 'function' && campCockpitOn() && (C.cockpit || C.ships.some(u => u.team === 'earth' && u.kind === 'fighter' && u.hp > 0 && !u.docked))) items.push({ id: 'cockpit', key: campCornerCap('cockpit'), word: uiText(C.cockpit ? 'camp.corner.chip.cockpitback' : 'camp.corner.chip.cockpit') }); // C takes the stick of a pilot's fighter, and hands it back (card space-game-fly-fighter-l1), while the switch is on and a pilot is out
+  const lights = typeof campTeachLights === 'function' ? campTeachLights(C) : {}; items.forEach(x => { if (lights[x.id]) { x.lit = true; x.note = lights[x.id]; } }); // a chip of the row lit where it stands, with its note (src/campteach.js)
   return items.length ? { items, a: 1 } : null;
 }
 
