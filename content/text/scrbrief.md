@@ -6,8 +6,8 @@ The words of the one-page briefing in the new look (card space-game-screens-b-br
 ## Strings
 | key | text |
 |---|---|
-| scr.bf.head | Mission {n} · {kind} · par {par} |
-| scr.bf.headreplay | Replay · mission {n} · {kind} · par {par} |
+| scr.bf.head | Mission {n} · {kind} |
+| scr.bf.headreplay | Replay · mission {n} · {kind} |
 | scr.bf.bonus | Bonus |
 | scr.bf.1.1.m1 | Patrol leaves |
 | scr.bf.1.1.m2 | A miner may call |

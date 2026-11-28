@@ -65,7 +65,7 @@ function campBriefMoments(level, i) {
 function scrBriefModel(P, bf) { // bf: { t: { level, i, replay, skipped }, brief: campHubBrief, moments: campBriefMoments }
   const B = bf.brief, t = bf.t, rp = t.replay === true && t.skipped !== true, goal = scrGoalLine(t.level, t.i), moments = bf.moments || [];
   const head = scrCardN('brief.head', { bare: true, at: { left: '4%', right: '4%', top: '4%' }, gap: 0 }, [scrRowN([
-    scrColN([scrTextN('lab', uiText(rp ? 'scr.bf.headreplay' : 'scr.bf.head', { n: B.n, kind: B.kindText, par: scrClock(B.par) }), 'gold'), scrTextN('t1', B.title), goal ? scrTextN('sm', goal) : null], { gap: 0.1 }),
+    scrColN([scrTextN('lab', uiText(rp ? 'scr.bf.headreplay' : 'scr.bf.head', { n: B.n, kind: B.kindText }), 'gold'), scrTextN('t1', B.title), goal ? scrTextN('sm', goal) : null], { gap: 0.1 }),
     scrRowN([scrChipN('pick'), scrTextN('t3', uiText('scr.hub.launch')), scrChipN('left'), scrChipN('right'), scrTextN('lab', uiText('scr.walk.step')), scrChipN('close'), scrTextN('lab', uiText('scr.hub.back'))])], { just: 'sp', full: true })]);
   const strip = moments.length ? scrCardN('brief.moments', { row: true, bare: true, at: { left: '4%', right: '4%', top: '68%' }, gap: 0.8 }, moments.map(m => scrTileN([scrRowN([scrRingN(1, SCRBRIEF.ring[m.kind] || 'mute', m.n, '1.7em'), scrTextN('t3', m.text)])], { grow: 1, on: bf.step === m.n }))) : null;
   const bonus = scrCardN('brief.bonus', { row: true, bare: true, at: { left: '4%', right: '4%', bottom: '5%' }, gap: 1 }, [scrRowN([
