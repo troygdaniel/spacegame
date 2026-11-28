@@ -82,7 +82,7 @@ The battle never slows for a list or the map: it runs at its own speed whatever 
 | Where | Keys |
 |---|---|
 | Station | `1`-`6` or `W S` and `Enter` pick from the station menu (go there and open it); `N` hands the keys back so `W A S D` walk and `E` uses what you stand at; `J` journal, `G` galaxy map |
-| Space, by hand | `A D` turn, `W` thrust, `S` brake, `Shift` boost (uses energy), `Q` / `E` dash sideways, `Space` or mouse fire, `L` dock or land (fly slowly, close in), mouse wheel zoom (with the address `?longhaul=new`, `-` and `=` zoom too, out to 0.05, and Earth stands in the world) |
+| Space, by hand | `A D` turn, `W` thrust, `S` brake, `Shift` boost (uses energy), `Q` / `E` dash sideways, `Space` or mouse fire, `L` dock or land (fly slowly, close in), mouse wheel zoom (in the new Long Haul, the address ?longhaul=new, the - and = keys zoom too, out to 0.05, and Earth stands in the world) |
 | Space, where to go | `N` places (`Enter` sets the destination, `Enter` again goes there, `X` clears it), `C` cruise there, `P` autopilot there, `G` galaxy map and jump, `F` call the fuel ranger on a near-empty tank |
 | Space, by command | `Z` flight assist on or off; `B` the Overview of ships (`Enter` targets one); `1`-`4` orders about the target: approach, keep at range, orbit, match speed; `V` gun lock; with the assist on a click in space flies there and a click on a ship or place targets it; `R` autotarget on or off (needs the part) |
 | Surface | `W A S D` walk, mouse aim and click to fire, `E` talk to the colonist or board at the pad, `C` show the controls again |

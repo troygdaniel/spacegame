@@ -86,7 +86,7 @@ const spaceOwn = bound(SPACE_FILES);
 const NOT_KEYS = ['CLICK', 'MOUSE', 'WHEEL', 'ANY KEY'];
 const ARROWCAP = { '\u2190': 'LEFT', '\u2192': 'RIGHT' }; // an arrow drawn as a cap stands for its key
 const capKeys = cap => { if (ARROWCAP[cap]) return [ARROWCAP[cap]]; const c = cap.toUpperCase(); if (c === 'ARROWS') return ['ARROWS']; if (NOT_KEYS.includes(c)) return []; const r = /^(\d)-(\d)$/.exec(c); if (r) { const out = []; for (let d = +r[1]; d <= +r[2]; d++) out.push(String(d)); return out; } return [norm(c)]; };
-const groups = J(`CONTROLS.map(g => ({ id: g.id, scene: g.scene, rows: g.rows.map(r => ({ k: r.k, t: r.t, help: r.help })) }))`);
+const groups = J(`CONTROLS.map(g => ({ id: g.id, scene: g.scene, rows: g.rows.filter(r => !r.lh).map(r => ({ k: r.k, t: r.t, help: r.help })) }))`); // (a row marked lh is only the new Long Haul's, ?longhaul=new: it is checked on its own below, tests/lhcam.mjs part F)
 const group = id => groups.find(x => x.id === id);
 
 console.log('1. every key the help names is bound');
