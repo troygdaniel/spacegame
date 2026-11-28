@@ -58,6 +58,7 @@ function hudCss(c) { return '#' + c.toString(16).padStart(6, '0'); }
 // text from a pool: made the first time its key is used, updated only when the words or colour change, hidden when a frame skips it
 function hudPut(h, key, x, y, str, o) {
   o = o || {};
+  if (typeof lhEarthSay === 'function') str = lhEarthSay(str, h.s); // with ?longhaul=new the HUD's lines say the home system's new names (src/lhnew.js); the same line without it
   const color = o.color || '#9fe9ff';
   let t = h.t[key];
   if (!t) {

@@ -11,6 +11,9 @@
 //   lhEarthApply(systems)  lays the names over the home system's row (SYSTEMS, or the table a test passes) when the switch is on; called at Boot after worldSync (src/boot.js). Idempotent: the row keeps its old name in
 //                          `was`, and the same call with the switch off puts every name back. Returns the ids it named.
 //   lhEarthName(id)        the name a body takes while the switch is on ('' when it has none, or the switch is off)
+//   lhEarthSay(text, scene) a line Long Haul SHOWS (a toast, a HUD line: the mission box, the prompts), with the old names of the home system's places put into the new ones, so the mission box says the Moon where the
+//                          nav list does. Display only, while the switch is on, in Long Haul's own scenes (LHNEW.earth.scenes; never the Campaign's): no content file is changed and nothing spoken goes through it (the voice
+//                          and the people in the bar say their lines as written: docs/longhaul-earth.html, Ask Troy). Capitals are kept: KEPLER-4B becomes THE MOON, and a name that starts the line starts with a capital
 const LHNEW = {
   addr: 'longhaul',                        // the address's name for the switch
   value: 'new',                            // and the one value that turns it on (?longhaul=new)
@@ -20,6 +23,8 @@ const LHNEW = {
     system: 'halcyon',                     // the system that is given the names (Long Haul's home: its file is not changed)
     name: 'Earth Orbit',                   // the system's name while the switch is on
     star: 'The Sun',                       // and its star's (src/universe.js sysStar makes the star's body, named after the system, once: its name is set there too)
+    scenes: ['Space', 'Station', 'Surface', 'ShipMode'],   // Long Haul's scenes, where a shown line takes the new names (lhEarthSay)
+    says: [['Halcyon Station', 'Keel Station'], ['Kepler-4b', 'the Moon'], ['Kepler Belt', 'Debris Field One'], ['Kestrel Outpost', 'Relay Outpost'], ['Perseus gate', 'Outbound Gate'], ['Slag Belt', 'Graveyard Belt'], ['Halcyon', 'Keel']], // old name, new name, in a shown line; the longer names first (Halcyon alone is the station's short name: "Halcyon pays" is "Keel pays")
     bodies: {                              // id: { name, tone (a world: the key of its three tones in CAMPDISC.tones, src/campworlddisc.js), kind (a world drawn as this kind in place of its own) }
       'halcyon-station': { name: 'Keel Station' },                       // the home dock: the ring station you launch from
       'kepler-4b': { name: 'The Moon', tone: 'luna', kind: 'rock' },       // the landable world of the rescue call
@@ -60,4 +65,15 @@ function lhEarthApply(systems) {
   def.bodies.forEach(b => { const r = E.bodies[b.id]; if (r && put(b, r.name)) done.push(b.id); });
   const st = typeof sysStar === 'function' ? sysStar(E.system) : null; if (st) put(st, E.star);
   return done;
+}
+const lhEarthSayRe = new RegExp(LHNEW.earth.says.map(r => r[0].replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|'), 'gi');
+function lhEarthSay(text, scene) {
+  if (typeof text !== 'string' || !text || !lhNewOn() || !scene || !scene.scene || LHNEW.earth.scenes.indexOf(scene.scene.key) < 0) return text;
+  return text.replace(lhEarthSayRe, (m, at) => {
+    const row = LHNEW.earth.says.find(r => r[0].toLowerCase() === m.toLowerCase()); if (!row) return m;
+    let out = row[1];
+    if (m === m.toUpperCase() && m !== m.toLowerCase()) out = out.toUpperCase(); // a line set in capitals
+    else if (at === 0 || /[.:!?]\s*$/.test(text.slice(0, at))) out = out.charAt(0).toUpperCase() + out.slice(1); // the first word of the line or of a sentence
+    return out;
+  });
 }

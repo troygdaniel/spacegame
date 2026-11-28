@@ -43,9 +43,16 @@ const once = J('JSON.stringify(SYSTEMS)'); J('lhEarthApply()');
 check('a second call changes nothing more', J('JSON.stringify(SYSTEMS)') === once);
 check('the home dock is still found by its id', J(`dockSystem('halcyon-station')`) === 'halcyon');
 
+console.log('C2 the lines Long Haul shows');
+const say = (t, key) => J(`lhEarthSay(${JSON.stringify(t)}, { scene: { key: ${JSON.stringify(key || 'Space')} } })`);
+check('the mission box and a toast take the new names', say('Rescue the colonist on Kepler-4b') === 'Rescue the colonist on the Moon' && say('Dock at Halcyon Station to get paid.') === 'Dock at Keel Station to get paid.' && say('Escort the MULE to the Perseus gate') === 'Escort the MULE to the Outbound Gate');
+check('capitals are kept and a name that starts a line or a sentence starts with a capital', say('KEPLER-4B') === 'THE MOON' && say('Kepler-4b is to the north.') === 'The Moon is to the north.' && say('Launch clear. Kepler-4b is to the east.') === 'Launch clear. The Moon is to the east.');
+check('Halcyon alone is the station\'s short name, and a line with no old name is the same line', say('Halcyon pays 100 cr for the wreck.') === 'Keel pays 100 cr for the wreck.' && say('Launch clear.') === 'Launch clear.');
+check('the Campaign\'s scenes and a line that is not text are left alone', say('Kepler-4b', 'Campaign') === 'Kepler-4b' && say('Kepler-4b', 'CampHub') === 'Kepler-4b' && J('lhEarthSay(42, { scene: { key: "Space" } })') === 42);
 console.log('D  off again');
 J('lhNewSet(false)'); J('lhEarthApply()');
 check('every name is back', J('JSON.stringify(SYSTEMS)') === before);
+check('and a shown line is the line as written', J(`lhEarthSay('Rescue the colonist on Kepler-4b', { scene: { key: 'Space' } })`) === 'Rescue the colonist on Kepler-4b');
 check('the star has its old name', J(`sysStar('halcyon').name`) === 'Halcyon Sun');
 J('lhNewSet(null)');
 check('given back to the address: off', J('lhNewOn()') === false);
@@ -56,6 +63,8 @@ check('every row names a body of the home system', rows.every(id => ids.includes
 check('every tone is one of the Campaign\'s discs', J(`Object.values(LHNEW.earth.bodies).filter(r => r.tone).every(r => !!CAMPDISC.tones[r.tone])`) === true);
 check('every name is a short plain name', J(`Object.values(LHNEW.earth.bodies).every(r => /^[A-Za-z ]{3,24}$/.test(r.name))`) === true);
 const text = readFileSync(ROOT + '/src/lhnew.js', 'utf8');
+check('toast and the HUD\'s text ask before they call', /if \(typeof lhEarthSay === 'function'\) msg = lhEarthSay\(msg, s\);/.test(readFileSync(ROOT + '/src/common.js', 'utf8')) && /if \(typeof lhEarthSay === 'function'\) str = lhEarthSay\(str, h\.s\);/.test(readFileSync(ROOT + '/src/hud.js', 'utf8')));
+check('no content file is changed for the names: the rescue call still says Kepler-4b', /Kepler-4b/.test(readFileSync(ROOT + '/content/missions/rescue.md', 'utf8')));
 check('the file asks the web for nothing', !/https?:\/\/|fetch\(|XMLHttpRequest|new Image/.test(text));
 check('the game was quiet', g.errors.length === 0, g.errors.join(' | '));
 
