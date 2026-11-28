@@ -7,6 +7,8 @@
 // Everything here is plain numbers and strings (no Phaser), so tests/campchatter.mjs runs it in Node:
 //   chatterEventOf(C, e)    PURE: which call a sim event is (src/campaign.js events, C.events), or null
 //   chatterNew()            a fresh radio state S: { last, hold, at, q, pilot, line }
+//   chatterWho(C, e)        PURE: the squad whose pilot a sim event belongs to (the fighter that was hit, the one that made the kill), or null
+//   chatterOrderWho(C)      PURE: the squad whose pilot answers the order that was last carried out (C.lastOrder, src/campwing.js): that pilot's, or the leader's for All pilots
 //   chatterOrderDiff(seen, orders)  PURE: the calls the orders given since the last look bring (C.orders counters): copy for a launch, attack, escort or guard, home for a recall
 //   chatterSpot(C, dx)      PURE: where the line stands, { x, bottom }: its left edge (the frames' margin less the stroke) and the y its last line ends at, CAMP.corner.radio px up from the bottom of the screen (dx: the step right of an open list)
 //   chatterHear(sc, e)      the scene's one call for each sim event (the computer's lines hold the radio; the rest may be a call); a scene with no radio hears nothing
@@ -23,6 +25,9 @@ const CHATTER = {
   hold: 2500,                            // ms of quiet after the ship's computer spoke
   show: 4200,                            // ms a line stays on the screen
   pilots: [['HAWK', 'aura-perseus-en'], ['ROOK', 'aura-angus-en'], ['VEGA', 'aura-orpheus-en'], ['LANCE', 'aura-zeus-en']], // callsign, Aura voice: none is a voice the computer can have or a bar character has
+  // THE RADIO SPEAKS AS THE PILOTS (card space-game-b14-c17-radio-names; Troy, 27 Nov 2026: yes, BRIEF 14 chunk 17): the line is shown with the pilot's own name (CAMP.pilots: Wedge, Kara, Apollo), not a callsign. The four rows above are the four RECORDED voices (the voice pack
+  // records every chatter line in each of them: nothing is re-recorded), and each of the three pilots keeps ONE of them for good: `voiceOf` pilot id -> the callsign whose voice he has. The fourth (LANCE, aura-zeus-en) is spare: recorded, said by nobody. The callsign itself is never shown or said.
+  voiceOf: { wedge: 'HAWK', kara: 'ROOK', apollo: 'VEGA' },
   events: {                              // delay: ms between the call and the line. A call that answers a computer line waits until its hold is over
     splash: { delay: 400 }, hit: { delay: 200 }, ore: { delay: 200 },
     copy: { delay: 1200 }, home: { delay: 1200 },       // an order given: the answer comes a beat later (the computer's own line, if it speaks one, is not a sim event: the radio is busy, not held)
@@ -56,6 +61,25 @@ function chatterSetMode(m) {
 
 function chatterNew() { return { last: -1e9, hold: -1e9, at: {}, q: [], pilot: -1, line: {} }; }
 
+// the pilots the radio speaks as, in the wing's order (Wedge, Kara, Apollo): [{ id, name, squad, lead }]
+const chatterRoster = () => (typeof CAMP !== 'undefined' && CAMP.pilots) || [];
+// the Aura voice of a pilot: the recorded voice of the callsign `voiceOf` gives him (the first recorded voice when a pilot has none: a mod's fourth pilot)
+function chatterVoice(id) { const cs = CHATTER.voiceOf[id], row = CHATTER.pilots.find(p => p[0] === cs); return (row || CHATTER.pilots[0])[1]; }
+// the squad whose pilot a sim event belongs to: the wing fighter that was hit (a 'hit' event names the ship hurt), the wing fighter that made the kill (a 'boom' event's `by`); null for anything else (the turrets' kills, the computer's lines)
+function chatterWho(C, e) {
+  if (!C || !e) return null;
+  const ship = id => id ? (C.by && C.by[id]) || (C.ships || []).find(s => s.id === id) || null : null;
+  const fighter = u => (u && u.team === 'earth' && u.kind === 'fighter' && u.squad && chatterRoster().some(p => p.squad === u.squad)) ? u.squad : null;
+  if (e.type === 'hit') return fighter(ship(e.id));
+  if (e.type === 'boom') return fighter(ship(e.by));
+  return null;
+}
+// the squad whose pilot answers the order carried out last: the one it was given to, or the leader (Wedge) for All pilots (the whole wing answers through its leader)
+function chatterOrderWho(C) {
+  const g = C && C.lastOrder ? C.lastOrder.group : '', R = chatterRoster(), p = R.find(q => q.squad === g) || R.find(q => q.lead) || R[0];
+  return p ? p.squad : null;
+}
+
 // which call a sim event is. The carrier's own hits are the computer's to warn about (hull half, critical), so only the wing's are "taking fire"
 function chatterEventOf(C, e) {
   if (!e) return null;
@@ -82,7 +106,7 @@ function chatterHear(sc, e) {
   if (!sc || !sc.radio || !e) return;
   const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
   if (e.type === 'say') chatterHold(sc.radio, now);
-  const ev = chatterEventOf(sc.camp, e); if (ev) chatterPush(sc.radio, ev, now);
+  const ev = chatterEventOf(sc.camp, e); if (ev) chatterPush(sc.radio, ev, now, chatterWho(sc.camp, e));
 }
 
 function chatterHold(S, now) { if (S) S.hold = now + CHATTER.hold; }
@@ -94,30 +118,37 @@ function chatterPool(ev) {
   return out;
 }
 
-function chatterPush(S, ev, now) {
+function chatterPush(S, ev, now, who) { // who: the squad whose pilot makes the call (an order's, a hit's, a kill's), or none: the pilots then take turns
   const mode = chatterMode(), def = CHATTER.events[ev];
   if (!S || !def || mode === 'off') return false;
   if (S.q.length) return false;                                          // one at a time: nothing is queued behind a call
   if (now - (S.at[ev] === undefined ? -1e9 : S.at[ev]) < CHATTER.same[mode]) return false;
   const due = now + def.delay;
   if (due - S.last < CHATTER.gap[mode]) return false;                    // one line in 8 s (Quiet)
-  S.at[ev] = now; S.q.push({ ev, due });
+  S.at[ev] = now; S.q.push({ ev, due, who: who || null });
   return true;
 }
 
-function chatterTick(S, now, busy) {
+function chatterTick(S, now, busy, out) { // out: the squads that have a pilot out now (the scene's), so the turns skip a pilot who is lost or in the bay; none given: all three
   if (!S || !S.q.length || now < S.q[0].due) return null;
   const p = S.q.shift(), mode = chatterMode();
   if (now > p.due + CHATTER.show) return null;                           // stale (the game was paused or held): not worth saying
   if (mode === 'off' || busy || now < S.hold) return null;              // the computer, a warning or any line has the radio: this call is dropped, not kept
   if (now - S.last < CHATTER.gap[mode]) return null;
   const pool = chatterPool(p.ev); if (!pool.length) return null;
-  S.pilot = (S.pilot + 1) % CHATTER.pilots.length;                       // the pilots take turns: never the same voice twice in a row
+  const R = chatterRoster(); if (!R.length) return null;
+  let at = p.who ? R.findIndex(q => q.squad === p.who) : -1;              // the pilot the call belongs to speaks it (the one ordered, hit, or who made the kill) ...
+  if (at < 0) {                                                          // ... any other call: the pilots take turns, never the same pilot twice in a row, skipping one who is not out
+    const here = Array.isArray(out) && out.length ? R.map((q, k) => out.includes(q.squad) ? k : -1).filter(k => k >= 0) : R.map((q, k) => k);
+    at = S.pilot; for (let k = 1; k <= R.length; k++) { const j = ((S.pilot < 0 ? -1 : S.pilot) + k) % R.length; if (here.includes(j)) { at = j; break; } }
+    if (at < 0) at = 0;
+  }
+  S.pilot = at;
   let i = Math.floor(Math.random() * pool.length);
   if (pool.length > 1 && i === S.line[p.ev]) i = (i + 1) % pool.length; // and the same line is not said twice running
   S.line[p.ev] = i; S.last = now;
-  const pl = CHATTER.pilots[S.pilot];
-  return { ev: p.ev, call: pl[0], voice: pl[1], text: pool[i] };
+  const pl = R[S.pilot];
+  return { ev: p.ev, call: pl.name, who: pl.squad, voice: chatterVoice(pl.id), text: pool[i] }; // call: the pilot's own name, shown before the words
 }
 
 // where the line stands: at the bottom left, its left edge the corner frames' margin less the stroke (CAMP.corner.edge - CAMP.corner.ink) and its bottom edge CAMP.corner.radio px up from the screen's bottom, above the key line; a longer line grows upward. (Card space-game-talk-over-fleet-corner put it above the FLEET corner at the bottom left;

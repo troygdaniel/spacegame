@@ -297,6 +297,7 @@ function campWingOrder(C, group, verb, target, how, dry) {
   return campWingDone(C, id, verb, tgo, ships, how, say, vars);
 }
 function campWingDone(C, id, verb, tg, ships, how, code, vars) {
+  C.lastOrder = { group: id, verb }; // who the order went to (a squad, or all): the radio answers in his voice (src/campchatter.js chatterOrderWho)
   C.events.push({ type: 'wingorder', group: id, verb, target: tg ? { kind: tg.kind, id: tg.id, name: tg.name } : null, n: ships.length, how: how || '' });
   const r = campYes(code, vars || { group: campWingGroupName(C, id), name: tg ? tg.name : '' });
   r.group = id; r.verb = verb; r.target = tg; r.n = ships.length; return r;

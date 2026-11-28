@@ -1141,7 +1141,7 @@ function campDo(C, name, arg, dry, how) {
     if (n <= 0) return campNo(C.launchQ.length ? 'launching' : out.length ? 'baydry' : 'bay');
     if (dry) return campYes('launch');
     for (let i = 0; i < C.bay.fighters; i++) C.launchQ.push('fighter');
-    C.bay.fighters = 0; C.orders.launch++; (C.repairs || []).forEach(r => { r.stay = false; }); // a fighter still being mended goes out too when it is whole
+    C.bay.fighters = 0; C.orders.launch++; C.lastOrder = { group: 'all', verb: 'launch' }; (C.repairs || []).forEach(r => { r.stay = false; }); // a fighter still being mended goes out too when it is whole
     return campYes('launch');
   }
   // Attack, Escort, Guard and Recall are the wing orders of src/campwing.js (campWingOrder) with no group and no target named: today's groups and today's answers
@@ -1177,7 +1177,7 @@ function campDo(C, name, arg, dry, how) {
     if (!C.pickups.length && !C.rocks.some(r => r.hp > 0)) return campNo('noore');
     if (dry) return campYes('mine');
     ms.forEach(u => { u.order = { type: 'mine' }; u.move = null; });
-    C.orders.mine++; return campYes('mine');
+    C.orders.mine++; C.lastOrder = { group: 'all', verb: 'mine' }; return campYes('mine');
   }
   if (name === 'recharge') return campNo('shieldauto'); // the old pay-ore recharge (card space-game-shield-auto): the shield mends by itself now, and "recharge shields" says so
   if (name === 'build') return campNo('nobuild'); // nothing builds ships any more (card space-game-repair-with-ore): the strip and the voice still understand the word, and say what to do instead
