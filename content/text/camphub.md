@@ -41,6 +41,7 @@ The words of the Campaign's ready room, the hub between missions (card space-gam
 | camp.hub.boughtf | A fighter joins the wing. {credits} credits and {ore} ore left. |
 | camp.hub.soldf | A fighter given back. {credits} credits and {ore} ore. |
 | camp.hub.noore | Not enough: {need} needed, {have} in credits and ore. |
+| camp.hub.locked | Fly {title} first. |
 | camp.hub.most | No more: {most} extra at most. |
 | camp.hub.nothing | Nothing to give back. |
 | camp.hub.rank.name | Rank: {name}  ({n} of {of}) |

@@ -15,6 +15,7 @@ The words of Settings in the new look (card space-game-screens-e-keys-settings; 
 | scr.sett.tab.reset | Reset |
 | scr.sett.foot.move | Move |
 | scr.sett.foot.change | Change |
+| scr.sett.foot.open | Open |
 | scr.sett.foot.back | Back |
 | scr.sett.s.volume | Volume |
 | scr.sett.s.mute | Mute |

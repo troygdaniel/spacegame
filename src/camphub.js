@@ -163,6 +163,18 @@ function campHubGridMove(P, H, dir) {
   }
   if (to < 0 || to === at) return false; H.cur = to; return true;
 }
+// A4 (card space-game-b13-a4-a6-grid-refit; Troy, 27 Nov 2026, BRIEF 13): the arrow that did not move because the tile in that direction is LOCKED (a later mission: nothing before it has been flown) says why. Returns null when the tile in that direction is not
+// a locked one (an edge, or a tile it can stand on), else { level, i, title }: the mission to fly first, the next one (every locked tile waits on it). Left and Right look at the tile beside the cursor's in the row; Up and Down at the same column of the row above or
+// below (the last tile of a shorter row). Pure; the key says it with camp.hub.locked ("Fly {title} first.").
+function campHubGridLocked(P, H, dir) {
+  const sel = campHubSelectable(P); if (!sel.length) return null;
+  const board = campHubBoard(P).filter(r => !r.head), nx = board.find(r => r.state === 'next'); if (!nx) return null;
+  const cur = sel[Math.max(0, Math.min(sel.length - 1, H.cur | 0))], rowOf = lv => board.filter(r => r.level === lv);
+  let t = null;
+  if (dir === 'left' || dir === 'right') { const row = rowOf(cur.level), k = row.findIndex(r => r.i === cur.i); t = row[k + (dir === 'right' ? 1 : -1)] || null; }
+  else { const levels = campHubLevels(), lv = levels[levels.indexOf(cur.level) + (dir === 'down' ? 1 : -1)]; if (lv != null) { const row = rowOf(lv); t = row[Math.min(cur.i, row.length - 1)] || null; } }
+  return t && t.state === 'later' ? { level: nx.level, i: nx.i, title: nx.title } : null;
+}
 // the MOUSE on the Missions overlay (card space-game-click-mission; Troy, 24 Nov 2026): a click on a mission is what the arrows are, a second click on the chosen one is Enter. The lines a click can land on are the
 // missions the cursor can stand on (the same rule: done, skipped, next); Start over is left to the keys (Enter asks, a second Enter does it: a stray double click must not wipe a campaign)
 function campHubBoardHits(P, max) {
@@ -303,7 +315,7 @@ function campHubKey(H, P, code, ctx) {
   if (d != null) { if (d >= 1 && d <= n) { H.row = d - 1; H.open = ''; res.used = res.moved = true; } return res; }
   if (ov && H.open === 'board' && typeof scrOn === 'function' && scrOn()) { // the new look's mission pick: a grid, all four arrows move round it (Left no longer closes it and Right no longer opens a briefing: Esc is Back, Enter selects)
     const dir = campHubLeft(code) ? 'left' : campHubRight(code) ? 'right' : campHubUp(code) ? 'up' : campHubDown(code) ? 'down' : '';
-    if (dir) { res.used = true; res.moved = campHubGridMove(P, H, dir); return res; }
+    if (dir) { res.used = true; res.moved = campHubGridMove(P, H, dir); if (!res.moved) { const lk = campHubGridLocked(P, H, dir); if (lk) { res.ok = false; res.say = { key: 'camp.hub.locked', vars: { title: lk.title } }; } } return res; } // (a locked tile in that direction: a line says why, card space-game-b13-a4-a6-grid-refit)
   }
   const sel = !dock && typeof scrOn === 'function' && scrOn(); // THE NEW SCREENS (card space-game-ready-room-arrows-select; Troy, 26 Nov 2026: "do not use arrow keys to move forward; Enter only. Arrow keys select items on the screen"): every arrow key only moves the highlight, Enter opens, does or goes on, Esc goes back
   if (ov) { // an overlay is up: Esc closes it, Up and Down move in its list, Enter does the thing on the choice, and its own keys (the glass look: Left also closes it and Right also does the thing; the new screens: the arrows only choose)

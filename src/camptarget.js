@@ -170,7 +170,7 @@ function campFriNumbered(C) { // the numbered list, dark ships included, in numb
 }
 function campFriJump(C, n, how) { // E then a digit: that ship is THE target held (the enemy is let go), as E would make it; a number that is dark (or none) does nothing and says so
   if (!C || !C.carrier) return campNo('what');
-  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e || !e.alive) return campNo('nofriend');
+  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e) return campNo('what'); if (!e.alive) return campNo('nofriend'); // a number no ship has taken yet (1.1's Transport is 1 until she is out at 4 s, so the miner is the only row at 2 s) is not "gone": nothing was ever there (card space-game-b14-c16-11-miner-gone); a ship that was out and is lost or has arrived is
   C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return { ok: true, say: '', fri: e.id };
 }
 const campFriLabel = (C, n) => { const e = campFriNumbered(C).find(x => x.number === n); return e ? e.name : 'Friend ' + n; }; // a row's words in the friends pick: the ship's name
@@ -260,11 +260,12 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
       return Object.assign({}, r, { verb: h ? 'attack' : 'guard', formup: !h && !fr }); // formup: nothing was picked, the pilots guard the cruiser
     };
     const info = { second: E.second ? E.second.verb : null, secondWho: E.second ? E.second.who : '', given: E.given }; // for the sentence line: what Enter twice would do (or did)
-    if (E.second && E.armed) { // THE SECOND ENTER, within CAMP.orderLine.twice ms of one that was taken (card space-game-orders-f4-enter-twice, Troy, 27 Nov 2026, mock F): the just-given order is switched to its secondary
+    if (E.second && E.armed && !dry) { // THE SECOND ENTER, within CAMP.orderLine.twice ms of one that was taken (card space-game-orders-f4-enter-twice, Troy, 27 Nov 2026, mock F): the just-given order is switched to its secondary
       const r = E.second.run(how, dry);
-      if (!dry && r && r.ok) { CAMP_ENTER.set(C, { key: E.key, at: t, twice: true }); (C.keysUsed || (C.keysUsed = {})).twice = true; } // (the one-time chip that teaches Enter twice goes quiet, src/campteach.js)
-      return Object.assign({}, r, { verb: E.second.verb, formup: false, second: E.second.verb, secondWho: E.second.who, given: dry ? E.given : 2, twice: true });
+      if (r && r.ok) { CAMP_ENTER.set(C, { key: E.key, at: t, twice: true }); (C.keysUsed || (C.keysUsed = {})).twice = true; } // (the one-time chip that teaches Enter twice goes quiet, src/campteach.js)
+      return Object.assign({}, r, { verb: E.second.verb, formup: false, second: E.second.verb, secondWho: E.second.who, given: 2, twice: true });
     }
+    // (a DRY run, which the sentence line and the key row ask every frame, always says the first Enter's own verb, with the secondary beside it: card space-game-b14-c13-order-line-mine; while the second Enter was armed it used to say the secondary, so the line read "guard Rock field 1" for a second after a mine order)
     const r = give();
     if (!dry && r && r.ok) CAMP_ENTER.set(C, { key: E.key, at: t, twice: false }); // a refused Enter arms nothing
     return Object.assign({}, r, info);
