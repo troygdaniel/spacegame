@@ -61,7 +61,7 @@ const drawn = g.run(`(() => {
       txt: (x, y, s, size, color, o) => { rec.txt.push({ x, y, s, size, wrap: o && o.style && o.style.wordWrap ? o.style.wordWrap.width : 0 }); return {}; }
     };
     Settings.prototype.draw_controls.call(fake);
-    out[grp.id] = { caps: rec.caps.map(c => [c.px, c.py]), txt: rec.txt, keys: grp.rows.reduce((n, r) => n + r.k.length, 0), rows: grp.rows.length };
+    out[grp.id] = { caps: rec.caps.map(c => [c.px, c.py]), txt: rec.txt, keys: controlsGroup(grp.id).rows.reduce((n, r) => n + r.k.length, 0), rows: controlsGroup(grp.id).rows.length }; // (controlsGroup: the rows the panel draws; a row only ?longhaul=new lists is not one without the switch)
   }
   return JSON.parse(JSON.stringify(out));
 })()`);

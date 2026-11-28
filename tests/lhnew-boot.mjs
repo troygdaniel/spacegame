@@ -6,6 +6,7 @@
 //   D  the aim help: a pirate ahead inside the cone is tracked (the bridge's aim names it) and a helped shot does the Campaign's price of the damage; a pirate killed draws the Campaign's kill effect
 //   E  the page HUD: the ship panel and the six-chip key row are on the page, Long Haul's key line is hidden, the hostiles panel names the pirate
 //   F  the same page WITHOUT the switch has none of it: no panel, no flat picture, today's key line, Halcyon
+//   H  (card space-game-lh-earth-zoom) Earth stands in the world (scroll factor 1) and the ship has flown away from it; the - and = keys (real key events) zoom the view out to 0.05 and back, the keys page lists them
 //   G  the game logged no error in either
 // It is not part of the smoke (Chrome is slow and shares one lock): the gate's Chrome batch runs it with the other boots.   node tests/lhnew-boot.mjs
 import { resolve, dirname } from 'node:path';
@@ -14,10 +15,10 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const { launch } = await import('./cdp.mjs');
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyW: 87, Space: 32 };
+const VK = { KeyW: 87, Space: 32, Minus: 189, Equal: 187 };
 const S = `game.scene.getScene('Space')`;
 const fly = async (t, ms, keys = ['KeyW', 'Space']) => {
-  const kd = code => ({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Space' ? ' ' : 'w' });
+  const kd = code => ({ windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Space' ? ' ' : code === 'Minus' ? '-' : code === 'Equal' ? '=' : 'w' });
   for (const c of keys) await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, kd(c)));
   await t.run(ms);
   for (const c of keys) await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, kd(c)));
@@ -76,6 +77,27 @@ let errors = [];
     check('the ship panel and the six-chip key row are on the page', hud.ship === true && ['WASD', 'Space', 'Shift', 'L', 'N', 'H'].every(k => hud.first.includes(k)) && /DOCK/i.test(hud.first), hud.first.replace(/\s+/g, ' '));
     check('Long Haul\'s key line is hidden and the Campaign\'s ore and missiles panel is not shown', hud.keyLine === false && hud.stock === false);
     check('the hostiles panel names the pirate', /1 Gunship/.test(hud.foes), hud.foes.replace(/\s+/g, ' '));
+    console.log('H  Earth in the world, and the zoom keys');
+    const w = await j(`(() => { const s = ${S}, e = s.lhEarth, home = spaceHomeDock(), z = camzoomScreen(s, e.x, e.y); return { sf: e.scrollFactorX, x: Math.round(e.x), y: Math.round(e.y), homeX: home.x, away: Math.round(Math.hypot(s.ship.x - home.x, s.ship.y - home.y)), onScreenX: Math.round(z.x), cam: e.cameraFilter, main: s._cz.main.id }; })()`);
+    check('Earth stands in the world: scroll factor 1, where the dock put it (about 11,565, 12,720), and the flight took the ship far from it', w.sf === 1 && Math.abs(w.x - 11565) < 3 && Math.abs(w.y - 12720) < 3 && w.away > 1500, JSON.stringify(w));
+    check('Earth is on the world\'s camera (it zooms with the world)', (w.cam & w.main) === 0, JSON.stringify(w));
+    await t.ev(`(() => { ${S}.ship.body.setVelocity(0, 0); return CAMZOOM.want = 1; })()`);
+    const press = async code => { await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyDown' }, { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : '=' })); await t.run(60); await t.send('Input.dispatchKeyEvent', Object.assign({ type: 'keyUp' }, { windowsVirtualKeyCode: VK[code], nativeVirtualKeyCode: VK[code], code, key: code === 'Minus' ? '-' : '=' })); await t.run(60); };
+    await press('Minus'); await press('Minus');
+    const z2 = await j('CAMZOOM.want');
+    check('two presses of - zoom out two steps of 1.2 (the Campaign\'s)', Math.abs(z2 - 1 / 1.44) < 1e-3, String(z2));
+    for (let i = 0; i < 30; i++) await press('Minus');
+    await t.run(900);
+    const far = await j(`({ want: CAMZOOM.want, cam: ${S}.cameras.main.zoom, min: CAMZOOM.min, label: CAMZOOM.labelMax })`);
+    check('far out the view stops at 0.05 (a 25,600 by 14,400 px view), and the camera has come to it', far.want === 0.05 && far.min === 0.05 && far.label === 20 && Math.abs(far.cam - far.want) < 0.02, JSON.stringify(far));
+    await t.ev(`(() => { ${S}.ship.body.reset(spaceHomeDock().x, spaceHomeDock().y); return 1; })()`); await t.run(600);
+    const seen = await j(`(() => { const s = ${S}, cam = s.cameras.main, z = cam.zoom, w = cam.width / z, h = cam.height / z, vx = cam.scrollX + cam.width / 2 - w / 2, vy = cam.scrollY + cam.height / 2 - h / 2, inV = (x, y) => x > vx && x < vx + w && y > vy && y < vy + h, e = s.lhEarth, moon = sysDef().bodies.find(b => b.id === 'kepler-4b'); return { earth: inV(e.x, e.y), moon: inV(moon.x, moon.y), dock: inV(spaceHomeDock().x, spaceHomeDock().y), w: Math.round(w) }; })()`);
+    check('at the home dock, zoomed out, Earth, Keel Station and the Moon are on one screen', seen.earth === true && seen.dock === true && seen.moon === true, JSON.stringify(seen));
+    await press('Equal'); await press('Equal');
+    const back = await j('CAMZOOM.want');
+    check('= zooms back in (two presses: 0.05 to about 0.11)', back > 0.09 && back < 0.14, String(back));
+    const keys = await j(`({ help: HELP.Space.some(l => /^- =\\s+zoom out and in/.test(l)), row: controlsGroup('flight').rows.some(r => r.lh) })`);
+    check('the keys page lists - and = for the flight', keys.help === true && keys.row === true, JSON.stringify(keys));
     errors = errors.concat(t.errors);
   } finally { await t.close(); }
 }
@@ -85,6 +107,9 @@ let errors = [];
     console.log('F  without the switch');
     await fly(t, 1000);
     const f = await j(`({ on: lhNewOn(), sys: sysDef().name, me: ${S}.ship.texture.key, panel: !!document.querySelector('.ph-ship'), keyLine: ${S}.keyLine.visible, earth: !!${S}.lhEarth, bridge: !!${S}.lhB, shot: (${S}.pb.getChildren().find(b => b.active) || { texture: {} }).texture.key })`);
+    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189, code: 'Minus', key: '-' }); await t.run(60); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189, code: 'Minus', key: '-' }); await t.run(100);
+    const nz = await j(`({ want: CAMZOOM.want, min: CAMZOOM.min, earth: ${S}.lhEarth ? ${S}.lhEarth.scrollFactorX : null, help: HELP.Space.some(l => /^- =/.test(l)) })`);
+    check('no switch: the - key does nothing, the zoom range is Long Haul\'s own (0.4), no Earth picture, the keys page does not list it', nz.want === 1 && nz.min === 0.4 && nz.earth === null && nz.help === false, JSON.stringify(nz));
     check('no switch: Halcyon, today\'s ship picture and shot, no panel, no bridge, the key line as it was', f.on === false && f.sys === 'Halcyon' && f.me === 'ship' && f.panel === false && f.earth === false && f.bridge === false && f.shot === 'bullet', JSON.stringify(f));
     errors = errors.concat(t.errors);
   } finally { await t.close(); }
