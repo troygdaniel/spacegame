@@ -31,7 +31,7 @@ check('W, 2, E, 2, Enter sends ONE pilot (Kara) to guard the miner, and nobody e
 g.run(`campPanelClose(P); C.fsel = ''; C.sel = 'all';`);
 mission(0, 20);
 mission(1, 20);
-check('1.2: the miners are 1 and 2, then the four rock fields 3 to 6 (card space-game-orders-f3-enter-fits: a rock field is an E target, numbered after every ship)', nums() === '1:Miner 1 | 2:Miner 2 | 3:Rock field 1 | 4:Rock field 2 | 5:Rock field 3 | 6:Rock field 4', nums());
+check('1.2: the four rock fields are 1 to 4, then the miners 5 and 6 (card space-game-orders-f3-enter-fits: a rock field is an E target; card space-game-b14-c14-15-e-pick: ore is the goal there, so the fields come first)', nums() === '1:Rock field 1 | 2:Rock field 2 | 3:Rock field 3 | 4:Rock field 4 | 5:Miner 1 | 6:Miner 2', nums());
 mission(2, 1);
 check('1.3: no hauler has come yet, so no line in the corner (a number is listed from the moment its ship is first seen), yet the pick has its nine places', nums() === '' && J(`campFriRows(C).length`) === 0 && J(`campPanelList(C, 'friends').length`) === 9);
 mission(2, 25);
