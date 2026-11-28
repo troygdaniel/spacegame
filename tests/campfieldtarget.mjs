@@ -22,7 +22,7 @@ console.log('A. the numbers');
   g.run(`__mk(1, 1);`);
   check('1.2: the four rock fields are E1 to E4 (marked *), then the miners E5 and E6 (ore is the goal there: card space-game-b14-c14-15-e-pick; tests/campepick.mjs)', J('__nums()').join() === '1:Rock field 1*,2:Rock field 2*,3:Rock field 3*,4:Rock field 4*,5:Miner 1,6:Miner 2', J('__nums()').join());
   g.run(`__mk(2, 0);`);
-  check('2.1 has no ship to protect: the fields are E1 and E2, in their own order (Rock field 1 first, though Rock field 2 is nearer)', J('__nums()').join() === '1:Rock field 1*,2:Rock field 2*', J('__nums()').join());
+  check('2.1 has no ship to protect: your cruiser is E1 (card space-game-e-row-cruiser-first), then the fields E2 and E3, in their own order (Rock field 1 first, though Rock field 2 is nearer)', J('__nums()').join() === '1:Cruiser,2:Rock field 1*,3:Rock field 2*', J('__nums()').join());
   g.run(`__mk(1, 1); window.__f0 = campFriNumbered(C).find(e => e.field && e.id === 'field-0'); C.rocks.filter(r => r.field === 0).forEach(r => { r.hp = 0; }); for (let i = 0; i < 3; i++) campStep(C, 1 / 30);`);
   check('a field with no rock left is dark, and keeps its number (the others do not move)', J('campFriNumbered(C).find(e => e.id === "field-0").alive') === false && J('campFriNumbered(C).find(e => e.id === "field-0").number') === J('__f0.number') && J('campFriNumbered(C).find(e => e.id === "field-1").number') === J('__f0.number') + 1);
   check('E steps through the live ones only (the dark field is passed)', (g.run(`C.fsel = ''; campFriStep(C, 1); campFriStep(C, 1); campFriStep(C, 1);`), J('C.fsel')) === 'field-1' || J('C.fsel') !== 'field-0');

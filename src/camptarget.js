@@ -148,6 +148,7 @@ function campFriList(C) { // the stops of [: the SHIPS you protect (the transpor
 // = [{ id, name, number, alive, hull (0..1; 0 when dark), picked (C.fsel is it), unit (the ship, null when dark) }] in number order; E steps through the live ones in that order, E then a digit (1 to 9) is campFriJump. The numbers are C.fnums = { next, plan: { id: n } (the level's convoys, in the level's order, reserved at the first look), by: { id: { n, name } } (a ship seen) }, written by the step of the sim (campFriRegister, before the dead leave the list) and by any first look
 const campFriShipName = u => (u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u)); // (the name src/camppick.js gives a ship you protect)
 const campFriOreGoal = C => !!(C && C.L && (C.L.objectives || []).some(o => o && o.type === 'ore')); // the mission's goal is ORE (1.2 only today: an objective of type 'ore'): E's first pick is a rock field there, a ship anywhere else (card space-game-b14-c14-15-e-pick; Troy yes, 27 Nov 2026; the cloud's BRIEF 14 chunk 14)
+const campFriCruiserName = () => { const t = typeof uiText === 'function' ? String(uiText('camp.corner.cruiser')) : 'Cruiser'; return t.charAt(0) + t.slice(1).toLowerCase(); }; // (the corner's title is CRUISER: written as the name of a ship, like Miner 1)
 function campFriRegFields(C, R, room) { // the rock fields with rock left take the next numbers, in field order (Field 1, Field 2 ...), at most `room` of them and never past 9 numbers in all; each keeps its number for the mission
   (typeof campPickFields === 'function' ? campPickFields(C).slice().sort((a, b) => (+String(a.id).slice(6) | 0) - (+String(b.id).slice(6) | 0)) : []).forEach(f => { if (!R.by[f.id] && R.next <= 9 && room-- > 0) R.by[f.id] = { n: R.next++, name: f.name, field: true }; });
 }
@@ -157,6 +158,7 @@ function campFriRegister(C) { // give a number to every ship you protect that ha
   if (!R) { // the first look of the mission: the convoys of the level hold their numbers in the level's own order (1.1: the Transport is 1 although the miner of that mission is in space first); the miners and anything else come after, as they are seen
     R = C.fnums = { next: 1, by: {}, plan: {} };
     if (campFriOreGoal(C)) campFriRegFields(C, R, 9 - ((C.L && C.L.convoys) || []).length - campPickGuarded(C).length); // an ORE mission (1.2): the rock fields are 1 to 4 and the miners come after, so "W a pilot, E 1, Enter" is the briefing's own mining (card space-game-b14-c14-15-e-pick); room is kept for every ship the list can hold, so no ship loses its number to a field
+    if (!campFriOreGoal(C) && !((C.L && C.L.convoys) || []).length && !campPickGuarded(C).length) R.by.cruiser = { n: R.next++, name: campFriCruiserName(), cruiser: true }; // NO SHIP on the E row (2.1 to 3.3; card space-game-e-row-cruiser-first, Troy chose (a), 27 Nov 2026): E1 is your own cruiser, so W 1 E 1 Enter = guard the cruiser, and the rock fields follow after it; an ore mission keeps its fields first, a mission with a ship keeps its ships first
     ((C.L && C.L.convoys) || []).forEach(cv => { R.plan['freighter-' + cv.id] = R.next++; });
     campPickGuarded(C).filter(u => u.joins && !(C.cues && C.cues[u.joins] != null)).forEach(u => { if (!R.plan[u.id]) R.plan[u.id] = R.next++; }); // a ship that joins the list at a cue (1.1's miner) keeps the number it would have had: the rock fields below take the numbers AFTER every ship (card space-game-orders-f3-enter-fits), so E2 is still the miner
   }
@@ -169,6 +171,7 @@ function campFriNumbered(C) { // the numbered list, dark ships included, in numb
   const fields = typeof campPickFields === 'function' ? campPickFields(C) : []; // (the rock fields with rock left: a field with none is dark, like a ship that was lost)
   return Object.keys(R.by).map(id => {
     const r = R.by[id];
+    if (r.cruiser) { const u = C.carrier, up = !!u && u.hp > 0; return { id, name: r.name, number: r.n, alive: up, hull: up ? Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1))) : 0, picked: C.fsel === id, unit: up ? u : null, cruiser: true }; } // your own cruiser (no ship on the row): a ship like the others, dark only when she is lost
     if (r.field) { const f = fields.find(x => x.id === id); return { id, name: r.name, number: r.n, alive: !!f, hull: f ? 1 : 0, picked: C.fsel === id, unit: null, field: true, n: f ? f.n : 0 }; }
     const u = C.by[id], up = !!u && u.hp > 0; return { id, name: r.name, number: r.n, alive: up, hull: up ? Math.max(0, Math.min(1, u.hp / (u.maxHp || u.hp || 1))) : 0, picked: C.fsel === id, unit: up ? u : null };
   }).sort((a, b) => a.number - b.number);
@@ -188,6 +191,10 @@ function campFriField(C, id) { // a rock field (id 'field-k', src/camppick.js ca
   if (!/^field-/.test(String(id || '')) || !C || !C.carrier || typeof campPickFields !== 'function') return null;
   const f = campPickFields(C).find(x => x.id === id); return f ? { id: f.id, kind: 'post', field: true, unit: null, name: f.name, x: f.x, y: f.y, r: f.r, rock: f.rock, n: f.n } : null;
 }
+function campFriCruiser(C) { // the cruiser as a friendly (the E row's number when no ship is on it, id 'cruiser'): a ward like a ship you protect, so Enter guards it (the pilots form up on her); { id: 'cruiser', kind: 'ward', cruiser: true, unit, name, x, y, r }, or null when she is lost
+  const u = C && C.carrier; if (!u || !(u.hp > 0) || !C.fnums || !C.fnums.by.cruiser) return null;
+  return { id: 'cruiser', kind: 'ward', cruiser: true, unit: u, name: C.fnums.by.cruiser.name, x: u.x, y: u.y, r: u.r || 20 };
+}
 function campFriMe(C) { // "me" (card space-game-orders-click-me-and-rocks; Troy, 27 Nov 2026: click your own ship): the ship the player flies now, the cruiser or the fighter he holds the stick of, as a friendly: { id: 'me', kind: 'ward', me: true, unit, name, x, y, r }; guard it and the pilots come to it. null with no cruiser
   const u = C && C.carrier ? (typeof campEye === 'function' ? campEye(C) : C.carrier) : null; if (!u || !(u.hp > 0)) return null;
   return { id: 'me', kind: 'ward', me: true, unit: u, name: typeof uiText === 'function' ? uiText('camp.corner.orderline.me') : 'me', x: u.x, y: u.y, r: u.r || 20 };
@@ -204,7 +211,7 @@ function campFriShip(C, id) { // a click on a ship you protect (card space-game-
 }
 function campFriNow(C) { // the friendly now: a ship of the list, or the place a map click holds; null when there is none (a ship that was lost is let go the next time anyone asks)
   if (!C || !C.fsel) return null;
-  const e = campFriList(C).find(x => x.id === C.fsel) || campFriPlace(C, C.fsel) || campFriField(C, C.fsel) || (C.fsel === 'me' ? campFriMe(C) : null);
+  const e = campFriList(C).find(x => x.id === C.fsel) || campFriPlace(C, C.fsel) || campFriField(C, C.fsel) || (C.fsel === 'cruiser' ? campFriCruiser(C) : null) || (C.fsel === 'me' ? campFriMe(C) : null);
   if (!e) { C.fsel = ''; return null; }
   return e;
 }
@@ -244,7 +251,7 @@ function campMarkNow(C) { // the strength of the squares now: what changed since
 }
 // ENTER TWICE (card space-game-orders-f4-enter-twice; Troy, 27 Nov 2026, mock F; ORCH's answers): a second Enter within CAMP.orderLine.twice ms of an Enter that was TAKEN, for the same picks, switches the order just given to its SECONDARY:
 // a ship you protect: guard first, ESCORT second; a rock field: mine first, GUARD it second (a point: the pilots hold the field); an enemy: the picked pilot attacks first, THE WHOLE WING attacks second (only when one pilot is picked: with All pilots they already all do);
-// nothing picked, your own ship (me), an outpost: no second. CAMP_ENTER holds, per game, { key (who|enemy|friendly), at (the sim clock of the last Enter taken), twice (the second was given) }. Returns { key, second: { verb, who, run(how, dry) } | null, armed, given 0 | 1 | 2 }.
+// nothing picked, your own ship (me), the cruiser (E1 where no ship is on the row: guard and escort are the same there), an outpost: no second. CAMP_ENTER holds, per game, { key (who|enemy|friendly), at (the sim clock of the last Enter taken), twice (the second was given) }. Returns { key, second: { verb, who, run(how, dry) } | null, armed, given 0 | 1 | 2 }.
 const CAMP_ENTER = new WeakMap();
 function campEnterTwice(C, h, fr) {
   const key = String(C.sel || '') + '|' + String(C.tgt || '') + '|' + String(C.fsel || ''), t = campMarkClock(C), last = CAMP_ENTER.get(C), same = !!last && last.key === key && t - last.at >= 0;
@@ -252,7 +259,7 @@ function campEnterTwice(C, h, fr) {
   let second = null;
   if (h) { if (grp() !== 'fighters') second = { verb: 'attack', who: 'wing', run: (how, dry) => campWingOrder(C, 'fighters', 'attack', h.id, how || 'key', dry) }; } // the whole wing attacks it
   else if (fr && fr.field) second = { verb: 'guard', who: '', run: (how, dry) => campWingOrder(C, grp(), 'guard', { x: fr.x, y: fr.y, r: fr.r, name: fr.name }, how || 'key', dry) }; // the field is a point to hold
-  else if (fr && !fr.me && fr.kind === 'ward') second = { verb: 'escort', who: '', run: (how, dry) => campWingOrder(C, grp(), 'escort', fr.id, how || 'key', dry) };
+  else if (fr && !fr.me && !fr.cruiser && fr.kind === 'ward') second = { verb: 'escort', who: '', run: (how, dry) => campWingOrder(C, grp(), 'escort', fr.id, how || 'key', dry) };
   return { key, second, armed: !!second && same && !last.twice && t - last.at <= CAMP.orderLine.twice, given: same ? (last.twice ? 2 : 1) : 0 };
 }
 function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (card space-game-keys2-orders): an enemy picked, attack it; a friendly picked, guard it; nothing picked, form up on the cruiser. 'attack' and 'guard' are its two halves (the target boxes' dry runs ask them); there is no recall (the pilots stay out; the Fast burn recalls them itself)
@@ -287,6 +294,6 @@ function campSelOrder(C, verb, how, dry) { // 'engage' is E, the one order key (
   if (verb === 'mine') { const fl = campFriNow(C); return fl && fl.field ? campWingOrder(C, group, 'mine', fl.rock, how || 'key', dry) : campNo('what'); } // the pilots mine the rock of the field held that is nearest (the field's own rock, as the Q list's field pick gave it)
   if (verb === 'formup') return campWingOrder(C, 'fighters', 'guard', null, how || 'key', dry); // the Q list's last row (card space-game-keys7-trim, Troy): ALL pilots form up on the cruiser, at once, whoever is picked and whatever target is held (the target stays held)
   const fr = campFriNow(C), fl = !fr && typeof campCockpitFlown === 'function' ? campCockpitFlown(C) : null; // fl: while a fighter is flown and no friend is picked, "the cruiser" is the wrong place to form up: the two other pilots form up on the fighter he flies (card space-game-chunk10-enter-forms-on-you, Troy 26 Nov 2026: yes, BRIEF 8 decision 8)
-  const tid = fr ? (fr.me ? (fr.unit === C.carrier ? null : fr.unit.id) : fr.id) : fl ? fl.id : null; // "me" (a click on your own ship): the cruiser is the default place to guard (none), the fighter flown is a ship
+  const tid = fr ? (fr.cruiser ? null : fr.me ? (fr.unit === C.carrier ? null : fr.unit.id) : fr.id) : fl ? fl.id : null; // "me" (a click on your own ship): the cruiser is the default place to guard (none), the fighter flown is a ship
   return campWingOrder(C, group, 'guard', tid, how || 'key', dry); // the friendly (a ship: the pilots fly in formation beside it; an outpost: they hold it); none: the cruiser, or the fighter flown
 }

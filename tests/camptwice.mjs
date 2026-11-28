@@ -116,9 +116,9 @@ console.log('E. the keys and the words');
 
 console.log('F. the line keeps the verb that was just done (card space-game-b14-c13-order-line-mine; the cloud\'s BRIEF 14 chunk 13)');
 {
-  // the page's test as a run: 3.2, W 1, E 1: "Wedge mine Rock field 1"; Enter: the radio says "Wedge, mine the rock." and the line still reads "Wedge mine Rock field 1" with its tick, all through the second the second Enter is armed (it read guard)
-  g.run(`window.C = campNew(3, [], { seed: 3, mission: 1 }); C.arrivedAt = 0; for (let i = 0; i < 120; i++) campStep(C, 1 / 30); C.events.length = 0; campSelPick(C, 'pilot:red', 'key'); campFriJump(C, 1); window.__line = () => { const L = campOrderLineNow(C); return L && [L.who.t, L.verb.t, L.target.t, L.alt && L.alt.t, L.check, L.swapped].join(' | '); };`);
-  check('3.2, W 1 E 1: the line reads "Wedge | mine | Rock field 1" with the dim "guard" beside it', J('__line()') === 'Wedge | mine | Rock field 1 | guard | false | false', J('__line()'));
+  // the page's test as a run: 3.2, W 1, E 2 (E 1 is the cruiser there): "Wedge mine Rock field 1"; Enter: the radio says "Wedge, mine the rock." and the line still reads "Wedge mine Rock field 1" with its tick, all through the second the second Enter is armed (it read guard)
+  g.run(`window.C = campNew(3, [], { seed: 3, mission: 1 }); C.arrivedAt = 0; for (let i = 0; i < 120; i++) campStep(C, 1 / 30); C.events.length = 0; campSelPick(C, 'pilot:red', 'key'); campFriJump(C, 2); window.__line = () => { const L = campOrderLineNow(C); return L && [L.who.t, L.verb.t, L.target.t, L.alt && L.alt.t, L.check, L.swapped].join(' | '); };`);
+  check('3.2, W 1 E 2: the line reads "Wedge | mine | Rock field 1" with the dim "guard" beside it', J('__line()') === 'Wedge | mine | Rock field 1 | guard | false | false', J('__line()'));
   g.run(`window.__r = campSelOrder(C, 'engage', 'key');`);
   check('Enter: the radio says "Wedge, mine the rock."', J('__r.say') === 'Wedge, mine the rock.' && J('__r.verb') === 'mine', J('__r.say'));
   const seen = [];
