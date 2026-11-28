@@ -285,6 +285,7 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
   key('Escape'); check('Esc again goes back to the battle', J('F.mode') === 'play' && J('F.panel') === false);
   key('Escape'); key('Enter'); check('Enter on the pause card resumes, as Esc does (card space-game-b13-a3-a9-pause-settings, BRIEF 13 A3)', J('F.mode') === 'play' && J('F.panel') === false);
   key('Escape'); key('KeyK'); check('K on the pause card goes to the ready room, as the lost card\'s Esc does (A3: the card had only T, to the title)', J('__went.pop()').key === 'CampHub');
+  key('Escape'); // (the test's go() only notes where it went: the scene is still paused; Esc resumes it for the next check)
   key('Escape'); key('KeyT'); check('T from the pause goes to the title', J('__went.pop()').key === 'Title');
   mk(1);
   begin();
