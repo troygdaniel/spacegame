@@ -160,7 +160,8 @@ class Space extends Phaser.Scene {
   killDrone(e) { // one place for bullets and ramming to finish an enemy
     const wanted = e.wanted, x = e.x, y = e.y, def = e.def;
     dropSalvage(this, e); // src/enemies.js
-    this.boom.explode(28, x, y); e.destroy(); G.stats.drones++; sfx('boom');
+    if (!(typeof lhKill === 'function' && lhKill(this, x, y, false))) this.boom.explode(28, x, y); // (with ?longhaul=new the Campaign's kill effect: a white ring, a pink ring, a core and five shards, src/lhfx.js)
+    e.destroy(); G.stats.drones++; sfx('boom');
     bountyPay(this, x, y, def); // src/enemies.js: the credits, the gold BOUNTY +N, coins, HUD glow, chime
     if (wanted || e.boss) missionKill(this, e);
   }
@@ -199,7 +200,7 @@ class Space extends Phaser.Scene {
 
   die() {
     this.dead = true;
-    this.boom.explode(70, this.ship.x, this.ship.y);
+    if (!(typeof lhKill === 'function' && lhKill(this, this.ship.x, this.ship.y, true))) this.boom.explode(70, this.ship.x, this.ship.y);
     this.ship.setVisible(false); this.ship.body.enable = false;
     // insurance fee: 20% of your credits, never less than 50; too poor to cover it and the ship is rebuilt at half hull
     const owed = Math.max(50, Math.floor(G.credits * 0.2)), fee = Math.min(owed, G.credits);
