@@ -76,6 +76,9 @@ console.log('E. the edges');
   g.run(`__mk(2, 0, 4); window.__tgt = campSpawn(C, 'raider', C.carrier.x + 500, C.carrier.y); campTgtHold(C, __tgt.id); campCockpitTake(C);`);
   check('a held enemy is let go with it: the cruiser\'s Enter no longer says "attack Raider" for a fighter in the cockpit', J('C.tgt') === '' && J('campHeldNow(C)') === null, J('[C.tgt]'));
   g.run(`__mk(2, 0, 4); window.__a = campOrderLineNow(C); campSelPick(C, 'pilot:red', 'key'); campFriJump(C, 1); campSelOrder(C, 'engage', 'key'); campCockpitTake(C);`);
+  g.run(`__mk(2, 0, 4); campFriJump(C, 1); window.__lit1 = JSON.stringify(campTeachLights(C));`);
+  const lit1 = J('__lit1'); g.run(`campCockpitTake(C); window.__lit2 = JSON.stringify(campTeachLights(C));`);
+  check('the one-time chip "Enter twice: the other" goes dark with the pick (it stayed lit for its 20 s over nothing)', /teachtwice|twice|other/i.test(lit1) && !/teachtwice|twice|other/i.test(J('__lit2')), lit1 + ' -> ' + J('__lit2'));
   check('the order\'s tick ends too: no "form up" is read back for an order nobody gave', J('__line()') === null, J('__line()'));
 }
 
