@@ -47,7 +47,7 @@ function scrSetKeys(s) {
     rows.push({ name: uiText('scr.sett.k.' + r.id), sub: uiText('scr.sett.k.' + r.id + '.use'), items: [
       scrSP(uiText(!k ? 'scr.sett.k.none' : bad ? 'scr.sett.k.rejected' : 'scr.sett.k.saved'), { ok: !k ? null : !bad, tone: !k ? 'amber' : bad ? 'pink' : '' }),
       { t: 'field', id: r.id, text: uiText(k ? 'scr.sett.k.replace' : 'scr.sett.k.paste') },
-      scrSP(uiText(k && !typed ? 'scr.sett.k.clear' : 'scr.sett.k.save'), { act: 'keysave', arg: r.id }),  // Clear is Save with an empty field: it says so when a key is saved and nothing is typed
+      scrSP(uiText(k && !typed ? 'scr.sett.k.clear' : 'scr.sett.k.save'), { act: 'keysave', arg: r.id, careful: !!(k && !typed) }),  // Clear is Save with an empty field: it says so when a key is saved and nothing is typed; careful: the keyboard's first landing (scrSetPad) goes past it, a key is not thrown away by two quick Enters
       scrSP(uiText('scr.sett.k.test'), { act: 'keytest', arg: r.id }),
       info && info.urlOk ? scrSP(uiText('scr.sett.k.get'), { act: 'keyget', arg: r.id }) : null].filter(Boolean) });
   });
@@ -56,8 +56,11 @@ function scrSetKeys(s) {
   rows.push({ label: uiText('scr.sett.k.model'), items: [{ t: 'field', id: 'model', text: CHAT_PROVIDERS[chatProvider()].model }] });
   const strip = typeof scrKeysCap === 'function' ? scrKeysCap('strip') : ''; // the key page's strip row moved here (the mock's cut list): the key that types an order, read from the key table, and what it needs
   if (strip) rows.push({ label: uiText('scr.sett.k.strip'), items: [{ t: 'chip', chip: { id: 'strip', k: strip } }, scrST(uiText('scr.sett.k.striphint'), { cls: 'sm', dim: true })] });
+  const at = s && s.padFocus != null ? s.padFocus : -1; scrSetWalk(rows).forEach((it, i) => { if (i === at) it.focus = true; }); // the keyboard's place on the tab (scrSetPad), drawn as a ring
   return rows;
 }
+// what the keyboard can stand on in a tab's rows, in reading order: every button (an item with an act) and every field (card space-game-b13-a3-a9-pause-settings, BRIEF 13 A9: Enter on the Keys tab used to drop into the first text box)
+const scrSetWalk = rows => { const out = []; (rows || []).forEach(r => (r.items || []).forEach(it => { if (it.act || it.t === 'field') out.push(it); })); return out; };
 function scrSetListen() {
   const r = listenReady(), used = LISTEN.s.used, max = LISTEN.limit.minutes, mins = Math.floor(used / 60000);
   return [
@@ -104,13 +107,14 @@ function scrSetReset(s) {
     { label: uiText('scr.sett.r.log'), items: [scrSP(uiText(logOn ? 'scr.sett.r.logon' : 'scr.sett.r.logoff'), { on: logOn, act: 'plon' }), scrSP(uiText('scr.sett.r.logget'), { act: 'plget' }), btn('plforget', 'scr.sett.r.logforget'), scrST(uiText('scr.sett.r.loghint'), { cls: 'sm', dim: true })] }
   ];
 }
-function scrSetFoot() { // the three chips of the foot are the key table's (the roles of the menus' keys in src/data_controls.js: Up and Down switch the tab, Enter does the one thing the tab has, Esc leaves)
-  return [{ chips: scrChips(['up', 'down']), t: uiText('scr.sett.foot.move') }, { chips: scrChips(['pick']), t: uiText('scr.sett.foot.change') }, { chips: scrChips(['close']), t: uiText('scr.sett.foot.back') }];
+function scrSetFoot(sec, s) { // the three chips of the foot are the key table's (the roles of the menus' keys in src/data_controls.js: Up and Down switch the tab, Enter does the one thing the tab has, Esc leaves); on the Keys tab, from the tab list, Enter goes IN (to its first button: scrSetPad), so it says Open until it is in (card space-game-b13-a3-a9-pause-settings)
+  const goIn = sec === 'keys' && !(s && s.padFocus != null);
+  return [{ chips: scrChips(['up', 'down']), t: uiText('scr.sett.foot.move') }, { chips: scrChips(['pick']), t: uiText(goIn ? 'scr.sett.foot.open' : 'scr.sett.foot.change') }, { chips: scrChips(['close']), t: uiText('scr.sett.foot.back') }];
 }
 function scrSetModel(s) {
   s = s || {}; const sec = SCRSET.tabs.indexOf(s.section) >= 0 ? s.section : 'sound';
   const body = ({ sound: scrSetSound, keys: scrSetKeys, listen: scrSetListen, controls: scrSetControls, flight: scrSetFlight, content: scrSetContent, reset: scrSetReset })[sec](s), say = s.scrSayMsg;
-  return { section: sec, tabs: SCRSET.tabs.map(id => ({ id, text: uiText('scr.sett.tab.' + id), on: id === sec })), body, foot: scrSetFoot(), status: say && say.text ? { text: String(say.text), tone: SCRSET.tones[say.color] || '' } : null };
+  return { section: sec, tabs: SCRSET.tabs.map(id => ({ id, text: uiText('scr.sett.tab.' + id), on: id === sec })), body, foot: scrSetFoot(sec, s), status: say && say.text ? { text: String(say.text), tone: SCRSET.tones[say.color] || '' } : null };
 }
 const scrSetBudget = sec => SCRSET.budget[sec] || 'settings';
 function scrSetShown(M) { // everything the model writes on the screen: the tabs, the rows' words, the chips' caps, the foot (the status is a line the game says back, not a part of the tab: it is left out of the count)
@@ -189,9 +193,21 @@ function scrSetCreate(s) { // Settings.create, with the switch on: no canvas pan
   return true;
 }
 function scrSetShow(s, id) { // Settings.show: the tab is the model's section; the inputs of the Keys tab are made when it opens and dropped when it closes
-  s.dropInputs(); s.armed = null; s.section = id; s.scrSayMsg = null;
+  s.dropInputs(); s.armed = null; s.section = id; s.scrSayMsg = null; s.padFocus = null; // (a new tab: the keyboard is on the tab list again)
   if (id === 'keys') scrSetInputs(s);
   scrSetPaint(s, true); s.focusFirst();
+}
+// THE KEYBOARD INSIDE THE KEYS TAB (card space-game-b13-a3-a9-pause-settings, BRIEF 13 A9; Troy, 27 Nov 2026: yes). Enter on the tab list used to drop the cursor into the first text box (a cursor, then Esc twice to leave). Now the first Enter goes IN: a ring stands on the first button
+// (past a Clear, which would throw a saved key away: scrSetKeys marks it careful); then Left and Right walk the tab's buttons and fields in reading order, Enter presses the one with the ring (on a field it puts the cursor there, the one way in to type by keyboard), and Up and Down move the
+// tabs as ever (a new tab forgets the place). Esc leaves Settings as before. what: 'enter', -1 (Left) or 1 (Right); true when the tab took it. Only the Keys tab has it: on the other tabs Enter changes the tab's first thing at once.
+function scrSetPad(s, what) {
+  if (!s || s.section !== 'keys') return false;
+  const walk = scrSetWalk(scrSetKeys(s)); if (!walk.length) return false;
+  if (what === 'enter') {
+    if (s.padFocus == null) { const i = walk.findIndex(it => it.act && !it.careful); s.padFocus = i < 0 ? 0 : i; }
+    else { const it = walk[Math.min(s.padFocus, walk.length - 1)]; if (it && it.act) scrSetAct(s, it.act, it.arg); else if (it && it.t === 'field' && s.inputs && s.inputs[it.id]) { try { s.inputs[it.id].focus(); } catch (e) { /* focus is a nicety */ } } }
+  } else if (s.padFocus != null) s.padFocus = (((s.padFocus + what) % walk.length) + walk.length) % walk.length;
+  scrSetPaint(s, true); return true;
 }
 function scrSetInputs(s) { // the real inputs of the Keys tab, as src/settings.js draw_keys makes them (a password field a key, a text field the model); they are laid over the placeholders this draws
   SETTINGS.keyRows.forEach(r => { s.inputs[r.id] = s.makeInput('password', 'paste your key here', 200, () => s.saveKey(r.id)); }); // (Settings.makeInput gives the keyboard back after Enter, as after Esc: card space-game-settings-keys-focus)
@@ -204,7 +220,7 @@ function scrSetInputs(s) { // the real inputs of the Keys tab, as src/settings.j
 }
 function scrSetSay(s, text, color) { s.scrSayMsg = text ? { text, color } : null; scrSetPaint(s); }
 function scrSetPill(R, parent, it, s) {
-  const e = scrHostEl(R, 'span', 'sc-pill' + (it.on ? ' on' : '') + (it.tone ? ' ' + it.tone : '') + (it.act ? ' act' : ''), parent);
+  const e = scrHostEl(R, 'span', 'sc-pill' + (it.on ? ' on' : '') + (it.tone ? ' ' + it.tone : '') + (it.act ? ' act' : '') + (it.focus ? ' focus' : ''), parent);
   if (it.ok !== undefined && it.ok !== null) scrHostSet(scrHostEl(R, 'b', it.ok ? 'sc-ok' : 'sc-no', e), 'text', it.ok ? '✓' : '–');
   scrHostSet(scrHostEl(R, 'span', '', e), 'text', it.text);
   if (it.hint) e.title = it.hint; // a longer word for the pointer (the mock moves "Opens it for an instant ..." under the button)
@@ -230,7 +246,7 @@ function scrSetRow(R, parent, r, s) {
     else if (it.t === 'meter2') { const w = scrHostEl(R, 'div', 'sc-r sc-two', row); it.ms.forEach(m => scrSetMeter(R, w, m, null, s)); }
     else if (it.t === 'chip') scrHostChip(R, row, it.chip);
     else if (it.t === 'ok') { scrHostSet(scrHostEl(R, 'span', 'sc-sm sc-ok', row), 'text', '✓ ' + it.text); }
-    else if (it.t === 'field') { const f = scrHostEl(R, 'span', 'sc-pill field', row); scrHostSet(f, 'text', '\u00a0'); s.scr.fields[it.id] = f; if (s.inputs && s.inputs[it.id]) s.inputs[it.id].placeholder = it.text; }
+    else if (it.t === 'field') { const f = scrHostEl(R, 'span', 'sc-pill field' + (it.focus ? ' focus' : ''), row); scrHostSet(f, 'text', '\u00a0'); s.scr.fields[it.id] = f; if (s.inputs && s.inputs[it.id]) s.inputs[it.id].placeholder = it.text; }
     else if (it.t === 'text') scrHostSet(scrHostEl(R, 'span', 'sc-' + (it.cls || 'sm') + (it.dim ? ' sc-dim' : '') + (it.amber ? ' sc-amber' : ''), row), 'text', it.text);
   });
   return row;

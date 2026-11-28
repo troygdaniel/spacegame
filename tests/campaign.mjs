@@ -283,6 +283,8 @@ console.log('H. the scene: keys, modes, the pick, retry (on a stand-in)');
     && pr.every(([row, r]) => r.open === '' && r.said.length === (/^(allG)$/.test(row) ? 0 : 1)), JSON.stringify(pr.map(([row, r]) => [row, r.said, r.open, r.e, r.f])));
   key('Escape'); check('Esc pauses the scene\'s own way (not Long Haul\'s menu), the sim stops, the strip is kept shut', J('F.mode') === 'pause' && J('F.panel') === true && (g.run('var __t0 = F.camp.t; F.update(0, 100)'), J('F.camp.t') === J('__t0')));
   key('Escape'); check('Esc again goes back to the battle', J('F.mode') === 'play' && J('F.panel') === false);
+  key('Escape'); key('Enter'); check('Enter on the pause card resumes, as Esc does (card space-game-b13-a3-a9-pause-settings, BRIEF 13 A3)', J('F.mode') === 'play' && J('F.panel') === false);
+  key('Escape'); key('KeyK'); check('K on the pause card goes to the ready room, as the lost card\'s Esc does (A3: the card had only T, to the title)', J('__went.pop()').key === 'CampHub');
   key('Escape'); key('KeyT'); check('T from the pause goes to the title', J('__went.pop()').key === 'Title');
   mk(1);
   begin();
