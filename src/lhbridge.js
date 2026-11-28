@@ -16,10 +16,23 @@
 //   lhBridgeGame(S, me, foes, now)   PURE: fills the bridge's game S.C from plain rows: me { x, y, rot, vx, vy, hp, maxHp }, foes [{ id, tex, x, y, rot, vx, vy, hp, r }]; keeps C.cockpit (the aim's memory) between frames
 //   lhBridge(scene, now)       the bridge of a Long Haul scene, refreshed for this frame: { C, view }, or null (off, or no ship)
 //   lhAimSync(scene, ship, off, now)   once a frame, in place of aimUpdate: the Campaign's aim on the bridge and its mint ring; scene.aimTarget is the pirate's sprite. true when it ran (the switch is on)
+//   lhAimCone(tier)            PURE: the cone in degrees with the autotarget part at that tier (0: none): the Campaign's 20, plus LHAIM.widen; lhPartWords(slot, i, text): the part's shop and panel words with the switch on
 //   lhFire(scene, ship, now)   when a shot leaves: { rot, speed, life, k, vx, vy } (the angle, px/s, ms, the damage's multiplier, the drift to add), or null for Long Haul's own shot
 //   lhShot(scene, b, f)        dresses the bullet lhFire answered for: its drift and its life
 //   lhShotLook(scene, b, own)  a bullet's picture: the Campaign's mint bolt (yours) or pink bolt (a pirate's); from the scene's shoot()
 const LHBRIDGE = { me: 'lh-me', r: 16, body: [14, 4] }; // the flown fighter's id in the bridge, its radius for the Campaign's maths, and a bullet's hit box (the old picture's size: the bolt is larger, the box is not)
+// THE AUTOTARGET PART WIDENS THE CONE (card space-game-lh-giant-and-aim-part, BRIEF 16 item 6; ORCH's default under Troy's "assume defaults", 28 Nov 2026). With the switch on the aim help is on every ship (the Campaign's 20 degree cone), so the part, which
+// used to switch the help on, would give nothing. It now WIDENS the cone: `widen` is the degrees the part's tier adds to CAMP.cockpit.aimCone (tier 1, 2, 3), so the cone is 20 degrees with no part and 24, 27 and 30 with it. Nothing else of the aim changes (the reach,
+// the lead, the damage price). The Campaign's own function reads the cone from its table, so the bridge puts the wider one there for the one call and puts the table back: the Campaign never sees it.
+const LHAIM = { widen: [0, 4, 7, 10] };
+const lhAimTier = () => typeof partTier === 'function' ? partTier('aim') | 0 : 0;   // the tier of the autotarget part fitted to the active ship (src/fleet.js)
+function lhAimCone(tier) { const base = +CAMP.cockpit.aimCone || 0; return base > 0 ? base + (LHAIM.widen[Math.min(3, Math.max(0, tier | 0))] || 0) : 0; } // degrees; the Campaign's cone at 0 (the tuning slider) stays 0: no help, part or none
+// the part's words in the shop and on the ship panel while the switch is on (shown only; nothing is spoken): `i` is the tier's place in the part's lists (0 to 2), `text` what the part says today; anything but the autotarget part, or the switch off, is `text`
+function lhPartWords(slot, i, text) {
+  if (slot !== 'aim' || typeof lhNewOn !== 'function' || !lhNewOn() || typeof CAMP !== 'object') return text;
+  const w = LHAIM.widen[(i | 0) + 1], base = +CAMP.cockpit.aimCone || 0; if (!(w > 0) || !(base > 0)) return text;
+  return 'aim cone ' + (base + w) + ' degrees' + (i === 0 ? ', from ' + base : i === 2 ? ', the widest' : '');
+}
 const lhBridgeOn = () => typeof lhNewOn === 'function' && lhNewOn() && typeof campCockpitAim === 'function' && typeof CAMP === 'object';
 const lhBridgeKind = tex => (typeof LHLOOK === 'object' && LHLOOK.map[tex] ? LHLOOK.map[tex][0] : 'skiff');
 function lhBridgeGame(S, me, foes, now) {
@@ -55,7 +68,7 @@ function lhBridge(scene, now) {
 function lhAimSync(scene, ship, off, now) {
   const S = lhBridge(scene, now); if (!S) return false;
   const C = S.C;
-  if (off || scene.dead) C.cockpit.aim = null; else campCockpitAim(C);
+  if (off || scene.dead) C.cockpit.aim = null; else { const K = CAMP.cockpit, was = K.aimCone; K.aimCone = lhAimCone(lhAimTier()); try { campCockpitAim(C); } finally { K.aimCone = was; } } // the part's cone for this one call (LHAIM)
   const A = C.cockpit.aim; scene.aimTarget = A ? S.view.sp[A.id] || null : null;
   if (A && typeof G !== 'undefined' && G.aimOff) A.steer = false; // R: the help is off, the ring still shows the lead
   if (typeof campCockpitAimSync === 'function') campCockpitAimSync(S.view);
