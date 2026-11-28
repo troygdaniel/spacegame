@@ -66,6 +66,13 @@ try {
   check('C  the computer\'s own warnings are not calls', ['earthhalf', 'earthlow', 'hullhalf', 'hulllow', 'mine', 'recharge', 'missiles'].every(k => say('camp.say.' + k) === null));
   check('C  a missile fired with one or none left is "low on missiles"; with more it is not', (g.run('__C.missiles = 1'), ev({ type: 'missile' })) === 'lowmissiles' && (g.run('__C.missiles = 0'), ev({ type: 'missile' })) === 'lowmissiles' && (g.run('__C.missiles = 4'), ev({ type: 'missile' })) === null);
   check('C  ore picked up is a call; the sounds and the flashes are not', ev({ type: 'ore', n: 3 }) === 'ore' && ['turret', 'launch', 'dock', 'blink', 'mboom', 'earthhit', 'shieldhit', 'recharge'].every(t => ev({ type: t }) === null));
+  // card space-game-b14-c19-ore-lines-quiet (BRIEF 14 chunk 19, Troy 27 Nov 2026): the ore lines stay off the radio while a hostile is in sight (dropped, not held)
+  g.run(`window.__C2 = campNew(1, ['shield'], { seed: 4, mission: 1 }); __C2.arrivedAt = 0; __C2.ships = __C2.ships.filter(u => u.team !== 'alien'); window.__R = campSpawn(__C2, 'raider', __C2.carrier.x + CAMP.sensor.range * 3, __C2.carrier.y); __R.vx = __R.vy = 0;`);
+  const ev2 = () => J(`chatterEventOf(__C2, { type: 'ore', n: 20 })`);
+  check('C  ore with no hostile alive is a call; with one alive but far beyond the sensors (not seen) it still is', (g.run(`__C2.ships.forEach(u => { if (u.team === 'alien') u.hp = 0; })`), ev2()) === 'ore' && (g.run(`__R.hp = __R.maxHp || 10`), J(`campSeen(__C2, __R)`)) === false && ev2() === 'ore');
+  check('C  ore with a hostile in sight (within the cruiser\'s sensor range) is NOT a call: "Ore secured." and "Ore aboard." are dropped while it lives, and come again when it is gone', (g.run(`__R.x = __C2.carrier.x + CAMP.sensor.range * 0.5; __R.y = __C2.carrier.y`), J(`campSeen(__C2, __R)`)) === true && ev2() === null && (g.run(`__R.hp = 0`), ev2()) === 'ore');
+  check('C  a tower or the mothership (the kinds always seen: 3.3 with seven towers alive) counts as in sight at any distance', (g.run(`window.__T = campSpawn(__C2, 'tower', __C2.carrier.x + CAMP.sensor.range * 9, __C2.carrier.y); __T.vx = __T.vy = 0`), J(`campSeen(__C2, __T)`)) === true && ev2() === null && (g.run(`__T.hp = 0`), ev2()) === 'ore');
+  check('C  the other calls are as they were while a hostile is in sight: a kill is still a splash, a hit on the wing still taking fire', (g.run(`__R.hp = 10; __R.x = __C2.carrier.x + 300`), J(`chatterEventOf(__C2, { type: 'boom', id: 'x', kind: 'raider' })`)) === 'splash');
 } catch (e) { check('a section of the test ran without an error', false, e && e.message); }
 
 // ---- D: the radio ----
