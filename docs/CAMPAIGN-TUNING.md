@@ -1243,6 +1243,36 @@ The careful player still wins every seed (32 of 32, win time 312 s then 317 s). 
 - **Pins:** `tests/camptowerdelay.mjs` (13 checks: the table, the first shot at 1 to 1.4 s with one tell, the rhythm after it, delay 0 the old tower, a tower on the cruiser or an unflown fighter no tell, the lock held, left and re-entered, the scene's hook); `tests/campl3waves.mjs`'s one-tick probe of the shot's speed runs with the delay at 0.
 
 
+## 3.1: the first ring's answer comes on arrival (card `space-game-b14-c20-31-first-minute`, the cloud's BRIEF 14 chunk 20, Troy, 27 Nov 2026: yes)
+
+**The problem the cloud saw.** In 3.1 the cruiser arrives at Kolga at 12 s and, for a player who does nothing, the first hostiles come 60 s after that (the picket that finds an idle player): the HOSTILES panel first lights at 72 s. A player who does know to fly to a ring meets the first wave only when the first scan begins, about 1,700 px from the place.
+
+**The change.** The row's first wave (2 raiders, from the north-west, the radio's "Defenders are launching from the planet.") is `on: { arrived: 0 }` instead of `on: { scanning: 0 }`: it comes the moment the cruiser arrives. `campWaveOn` has the new trigger `arrived: s` (s seconds after the cruiser came to the mission's place; false before it has). The second and third ring's waves still come when their scans start, the idle pickets are as they were, and the first ring still has to be scanned (7 s, with no wave of its own to call). Nothing else changes. I read the cloud's "the first scan ring's answer" as the aliens' answer: the brief's own words are "Aliens answer each scan".
+
+**Measured** (32 seeds, 3.1, sharp / steady / rough, plain, ace, hands-off and carrier-alone bots; before = main `20a397db`):
+
+- **The first minute.** An idle player (the cloud's test: Q then 1, the cruiser at Kolga, the wing docked, hands off): the HOSTILES panel first lights **60.1 s after arrival (72 s in) before, 0.1 s after (12 s in)**, the same on all 32 seeds.
+- **A careful player still wins every seed**: 100 per cent for all four bots at all three skills, before and after.
+
+| skill | bot | before: won % / s / cruiser damage | after |
+|---|---|---|---|
+| sharp | plain | 100/79/78 | 100/78/56 |
+| sharp | ace | 100/78/35 | 100/87/40 |
+| sharp | sit | 100/83/71 | 100/80/68 |
+| sharp | carrier (the cruiser alone) | 100/85/62 | 100/84/68 |
+| steady | plain | 100/80/65 | 100/79/56 |
+| steady | ace | 100/74/40 | 100/80/40 |
+| steady | sit | 100/80/66 | 100/80/60 |
+| steady | carrier (the cruiser alone) | 100/85/81 | 100/84/87 |
+| rough | plain | 100/81/68 | 100/79/52 |
+| rough | ace | 100/72/28 | 100/70/25 |
+| rough | sit | 100/79/59 | 100/80/66 |
+| rough | carrier (the cruiser alone) | 100/86/68 | 100/84/74 |
+
+- **Time and damage.** The plain bot wins 0 to 2 s sooner and its cruiser takes 9 to 22 less damage (78, 65, 68 down to 56, 56, 52); the hands-off bot is within 3 s and 7 damage; the cruiser alone takes 6 more (62, 81, 68 up to 68, 87, 74); the ace bot is 9 s slower at sharp (78 to 87), 6 s slower at steady and 2 s faster at rough.
+- **The sweep's rules for the ace bot:** the fails go from 4 to 1. Sharp (rule 2, the fighter may not make the cruiser's fight more than 30 per cent softer, and the damage-share rule 5) and steady (rule 2) pass now; rough rule 2 still fails (25 against the plain bot's 52).
+- **Words (none re-recorded, none reworded).** Now not quite true: the voiced `camp.bf.3.1.w3`, "Aliens answer each scan. Keep the wing close.": the first scan's answer comes before it. Still true: "Defenders are launching from the planet." (it is said when the first wave comes, now on arrival), "Fly to each of the 3 marked rings on the map." and "Any ship of yours inside a ring scans it: 7 seconds.". The hostiles panel's group "Scouted" now only ever shows the second and third ring's waves (a fighter near the first ring has nothing to reveal: its wave is already out).
+- **Pins.** `tests/campl3waves.mjs` (46: the first wave on arrival, the other two on their scans, `on.arrived`'s edges, nothing else comes before a ring is entered), `tests/campscout.mjs` (27: the scouted panel is the second ring's wave), `tests/campaign.mjs` (the 3.1 row).
 ## 3.1's brief line w3: new words after the first answer moved to arrival (card `space-game-voice-31-w3-words`, Troy, 27 Nov 2026: yes)
 
 The voiced line `camp.bf.3.1.w3` said "Aliens answer each scan. Keep the wing close.". Since the first wave of 3.1 comes on arrival (card `space-game-b14-c20-31-first-minute`, the section above) that was not quite true of the first scan. Troy's words: **"Aliens meet you, then answer each scan. Keep the wing close."** (11 words). Changed in `content/text/campbrief.md` and its default in `src/contenttables.js`, resealed (`node tools/build-content.mjs --seal`, `--check` green). **Nobody has recorded the new words**: a recording is named by a hash of the voice and the exact words (`src/voicepack.js`), so the old recording of the old words no longer plays for this line and nothing wrong is said; until Troy records it with his own tool (`tools/voicepack.mjs`, his key: not run here) a player with no key reads the line and does not hear it, and a player with a key hears the live voice. Tests: `tests/voicepack.mjs` (82), `tests/campbrief.mjs`, `tests/campbriefwalk.mjs`, `tests/contentproof.mjs` green.

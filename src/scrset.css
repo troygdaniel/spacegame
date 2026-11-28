@@ -22,6 +22,7 @@
 .sc-rl{width:8em;flex:none}
 .sc-rn{width:11em;flex:none;display:flex;flex-direction:column;gap:0}
 .sc-pill.on{border-color:var(--sc-ink)}
+.sc-pill.focus{outline:2px solid var(--sc-ink);outline-offset:2px} /* the keyboard's place on the Keys tab (card space-game-b13-a3-a9-pause-settings) */
 .sc-pill.amber{color:var(--sc-amber)}
 .sc-pill.pink{color:var(--sc-foe);border-color:rgba(255,111,168,.45)}
 .sc-pill.pink.on{border-color:var(--sc-foe)}

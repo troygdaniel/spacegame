@@ -2,7 +2,7 @@
 // not a wave called early) ----------
 // A scan objective may carry scout (seconds): while a fighter of yours (a pilot's, or the one he flies: kind 'fighter', not docked) is within the ring's radius plus that many seconds of its top speed of a ring that has not begun, the wave that ring will
 // call (the row's wave with on { scanning: k }) is REVEALED: how many and of what, and where it will come from. Nothing starts: the scan, the wave and every rule are as they were; the HUD's hostiles panel and the Tab map show what is revealed, dimmed, until the
-// wave is real (the ring begins, and the real hostiles show as always). A mission with no scout on its objective reveals nothing.
+// wave is real (the ring begins, and the real hostiles show as always). A mission with no scout on its objective reveals nothing. 3.1's FIRST ring has no wave of that kind any more (its answer comes on arrival, card space-game-b14-c20-31-first-minute: the row's wave is on { arrived: 0 }), so only the second and third ring are ever scouted.
 //   campScoutReveals(C)   [{ k, n, kinds: { raider: 2 }, x, y, ring: { x, y, r } }] (x, y: where the wave comes from; k: the ring), nearest the cruiser first; [] when there is nothing to show
 //   campScoutSpeed(u)     a fighter's top speed in px/s: the flown fighter's (CAMP.cockpit.speed), else the unit's own
 const campScoutSpeed = u => u && u.cockpit && typeof CAMP === 'object' && CAMP.cockpit && CAMP.cockpit.speed > 0 ? CAMP.cockpit.speed : (u && u.vmax > 0 ? u.vmax : 0);

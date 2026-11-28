@@ -188,8 +188,22 @@ g.run(`window.k2 = __real('sound'); k2.focusKey = 'deepgram'; scrSetShow(k2, 'ke
 check('Settings opened for a field (V on the title asks for the Deepgram key) puts the keyboard in that field, once: the focus is asked for and used up', J('document.activeElement === k2.inputs.deepgram') && J('k2.focusKey') === '');
 g.run(`document.activeElement = null; scrSetShow(k2, 'listen'); scrSetShow(k2, 'keys');`); await nap(130);
 check('and coming back to the tab does not take it again', J('document.activeElement === null'));
-g.run(`k2.onKey({ code: 'Enter', repeat: false });`);
-check('Enter on the Keys tab is the tab\'s own key: it starts editing the first field', J('document.activeElement === k2.inputs.deepgram'));
+// card space-game-b13-a3-a9-pause-settings (BRIEF 13 A9, Troy 27 Nov 2026): Enter on the Keys tab goes IN to the first button, not into a text box
+check('on the tab list of the Keys tab the foot says Enter OPEN (it goes in); on the Sound tab, where Enter changes the first thing at once, it still says CHANGE', J(`scrSetModel(k2).foot[1].t`) === 'Open' && J(`scrSetModel(k2).foot[1].chips[0].k`) === 'Enter' && J(`scrSetModel(__set('sound')).foot[1].t`) === 'Change' && J(`['listen', 'controls', 'flight', 'content', 'reset'].every(t => scrSetModel(__set(t)).foot[1].t === 'Change')`));
+g.run(`document.activeElement = null; k2.onKey({ code: 'Enter', repeat: false });`);
+check('Enter on the Keys tab puts NO text cursor anywhere (Title, S, Down, Enter): no field has the keyboard, the ring stands on the first button, Deepgram\'s Save (the fields are in the walk, the first landing is a button)', J('document.activeElement === null') && J('k2.padFocus') === 1 && J(`/(^| )focus( |$)/.test(__pill(k2, 'Save')._cls)`) && J(`__pills(k2).filter(e => /(^| )focus( |$)/.test(e._cls)).length`) === 1);
+check('once in, the foot says CHANGE (Enter now presses the one with the ring)', J(`scrSetModel(k2).foot[1].t`) === 'Change');
+g.run(`window.__says2 = []; const __sy2 = k2.say; k2.say = (m, c) => { __says2.push(m); return __sy2.call(k2, m, c); }; k2.onKey({ code: 'Enter', repeat: false });`);
+check('Enter on the ring presses it: Save with nothing typed and no key says so, and still no cursor', J('__says2[0]') === 'Paste a key first.' && J('document.activeElement === null'));
+g.run(`k2.onKey({ code: 'ArrowRight', repeat: false });`);
+check('Right walks to the next thing: Test (the ring moves, one pill has it)', J('k2.padFocus') === 2 && J(`/(^| )focus( |$)/.test(__pill(k2, 'Test')._cls)`) && J(`__pills(k2).filter(e => /(^| )focus( |$)/.test(e._cls)).length`) === 1);
+g.run(`k2.onKey({ code: 'ArrowLeft', repeat: false }); k2.onKey({ code: 'ArrowLeft', repeat: false });`);
+check('Left twice walks back past Save onto Deepgram\'s field, and Enter there puts the cursor in it (the one way in to type by keyboard)', J('k2.padFocus') === 0 && (g.run(`k2.onKey({ code: 'Enter', repeat: false });`), J('document.activeElement === k2.inputs.deepgram')));
+g.run(`document.activeElement = null; VOICE.key = ${JSON.stringify(FAKE)}; scrSetShow(k2, 'listen'); scrSetShow(k2, 'keys'); k2.onKey({ code: 'Enter', repeat: false });`);
+check('with a key saved the first button reads Clear and would throw it away: the first landing goes past it, to Test (two quick Enters do not delete a key); Left onto Clear is deliberate', J('k2.padFocus') === 2 && J(`scrSetKeys(k2)[1].items.find(i => i.careful).text`) === 'Clear' && (g.run(`k2.onKey({ code: 'ArrowLeft', repeat: false });`), J('k2.padFocus') === 1));
+g.run(`VOICE.key = ''; k2.onKey({ code: 'ArrowDown', repeat: false });`);
+check('Down leaves the Keys tab as ever (Listen) and the ring is forgotten; coming back is on the tab list again, the foot says OPEN', J('k2.section') === 'listen' && J('k2.padFocus') === null && (g.run(`scrSetShow(k2, 'keys')`), J(`scrSetModel(k2).foot[1].t`) === 'Open'));
+g.run(`k2.onKey({ code: 'Enter', repeat: false }); k2.inputs.deepgram.focus();`);
 g.run(`__key(k2.inputs.deepgram, 'ArrowDown');`);
 check('a key typed in a field stays in the field (the arrows are the text\'s there: the event is stopped before the scene)', J('__stop') === 1 && J('k2.section') === 'keys');
 g.run(`__key(k2.inputs.deepgram, 'Escape');`);

@@ -41,7 +41,7 @@ function titleScrModel(P, sel) {
   const at = titleScrAt(P), lit = (TITLE_CHOICES[sel | 0] || TITLE_CHOICES[0]).go;
   return {
     lab: uiText('scr.title.lab'), name: uiText('scr.title.name'),
-    doors: TITLE_SCR.doors.map(d => Object.assign({ id: d.id, go: d.go, chips: scrChips((d.role ? [d.role] : []).concat(d.go === lit ? [TITLE_SCR.enter] : d.role ? [] : [TITLE_SCR.move])), name: uiText(d.name), sub: uiText(d.sub + (d.go === 'campaign' && P && P.revealed ? '.r' : '')), on: d.go === lit },
+    doors: TITLE_SCR.doors.map(d => Object.assign({ id: d.id, go: d.go, chips: scrChips(d.go === lit ? [TITLE_SCR.enter] : d.role ? [d.role] : []), /* ONE cap on a door at most (card space-game-b13-a5-a7-a8-trim, BRIEF 13 A5; Troy, 27 Nov 2026: yes): the lit door shows Enter, the other its own letter if it has one (the Campaign's K); K and the arrows still work, unshown */ name: uiText(d.name), sub: uiText(d.sub + (d.go === 'campaign' && P && P.revealed ? '.r' : '')), on: d.go === lit },
       d.go === 'campaign' ? { at: uiText('scr.title.camp.at', { n: at.n, of: at.of }), meter: scrMeter(at.frac, { tone: 'good' }) } : {})),
     settings: { chip: scrChip(TITLE_SCR.settings), label: uiText('scr.title.settings') }
   };
