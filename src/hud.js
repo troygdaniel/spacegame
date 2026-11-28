@@ -872,13 +872,14 @@ function hudTick(s) {
   if (!h || !h.g.active) h = s._hud = { s, g: s.add.graphics().setScrollFactor(0).setDepth(100), t: {}, seen: {}, zones: [], cr: G.credits, flash: 0, open: true, box: new Phaser.Geom.Rectangle() };
   const g = h.g, key = s.scene.key, now = s.time.now, space = key === 'Space', surf = key === 'Surface';
   g.clear(); h.seen = {}; h.zones = []; h.now = now;
-  hudFrame(g, now);
+  const lhh = space && typeof lhPageHudSync === 'function' && lhPageHudSync(s, now); // with ?longhaul=new the Campaign's page panels show the hull, the shield, the boost and the speed (src/lhpagehud.js): the frame and the two dials are then left out; false without it
+  if (!lhh) hudFrame(g, now);
 
   // gauges, top left: hull (health on foot), then speed in space or the colonist on foot
   const hullFrac = surf ? s.hp / 100 : G.hull / G.maxHull;
-  hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
-  if (space && s.sh && s.sh.max > 0) hudShield(h, s.sh, 70, 80, 59, now); // the shield: a thin ring round the hull gauge (the parts, src/data_parts.js)
-  if (space) {
+  if (!lhh) hudGauge(h, 'g1', 70, 80, 40, hullFrac, hullFrac > 0.5 ? CYAN : hullFrac > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(surf ? s.hp : G.hull))), surf ? 'HEALTH' : 'HULL', null, hullFrac <= 0.3);
+  if (space && !lhh && s.sh && s.sh.max > 0) hudShield(h, s.sh, 70, 80, 59, now); // the shield: a thin ring round the hull gauge (the parts, src/data_parts.js)
+  if (space && !lhh) {
     const spd = s.ship.body.speed, top = boostMax();
     if (s.cruising) hudGauge(h, 'g2', 186, 80, 40, Math.min(1, spd / CRUISE.top), CYAN, hudFmt(spd / 10), 'KM/S', null); // cruise: the speed in km/s (src/cruise.js)
     else hudGauge(h, 'g2', 186, 80, 40, spd / top, spd > shipStat('vmax') ? AMBER : CYAN, String(Math.round(spd)), s.boostLocked ? 'NO BOOST' : 'SPEED', 150 / top);

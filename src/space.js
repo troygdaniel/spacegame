@@ -214,7 +214,7 @@ class Space extends Phaser.Scene {
 
   update(time, dt) {
     guideTick(this);
-    if (this.keyLine) this.keyLine.setVisible(G.guideDone || !(this._gh && this._gh.visible)); // not under a first-run tip, which says the keys itself; the later travel tip does not, so the line stays
+    if (this.keyLine) this.keyLine.setVisible((G.guideDone || !(this._gh && this._gh.visible)) && !(typeof lhNewOn === 'function' && lhNewOn())); // not under a first-run tip, which says the keys itself; the later travel tip does not, so the line stays
     const k = this.k, ship = this.ship, JD = Phaser.Input.Keyboard.JustDown;
     spaceBackdropTick(this); // parallax layers follow the camera
     if (typeof lhCamFrame === 'function') lhCamFrame(this, dt); // with ?longhaul=new the view leads a boosting ship and pulls back a little, as the Campaign's does (src/lhcam.js); nothing without it

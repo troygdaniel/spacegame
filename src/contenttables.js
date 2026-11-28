@@ -1316,6 +1316,7 @@ const UI_TEXT = {
   'camp.corner.chip.reload': 'Reload',
   'camp.corner.chip.teachr': 'rack is empty',
   'camp.corner.chip.map': 'Map',
+  'lh.chip.dock': 'Dock', 'lh.chip.places': 'Places', 'lh.chip.keys': 'Keys', // the new Long Haul's key row (src/lhpagehud.js, content/text/longhaul.md; behind ?longhaul=new)
   'camp.corner.chip.teachtab': 'wave off screen',
   'camp.corner.cruiserauto': 'Cruiser (auto)',
   'camp.corner.comehere': 'Cruiser, come to me',
