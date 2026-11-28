@@ -4,6 +4,7 @@
 //   B  the timing: within 1 s the second Enter is the secondary; the third is the first again; after 1 s it is the first; a refused Enter, another pick, another who and a dry run arm nothing
 //   C  the orders really given: guard then escort (the ship), mine then guard (a point at the field), attack by one pilot then by all three
 //   D  the sentence line: the dim secondary before, the swap after (Wing attack Raider), the tip and the DOM
+//   F  the line keeps the verb that was just done: after a mine Enter it reads mine (not the secondary guard) all through the second the second Enter is armed (card space-game-b14-c13-order-line-mine)
 //   E  the keys: the real Enter key twice (the lists' door) says the secondary's words; the words exist
 // Run: node tests/camptwice.mjs   (exit code 1 on a failed check)
 import { nodeGame } from './nodegame.mjs';
@@ -111,6 +112,29 @@ console.log('E. the keys and the words');
   g.run(`__mk(); window.P = campPanelNew(); campSelPick(C, 'pilot:red', 'key'); C.fsel = __ship(); window.__k1 = campPanelKey(P, C, 'Enter', 1000); C.t += 300; window.__k2 = campPanelKey(P, C, 'Enter', 1300);`);
   check('the real Enter key twice: the first says guard, the second escort, in the order\'s own words', J('__k1.ran') === true && J('__k1.ok') === true && /guard/i.test(J('__k1.say')) && J('__k2.ok') === true && /escort/i.test(J('__k2.say')), J('[__k1.say, __k2.say]'));
   check('the words: Escort, Wing, and the window is a second', J(`uiText('camp.corner.enter.escort')`) === 'Escort' && J(`uiText('camp.corner.orderline.wing')`) === 'Wing' && J('CAMP.orderLine.twice') === 1000);
+}
+
+console.log('F. the line keeps the verb that was just done (card space-game-b14-c13-order-line-mine; the cloud\'s BRIEF 14 chunk 13)');
+{
+  // the page's test as a run: 3.2, W 1, E 1: "Wedge mine Rock field 1"; Enter: the radio says "Wedge, mine the rock." and the line still reads "Wedge mine Rock field 1" with its tick, all through the second the second Enter is armed (it read guard)
+  g.run(`window.C = campNew(3, [], { seed: 3, mission: 1 }); C.arrivedAt = 0; for (let i = 0; i < 120; i++) campStep(C, 1 / 30); C.events.length = 0; campSelPick(C, 'pilot:red', 'key'); campFriJump(C, 1); window.__line = () => { const L = campOrderLineNow(C); return L && [L.who.t, L.verb.t, L.target.t, L.alt && L.alt.t, L.check, L.swapped].join(' | '); };`);
+  check('3.2, W 1 E 1: the line reads "Wedge | mine | Rock field 1" with the dim "guard" beside it', J('__line()') === 'Wedge | mine | Rock field 1 | guard | false | false', J('__line()'));
+  g.run(`window.__r = campSelOrder(C, 'engage', 'key');`);
+  check('Enter: the radio says "Wedge, mine the rock."', J('__r.say') === 'Wedge, mine the rock.' && J('__r.verb') === 'mine', J('__r.say'));
+  const seen = [];
+  for (const ms of [0, 100, 300, 500, 700, 900, 999, 1100, 1500, 2100]) { g.run(`C.t += ${ms ? 100 : 0};`); if (ms >= 300) g.run('C.t += 100'); seen.push(J('__line()')); }
+  check('and the line says what happened at every look after it: mine, with its tick, the dim guard beside it, never guard (it read guard for about a second)', seen.slice(0, 8).every(x => x.startsWith('Wedge | mine | Rock field 1 | guard | true | false')) && seen.every(x => !/^Wedge \| guard/.test(x)), JSON.stringify(seen));
+  g.run(`C.t = C.t - C.t + C.t;`);
+  const dry = J(`(() => { const r = campSelOrder(C, 'engage', 'key', true); return [r.verb, r.second, r.given].join(); })()`);
+  check('the dry run (the line and the Enter chip ask it every frame) says the first Enter\'s own verb with the secondary beside it, also while the second Enter is armed', dry === 'mine,guard,1' || /^mine,guard,[01]$/.test(dry), dry);
+  g.run(`campSelOrder(C, 'engage', 'key', false);`);
+  g.run(`C.t += 200; window.__r2 = campSelOrder(C, 'engage', 'key'); C.t += 50;`);
+  check('the second Enter within the second still switches: the order on Wedge is guard and the line swaps to "guard" with the dim "mine"', J('__r2.verb') === 'guard' && J('__r2.twice') === true && /^Wedge \| guard \| Rock field 1 \| mine/.test(J('__line()')), J('__line()'));
+  g.run(`__mk(); campSelPick(C, 'pilot:red', 'key'); C.fsel = __ship(); campOrderLineNow(C); campSelOrder(C, 'engage', 'key'); C.t += 100;`); // (the page looks every frame: the first look is before the Enter)
+  const shipLine = J('(() => { const L = campOrderLineNow(C); return L && [L.who.t, L.verb.t, L.target.t, L.alt && L.alt.t, L.check, L.swapped].join(" | "); })()');
+  check('the same for a ship: after the first Enter (guard) the line keeps guard, with the dim escort', /^Wedge \| guard \| .* \| escort \| true \| false$/.test(shipLine), shipLine);
+  g.run(`__mk(); campSelPick(C, 'pilot:red', 'key'); window.__a = __foe(); campOrderLineNow(C); campSelOrder(C, 'engage', 'key'); C.t += 100;`);
+  check('and for an enemy: it keeps "Wedge attack Raider" with the dim "wing attack"', J('(() => { const L = campOrderLineNow(C); return L && [L.who.t, L.verb.t, L.alt && L.alt.t, L.swapped].join(" | "); })()') === 'Wedge | attack | wing attack | false');
 }
 
 check('the game logged no errors', g.errors.length === 0, g.errors.join(' | '));
