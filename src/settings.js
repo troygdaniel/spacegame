@@ -545,9 +545,10 @@ class Settings extends Phaser.Scene {
       if (this.section === 'sound') this.adjustVolume(d);
       else if (this.section === 'flight') this.stepFeel(d);
       else if (this.section === 'controls') { const ids = CONTROLS.map(g => g.id); this.ctab = ids[(ids.indexOf(this.ctab) + d + ids.length) % ids.length]; this.show('controls'); }
+      else if (this.section === 'keys' && this.scr && typeof scrSetPad === 'function') scrSetPad(this, d); // the ring on the Keys tab's buttons (card space-game-b13-a3-a9-pause-settings)
     } else if (code === 'Enter' || code === 'Space' || code === 'NumpadEnter') {
       if (this.section === 'sound') this.toggleMute();
-      else if (this.section === 'keys') { const el = this.inputs.deepgram; if (el) el.focus(); }
+      else if (this.section === 'keys') { if (this.scr && typeof scrSetPad === 'function') scrSetPad(this, 'enter'); else { const el = this.inputs.deepgram; if (el) el.focus(); } } // the new look: Enter goes in to the first button, no text cursor (card space-game-b13-a3-a9-pause-settings, BRIEF 13 A9); the old look (?screens=0) as it was
       else if (this.section === 'listen') { listenSetOn(!LISTEN.on); this.listenRefresh(); }
       else if (this.section === 'flight') this.stepFeel(1);
       else if (this.section === 'reset') this.press('reset');
