@@ -548,7 +548,7 @@ function hudRadar(h, s, key, obj, now) {
   const foes = key === 'Space' ? s.enemies.getChildren() : s.crawlers.getChildren(), engage = key === 'Space' ? 900 : 380, unit = key === 'Space' ? 'km' : 'm';
   let n = 0, near = Infinity;
   foes.forEach(e => { if (!e.active) return; const d = Math.hypot(e.x - ox, e.y - oy); if (d <= range) { n++; if (d < near) near = d; } });
-  const hot = near < engage, rim = hot ? RED : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
+  const hot = near < engage, rim = hot ? (typeof lhTone === 'function' ? lhTone(RED, 'foe') : RED) : CYAN, beat = hot ? 0.6 + 0.4 * Math.sin(now / 120) : 1;
   h.near = near; h.engage = engage; // hudWarn reads these
   const far = key === 'Space' && hudRadarMode(h, near, now) === 'sys' ? hudOrreryModel(sysDef(), me, R) : null; // the orrery, or null for the close view
   h.radarMode = far ? 'sys' : 'near';
@@ -589,7 +589,7 @@ function hudRadar(h, s, key, obj, now) {
     if (pg < 1) { g.lineStyle(1, CYAN, 0.35 * (1 - pg)); hudRing(g, cx, cy, R * pg); }
   }
   hudPut(h, 'rt', cx, cy + R + 32, n ? n + ' HOSTILE  ' + Math.round(near * 0.1) + ' ' + unit : 'CLEAR',
-    { size: HT.label, bold: hot, color: hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
+    { size: HT.label, bold: hot, color: n && typeof lhTone === 'function' && lhTone(RED, 'foe') !== RED ? hudCss(lhTone(RED, 'foe')) : hot ? '#ff4d6d' : n ? '#ffb454' : '#58b57d', ox: 0.5, spacing: 1, alpha: hot ? 0.7 + 0.3 * Math.sin(now / 120) : 1 });
   hudPut(h, 'rl', cx, cy + R + 16, far ? (far.name || 'SYSTEM').toUpperCase().slice(0, 14) + '  ' + hudFmt(mapRange / 10) + ' km' : 'RADAR  ' + (key === 'Space' ? (range / 10) + ' km' : (range / 10) + ' m'), { size: HT.label, color: HUD_DIM, ox: 0.5, spacing: 1 });
 
   const pt = (wx, wy, keep) => { // world point -> radar point; off the radar it is clamped to the rim when keep, else null
@@ -628,7 +628,7 @@ function hudRadar(h, s, key, obj, now) {
   } else if (key === 'Space') {
     (s.docks || (s.station.nowhere ? [] : [{ obj: s.station }])).forEach(k => mark(pt(k.obj.x, k.obj.y, true), CYAN, p => hudDiamond(g, p.x, p.y, 5, CYAN))); // every dock of the system (src/space.js)
     if (!s.planet.nowhere) mark(pt(s.planet.x, s.planet.y, true), AMBER, p => { g.fillStyle(AMBER, 1); hudDisc(g, p.x, p.y, 5); });
-    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, d.wanted ? AMBER : (d.def && d.def.radar) || RED, d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
+    s.enemies.getChildren().forEach(d => { if (d.active) dot(d.x, d.y, (typeof lhTone === 'function' ? lhTone(d.wanted ? AMBER : (d.def && d.def.radar) || RED, 'foe') : d.wanted ? AMBER : (d.def && d.def.radar) || RED), d.wanted ? 3 : d.def && d.def.key === 'gunship' ? 3 : 2.2); });
   } else {
     mark(pt(s.pad.x, s.pad.y, true), AMBER, p => hudDiamond(g, p.x, p.y, 5, AMBER));
     mark(pt(s.pod.x, s.pod.y, true), 0x8b95a1, p => { g.fillStyle(0x8b95a1, 1); g.fillRect(p.x - 3, p.y - 3, 6, 6); });
@@ -656,7 +656,7 @@ function hudRadar(h, s, key, obj, now) {
   }
   const at = { x: cx, y: cy }; // you are the centre of the plate, in space and on foot
   if (far) hudOrreryFoes({ c: { x: ox, y: oy }, sc: psc }, s.enemies.getChildren().filter(e => e.active && Math.hypot(e.x - ox, e.y - oy) <= mapRange), R).forEach(f => { // hostiles on the plate: red dots (a wanted one amber)
-    const c = f.wanted ? AMBER : RED; g.fillStyle(c, 0.25); hudDisc(g, cx + f.x, cy + f.y, 4.2); g.fillStyle(c, 1); hudDisc(g, cx + f.x, cy + f.y, 1.9);
+    const c = (typeof lhTone === 'function' ? lhTone(f.wanted ? AMBER : RED, 'foe') : f.wanted ? AMBER : RED); g.fillStyle(c, 0.25); hudDisc(g, cx + f.x, cy + f.y, 4.2); g.fillStyle(c, 1); hudDisc(g, cx + f.x, cy + f.y, 1.9);
   });
   g.lineStyle(1, 0xffffff, 0.45); g.lineBetween(at.x, at.y, at.x + Math.cos(me.rotation) * R * 0.3, at.y + Math.sin(me.rotation) * R * 0.3); // where you are pointing
   tri(g, at.x, at.y, me.rotation, 5, 0xffffff);
@@ -683,7 +683,7 @@ function hudLock(h, s, now) {
   if (cur && best && best !== cur && bd < 0.7 * Math.hypot(cur.x - me.x, cur.y - me.y)) next = best;
   if (next !== h.lock) h.lockSince = now; // a new target: the brackets close in again
   h.lock = next;
-  if (next) h.lockColor = next.wanted ? AMBER : next.def && next.def.boss ? 0xff2a4a : RED;
+  if (next) { h.lockColor = next.wanted ? AMBER : next.def && next.def.boss ? 0xff2a4a : RED; if (typeof lhTone === 'function') h.lockColor = lhTone(h.lockColor, 'foe'); } // (with ?longhaul=new every hostile mark is the Campaign's pink: src/lhtone.js)
 }
 
 function hudBrackets(g, x, y, half, k, color, a, w) {
@@ -699,7 +699,7 @@ function hudTargets(h, s, now) {
   (h.view || []).forEach(e => { // the ones in view that are not the target: four small ticks
     if (e === lock) return;
     const p = camzoomScreen(s, e.x, e.y), x = p.x, y = p.y, half = Math.max(e.displayWidth, e.displayHeight) / 2 * camzoomZ(s) + 8; // src/camzoom.js: where it is on the screen at this zoom
-    hudBrackets(g, x, y, half, 4, e.wanted ? AMBER : RED, 0.4, 1);
+    hudBrackets(g, x, y, half, 4, (typeof lhTone === 'function' ? lhTone(e.wanted ? AMBER : RED, 'foe') : e.wanted ? AMBER : RED), 0.4, 1);
   });
   if (!lock) return; // its tag texts are not used this frame, so hudTick hides them
   const lp = camzoomScreen(s, lock.x, lock.y), x = lp.x, y = lp.y, c = h.lockColor, t = Phaser.Math.Clamp((now - h.lockSince) / 380, 0, 1);
@@ -757,13 +757,13 @@ function hudWarn(h, s, now, key, near, engage) {
   const hullF = surf ? s.hp / 100 : G.hull / G.maxHull;
   if ((space || surf) && hullF <= 0.3) list.push({ id: 'hull', text: surf ? 'HEALTH CRITICAL' : 'HULL CRITICAL', sub: Math.max(0, Math.round(hullF * 100)) + '%  BREAK OFF', color: RED, crit: true });
   if (surf && s.col && s.col.state !== 'dead' && s.col.hp / 60 <= 0.3) list.push({ id: 'col', text: 'COLONIST IN DANGER', sub: Math.max(0, Math.round(s.col.hp)) + ' HP', color: AMBER, crit: true });
-  if (space && now < (h.interdictUntil || 0)) list.push({ id: 'int', text: 'INTERDICTED', sub: 'PIRATES AHEAD', color: RED, crit: true }); // pulled out of cruise (src/cruise.js)
+  if (space && now < (h.interdictUntil || 0)) list.push({ id: 'int', text: 'INTERDICTED', sub: 'PIRATES AHEAD', color: (typeof lhTone === 'function' ? lhTone(RED, 'foe') : RED), crit: true }); // pulled out of cruise (src/cruise.js)
   if (space && s.boostLocked) list.push({ id: 'bst', text: 'BOOST EMPTY', sub: 'RECHARGING', color: AMBER });
   if (space && s.sh && s.sh.max > 0 && now - s.sh.down < 2500) list.push({ id: 'shd', text: 'SHIELDS DOWN', sub: 'THE HULL TAKES THE HITS', color: AMBER });
   const hot = near < engage; // first contact: a banner for 2.5 s when something comes into attack range
   if (hot && !h.hotWas) h.contact = now + 2500;
   h.hotWas = hot;
-  if (now < (h.contact || 0)) list.push({ id: 'hos', text: 'HOSTILE CONTACT', sub: Math.round(near * 0.1) + (space ? ' KM' : ' M'), color: RED });
+  if (now < (h.contact || 0)) list.push({ id: 'hos', text: 'HOSTILE CONTACT', sub: Math.round(near * 0.1) + (space ? ' KM' : ' M'), color: (typeof lhTone === 'function' ? lhTone(RED, 'foe') : RED) });
   const full = space && (G.ore | 0) >= holdCap();
   if (full && !h.fullWas) h.holdFull = now + 3000;
   h.fullWas = full;
