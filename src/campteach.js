@@ -21,7 +21,7 @@ const CAMP_TEACH = [
   // the 1.1 miner's call (card space-game-chunk14-teach-e-enter): E opens the friends' list (the miner is row 2) and Enter sends a pilot; an added chip or a lit one, while the call is live
   { id: 'e', panel: 'friends', word: 'camp.corner.chip.friendly', note: 'camp.corner.chip.teache', mission: 'escort', seen: C => campTeachCall(C), keep: C => campTeachCall(C), for: 90, used: C => !!(C.keysUsed && C.keysUsed.friends) },
   // the one-time chip of Enter twice (card space-game-orders-f5-q-cruiser-only; Troy, 27 Nov 2026, mock F): the FIRST time a target is picked, in any mission, the Enter chip is lit "Enter twice: the other" (20 s), until a second Enter has been given. It comes BEFORE the mission rows below, so one of them (the miner's "send a pilot") shows over it while it is due
-  { id: 'twice', chip: 'enter', note: 'camp.corner.chip.teachtwice', seen: C => !!(C.tgt || C.fsel), for: 20, used: C => !!(C.keysUsed && C.keysUsed.twice) },
+  { id: 'twice', chip: 'enter', needs: C => !!(C.tgt || C.fsel), note: 'camp.corner.chip.teachtwice', seen: C => !!(C.tgt || C.fsel), for: 20, used: C => !!(C.keysUsed && C.keysUsed.twice) },
   // 1.2, mining (the same card): the pilots are the miners and mining is W, a pilot; E, a rock field; Enter: W and E are ADDED to the row from 10 s in until each has been used, and Enter is lit "mine it" once a field is held
   { id: 'w', panel: 'fleet', word: 'camp.corner.chip.who', note: 'camp.corner.chip.teachw', mission: 'mine', at: 10, until: 150, used: C => !!(C.keysUsed && C.keysUsed.fleet) },
   { id: 'e2', panel: 'friends', word: 'camp.corner.chip.friendly', note: 'camp.corner.chip.teachefield', mission: 'mine', at: 10, until: 150, used: C => !!(C.keysUsed && C.keysUsed.friends) },
