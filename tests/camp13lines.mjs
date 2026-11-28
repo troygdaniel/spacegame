@@ -49,6 +49,20 @@ g.run(`
   g.run(`__new(1, 1, 1); __step(120);`);
   check('mission 1.2 says nothing of the turrets and nothing of a hauler behind', J(`__seen('camp.say.l13.turrets').length`) === 0 && J(`__seen('camp.say.l13.behind').length`) === 0);
 }
+// ---- B2. while a fighter is flown (card space-game-b14-c18-turret-tip-cockpit; the cloud's BRIEF 14 chunk 18: Start 1.3, press C at the first skiffs, 27 s: the screen says "Pirates. Hold Space: the turrets fire at ships in reach." After: the tip waits until you are back on the cruiser) ----
+{
+  g.run(`__new(1, 2, 1); __step(5); window.__took = campCockpitTake(C); __step(30);`);
+  check('C taken before the first raid: the stick is held, the raid came and its 3 s passed (at about 35 s, the stick taken at 5 s), and the turrets are not mentioned (Space is the fighter\'s gun now)', J('__took') === true && J('!!C.cockpit') === true && J('C.waves[0].started') === true && J(`__seen('camp.say.l13.turrets').length`) === 0 && J('C.l13.turrets') === false);
+  g.run(`campCockpitGive(C, 'hand'); __step(0.5);`);
+  const told = J(`__seen('camp.say.l13.turrets')`);
+  check('handed back: the line is said at once, once, in the same words (no word of it changed)', told.length === 1 && told[0].text === 'Pirates. Hold Space: the turrets fire at ships in reach.', JSON.stringify(told));
+  g.run(`__step(20); campCockpitTake(C); __step(5); campCockpitGive(C, 'hand'); __step(20);`);
+  check('and not again: not later, and not after a second take and hand-back', J(`__seen('camp.say.l13.turrets').length`) === 1);
+  g.run(`__new(1, 2, 1); __step(200);`);
+  check('with no take the line comes as before, CAMP.l13.turretsWait (3 s) after the raid', J(`__seen('camp.say.l13.turrets').length`) === 1 && J(`__seen('camp.say.l13.turrets')[0].at`) - J('C.waves[0].at') >= 3 && J(`__seen('camp.say.l13.turrets')[0].at`) - J('C.waves[0].at') < 4);
+  g.run(`__new(1, 2, 1); __step(5); campCockpitTake(C); __step(10); campCockpitGive(C, 'hand'); __step(1);`);
+  check('taken early and handed back long before the raid: nothing yet; the line still waits for the first raid', J('C.waves[0].started') === false && J(`__seen('camp.say.l13.turrets').length`) === 0);
+}
 
 // ---- C. the last hauler ----
 {

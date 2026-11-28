@@ -33,6 +33,9 @@ function campOrderLine(C) {
     tip: h && (h.unit || (h.post && h.post.field)) && e.ok !== false ? { id: h.unit ? h.unit.id : h.id, text: uiText('camp.corner.orderline.tip', { who: who.t, verb: vb.t }), at: h.unit ? null : { x: h.post.x, y: h.post.y, r: h.post.r } } : { id: '', text: '' } };
 }
 
+// taking the stick (src/campcockpit.js campCockpitTake; card space-game-b14-c14-15-e-pick, chunk 15): the sentence that was there is over, with its check: nothing is said until he picks again (the line would otherwise read "All pilots form up  ✓" for the rest of the second after an order, which no one gave)
+function campOrderLineQuiet(C) { const st = C && CAMP_ORDERLINE_STATE.get(C); if (st) { st.gaveAt = -1e9; st.q = null; st.n = typeof campMarkOrders === 'function' ? campMarkOrders(C) : st.n; } } // (st.n too: an order given in the very frame of the take is not found by the next look and read back)
+
 // the Q order just given: a list that runs a row and has it TAKEN notes it in P.did ({ id, at }; a refusal is not noted), so a new P.did is an order (the first look is not news); the row's words, read back
 function campOrderLineQ(C, P, st, t) {
   if (!P || typeof campPanelList !== 'function') return;

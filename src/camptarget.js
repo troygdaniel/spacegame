@@ -147,16 +147,21 @@ function campFriList(C) { // the stops of [: the SHIPS you protect (the transpor
 // THE NUMBERED FRIENDS (card space-game-keys8-e-digit; Troy, 25 Nov 2026: "a letter says what kind of thing, a digit says which"): every ship you protect gets a number the first time it is seen and keeps it for the WHOLE mission, in the mission's own order (1.1: the transport is 1; 1.2: the miners 1 and 2; 1.3: the haulers 1, 2, 3, each as it comes); a ship that is lost (or has arrived) keeps its number, which goes dark, and nothing moves up. ONE pure list for both HUDs (the canvas corner and the page): campFriNumbered(C)
 // = [{ id, name, number, alive, hull (0..1; 0 when dark), picked (C.fsel is it), unit (the ship, null when dark) }] in number order; E steps through the live ones in that order, E then a digit (1 to 9) is campFriJump. The numbers are C.fnums = { next, plan: { id: n } (the level's convoys, in the level's order, reserved at the first look), by: { id: { n, name } } (a ship seen) }, written by the step of the sim (campFriRegister, before the dead leave the list) and by any first look
 const campFriShipName = u => (u.kind === 'freighter' && !u.named ? campConvoyName(u) + ' convoy' : campConvoyName(u)); // (the name src/camppick.js gives a ship you protect)
+const campFriOreGoal = C => !!(C && C.L && (C.L.objectives || []).some(o => o && o.type === 'ore')); // the mission's goal is ORE (1.2 only today: an objective of type 'ore'): E's first pick is a rock field there, a ship anywhere else (card space-game-b14-c14-15-e-pick; Troy yes, 27 Nov 2026; the cloud's BRIEF 14 chunk 14)
+function campFriRegFields(C, R, room) { // the rock fields with rock left take the next numbers, in field order (Field 1, Field 2 ...), at most `room` of them and never past 9 numbers in all; each keeps its number for the mission
+  (typeof campPickFields === 'function' ? campPickFields(C).slice().sort((a, b) => (+String(a.id).slice(6) | 0) - (+String(b.id).slice(6) | 0)) : []).forEach(f => { if (!R.by[f.id] && R.next <= 9 && room-- > 0) R.by[f.id] = { n: R.next++, name: f.name, field: true }; });
+}
 function campFriRegister(C) { // give a number to every ship you protect that has none (C.ships order is the order they were made in); the registry, or null when there is no mission
   if (!C || !C.ships || typeof campPickGuarded !== 'function') return null;
   let R = C.fnums;
   if (!R) { // the first look of the mission: the convoys of the level hold their numbers in the level's own order (1.1: the Transport is 1 although the miner of that mission is in space first); the miners and anything else come after, as they are seen
     R = C.fnums = { next: 1, by: {}, plan: {} };
+    if (campFriOreGoal(C)) campFriRegFields(C, R, 9 - ((C.L && C.L.convoys) || []).length - campPickGuarded(C).length); // an ORE mission (1.2): the rock fields are 1 to 4 and the miners come after, so "W a pilot, E 1, Enter" is the briefing's own mining (card space-game-b14-c14-15-e-pick); room is kept for every ship the list can hold, so no ship loses its number to a field
     ((C.L && C.L.convoys) || []).forEach(cv => { R.plan['freighter-' + cv.id] = R.next++; });
     campPickGuarded(C).filter(u => u.joins && !(C.cues && C.cues[u.joins] != null)).forEach(u => { if (!R.plan[u.id]) R.plan[u.id] = R.next++; }); // a ship that joins the list at a cue (1.1's miner) keeps the number it would have had: the rock fields below take the numbers AFTER every ship (card space-game-orders-f3-enter-fits), so E2 is still the miner
   }
   campPickGuarded(C).filter(u => !u.joins || (C.cues && C.cues[u.joins] != null)).forEach(u => { if (!R.by[u.id]) R.by[u.id] = { n: R.plan[u.id] || R.next++, name: campFriShipName(u) }; }); // (a number is in the list only from the moment its ship is first seen: no row for a hauler that has not come yet; a ship with `joins` (a traffic row's field: the miner of 1.1) is no friend of the list until that cue has fired, then it takes the next free number: card space-game-11-e-reaches-miner)
-  (typeof campPickFields === 'function' ? campPickFields(C).slice().sort((a, b) => (+String(a.id).slice(6) | 0) - (+String(b.id).slice(6) | 0)) : []).forEach(f => { if (!R.by[f.id] && R.next <= 9) R.by[f.id] = { n: R.next++, name: f.name, field: true }; }); // card space-game-orders-f3-enter-fits (Troy, 27 Nov 2026, mock F: "a rock field is just another E target"): the numbers CONTINUE after the ships with the rock fields (Field 1, Field 2 ...), each as it is first seen with rock left in it, and keep them for the mission; E then that digit holds the field, and Enter sends the pilots to MINE it
+  campFriRegFields(C, R, 9); // card space-game-orders-f3-enter-fits (Troy, 27 Nov 2026, mock F: "a rock field is just another E target"): the numbers CONTINUE after the ships with the rock fields (Field 1, Field 2 ...), each as it is first seen with rock left in it, and keep them for the mission; E then that digit holds the field, and Enter sends the pilots to MINE it
   return R;
 }
 function campFriNumbered(C) { // the numbered list, dark ships included, in number order
@@ -170,7 +175,7 @@ function campFriNumbered(C) { // the numbered list, dark ships included, in numb
 }
 function campFriJump(C, n, how) { // E then a digit: that ship is THE target held (the enemy is let go), as E would make it; a number that is dark (or none) does nothing and says so
   if (!C || !C.carrier) return campNo('what');
-  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e || !e.alive) return campNo('nofriend');
+  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e) return campNo('what'); if (!e.alive) return campNo('nofriend'); // a number no ship has taken yet (1.1's Transport is 1 until she is out at 4 s, so the miner is the only row at 2 s) is not "gone": nothing was ever there (card space-game-b14-c16-11-miner-gone); a ship that was out and is lost or has arrived is
   C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return { ok: true, say: '', fri: e.id };
 }
 const campFriLabel = (C, n) => { const e = campFriNumbered(C).find(x => x.number === n); return e ? e.name : 'Friend ' + n; }; // a row's words in the friends pick: the ship's name

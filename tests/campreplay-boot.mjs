@@ -32,7 +32,7 @@ try {
   scr = await SCR();
   await key('KeyK');
   if (scr) {
-    check('K opens the ready room; Enter opens the pick: the two missions done with their best scores (Belt survey 900, Ore haulers 640), the next one marked Next, and the keys (Enter Briefing, Esc Back)', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Enter'), true) && await settle(`${HUB}.hub.open === 'board'`) && await (async () => { const w = await shown(); return near(w, /^Belt survey$/, /^900$/) && near(w, /^Ore haulers$/, /^640$/) && near(w, /^The mothership$/, /^Next$/) && w.indexOf('Briefing') >= 0 && w.indexOf('Back') >= 0; })(), (await shown()).join(' | '));
+    check('K opens the ready room; Enter opens the pick: the two missions done with their best scores (Belt survey 900, Ore haulers 640), the next one marked Next, and the keys (Enter Briefing, Esc Back)', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Digit1'), true) && (await key('Enter'), true) && await settle(`${HUB}.hub.open === 'board'`) && await (async () => { const w = await shown(); return near(w, /^Belt survey$/, /^900$/) && near(w, /^Ore haulers$/, /^640$/) && near(w, /^The mothership$/, /^Next$/) && w.indexOf('Briefing') >= 0 && w.indexOf('Back') >= 0; })(), (await shown()).join(' | '));
   } else {
     check('K opens the ready room; Enter opens the missions overlay: the two missions done with their best scores, the cursor on the next mission, and the keys', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Enter'), true) && await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await shown()).some(x => /^> \[>\] 3\s+The mothership/.test(x)) && (await shown()).some(x => /^900 pts/.test(x)) && (await shown()).some(x => /Enter or click again\s+open its briefing/.test(x)), (await shown()).join(' | '));
   }
@@ -48,7 +48,7 @@ try {
   }
   if (scr) {
     await key('Enter'); await t.run(800); await snap('3-briefing');
-    check('Enter opens the replay\'s one-page briefing (headed Replay, mission 2); Esc back to the pick; Launch (4) lights the card: it says Replay, Ore haulers and Enter Launch', near(await shown(), /^Replay \u00b7 mission 2/, /^Ore haulers$/, 2) && (await key('Escape'), await t.run(400), await key('Digit4'), await t.run(500), near(await shown(), /^Replay \u00b7 mission 2 of 9$/, /^Ore haulers$/, 1) && near(await shown(), /^Enter$/, /^Launch$/, 2)), (await shown()).join(' | '));
+    check('Enter opens the replay\'s one-page briefing (headed Replay, mission 2); Esc back to the pick; Launch (4) lights the card: it says Replay, Ore haulers and Enter Briefing (card space-game-b13-a1-a2-enter-flow: Enter on the card opens the briefing)', near(await shown(), /^Replay \u00b7 mission 2/, /^Ore haulers$/, 2) && (await key('Escape'), await t.run(400), await key('Digit4'), await t.run(500), near(await shown(), /^Replay \u00b7 mission 2 of 9$/, /^Ore haulers$/, 1) && near(await shown(), /^Enter$/, /^Briefing$/, 2)), (await shown()).join(' | '));
   } else {
     await t.run(600); await snap('3-briefing');
     check('beside the list the overlay shows the replay\'s briefing, headed REPLAY; Launch (4) says it flies Ore haulers again, with the story staying', (await shown()).some(x => /^REPLAY\s+-\s+MISSION 2 OF 3\s+-\s+Ore haulers/.test(x)) && (await key('Digit4'), await t.run(500), (await shown()).some(x => /^Fly Ore haulers again for a better score\./.test(x))), (await shown()).join(' | '));
@@ -65,7 +65,7 @@ try {
   check('the debrief is up', await j(`${CAMPS}.mode === 'debrief'`));
   if (scr) {
     const w = await j(`[...document.querySelectorAll('.sc-root *')].filter(e => e.children.length === 0 && (e.textContent || '').trim()).map(e => e.textContent.trim())`);
-    check('the won card is headed Replay with the mission, the new score 1,700, the best (now 1,700) and a New best pill, and its key says Enter, Ready room', w.indexOf('Replay') >= 0 && w.indexOf('Ore haulers') >= 0 && w.indexOf('1,700') >= 0 && w.some(x => /^Best 1,700$/.test(x)) && w.indexOf('New best') >= 0 && near(w, /^Enter$/, /^Ready room$/, 2), w.join(' | ').slice(0, 300));
+    check('the won card is headed Replay with the mission, the new score 1,700, the best (now 1,700) and a New best pill, and its keys say Enter Briefing and Esc Ready room (card space-game-b13-a1-a2-enter-flow)', w.indexOf('Replay') >= 0 && w.indexOf('Ore haulers') >= 0 && w.indexOf('1,700') >= 0 && w.some(x => /^Best 1,700$/.test(x)) && w.indexOf('New best') >= 0 && near(w, /^Enter$/, /^Briefing$/, 2) && near(w, /^Esc$/, /^Ready room$/, 2), w.join(' | ').slice(0, 300));
   } else {
     const lines = await j(`(() => { const s = ${CAMPS}; return (s.card || []).filter(o => o && o.text).map(o => o.text); })()`);
     check('the card is titled REPLAY, has the old best against the new, and the hint is Enter ready room', lines.some(x => /^REPLAY\s+-\s+Ore haulers/.test(x)) && lines.some(x => /this run 1,700, your best was 640/.test(x)) && lines.some(x => /A new best: 1,700 points/.test(x)) && lines.some(x => /ready room/.test(x)), lines.join(' | ').slice(0, 300));
@@ -73,9 +73,9 @@ try {
   await snap('7-replay-debrief');
   const sv = await save();
   check('already in the save: the best is 1,700 with one replay, and the story has NOT moved (level 1, mission 3 next), the ore 90, the techs and extras as they were', sv.results['1.2'].score === 1700 && sv.results['1.2'].replays === 1 && sv.level === 1 && sv.mission === 2 && sv.ore === 90 && sv.techs.join() === 'shield,bay2' && sv.bonus.fighters === 2 && sv.bonus.escorts === undefined && sv.results['1.1'].score === 900 /* the saved escort became a fighter when the escort ship was cut */, JSON.stringify(sv));
-  await key('Enter');
+  await key(scr ? 'Escape' : 'Enter'); // the new look's won card: Enter is the next briefing, Esc is the ready room (card space-game-b13-a1-a2-enter-flow); the room opens on the next-mission card, so 1 puts the light on Missions before Enter opens the pick
   if (scr) {
-    check('Enter is the ready room: the pick has the new best on the second mission (1,700), the third is still Next, and no story, refit or pick came up first', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Enter'), true) && await settle(`${HUB}.hub.open === 'board'`) && near(await shown(), /^Ore haulers$/, /^1,?700$/, 3) && near(await shown(), /^The mothership$/, /^Next$/, 2), (await shown()).join(' | '));
+    check('Enter is the ready room: the pick has the new best on the second mission (1,700), the third is still Next, and no story, refit or pick came up first', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Digit1'), true) && (await key('Enter'), true) && await settle(`${HUB}.hub.open === 'board'`) && near(await shown(), /^Ore haulers$/, /^1,?700$/, 3) && near(await shown(), /^The mothership$/, /^Next$/, 2), (await shown()).join(' | '));
   } else {
     check('Enter is the ready room: the board has the new best on the second mission, the third is still NEXT, and no story, refit or pick came up', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && (await key('Enter'), true) && (await shown()).some(x => /^1,?700 pts/.test(x) || /1700 pts/.test(x)) && (await shown()).some(x => /\[>\] 3\s+The mothership/.test(x)), (await shown()).join(' | '));
   }
