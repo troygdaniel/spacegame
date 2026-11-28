@@ -43,7 +43,7 @@ let errors = [];
     await t.ev(`(() => { const s = ${S}; s.enemies.clear(true, true); s.launchAt = -1e6; s.ironUntil = 0; window.__p = spawnPirate(s, s.ship.x + 2000, s.ship.y, 'raider'); return 1; })()`);
     await t.run(100);
     const b = await j(`({ me: ${S}.ship.texture.key, foe: __p.texture.key, r: __p.body.radius, w: __p.width, h: __p.height, hw: __p.body.halfWidth })`);
-    check('your ship and a pirate show their flat-cut pictures', /^lh-ship-\d+x\d+$/.test(b.me) && b.foe === 'lh-raider-40x30', JSON.stringify(b));
+    check('your ship (the Wren, with the plating and barrels you own: card space-game-lh-hull-shapes) and a pirate show their flat-cut pictures', /^lh-ship-wren-\d\d-\d+x\d+$/.test(b.me) && b.foe === 'lh-raider-40x30', JSON.stringify(b));
     check('the pirate\'s picture is the old size and its hit circle the old radius', b.w === 40 && b.h === 30 && b.r === 10, JSON.stringify(b));
     await t.ev(`(() => { __p.destroy(); return 1; })()`);
 

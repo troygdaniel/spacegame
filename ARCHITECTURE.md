@@ -28,7 +28,7 @@ The rule of the design: **reuse the Campaign's code, never copy it, never change
 |---|---|---|
 | The switch and the names of the home system's places | `lhnew.js` | `boot.js` after `worldSync` |
 | Earth, the flat worlds, the sky | `lhearth.js` | `space.js` (backdrop, the landable world), `cruise.js` (the star, the far worlds) |
-| Flat-cut ships, flame colours, nozzles | `lhlook.js` | `ships.js` `shipsOne`, `traffic.js` (the tint) |
+| Flat-cut ships, flame colours, nozzles; the six hulls' own outlines with the plating and barrels bought (card `space-game-lh-hull-shapes`: `LHHULLS`, `lhLookHullId`, `lhLookTiers`, `lhLookPaintHull`) | `lhlook.js` | `ships.js` `shipsOne`, `traffic.js` (the tint), `shipmodels.js` (`shipActiveModel`, `shipTiers`) |
 | The bridge, the aim help, your shot, the bolts | `lhbridge.js` | `space.js` (`shoot`, the aim line, the fire block), `autotarget.js` (`aimFitted`) |
 | Pirates lead their shots | `lhfoe.js` | `enemies.js` `pirateAI` |
 | The kill effect | `lhfx.js` | `space.js` `killDrone`, `die` |
