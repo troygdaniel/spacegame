@@ -13,7 +13,7 @@ import { beltSource } from './fixtures/campbelt.mjs';
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
+const VK = { Digit1: 49, KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyR: 82, KeyL: 76, KeyM: 77, KeyH: 72, Enter: 13, Escape: 27, ArrowUp: 38, ArrowRight: 39, ArrowLeft: 37, Left: 37, Digit2: 50 };
 
 const t = await launch('', ROOT);
 try {
@@ -35,7 +35,7 @@ try {
   check('K opens the ready room, the cursor on the next mission', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`) && await j(`${HUB}.hub.cur === 2 && !${HUB}.bf`));
   await t.run(900);
   if (scr) {
-    await key('Enter'); await t.run(700); await key('Enter'); await t.run(900); // the pick opens, Enter on the mission in it opens its one-page briefing
+    await key('Digit1'); await t.run(200); await key('Enter'); await t.run(700); await key('Enter'); await t.run(900); // 1 puts the light on Missions (the room opens on the next-mission card); the pick opens, Enter on the mission in it opens its one-page briefing
     const a = await page();
     check('Enter on the ready room\'s Missions, then on the mission: the one-page briefing opens: Mission 3 (not 3 of 3), the mission\'s name and its goal line, the Launch chip, the Step chips (Left Right) and Esc Back, the moments as numbered tiles and the bonus pills', await j(`campBriefIsOpen(${HUB})`) && await j(`!!${HUB}.bf && ${HUB}.bf.screen === 0`) && a.some(x => /^Mission 3 \u00b7 ATTACK \u00b7 par \d:\d\d$/.test(x)) && a.indexOf('The mothership') >= 0 && a.indexOf('Destroy the alien mothership.') >= 0 && near(a, /^Enter$/, /^Launch$/, 1) && near(a, /^Right$/, /^Step$/, 1) && near(a, /^Esc$/, /^Back$/, 1) && a.indexOf('Bonus') >= 0 && a.some(x => /^Hull over \d+%$/.test(x)), a.join(' | ').slice(0, 400));
     await snap('1-briefing');
