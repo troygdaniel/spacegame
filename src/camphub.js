@@ -39,6 +39,7 @@ const CAMP_HUB = {
   },
   boardLines: 12,                                        // lines of the mission board shown at once (a level's name is a line): three levels of three missions fit
   actReady: 'ready',                                     // what L does in the hall (card space-game-ready-l-briefing-first): the briefing of the mission Launch flies opens first (a mission with no briefing launches at once); L again, in the briefing, launches (src/campbrief.js). In a dock L is the row's own way out (undock)
+  openOn: 'launch',                                      // the row the hall opens on in the new look (card space-game-b13-a1-a2-enter-flow, BRIEF 13 A1; Troy, 27 Nov 2026: yes): the next-mission card, so Enter opens its briefing and Enter again flies; the grid (Missions) is for replays. '' keeps the first row. A dock's room and the old look open as they did (campHubOpenRow)
   act: { launch: 'launch', board: 'brief' },             // what Enter does on a row, by id: the action the scene carries out; a row with none goes on to the next one (board: INSIDE its overlay, Enter opens the big briefing, src/campbriefdraw.js)
   over: {},                                              // the rows that open an overlay on Enter, by id (filled below, where the helpers are): { len(P) the list's length, get(H) / set(H, i) the cursor, go(H, P, res) what Enter does on the choice, key(H, P, code, res) its own keys }. Not in a dock's room: its rows go on as ever
   note: {},                                              // the live note under a row's name, by id: (P) => text (filled below, where the helpers are)
@@ -55,6 +56,8 @@ function campHubStation(level, mission) { // mission (optional): the next missio
 // the rows this visit shows: the ids asked for that the table knows (a note is what makes a row known), else the five; at: the id to stand on
 const campHubIds = ids => { const ok = (Array.isArray(ids) ? ids : []).filter((id, i, a) => typeof id === 'string' && typeof CAMP_HUB.note[id] === 'function' && a.indexOf(id) === i); return ok.length ? ok : CAMP_HUB.rows.slice(); };
 function campHubNew(P, opts) { const rows = campHubIds(opts && opts.rows), at = opts && opts.at ? rows.indexOf(opts.at) : 0; return { row: at > 0 ? at : 0, rows, last: '', open: '', sel: 0, cur: Math.max(0, campHubSelectable(P).findIndex(r => r.state === 'next')), pick: null, ask: false }; } // cur: the board's cursor among the missions that can be picked (the ones done and the next one; it starts on the next); pick: the replay chosen, { level, i }, or null; ask: the Start over row has asked and waits for its second Enter
+// the row the room opens on (card space-game-b13-a1-a2-enter-flow, BRIEF 13 A1): d is the scene's data. A row asked for (a dock's) wins; the hall in the new look opens on CAMP_HUB.openOn (the next-mission card: Enter opens its briefing); anything else, the first row as before
+const campHubOpenRow = d => (d && d.at) || (d && (d.dock || d.rows) ? '' : typeof scrOn === 'function' && scrOn() ? CAMP_HUB.openOn || '' : '');
 
 // the mission the Launch row flies: the one the save says is next, kept inside what exists
 function campHubNext(P) {
@@ -331,8 +334,9 @@ function campHubKey(H, P, code, ctx) {
     if (!dock && CAMP_HUB.over[id] && (enter || (!sel && campHubRight(code)))) { H.open = id; res.used = res.moved = true; return res; } // Enter (the glass look: or Right) opens the row as an overlay
     if (enter) {
       res.used = true;
-      const act = dock && id === 'board' ? '' : CAMP_HUB.act[id]; // (a dock's room has no mission board to open)
-      if (act) res.action = act; else { H.row = (H.row + 1) % n; res.moved = true; }
+      const act = dock && id === 'board' ? '' : CAMP_HUB.act[id], hall = !(ctx && (ctx.dock || typeof ctx.onLaunch === 'function')); // (a dock's room has no mission board to open)
+      if (act) res.action = act === 'launch' && sel && hall ? CAMP_HUB.actReady : act; // the new look's hall: Enter on the next-mission card opens its briefing, as L does (the briefing's own Enter or L launches; BRIEF 13 A1); the old look and a dock launch or undock as ever
+      else { H.row = (H.row + 1) % n; res.moved = true; }
       return res;
     }
   }

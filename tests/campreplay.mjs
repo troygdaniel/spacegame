@@ -166,7 +166,7 @@ check('the room\'s scene opens that page on H (with the room\'s groups), the nex
 // ---- the files ----
 const sc = src('src/campaignscene.js'), ch = src('src/camphub.js');
 check('the words are in a content file of their own (ui.md is full), and no leftover key reads as itself', (() => { const md = src('content/text/campreplay.md'); return ['camp.hub.replay.set', 'camp.hub.replay.none', 'camp.hub.replay.cleared', 'camp.hub.replay.mark', 'camp.hub.replay.keys', 'camp.hub.note.replay', 'camp.hub.replay.head', 'camp.hub.replay.rule1', 'camp.hub.replay.rule2', 'camp.ui.replay', 'camp.ui.replayscore', 'camp.ui.replaybest', 'camp.ui.replaykept'].every(k => md.indexOf('| ' + k + ' |') >= 0 && !/^camp\./.test(J(`uiText(${JSON.stringify(k)}, { n: 1, of: 3, title: 'T', now: 1, old: 2, best: 3 })`))); })());
-check('the scene goes to the ready room at a replay\'s debrief by the one nextMission it has (no new way out)', /nextMission\(\) \{ go\(this, 'CampHub', \{\}\); \}/.test(sc) && /replay: this\.replay/.test(sc));
+check('the scene goes to the ready room at a replay\'s debrief by the one nextMission it has (no new way out)', /nextMission\(brief\) \{ go\(this, 'CampHub', brief === true \? \{ brief: true \} : \{\}\); \}/.test(sc) && /replay: this\.replay/.test(sc));
 check('no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 console.log(failed ? `CAMPAIGN REPLAY FAIL (${failed} of ${n})` : `CAMPAIGN REPLAY PASS (${n} checks)`);
 process.exitCode = failed ? 1 : 0;

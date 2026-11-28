@@ -13,7 +13,7 @@ const { launch, sleep } = await import('./cdp.mjs');
 const OUT = process.env.BRIEF_SHOTS || join(homedir(), 'dev/spacegame-night/shots'); mkdirSync(OUT, { recursive: true });
 let bad = 0;
 const check = (name, ok, extra = '') => { console.log((ok ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : '')); if (!ok) bad++; };
-const VK = { KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
+const VK = { Digit1: 49, KeyQ: 81, Equal: 187, Minus: 189, Backspace: 8, KeyS: 83, KeyK: 75, KeyL: 76, KeyM: 77, Enter: 13, Escape: 27, ArrowRight: 39, ArrowLeft: 37 };
 
 const t = await launch('', ROOT);
 try {
@@ -34,7 +34,7 @@ try {
   check('K opens the ready room of the rim run', await settle(`game.scene.isActive('CampHub') && ${HUB}.player`));
   await t.run(900);
   if (scr) {
-    await key('Enter'); await t.run(700); await key('Enter'); await t.run(900); // the pick opens, Enter on mission 1.1 opens its one-page briefing
+    await key('Digit1'); await t.run(200); await key('Enter'); await t.run(700); await key('Enter'); await t.run(900); // 1 puts the light on Missions (the room opens on the next-mission card: card space-game-b13-a1-a2-enter-flow); the pick opens, Enter on mission 1.1 opens its one-page briefing
     const a = await page(), moms = await j(`campBriefMoments(1, 0).map(m => m.text)`), goal = await j(`scrGoalLine(1, 0)`);
     check('Enter on Missions, then on mission 1.1: the one-page briefing opens (no stepped walk, no three pages): headed Mission 1, the goal line, the four numbered moments of the walk table, the Launch chip and the Left Right Step chips', await j(`campBriefIsOpen(${HUB}) && !!${HUB}.bf && !${HUB}.bf.wk`) && a.some(x => /^(Next \u00b7 )?[Mm]ission 1 \u00b7 /.test(x)) && a.indexOf(goal) >= 0 && moms.length === 4 && moms.every(x => a.indexOf(x) >= 0) && ['1', '2', '3', '4'].every(d => a.indexOf(d) >= 0) && /^Enter$/.test(a[a.indexOf('Launch') - 1]) && a.indexOf('Step') > 0, JSON.stringify(a).slice(0, 400));
     await snap('1-one-page');
