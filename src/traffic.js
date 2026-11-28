@@ -103,7 +103,7 @@ function spawnCivilian(s, initial) {
   const a0 = Phaser.Math.Angle.Between(st.x, st.y, goal.x, goal.y), f = initial ? Phaser.Math.FloatBetween(0.2, 0.5) : 0;
   const x = st.x + Math.cos(a0) * (240 + f * Phaser.Math.Distance.Between(st.x, st.y, goal.x, goal.y));
   const y = st.y + Math.sin(a0) * (240 + f * Phaser.Math.Distance.Between(st.x, st.y, goal.x, goal.y));
-  const img = s.add.image(x, y, 'civilian').setDepth(3).setScale(0.85).setTint(Phaser.Utils.Array.GetRandom(CIV_TINTS)).setRotation(a0);
+  const img = s.add.image(x, y, 'civilian').setDepth(3).setScale(0.85).setTint(typeof lhNewOn === 'function' && lhNewOn() ? 0xffffff : Phaser.Utils.Array.GetRandom(CIV_TINTS)).setRotation(a0); // (with ?longhaul=new no tint: every neutral ship is the Campaign's one grey-blue, src/lhlook.js)
   if (!initial) img.setAlpha(0);
   t.civ.push({ img, tint: img.tintTopLeft, goal, state: 'out', phase: Math.random() * 6.28, speed: Phaser.Math.Between(110, 150), until: 0 });
 }
