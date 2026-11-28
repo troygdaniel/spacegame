@@ -79,6 +79,7 @@ The short words of the Controls tab of Settings in the new look (card space-game
 | scr.ctl.campaign.25 | Begin, continue |
 | scr.ctl.campaign.26 | Pick a tech |
 | scr.ctl.campaign.27 | Buy a fighter |
+| scr.ctl.campaign.28 | Ready room |
 | scr.ctl.readyroom.0 | Pick a row |
 | scr.ctl.readyroom.1 | Move |
 | scr.ctl.readyroom.2 | Open |
