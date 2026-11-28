@@ -489,8 +489,9 @@ class Campaign extends Phaser.Scene {
       if (typeof campNudge === 'function') { const nd = campNudge(C, this.shown); if (nd) toast(this, nd, '#9fe9ff'); } // the first-minute hints, once each (src/campnudge.js)
       { const pk = C.power ? C.power.base.join() : ''; if (this.powerKey !== undefined && pk !== this.powerKey) { this.powerKey = pk; campPowerSave(C.power.base); } } // the setting is kept for the next battle the moment it is changed (the base, never an emergency's pips)
       const now = performance.now(); // the wing's radio: the orders carried out since the last look make a call; the call that is due is said when nothing else is (src/campchatter.js)
-      chatterOrderDiff(this.orderSeen, C.orders).forEach(ev => chatterPush(this.radio, ev, now)); this.orderSeen = Object.assign({}, C.orders);
-      const line = chatterTick(this.radio, now, typeof voiceSpeaking === 'function' && voiceSpeaking()); if (line) this.chatShow(line, now);
+      chatterOrderDiff(this.orderSeen, C.orders).forEach(ev => chatterPush(this.radio, ev, now, chatterOrderWho(C))); this.orderSeen = Object.assign({}, C.orders); // the answer is the voice of the pilot who was ordered (the leader's for All pilots)
+      const out = typeof campSelList === 'function' ? campSelList(C).filter(e => e.kind === 'pilot' && e.unit).map(e => e.squad) : null; // the pilots with a ship out: the radio's turns skip the others
+      const line = chatterTick(this.radio, now, typeof voiceSpeaking === 'function' && voiceSpeaking(), out); if (line) this.chatShow(line, now);
     }
     const bs = this.mode === 'play' ? campBeamState(C) : null; beamHum(bs ? bs.level : 0, bs ? bs.rise : 0); // the beam hum (src/audio.js): the Beam turrets firing, or a laser on a rock
     if (this.hud.chat) { const left = this.chatUntil - performance.now(); this.hud.chat.setAlpha(this.mode === 'play' && left > 0 ? Math.min(1, left / 500) : 0); } // the line fades; a card, the pause and the map hide it

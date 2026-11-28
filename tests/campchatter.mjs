@@ -120,7 +120,7 @@ try {
   for (let i = 0; i < 12; i++) { t += 20000; push('splash', t); const l = tick(t + J('CHATTER.events.splash.delay')); if (l) said.push(l); }
   check('F  twelve calls make twelve lines (the radio was clear each time)', said.length === 12, said.length);
   check('F  the same pilot never speaks twice in a row', said.every((l, i) => i === 0 || l.call !== said[i - 1].call));
-  check('F  all the pilots are heard, each in his own voice', new Set(said.map(l => l.call)).size === J('CHATTER.pilots.length') && said.every(l => J('CHATTER.pilots').some(p => p[0] === l.call && p[1] === l.voice)));
+  check('F  all three pilots are heard (Wedge, Kara, Apollo: card space-game-b14-c17-radio-names; it was the four callsigns), each in his own recorded voice', new Set(said.map(l => l.call)).size === J('CAMP.pilots.length') && said.every(l => J(`chatterVoice(${JSON.stringify(J('CAMP.pilots').find(p => p.name === l.call).id)})`) === l.voice));
   check('F  the same line is never said twice in a row for one kind of call', said.every((l, i) => i === 0 || l.text !== said[i - 1].text));
   check('F  a line carries its words, its callsign and its voice, and the words are the file\'s', said.every(l => rows.some(([, tx]) => tx === l.text) && l.ev === 'splash'));
   g.run(`window.__say = []; var __vs = typeof voiceSay === 'function' ? voiceSay : null; voiceSay = (text, prio, model) => { __say.push([text, prio, model]); return true; };`);
@@ -169,5 +169,46 @@ try {
   check('H  the radio line (330 wide from x 16) ends left of the toast box', closed.x + 330 < toastL, [closed.x + 330, toastL].join(' '));
   check('H  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
 } catch (e) { check('a section of the test ran without an error (H)', false, e && e.message); }
+// ---- I: the radio speaks as the pilots (card space-game-b14-c17-radio-names; Troy, 27 Nov 2026: yes; BRIEF 14 chunk 17) ----
+// The line is shown with the pilot's own name, not a callsign: "Wedge, guard our miner." is answered "Wedge: Copy that.", not "HAWK: Copy that.". The voices are the four RECORDED ones (nothing is re-recorded);
+// each of the three pilots keeps one of them for good (CHATTER.voiceOf). The pilot who was ordered answers the order, the pilot who was hit or made a kill speaks for it, and any other call takes turns among the pilots who are out.
+try {
+  const P = J('CAMP.pilots'), V = J('CHATTER.voiceOf'), rec = J('CHATTER.pilots'), voices = rec.map(r => r[1]);
+  check('I  the pilots the radio speaks as are the wing\'s three: Wedge, Kara and Apollo', JSON.stringify(P.map(p => p.name)) === '["Wedge","Kara","Apollo"]', JSON.stringify(P.map(p => p.name)));
+  check('I  each pilot has one voice, a callsign\'s of the four recorded ones, and the three are different (LANCE\'s is spare)', P.every(p => rec.some(r => r[0] === V[p.id])) && new Set(P.map(p => J(`chatterVoice(${JSON.stringify(p.id)})`))).size === 3 && P.every(p => voices.includes(J(`chatterVoice(${JSON.stringify(p.id)})`))), JSON.stringify([V, rec]));
+  check('I  the four recorded voices are as they were (so no line is re-recorded and the voice pack is the same): HAWK, ROOK, VEGA, LANCE on perseus, angus, orpheus, zeus', JSON.stringify(rec) === JSON.stringify([['HAWK', 'aura-perseus-en'], ['ROOK', 'aura-angus-en'], ['VEGA', 'aura-orpheus-en'], ['LANCE', 'aura-zeus-en']]), JSON.stringify(rec));
+  g.run('CHATTER.mode = "on"; window.__S = chatterNew()');
+  const callsigns = ['HAWK', 'ROOK', 'VEGA', 'LANCE'], lines = []; let t = 0;
+  for (let i = 0; i < 12; i++) { t += 20000; J(`chatterPush(__S, 'splash', ${t})`); const l = J(`chatterTick(__S, ${t + 500}, false)`); if (l) lines.push(l); }
+  check('I  no line shown carries a callsign: the name is the pilot\'s', lines.length === 12 && lines.every(l => P.some(p => p.name === l.call) && !callsigns.includes(l.call)), JSON.stringify(lines.map(l => l.call)));
+  // who speaks
+  const who = (ev, sq, out) => { g.run('window.__S = chatterNew()'); J(`chatterPush(__S, ${JSON.stringify(ev)}, 1000, ${JSON.stringify(sq || null)})`); return J(`chatterTick(__S, 5000, false${out ? ', ' + JSON.stringify(out) : ''})`); };
+  const k1 = who('copy', 'red'), k2 = who('copy', 'green'), k3 = who('copy', 'yellow');
+  check('I  the pilot a call belongs to speaks it, in his own voice: red is Wedge, green Kara, yellow Apollo', k1.call === 'Wedge' && k2.call === 'Kara' && k3.call === 'Apollo' && [k1, k2, k3].every(l => l.voice === J(`chatterVoice(${JSON.stringify(P.find(p => p.name === l.call).id)})`)), JSON.stringify([k1, k2, k3]));
+  check('I  a call for a pilot who is not out is still his (he was the one ordered, hit or credited)', who('hit', 'green', ['red', 'yellow']).call === 'Kara');
+  check('I  a call with no pilot takes turns among the pilots who are out: with only red and yellow out, Wedge then Apollo then Wedge, never Kara', (() => { g.run('window.__S = chatterNew()'); const out = ['red', 'yellow'], c = []; let t2 = 0; for (let i = 0; i < 6; i++) { t2 += 20000; J(`chatterPush(__S, 'contact', ${t2})`); const l = J(`chatterTick(__S, ${t2 + 3000}, false, ${JSON.stringify(out)})`); c.push(l && l.call); } return c.join() === 'Wedge,Apollo,Wedge,Apollo,Wedge,Apollo'; })());
+  check('I  with nobody reported out the turns run over all three (Wedge, Kara, Apollo)', (() => { g.run('window.__S = chatterNew()'); const c = []; let t2 = 0; for (let i = 0; i < 3; i++) { t2 += 20000; J(`chatterPush(__S, 'contact', ${t2})`); c.push(J(`chatterTick(__S, ${t2 + 3000}, false)`).call); } return c.join() === 'Wedge,Kara,Apollo'; })());
+  // the sim's side: who an event or an order belongs to
+  g.run(`window.__I = campNew(1, [], { seed: 5, mission: 1 }); __I.arrivedAt = 0; for (let i = 0; i < 90; i++) { campStep(__I, 1 / 30); __I.events.length = 0; }`);
+  const fid = sq => J(`(() => { const u = __I.ships.find(s => s.team === 'earth' && s.kind === 'fighter' && s.squad === ${JSON.stringify(sq)}); return u ? u.id : null; })()`);
+  const wid = fid('red'), kid = fid('green'), aid = fid('yellow');
+  check('I  the wing\'s three fighters are out in 1.2 (the sim this part reads)', !!wid && !!kid && !!aid, JSON.stringify([wid, kid, aid]));
+  const W = e => J(`chatterWho(__I, ${JSON.stringify(e)})`);
+  check('I  a hit on a wing fighter is its pilot\'s call: green is Kara', W({ type: 'hit', id: kid }) === 'green' && W({ type: 'hit', id: aid }) === 'yellow');
+  check('I  a kill is the pilot\'s who fired the last shot: yellow is Apollo; the turrets\' kill and a kill with nobody named are nobody\'s', W({ type: 'boom', id: 'x', kind: 'raider', by: aid }) === 'yellow' && W({ type: 'boom', id: 'x', kind: 'raider', by: J('__I.carrier.id') }) === null && W({ type: 'boom', id: 'x', kind: 'raider' }) === null);
+  check('I  a hit on anything but a wing fighter is nobody\'s, and an event that is not a hit or a kill is nobody\'s', W({ type: 'hit', id: J('__I.carrier.id') }) === null && W({ type: 'ore', n: 3 }) === null && W({ type: 'say', key: 'camp.say.wave1' }) === null && J('chatterWho(null, null)') === null);
+  // an order: the page's own test, 1.2, W 1 E 1 Enter
+  g.run(`window.__I = campNew(1, [], { seed: 5, mission: 1 }); __I.arrivedAt = 0; for (let i = 0; i < 60; i++) { campStep(__I, 1 / 30); __I.events.length = 0; } window.__P = campPanelNew();`);
+  const keys = ['KeyW', 'Digit1', 'KeyE', 'Digit1', 'Enter'].map(c => J(`(() => { const r = campPanelKey(__P, __I, ${JSON.stringify(c)}, 0); return { ok: !!r.ok, say: r.say }; })()`));
+  check('I  the page\'s test: W 1 E 1 Enter at 2 s in 1.2 sends Wedge ("Wedge, guard our miner.")', keys[4].ok && keys[4].say === 'Wedge, guard our miner.', JSON.stringify(keys));
+  check('I  the order records who it went to: red; and the radio answers with Wedge, "Wedge: Copy that.", in his voice', J('__I.lastOrder.group') === 'red' && J('chatterOrderWho(__I)') === 'red' && (() => { g.run('window.__S = chatterNew()'); J(`chatterPush(__S, 'copy', 1000, chatterOrderWho(__I))`); const l = J('chatterTick(__S, 5000, false)'); return !!l && l.ev === 'copy' && l.call === 'Wedge' && l.voice === J(`chatterVoice('wedge')`) && J(`chatterPool('copy')`).includes(l.text); })());
+  g.run(`campWingOrder(__I, 'green', 'attack', null, 'bot')`);
+  check('I  an order to Kara is Kara\'s to answer; to All pilots the leader\'s (Wedge); with no order known yet it is the leader\'s too', J('chatterOrderWho(__I)') === 'green' && (g.run(`campWingOrder(__I, null, 'guard', null, 'bot')`), J('chatterOrderWho(__I)')) === 'red' && J('chatterOrderWho({})') === 'red' && J('chatterOrderWho(null)') === 'red');
+  // the wiring
+  const sc2 = read('src/campaignscene.js'), ch = read('src/campchatter.js');
+  check('I  the scene gives the order calls their pilot (chatterOrderWho) and the turns the pilots out (campSelList), and chatterHear gives a hit or a kill its pilot (chatterWho)', /chatterPush\(this\.radio, ev, now, chatterOrderWho\(C\)\)/.test(sc2) && /chatterTick\(this\.radio, now,[^;]*, out\)/.test(sc2) && /campSelList\(C\)/.test(sc2) && /chatterPush\(sc\.radio, ev, now, chatterWho\(sc\.camp, e\)\)/.test(ch));
+  check('I  the callsign is never shown or said: the scene shows line.call, which is the pilot\'s name', /line\.call \+ ': ' \+ line\.text/.test(sc2) && !/HAWK|ROOK|VEGA|LANCE/.test(sc2));
+  check('I  no errors in the game scripts', g.errors.length === 0, g.errors.join(' | '));
+} catch (e) { check('a section of the test ran without an error (I)', false, e && e.message); }
 console.log(failed ? `CAMP CHATTER FAIL (${failed} of ${n})` : `CAMP CHATTER PASS (${n} checks)`);
 process.exit(failed ? 1 : 0);
