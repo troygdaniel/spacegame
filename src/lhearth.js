@@ -1,20 +1,21 @@
 // ---------- The new Long Haul: Earth, the Moon and the sky (PROMPT 23, piece 2 of docs/longhaul-earth.html; behind ?longhaul=new, src/lhnew.js) ----------
 // With the switch on, the flight is drawn in the Campaign's world look, by the Campaign's own painters (nothing of them is copied or changed): the sky is campWorldBackdrop (src/campworldback.js: near black, white stars,
 // two faint slate clouds, no tint), the worlds the names file gives a tone (LHNEW.earth.bodies: the Moon, Cruithne, Anchor Rock) are campDiscTexture's flat discs (src/campworlddisc.js) at the size the body has, and the
-// Sun is the Campaign's flat star. In the home system Earth itself is one very large flat disc behind everything, in the Campaign's Earth tones: it is a picture, not a place (no body, no gravity, nothing docks there), and
-// it slides a little as the ship flies so the system reads as an orbit. The other systems get the sky and nothing else. With the switch off every function here answers null or false and the caller draws what it drew.
+// Sun is the Campaign's flat star. In the home system Earth itself is one very large flat disc behind everything, in the Campaign's Earth tones: it is a picture, not a place (no body, no gravity, nothing docks there), but it
+// STANDS IN THE WORLD (card space-game-lh-earth-zoom; Troy, 28 Nov 2026: it sat in one spot on the screen as he flew): fixed where it is with the ship at the home dock, so flying moves you past it, the Moon and the stations
+// are the world's own, and the zoom (src/lhcam.js: the - and = keys) pulls out far enough to see them all. The other systems get the sky and nothing else. With the switch off every function here answers null or false and the caller draws what it drew.
 //   lhBackdrop(scene, deep)   in place of spaceBackdrop: the Campaign's sky and, in the home system (not in deep space), Earth. true when it drew
 //   lhWorld(scene, body)      { key, scale } for a world of the home system that has a tone, or null: the caller's image takes the key and the scale
 //   lhStar(scene, star)       { key, scale } for the system's star as a flat disc, or null
-//   lhEarthAt(par, home, view) PURE: where Earth's image stands in the world so that, with the ship at the home dock, its middle is at LHEARTH.at of the screen: { x, y }
+//   lhEarthAt(par, home, view) PURE: where Earth's image stands in the world so that, with the ship at the home dock, its middle is at LHEARTH.at of the screen: { x, y } (par 1: the world's own place)
 const LHEARTH = {
   tone: 'earth',                 // the Campaign's three Earth tones (CAMPDISC.tones.earth)
   key: 'lh-earth',               // the texture, made once
   size: 1536, k: 3,              // its canvas, and how many times the Campaign's 512 px disc it is painted at (the disc is then 720 px in radius: a picture this large is not a scaled-up small one)
   r: 900,                        // px: Earth's radius on the screen at zoom 1
-  par: 0.02,                     // the share of the camera's move Earth takes: the home system is 108,000 px across, so Earth leaves the screen about 30,000 px from the dock
-  at: [0.16, 1.5],               // where its middle is on the 1280 by 720 screen while the ship is at the home dock (shares of the width and the height: low on the left, most of it under the edge)
-  depth: -7.5                    // over the three star layers (-10, -9, -8), under every world and ship (0 and up)
+  par: 1,                        // the share of the camera's move Earth takes: ALL of it, 1, is the world (it was 0.02, a picture that sat on the screen: Troy, 28 Nov 2026); the camera then zooms it with the world
+  at: [0.16, 1.5],               // where its middle is on the 1280 by 720 screen while the ship is at the home dock (shares of the width and the height: low on the left, most of it under the edge); with par 1 that is a place in the world, (11565, 12720) for the dock at (12000, 12000)
+  depth: -7.5                    // over the three star layers (-10, -9, -8), under every world and ship (0 and up); at par 1 src/camzoom.js puts it on the world's camera, so it zooms with the world
 };
 const lhEarthHome = () => typeof lhNewOn === 'function' && lhNewOn() && typeof G !== 'undefined' && !G.deep && G.system === LHNEW.earth.system;
 function lhEarthAt(par, home, view) { // an image with scroll factor `par` is drawn at x - scrollX * par; with the ship at `home` the camera's scroll is home minus half the view

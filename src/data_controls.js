@@ -293,7 +293,8 @@ const CONTROLS = [
     { k: ['G'], t: 'Galaxy map: Enter jumps, Esc cancels' },
     { k: ['Tab'], t: 'Sector map (Z zooms, click to fly)' },
     { k: ['I'], t: 'Ship\'s computer: ask it a question (needs a chat key)', help: 0 },
-    { k: ['Wheel'], t: 'Zoom out and in', help: 0 }
+    { k: ['Wheel'], t: 'Zoom out and in', help: 0 },
+    { k: ['-', '='], t: 'Zoom out and in (the wheel too)', lh: 1 } // only under ?longhaul=new (src/lhcam.js; card space-game-lh-earth-zoom): controlsRows leaves a row with lh out without the switch, so today's Long Haul lists what it did
   ] },
   { id: 'surface', title: 'SURFACE', scene: 'Surface', rows: [
     { k: ['W', 'A', 'S', 'D'], t: 'Walk (the arrow keys work too)' },
@@ -375,12 +376,13 @@ const CONTROLS = [
 campPowerSet(CAMP_POWER); // and the power's (the J K L row)
 campVoiceSet(CAMP_VOICE); // and the voice's (no row while it is off)
 
-const controlsGroup = id => CONTROLS.find(g => g.id === id) || null;
+const controlsRows = g => g.rows.some(r => r.lh) ? g.rows.filter(r => !r.lh || (typeof lhNewOn === 'function' && lhNewOn())) : g.rows; // a row marked lh is the new Long Haul's (?longhaul=new): listed only with the switch on
+const controlsGroup = id => { const g = CONTROLS.find(x => x.id === id); return g ? (g.rows.some(r => r.lh) ? Object.assign({}, g, { rows: controlsRows(g) }) : g) : null; };
 const controlsLine = r => r.k.join(' ') + '   ' + r.t.charAt(0).toLowerCase() + r.t.slice(1); // 'W A S D   walk (the arrow keys work too)'
 // the H page's lines for a scene: HELP.Space and the rest (src/meta.js)
 function controlsHelp(scene) {
   const g = CONTROLS.find(x => x.scene === scene);
-  return g ? g.rows.filter(r => r.help !== 0).map(controlsLine) : [];
+  return g ? controlsRows(g).filter(r => r.help !== 0).map(controlsLine) : [];
 }
 // the Ship bay's key panel: [[keys], what] for every row marked bay, in table order (src/shipmode.js)
 function controlsBay() {
