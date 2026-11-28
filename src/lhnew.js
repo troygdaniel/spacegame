@@ -68,7 +68,7 @@ function lhEarthApply(systems) {
 }
 const lhEarthSayRe = new RegExp(LHNEW.earth.says.map(r => r[0].replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|'), 'gi');
 function lhEarthSay(text, scene) {
-  if (typeof text !== 'string' || !text || !lhNewOn() || !scene || !scene.scene || LHNEW.earth.scenes.indexOf(scene.scene.key) < 0) return text;
+  if (typeof text !== 'string' || !text || !lhNewOn() || !(scene === true || (scene && scene.scene && LHNEW.earth.scenes.indexOf(scene.scene.key) >= 0))) return text; // (scene true: a caller that only Long Haul has, the nav panel's job line)
   return text.replace(lhEarthSayRe, (m, at) => {
     const row = LHNEW.earth.says.find(r => r[0].toLowerCase() === m.toLowerCase()); if (!row) return m;
     let out = row[1];

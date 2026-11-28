@@ -48,6 +48,7 @@ const say = (t, key) => J(`lhEarthSay(${JSON.stringify(t)}, { scene: { key: ${JS
 check('the mission box and a toast take the new names', say('Rescue the colonist on Kepler-4b') === 'Rescue the colonist on the Moon' && say('Dock at Halcyon Station to get paid.') === 'Dock at Keel Station to get paid.' && say('Escort the MULE to the Perseus gate') === 'Escort the MULE to the Outbound Gate');
 check('capitals are kept and a name that starts a line or a sentence starts with a capital', say('KEPLER-4B') === 'THE MOON' && say('Kepler-4b is to the north.') === 'The Moon is to the north.' && say('Launch clear. Kepler-4b is to the east.') === 'Launch clear. The Moon is to the east.');
 check('Halcyon alone is the station\'s short name, and a line with no old name is the same line', say('Halcyon pays 100 cr for the wreck.') === 'Keel pays 100 cr for the wreck.' && say('Launch clear.') === 'Launch clear.');
+check('the nav panel\'s job line (a caller only Long Haul has) takes them too', J(`lhEarthSay('Land on Kepler-4b', true)`) === 'Land on the Moon' && /lhEarthSay\(st\.text, true\) : st\.text/.test(readFileSync(ROOT + '/src/navpanel.js', 'utf8')));
 check('the Campaign\'s scenes and a line that is not text are left alone', say('Kepler-4b', 'Campaign') === 'Kepler-4b' && say('Kepler-4b', 'CampHub') === 'Kepler-4b' && J('lhEarthSay(42, { scene: { key: "Space" } })') === 42);
 console.log('D  off again');
 J('lhNewSet(false)'); J('lhEarthApply()');

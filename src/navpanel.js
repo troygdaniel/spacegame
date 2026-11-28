@@ -102,7 +102,7 @@ function navpanelHint(r, isDest, order) {
 }
 function navpanelStar(r) { return typeof callSysName === 'function' ? callSysName(r.id) : r.name; }
 // the job line: the next step of the open call, or '' with no call
-function navpanelJob() { const st = typeof missionStep === 'function' ? missionStep() : null; return st ? 'JOB  ' + st.text : ''; }
+function navpanelJob() { const st = typeof missionStep === 'function' ? missionStep() : null; return st ? 'JOB  ' + (typeof lhEarthSay === 'function' ? lhEarthSay(st.text, true) : st.text) : ''; } // (with ?longhaul=new the step's line says the home system's new names, src/lhnew.js)
 function navpanelFuel(v) { return String(Math.round(v * 10) / 10); }
 
 // ---- what the scene has ----
