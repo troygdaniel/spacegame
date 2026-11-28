@@ -36,7 +36,7 @@ try {
   if (scr) {
     await key('Enter'); await t.run(700); await key('Enter'); await t.run(900); // the pick opens, Enter on mission 1.1 opens its one-page briefing
     const a = await page(), moms = await j(`campBriefMoments(1, 0).map(m => m.text)`), goal = await j(`scrGoalLine(1, 0)`);
-    check('Enter on Missions, then on mission 1.1: the one-page briefing opens (no stepped walk, no three pages): headed Mission 1, the goal line, the four numbered moments of the walk table, the Launch chip and the Left Right Step chips', await j(`campBriefIsOpen(${HUB}) && !!${HUB}.bf && !${HUB}.bf.wk`) && a.some(x => /^(Next \u00b7 )?[Mm]ission 1 \u00b7 /.test(x)) && a.indexOf(goal) >= 0 && moms.length === 4 && moms.every(x => a.indexOf(x) >= 0) && ['1', '2', '3', '4'].every(d => a.indexOf(d) >= 0) && /^L$/.test(a[a.indexOf('Launch') - 1]) && a.indexOf('Step') > 0, JSON.stringify(a).slice(0, 400));
+    check('Enter on Missions, then on mission 1.1: the one-page briefing opens (no stepped walk, no three pages): headed Mission 1, the goal line, the four numbered moments of the walk table, the Launch chip and the Left Right Step chips', await j(`campBriefIsOpen(${HUB}) && !!${HUB}.bf && !${HUB}.bf.wk`) && a.some(x => /^(Next \u00b7 )?[Mm]ission 1 \u00b7 /.test(x)) && a.indexOf(goal) >= 0 && moms.length === 4 && moms.every(x => a.indexOf(x) >= 0) && ['1', '2', '3', '4'].every(d => a.indexOf(d) >= 0) && /^Enter$/.test(a[a.indexOf('Launch') - 1]) && a.indexOf('Step') > 0, JSON.stringify(a).slice(0, 400));
     await snap('1-one-page');
     const steps = [];
     for (let k = 0; k < 4; k++) { await key('ArrowRight'); await t.run(350); steps.push(await j(`${HUB}.bf.step`)); }
