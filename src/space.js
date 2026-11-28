@@ -172,7 +172,8 @@ class Space extends Phaser.Scene {
     if (!b) return null;
     b.enableBody(true, x, y, true, true);
     b.setRotation(rot).setDepth(4);
-    b.born = now; b.dmg = 0;
+    b.born = now; b.dmg = 0; b.life = 0;
+    if (typeof lhShotLook === 'function') lhShotLook(this, b, group === this.pb); // with ?longhaul=new the Campaign's bolts: yours mint, a pirate's pink (src/lhbridge.js)
     this.physics.velocityFromRotation(rot, speed, b.body.velocity);
     return b;
   }
@@ -251,15 +252,16 @@ class Space extends Phaser.Scene {
     if (ap === 'auto') autopilotDrive(this, dt); // the autopilot sets the heading and the speed over the thrust code above
     if (ast === 'assist') assistDrive(this, dt); // the flight assist does the same, with its own flight model
     if (JD(k.R)) aimToggle(this); // src/autotarget.js: the sixth part, on or off (R is free in flight; X belongs to the nav list, which reads it every frame)
-    aimUpdate(this, ship, locked || still); // the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
+    if (!(typeof lhAimSync === 'function' && lhAimSync(this, ship, locked || still, time))) aimUpdate(this, ship, locked || still); // (with ?longhaul=new the Campaign fighter's aim help and its mint ring: src/lhbridge.js) the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
-      const rot = aimAngle(this, ship); // the ship's heading, or toward the nearest raider in reach when the autotarget is fitted and on
-      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, rot, SHOT_SPEED, time);
-      if (shot) shot.dmg = shipStat('damage'); // the weapons part: 15, and 20 at tier 3
+      const lf = typeof lhFire === 'function' ? lhFire(this, ship, time) : null; // with ?longhaul=new the Campaign fighter's shot: its speed, its life, the lead the aim help found and the help's price (src/lhbridge.js); null: today's
+      const rot = lf ? lf.rot : aimAngle(this, ship); // the ship's heading, or toward the nearest raider in reach when the autotarget is fitted and on
+      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, rot, lf ? lf.speed : SHOT_SPEED, time);
+      if (shot) { shot.dmg = lf ? Math.round(shipStat('damage') * lf.k * 10) / 10 : shipStat('damage'); if (lf) lhShot(this, shot, lf); } // the weapons part: 15, and 20 at tier 3
       sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, rot);
     }
-    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > SHOT_LIFE) b.disableBody(true, true); });
+    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > (b.life || SHOT_LIFE)) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
     if (this.launchAt === null) { // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)
