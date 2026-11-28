@@ -811,7 +811,7 @@ const CAMP = {
         { id: 'approach', kind: 'recon', par: 120, hpScale: 2.2, dmgScale: 2.6, place: 'kolga', dock: 'tyr',  // M1 at Kolga, a moon of the alien home world (a trip of about 10 s by Fast)                // M1: three points on the way in; defenders come when the first is scanned
           objectives: [{ type: 'scan', pause: 2, scout: 10, points: [{ at: [-1500, 800], r: 420, secs: 7 }, { at: [100, 1400], r: 420, secs: 7 }, { at: [1500, -500], r: 420, secs: 7 }] }, { type: 'clear' }],  // what the mission asks (scan points: where, how close, how many seconds; a scan stops while the cruiser is hit and goes on 2 s after, brief 7 decision 1), all of it: every wave comes and none is left
           bonus: [{ id: 'find', type: 'anomaly', anomaly: 'nest' }, { id: 'swift', type: 'time', secs: 120 }, { id: 'clean', type: 'lost', n: 0 }],  // bonus objectives: each met earns CAMP.score.bonus
-          waves: [{ on: { scanning: 0 }, from: [-2500, 1800], ships: { raider: 2, drone: 0 }, goal: 'carrier', say: 'camp.say.l3wave1' },    // a scan's wave arrives when that scan starts, at its ring (brief 7 decision 1; the numbers are a first try)
+          waves: [{ on: { arrived: 0 }, from: [-2500, 1800], ships: { raider: 2, drone: 0 }, goal: 'carrier', say: 'camp.say.l3wave1' },    // the FIRST ring's answer comes on ARRIVAL, not when the scan starts (card space-game-b14-c20-31-first-minute, the cloud's BRIEF 14 chunk 20; Troy, 27 Nov 2026: yes): a cruiser that arrives at 12 s met nothing until a ring was entered, 72 s in for a player who did not know to look; the other two rings' waves still come when their scans start (brief 7 decision 1; the numbers are a first try)
                   { on: { scanning: 1 }, from: [-700, 2900], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier' },  // (a wave of level 3: card space-game-b7-level3)
                   { on: { scanning: 2 }, from: [2900, -1500], ships: { raider: 2, drone: 1, gunship: 1 }, goal: 'carrier', say: 'camp.say.l3wave3' },  // (a wave of level 3: card space-game-b7-level3)
                   // the picket finds an idle player (Troy's yes, 26 Nov): no scan begun 60 s after arrival and a patrol of 3 raiders and a gunship leaves the planet for the cruiser, another every 40 s until a scan begins, four at most; optional: a player who scans never meets it
@@ -1392,12 +1392,13 @@ function campLaserStep(C, dt) {
 }
 
 const campLane = (C, id) => id ? (C.lane[id] || 0) : Object.keys(C.lane).reduce((a, k) => Math.max(a, C.lane[k]), 0);
-// when a wave that waits for an event starts: on { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
+// when a wave that waits for an event starts: on { arrived: s } (s seconds after the cruiser arrived at the mission's place), { scanned: k } (k recon points scanned), { delivered: k } (k haulers arrived), { t: s } (s seconds in), { lane: f, convoy? } (a convoy has flown f of its road)
 const campIdleClock = C => C.arrivedAt != null ? (C.t - C.arrivedAt) / 1000 : Math.max(0, C.t / 1000 - CAMP.mission.idleTrip); // seconds since arrival; a cruiser that never reaches the mission's place is found CAMP.mission.idleTrip s after the start plus the same clock
 const campIdleStop = (C, until) => until === 'scan' ? C.scan.some(p => p.began) : until === 'tower' ? (C.towerN || 0) - C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length >= 1 : false;
 function campWaveOn(C, on) {
   if (on.scanned != null) return C.scan.filter(p => p.got).length >= on.scanned;
   if (on.idle != null) return campIdleClock(C) >= on.idle && !campIdleStop(C, on.until); // the idle threat (brief 7 decision 6, Troy's yes of 26 Nov): a group comes for the cruiser on.idle seconds in, unless the player has begun what the mission asks (until: 'scan', a scan has begun; 'tower', a tower has fallen)
+  if (on.arrived != null) return C.arrivedAt != null && campMissionClock(C) >= on.arrived; // s seconds after the cruiser came to the mission's place (0: the moment it arrives; nothing before it has: card space-game-b14-c20-31-first-minute, 3.1's first answer)
   if (on.scanning != null) return !!(C.scan[on.scanning] && C.scan[on.scanning].began); // scan k (0 is the first) has begun: a ship of yours is in its ring (brief 7: a scan's wave arrives when it starts)
   if (on.towers != null) return C.towerN - C.ships.filter(u => u.kind === 'tower' && u.hp > 0).length >= on.towers; // k towers have fallen (brief 7: each tower that falls calls a group)
   if (on.delivered != null) return C.delivered >= on.delivered;

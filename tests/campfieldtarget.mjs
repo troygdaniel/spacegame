@@ -20,7 +20,7 @@ g.run(`window.__mk = (level, mission) => { const C = window.C = campNew(level, [
 console.log('A. the numbers');
 {
   g.run(`__mk(1, 1);`);
-  check('1.2: the miners are E1 and E2, then the four rock fields E3 to E6 (marked *)', J('__nums()').join() === '1:Miner 1,2:Miner 2,3:Rock field 1*,4:Rock field 2*,5:Rock field 3*,6:Rock field 4*', J('__nums()').join());
+  check('1.2: the four rock fields are E1 to E4 (marked *), then the miners E5 and E6 (ore is the goal there: card space-game-b14-c14-15-e-pick; tests/campepick.mjs)', J('__nums()').join() === '1:Rock field 1*,2:Rock field 2*,3:Rock field 3*,4:Rock field 4*,5:Miner 1,6:Miner 2', J('__nums()').join());
   g.run(`__mk(2, 0);`);
   check('2.1 has no ship to protect: the fields are E1 and E2, in their own order (Rock field 1 first, though Rock field 2 is nearer)', J('__nums()').join() === '1:Rock field 1*,2:Rock field 2*', J('__nums()').join());
   g.run(`__mk(1, 1); window.__f0 = campFriNumbered(C).find(e => e.field && e.id === 'field-0'); C.rocks.filter(r => r.field === 0).forEach(r => { r.hp = 0; }); for (let i = 0; i < 3; i++) campStep(C, 1 / 30);`);
@@ -31,13 +31,13 @@ console.log('A. the numbers');
 console.log('B. the pick');
 {
   g.run(`__mk(1, 1); window.P = campPanelNew(); window.__tgt = campSpawn(C, 'raider', C.carrier.x + 600, C.carrier.y); __tgt.hold = true; campTgtHold(C, __tgt.id);`);
-  g.run(`campPanelKey(P, C, 'KeyE', 1000); window.__r = campPanelKey(P, C, 'Digit3', 1100);`);
-  check('E then 3 (the real keys) holds Rock field 1 and lets the enemy go (one target)', J('C.fsel') === 'field-0' && J('C.tgt') === '' && J('__r.ok') === true, J('[C.fsel, C.tgt, __r]'));
+  g.run(`campPanelKey(P, C, 'KeyE', 1000); window.__r = campPanelKey(P, C, 'Digit1', 1100);`);
+  check('E then 1 (the real keys) holds Rock field 1 and lets the enemy go (one target)', J('C.fsel') === 'field-0' && J('C.tgt') === '' && J('__r.ok') === true, J('[C.fsel, C.tgt, __r]'));
   const h = J('campHeldNow(C)');
   check('the one target held is a friendly with a place-like entry (post, field): its name is Rock field 1', h && h.kind === 'friendly' && h.name === 'Rock field 1' && !!h.post && h.post.field === true && h.unit === null, JSON.stringify(h));
   g.run(`C.rocks.filter(r => r.field === 0).forEach(r => { r.hp = 0; });`);
   check('a held field whose rocks are all gone is let go the next time anyone asks', J('campHeldNow(C)') === null && J('C.fsel') === '');
-  g.run(`window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 1200); window.__fs = C.fsel; window.__r = campPanelKey(P, C, 'Digit3', 1300);`);
+  g.run(`window.P = campPanelNew(); campPanelKey(P, C, 'KeyE', 1200); window.__fs = C.fsel; window.__r = campPanelKey(P, C, 'Digit1', 1300);`);
   check('E then the dark number does nothing and says so: the pick is what the E tap left, and the answer is a refusal', J('__r.ok') === false && J('C.fsel') === J('__fs') && J('C.fsel') !== 'field-0', J('[__r.ok, __r.say, C.fsel, __fs]'));
 }
 

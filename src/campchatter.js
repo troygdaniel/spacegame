@@ -87,9 +87,11 @@ function chatterEventOf(C, e) {
   if (e.type === 'hit') { const u = ((C && C.ships) || []).find(s => s.id === e.id); return u && u.team === 'earth' && u.kind === 'fighter' ? 'hit' : null; }
   if (e.type === 'say') return CHATTER.says[e.key] || null;
   if (e.type === 'missile') return C && typeof C.missiles === 'number' && C.missiles <= 1 ? 'lowmissiles' : null;
-  if (e.type === 'ore') return 'ore';
+  if (e.type === 'ore') return chatterHostilesSeen(C) ? null : 'ore'; // not while a hostile is in sight: dropped, not held (the radio queues nothing)
   return null;
 }
+// a hostile is in sight: any of them that is alive and SEEN (campSeen, src/campsight.js: within the cruiser's sensor range or a fighter's that is out, and the kinds always seen, the towers and the mothership: the ones the HOSTILES panel lists). The ore lines ("Ore secured.", "Ore aboard.") stay off the radio then (card space-game-b14-c19-ore-lines-quiet, BRIEF 14 chunk 19; Troy, 27 Nov 2026: yes): in a fight the radio's one line in 8 seconds is for the fight, and mining news is no news with towers on the screen. They said that in 3.3 with seven towers alive, and why they came at all: a call is made for ANY ore a ship of yours takes (src/campaign.js campPickups: a chunk the cruiser's turrets cut from a rock as she flies by, the ore of a wreck a fighter flies over), by a callsign that goes round the wing, not for the pilot sent to mine
+const chatterHostilesSeen = C => !!C && Array.isArray(C.ships) && typeof campSeen === 'function' && C.ships.some(u => u && u.team === 'alien' && u.hp > 0 && campSeen(C, u));
 
 // the orders given since the last look (C.orders counts each one that was carried out, from a key, the strip or the map): the wing answers the first, a recall with "going home"
 function chatterOrderDiff(seen, orders) {

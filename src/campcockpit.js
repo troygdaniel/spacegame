@@ -54,6 +54,7 @@ function campCockpitTake(C, id) {
   const K = CAMP.cockpit, k = campCockpitHull();
   C.cockpit = { id: u.id, k, input: campCockpitInput(), boost: { en: K.store.max, locked: false, on: false, until: 0, th: 0, flare: 0, fx: 0 }, vmax: K.speed, nextShot: C.t, since: C.t };
   C.flights = null; C.cockpitTaken = true; // the flights of the tick are made again without this ship; cockpitTaken: once taken, the first-minute tip is not shown
+  if (typeof campOrderLineQuiet === 'function') campOrderLineQuiet(C); C.fsel = ''; C.tgt = ''; // TAKING THE STICK LETS GO OF THE PICKED TARGET (card space-game-b14-c14-15-e-pick, chunk 15; Troy yes, 27 Nov 2026): a sentence like "All pilots mine Rock field 1" no longer waits for one Enter in the hardest fighter fight; the line is dark until he picks again (a pick made WHILE flying is kept: this runs once, at the take)
   u.cockpit = true; u.hp *= k; u.maxHp = (u.maxHp || u.hp / k) * k; // the hull is the pilot's times hpK, from where it is
   const m = u.mate && C.by[u.mate]; if (m && m.mate === u.id) m.mate = null; u.mate = null; u.run = null; // out of any duel: nobody is paired with a ship the pilot's own AI is not flying
   if (typeof campMinerPilots === 'function') campMinerPilots(C); // 1.2 only (the row's pilotsGuardMiners): the other two pilots each guard a miner, unless he has given a pilot an order (card space-game-b12-c10-12-pilots-guard-miners, src/campminerpilots.js)
