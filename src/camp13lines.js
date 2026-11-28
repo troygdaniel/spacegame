@@ -1,6 +1,7 @@
 // ---------- Campaign: two radio lines of mission 1.3, Haulers home (card space-game-13-radio-lines; Troy said yes to both) ----------
 // Pure rule, no Phaser. It changes nothing but what the player is told. Both are KEPT lines (CAMP.sayhold.keep, src/campsayhold.js): each stays up 5 s and the radio lines that come in then wait.
 //   1. THE TURRETS, once. CAMP.l13.turretsWait s after the first raid of 1.3 comes (the first wave row: pirates on the lead hauler) the radio says to hold the turrets key, and the key's name is the key table's
+//      While the player flies a fighter (C.cockpit) the line is held back: Space fires the fighter's gun then, and the cruiser's turrets fire by themselves; it is said, once, as soon as he is back on the cruiser (card space-game-b14-c18-turret-tip-cockpit).
 //      ({keyfire}, src/data_controls.js): a player who has only flown and mined may never have held it, and the first raid is the first fight the turrets must win.
 //   2. THE LAST HAULER, again and again while it lasts (the pattern of src/campstray.js). In a mission that delivers a convoy, when the last ship of it (the least of the road flown, C.lane) is further than CAMP.l13.gapFar px
 //      behind the next one ahead of her, the radio says so (camp.say.l13.behind: her name and how far), first after CAMP.l13.gapGrace s of it and again every CAMP.l13.gapAgain s while it lasts. With one ship left there is no convoy to fall behind.
@@ -17,7 +18,7 @@ function camp13Tick(C) {
   try {
     if (!C || C.result || C.level !== 1 || !C.L || C.L.mid !== 'haulers') return;
     const S = C.l13 || (C.l13 = { turrets: false, since: -1, said: -1 }), K = CAMP.l13, w = C.waves && C.waves[0];
-    if (!S.turrets && w && w.started && campMissionClock(C) - (w.at || 0) >= K.turretsWait) { S.turrets = true; campSay(C, 'camp.say.l13.turrets'); }
+    if (!S.turrets && !C.cockpit && w && w.started && campMissionClock(C) - (w.at || 0) >= K.turretsWait) { S.turrets = true; campSay(C, 'camp.say.l13.turrets'); } // (while a fighter is flown Space is HIS gun, not the turrets' key: the tip waits until he is back on the cruiser, card space-game-b14-c18-turret-tip-cockpit, BRIEF 14 chunk 18)
     const g = camp13Gap(C); if (!g) { S.since = -1; return; }
     if (S.since < 0) S.since = C.t;
     if (C.t - S.since < K.gapGrace * 1000) return;
