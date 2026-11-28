@@ -170,7 +170,7 @@ function campFriNumbered(C) { // the numbered list, dark ships included, in numb
 }
 function campFriJump(C, n, how) { // E then a digit: that ship is THE target held (the enemy is let go), as E would make it; a number that is dark (or none) does nothing and says so
   if (!C || !C.carrier) return campNo('what');
-  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e || !e.alive) return campNo('nofriend');
+  const e = campFriNumbered(C).find(x => x.number === (n | 0)); if (!e) return campNo('what'); if (!e.alive) return campNo('nofriend'); // a number no ship has taken yet (1.1's Transport is 1 until she is out at 4 s, so the miner is the only row at 2 s) is not "gone": nothing was ever there (card space-game-b14-c16-11-miner-gone); a ship that was out and is lost or has arrived is
   C.fsel = e.id; C.tgt = ''; campMarkTouch(C, false, true); return { ok: true, say: '', fri: e.id };
 }
 const campFriLabel = (C, n) => { const e = campFriNumbered(C).find(x => x.number === n); return e ? e.name : 'Friend ' + n; }; // a row's words in the friends pick: the ship's name
