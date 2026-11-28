@@ -59,6 +59,54 @@ const painted = J(`(() => { const R = campPageHudBuild(fakeDoc); campPageHudPain
 check('hull 42 percent, the hostiles line and six chips are painted', painted.hull === '42%' && painted.pct === '42%' && painted.foes === '1 Raider' && /south-east/.test(painted.sub) && painted.chips === 6 && painted.sp === '300', JSON.stringify(painted));
 J('lhNewSet(null)');
 
+console.log('H  one style: the supplies, the mission and the tip as page panels (card space-game-lh-hud-one-style; Troy, 28 Nov 2026: yes, the layout picture)');
+{
+  const SU = o => J(`lhSupplyModel(${JSON.stringify(Object.assign({ now: 10000, cr: { show: 412, gain: null, flash: 0, pulse: 0, pulseRed: false }, fuel: { frac: 1, state: 'ok' }, ore: 0, cap: 10, parts: [] }, o))})`);
+  let m = SU({});
+  check('supplies at rest: Cr 412 with no float and no glow, the fuel full and cyan (ok), the ore empty, the words Cr, Fuel, Ore', m.cr.text === '412' && m.cr.delta === null && m.cr.glow === 0 && m.cr.loss === false && m.fuel.frac === 1 && m.fuel.state === 'ok' && m.ore.frac === 0 && m.ore.full === false && m.words.cr === 'Cr' && m.words.fuel === 'Fuel' && m.words.ore === 'Ore', JSON.stringify(m));
+  m = SU({ cr: { show: 1234567, gain: { v: 250, t: 9700 }, flash: 10200, pulse: 10350, pulseRed: false } });
+  check('a gain: the figure has its thousands (1,234,567), +250 floats beside it (green, fading), the panel glows gold and the figure flashes white', m.cr.text === '1,234,567' && m.cr.delta.text === '+250' && m.cr.delta.loss === false && m.cr.delta.alpha > 0 && m.cr.delta.alpha < 1 && m.cr.glow > 0 && m.cr.loss === false && m.cr.flash === true, JSON.stringify(m.cr));
+  m = SU({ cr: { show: 300, gain: { v: -100, t: 9900 }, flash: 10600, pulse: 10500, pulseRed: true } });
+  check('a loss: -100 floats (red) and the panel glows red', m.cr.delta.text === '-100' && m.cr.delta.loss === true && m.cr.loss === true, JSON.stringify(m.cr));
+  check('the float is gone after 1.3 s and the glow after 0.65 s', SU({ cr: { show: 5, gain: { v: 5, t: 8000 }, flash: 0, pulse: 9000, pulseRed: false } }).cr.delta === null && SU({ cr: { show: 5, gain: null, flash: 0, pulse: 9000, pulseRed: false } }).cr.glow === 0);
+  m = SU({ fuel: { frac: 0.2, state: 'low' }, ore: 10, cap: 10 });
+  check('the fuel under a quarter is low (amber), the ore at the hold\'s size is full (red, beating)', m.fuel.state === 'low' && m.ore.full === true && m.ore.frac === 1 && SU({ fuel: { frac: 0.05, state: 'crit' } }).fuel.state === 'crit' && SU({ fuel: { frac: 7, state: 'ok' } }).fuel.frac === 1 && SU({ ore: 4, cap: 10 }).ore.frac === 0.4);
+  m = SU({ parts: [{ short: 'SHD', tier: 2, off: false }, { short: 'WPN', tier: 0 }, { short: 'AIM', tier: 3, off: true }, { short: 'ENG', tier: 9 }] });
+  check('the parts: three letters, a pip a tier (0 to 3), the aim help red while R has it off', m.parts.length === 4 && m.parts[0].short === 'SHD' && m.parts[0].tier === 2 && m.parts[1].tier === 0 && m.parts[2].off === true && m.parts[3].tier === 3, JSON.stringify(m.parts));
+  check('all six parts of the game are in the view, in the game\'s order (SHD WPN ENG TNK CRG AIM)', J(`PART_ORDER.map(k => PARTS[k].short).join(' ')`) === 'SHD WPN ENG TNK CRG AIM');
+
+  const MI = (m0, o) => J(`lhMissionModel(${JSON.stringify(Object.assign({ m: m0, meter: null, open: false }, o))})`);
+  const none = { kind: 'none', head: 'NO ACTIVE MISSION', next: 'Take a call at the MISSIONS terminal' };
+  const act = { kind: 'active', head: 'Rescue call', sub: 'The Moon, Earth Orbit', reward: 500, cur: 1, next: 'Land on the Moon (L)', steps: [{ text: 'Take the rescue call', state: 'done' }, { text: 'Find the colonist', state: 'cur' }, { text: 'Dock', state: 'todo' }] };
+  let mm = MI(none);
+  check('slim, no mission: NO ACTIVE MISSION with the T cap and the next line under it (as the picture)', mm.open === false && mm.head === 'NO ACTIVE MISSION' && mm.key === 'T' && mm.next === 'Take a call at the MISSIONS terminal' && mm.tone === 'none', JSON.stringify(mm));
+  mm = MI(act);
+  check('slim, a mission with steps: the step you are on (Find the colonist) and the T cap, no next line (as the canvas strip had)', mm.head === 'Find the colonist' && mm.next === '' && mm.tone === 'live' && mm.key === 'T', JSON.stringify(mm));
+  mm = MI(act, { open: true });
+  check('open: Mission, the T cap and Hide, +500 cr, the title and place, the three steps with their states, the next line', mm.open === true && mm.label === 'Mission' && mm.hide === 'Hide' && mm.reward === '+500 cr' && mm.head === 'Rescue call' && mm.sub === 'The Moon, Earth Orbit' && mm.steps.map(x => x.state).join() === 'done,cur,todo' && mm.next === 'Land on the Moon (L)', JSON.stringify(mm));
+  check('a failed mission is bad (pink), the open one with no reward shows none', MI({ kind: 'failed', head: 'MISSION FAILED', next: 'x' }).tone === 'bad' && MI({ kind: 'failed', head: 'MISSION FAILED', next: 'x' }, { open: true }).reward === '');
+  check('the meter (the freighter\'s hull, say) is in both states and is low under 30 percent', MI(act, { meter: { name: 'FREIGHTER', frac: 0.25 } }).meter.low === true && MI(act, { open: true, meter: { name: 'FREIGHTER', frac: 0.8 } }).meter.low === false && MI(act).meter === null);
+
+  const TI = o => J(`lhTipsModel(${JSON.stringify(o)})`);
+  check('the tip: the words as the canvas had them, the H cap and "Hide tips" only while the cap shows; gone with no words or while the command strip is up', TI({ text: 'W thrusts', hide: true }).text === 'W thrusts' && TI({ text: 'W thrusts', hide: true }).hide === true && TI({ text: 'W thrusts', hide: true }).word === 'Hide tips' && TI({ text: 'W thrusts', hide: false }).hide === false && TI({ text: '' }).on === false && TI({ text: 'x', away: true }).on === false);
+  check('the six words are in the table and the content file', ['mission', 'hide', 'fuel', 'ore', 'cr', 'tips'].every(k => J(`uiText('lh.hud.${k}')`) !== 'lh.hud.' + k) && /lh\.hud\.tips \| Hide tips/.test(src('content/text/longhaul.md')));
+
+  // the state that moved out of hudStrip: the same figures as before
+  g.run(`window.__h = { cr: 100, crShow: 100 }; G.credits = 350; hudCredits(__h, 5000);`);
+  const hc = J('({ cr: __h.cr, gain: __h.gain, flash: __h.flash, pulse: __h.pulse, show: __h.crShow, gold: __h.pulseCol === GOLD })');
+  check('hudCredits keeps the old figures: a gain of 250 flashes 700 ms and glows 650 ms in gold, the shown figure goes 14 percent of the way', hc.cr === 350 && hc.gain.v === 250 && hc.flash === 5700 && hc.pulse === 5650 && hc.gold === true && Math.abs(hc.show - 135) < 0.01, JSON.stringify(hc));
+  g.run(`G.credits = 0;`);
+
+  const hs = src('src/hud.js'), lp = src('src/lhpagehud.js'), gd = src('src/guide.js'), ls = src('src/listen.js'), ix = src('index.html'), css = src('src/lhhud.css');
+  check('hudTick with the switch: the credits state and the fuel sound stay, the strip and the checklist are the page\'s, and the panels are asked after the mission', /if \(lhh\) \{ hudCredits\(h, now\); const fst = fuelState\(\); hudFuelWarn\(h, now, fst === 'crit', fst !== 'ok'\); \} else hudStrip\(h, now\);/.test(hs) && /if \(lhh\) \{ h\.lhMission = \{ m, meter: s\._hm \|\| null, open: h\.open \}; lhPageHudSide\(s, h, now\); \}/.test(hs) && /else \{\s*const ht = hudTracker\(/.test(hs));
+  check('hudStrip and hudFuel call the same two functions (the old strip is as it was)', /hudCredits\(h, now\);\s*const CRW = 408;/.test(hs) && /hudFuelWarn\(h, now, crit, low\);\s*\}/.test(hs));
+  check('the radar sits under the supplies panel: h.radarCy in the radar, its dim disc and its zone; the hostiles panel under it', /cy = h\.radarCy \|\| 112/.test(hs) && /hudDisc\(g, W - 110, h\.radarCy \|\| 112, 88\)/.test(hs) && /y0: 250, x1: W, y1: 250 \+ \(h\.radarCy - 112\)/.test(hs) && /scene\._hud\.radarCy \+ 188/.test(lp));
+  check('the tip: guide.js keeps the H cap flag and leaves its canvas text out when the page draws it', /s\._gkOn = !!text &&/.test(gd) && /lhPageHudOwnsTips\(s\)\) \{ s\._gh\.setVisible\(false\); s\._gk\.setVisible\(false\); \}/.test(gd) && J(`lhPageHudOwnsTips({ scene: { key: 'Space' } })`) === false);
+  check('the talk cap: a pill in the Campaign\'s look under the switch, the old ring without it', /typeof lhNewOn === 'function' && lhNewOn\(\)\) \{ \/\/ \?longhaul=new: the Campaign's look/.test(ls) && /if \(d\.lh\) \{/.test(ls) && /width:58px;height:58px;border-radius:50%/.test(ls));
+  check('the stylesheet is linked and has every class the panels use', /<link rel="stylesheet" href="src\/lhhud\.css">/.test(ix) && ['ph-lhmis', 'ph-lhres', 'ph-lhtips', 'ph-lhcr', 'ph-parts', 'ph-part', 'ph-lhprog', 'ph-lhstp', 'ph-lhhide'].every(c => css.indexOf('.' + c) >= 0));
+  check('a click on the mission panel opens and shuts the checklist as the canvas one did, and the toasts follow it', /hudToggle\(scene\._hud, scene, true\)/.test(lp) && /toastKeep\(scene, scene\.toastTop\(\)\)/.test(lp));
+}
+
 console.log('G  the hooks');
 const hud = src('src/hud.js');
 check('hudTick asks first and keeps its frame and dials as the other branch', /const lhh = space && typeof lhPageHudSync === 'function' && lhPageHudSync\(s, now\);/.test(hud) && /if \(!lhh\) hudFrame\(g, now\);/.test(hud) && /if \(!lhh\) hudGauge\(h, 'g1'/.test(hud) && /if \(space && !lhh\) \{/.test(hud));

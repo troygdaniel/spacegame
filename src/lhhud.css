@@ -1,0 +1,64 @@
+/* The new Long Haul's supplies, mission and tips panels (card space-game-lh-hud-one-style; src/lhpagehud.js; behind ?longhaul=new): the old canvas strips (fuel, credits and the six parts, ore, the mission box, the tip line)
+   in the Campaign's panel look. They are children of the page HUD's root, so they use its tokens (src/camppagehud.css: --ph-ink, --ph-mute, --ph-line, --ph-panel, --ph-shield, --ph-warn, --ph-good, --ph-ore, --ph-foe)
+   and its em (the root's font size). Sizes are in em; colours are the Campaign's, plus the credits' gold and the Long Haul's cyan fuel. */
+.ph-lhmis { left: 50%; top: 1.3em; transform: translateX(-50%); width: 23em; max-width: 36%; display: flex; flex-direction: column; gap: .45em; padding: .7em 1em; pointer-events: auto; cursor: pointer; }
+.ph-lhmb { display: flex; flex-direction: column; gap: .45em; min-width: 0; }
+.ph-lhm1 { display: flex; align-items: center; justify-content: space-between; gap: .7em; min-width: 0; }
+.ph-lhstep { font-size: .78em; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ph-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ph-lhstep.none { color: var(--ph-mute); }
+.ph-lhstep.bad { color: var(--ph-foe); }
+.ph-lhstep.live { color: var(--ph-warn); }
+.ph-lhrew { font-size: .86em; font-weight: 600; color: #ffd37a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ph-lhhide { display: flex; align-items: center; gap: .4em; font-size: .72em; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ph-mute); }
+.ph-lhhead { display: flex; justify-content: space-between; align-items: baseline; gap: .8em; min-width: 0; }
+.ph-lhhead b { font-size: .98em; font-weight: 600; color: var(--ph-warn); white-space: nowrap; }
+.ph-lhhead.bad b { color: var(--ph-foe); }
+.ph-lhhead.none b { color: var(--ph-shield); }
+.ph-lhsub { font-size: .72em; color: var(--ph-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ph-lhprog { display: flex; gap: .25em; }
+.ph-lhprog i { flex: 1; height: .3em; border-radius: 1em; background: rgba(255, 255, 255, .09); }
+.ph-lhprog i.done { background: var(--ph-good); }
+.ph-lhprog i.cur { background: var(--ph-warn); animation: ph-lhbeat 1.6s ease-in-out infinite; }
+.ph-lhsteps { display: flex; flex-direction: column; gap: .3em; }
+.ph-lhstp { display: flex; align-items: center; gap: .6em; font-size: .84em; color: var(--ph-mute); }
+.ph-lhstp.done { color: #58b57d; }
+.ph-lhstp.cur { color: var(--ph-warn); }
+.ph-lhbox { flex: none; width: .95em; height: .95em; border-radius: .25em; box-sizing: border-box; border: 1px solid rgba(140, 170, 210, .35); }
+.ph-lhstp.done .ph-lhbox { background: var(--ph-good); border-color: var(--ph-good); }
+.ph-lhstp.cur .ph-lhbox { border: 2px solid var(--ph-warn); animation: ph-lhbeat 1.6s ease-in-out infinite; }
+.ph-lhmis .ph-hint { color: var(--ph-mute); }
+.ph-lhmis .ph-hint.bad { color: var(--ph-foe); }
+.ph-lhmis .ph-hint.live { color: var(--ph-shield); }
+.ph-lhmeter { display: flex; align-items: center; gap: .7em; font-size: .72em; }
+.ph-lhmeter .ph-fill { background: var(--ph-warn); }
+.ph-lhmeter.low .ph-fill { animation: ph-lhbeat .5s ease-in-out infinite; }
+/* the supplies: top right (the radar is moved under it: src/hud.js h.radarCy) */
+.ph-lhres { right: 1.3em; top: 1.3em; width: 21em; display: flex; flex-direction: column; gap: .6em; box-shadow: 0 .6em 2em rgba(0, 0, 0, .35), 0 0 calc(var(--g, 0) * 1.6em) rgba(255, 200, 87, calc(var(--g, 0) * .6)); transition: box-shadow .1s linear; }
+.ph-lhres.loss { box-shadow: 0 .6em 2em rgba(0, 0, 0, .35), 0 0 calc(var(--g, 0) * 1.6em) rgba(255, 77, 109, calc(var(--g, 0) * .7)); }
+.ph-lhcr { display: flex; align-items: center; gap: .6em; font-weight: 600; position: relative; }
+.ph-lhcr b { font-size: 1.25em; color: #ffd37a; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.ph-lhres.flash .ph-lhcr b { color: #fff; }
+.ph-lhres.loss .ph-lhcr b { color: var(--ph-foe); }
+.ph-lhd { font-size: .86em; font-weight: 600; color: var(--ph-good); font-variant-numeric: tabular-nums; }
+.ph-lhd.loss { color: var(--ph-foe); }
+.ph-coin { flex: none; width: 1.1em; height: 1.1em; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe9a8, #e0a52a); box-shadow: 0 0 .6em rgba(255, 200, 87, .5); }
+.ph-lhrow { gap: .7em; }
+.ph-lhrow .ph-lab { width: 3.4em; flex: none; }
+.ph-fill.ph-fuel { background: var(--ph-shield); }
+.ph-fill.ph-fuel.low { background: var(--ph-warn); }
+.ph-fill.ph-fuel.crit { background: var(--ph-foe); animation: ph-lhbeat .5s ease-in-out infinite; }
+.ph-fill.ph-ore.full { background: var(--ph-foe); animation: ph-lhbeat .5s ease-in-out infinite; }
+.ph-parts { display: grid; grid-template-columns: repeat(6, 1fr); gap: .35em; border-top: 1px solid var(--ph-line); padding-top: .15em; }
+.ph-part { display: flex; flex-direction: column; align-items: center; gap: .25em; font-size: .66em; letter-spacing: .08em; font-weight: 600; color: var(--ph-mute); margin-top: .5em; }
+.ph-part.have { color: #cfe9ff; }
+.ph-part.off { color: var(--ph-foe); }
+.ph-part .pp { display: flex; gap: .2em; }
+.ph-part .pp i { width: .9em; height: .3em; border-radius: 1em; background: rgba(255, 255, 255, .1); }
+.ph-part .pp i.on { background: var(--ph-shield); }
+.ph-part.off .pp i.on { background: var(--ph-foe); }
+/* the tip: a panel above the key row, the same words */
+.ph-lhtips { left: 50%; bottom: 4.3em; transform: translateX(-50%); display: flex; align-items: center; gap: .9em; padding: .55em 1em; font-size: .9em; width: max-content; max-width: 56em; }
+.ph-lhtips.gone { display: none; }
+.ph-lhtk { display: flex; align-items: center; gap: .4em; font-size: .78em; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ph-mute); white-space: nowrap; }
+@keyframes ph-lhbeat { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .ph-lhprog i.cur, .ph-lhstp.cur .ph-lhbox, .ph-lhmeter.low .ph-fill, .ph-fill.ph-fuel.crit, .ph-fill.ph-ore.full { animation: none; } }
