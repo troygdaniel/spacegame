@@ -176,7 +176,7 @@ class ShipBay extends Phaser.Scene {
       BAY_SLOTS.forEach(sl => {
         const p = info.parts.find(q => q.key === sl.key); if (!p) return;
         list.push({ title: sl.title, value: p.tier ? p.tiers[p.tier - 1] : sl.stock, n: p.tier, of: p.max,
-          desc: p.tier ? p.descs[p.tier - 1] : 'none fitted', pt: at(...L.anchors[sl.anchor]), lx: sl.lx, ly: sl.ly, side: sl.side });
+          desc: p.tier ? (typeof lhPartWords === 'function' ? lhPartWords(p.key, p.tier - 1, p.descs[p.tier - 1]) : p.descs[p.tier - 1]) : 'none fitted', pt: at(...L.anchors[sl.anchor]), lx: sl.lx, ly: sl.ly, side: sl.side });
       });
       list.push({ title: 'HULL', value: Math.round(frac * 100) + '%', n: -1, desc: Math.round(info.hull) + ' of ' + Math.round(info.maxHull) + ' points', pt: at(...L.anchors.hull), lx: 640, ly: 300, side: 'R', color: hc });
     }
@@ -261,7 +261,7 @@ class ShipBay extends Phaser.Scene {
       const on = p.tier > 0;
       this.text(box, L, y, p.name, 13, on ? '#cfefff' : '#6b8296');
       box.add(pips(this, -58, y - 4, p.tier, p.max, GREEN));
-      this.text(box, R, y, on ? p.descs[p.tier - 1] : 'not fitted', 12, on ? '#9fe9ff' : '#4d6579', { ox: 1 });
+      this.text(box, R, y, on ? (typeof lhPartWords === 'function' ? lhPartWords(p.key, p.tier - 1, p.descs[p.tier - 1]) : p.descs[p.tier - 1]) : 'not fitted', 12, on ? '#9fe9ff' : '#4d6579', { ox: 1 });
       y += 29;
     });
     this.fadeSet.push(box); this.statusBox = box; this.statusUI = ui;

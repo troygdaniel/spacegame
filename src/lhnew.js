@@ -33,7 +33,7 @@ const LHNEW = {
       'perseus-gate': { name: 'Outbound Gate' },
       'kepler-4c': { name: 'Cruithne', tone: 'eros', kind: 'rock' },       // the far rock: a small body that shares Earth's orbit
       'slag-belt': { name: 'Graveyard Belt' },                            // the far belt: where the dead satellites were parked
-      'tern': { name: 'Anchor Rock', tone: 'vesta', kind: 'rock' },        // the gas giant of the old far corner cannot stand beside Earth: a large captured rock
+      'tern': { name: 'Anchor Giant', tone: 'jupiter', kind: 'gas' },     // the far gas giant of the old far corner, drawn as one: the Campaign's flat banded disc (card space-game-lh-giant-and-aim-part, BRIEF 16 item 5; it was a rock called Anchor Rock, which read wrong for a giant)
       'tern-wreck': { name: 'Dead Station' }
     }
   }
