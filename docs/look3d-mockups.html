@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The Campaign's "3D from above" look, mock-ups for Troy's own ships (cloud session, 28 Nov 2026, PROMPT 24 / BRIEF 17). Open this file in a browser. Not part of the game. Everything is drawn in code on this page: no web request, no image file. -->
+<title>Rim Run 3D Look</title>
+<style>
+:root{color-scheme:dark;--bg:#070b14;--ink:#e6edf7;--mute:#8794ab;--line:rgba(140,170,210,.16);--text:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:15px;line-height:1.5;padding:28px max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-size:26px;font-weight:600;margin:0}h2{font-size:19px;font-weight:600;margin:0 0 6px}h3{font-size:16px;font-weight:600;margin:0}
+p{margin:0;max-width:74ch;color:#c3cde0}.note{color:var(--mute);font-size:13.5px}
+section{display:flex;flex-direction:column;gap:14px}.scroll{overflow-x:auto}
+.card{display:flex;flex-direction:column;gap:8px}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;padding:2px 10px;border-radius:999px;background:rgba(207,230,255,.14);color:#cfe6ff;margin-right:8px}
+canvas{display:block;width:100%;min-width:900px;height:auto;border-radius:14px;border:1px solid var(--line);background:#05080f}
+ul{margin:0;padding-left:1.3em;color:#c3cde0;display:flex;flex-direction:column;gap:7px;max-width:78ch}li b{color:var(--ink);font-weight:600}
+table{border-collapse:collapse;width:100%;min-width:760px}th,td{text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:600}td b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><h1>3D from above: your cruiser and her fighters</h1><p>Mock-ups for the Campaign. The camera stays straight above. The ships are still flat drawings, but they are lit, they roll when they turn, they cast a soft shadow, and their engines and flaps move. Nothing here is a 3D model: every picture is canvas shapes, redrawn each frame. Pick one fighter and one cruiser by letter.</p></div>
+
+  <section><h2>How the effect is made</h2><ul>
+  <li><b>Light and shade.</b> Each hull part is filled with a band of light across its width: a highlight, the metal's own tone, a dark edge.</li>
+  <li><b>Bank and tilt.</b> In a turn the hull is drawn narrower (it rolls), the highlight slides to the raised side, the low side goes dark, and the raised parts (canopy, bridge, fins) shift sideways over the hull.</li>
+  <li><b>A soft shadow.</b> The ship's outline, blurred and dark, a little down and to the right. It moves further away as a fighter climbs off the deck.</li>
+  <li><b>Moving parts.</b> The engine flare grows with thrust and flickers; the exhaust trails and bends away from a turn; the flaps on the wings move with the stick.</li>
+  <li><b>Where the shadow shows.</b> Space is black, so the shadow is seen over what is behind the ship: a cloud, a planet, a station, and above all the cruiser's own deck under a fighter.</li>
+  </ul><p class="note">Colour rules kept: your ships are pale blue metal with your blue engine glow, so they still read as yours. No pink, amber or gold is used on them.</p></section>
+
+  <section id="fighters"><h2>The fighter: three options</h2><p class="note">Each row: at rest, banking left, at full thrust; then at the game's real sizes beside today's fighter (19 px long in the commander's view, 57 px when you fly it).</p></section>
+  <section id="cruisers"><h2>The light cruiser: three options</h2><p class="note">Each row: at rest, banking left, at full thrust; then at the game's real sizes beside today's cruiser (58 px long in the commander's view, 174 px when you fly a fighter).</p></section>
+  <section id="strips"><h2>Launch and landing</h2><p class="note">One strip a cruiser, with the fighter of the same letter: a fighter leaves the deck by the bow, climbs (its shadow falls away), comes round, and lands from astern beside the two that stayed home.</p></section>
+
+  <section><h2>My pick</h2><div class="scroll"><table><thead><tr><th></th><th>Pick</th><th>Why</th></tr></thead><tbody>
+  <tr><td><b>Fighter</b></td><td><b>A, the Lance</b></td><td>Its two engine pods stand apart from the hull, so the flare and the bank both read at 19 px; B's three engines merge into one blob at that size.</td></tr>
+  <tr><td><b>Cruiser</b></td><td><b>A, the Sloop</b></td><td>One slim hull with the deck down its middle is the most yacht-like and the clearest home for three fighters in a row; B is wider and reads heavier.</td></tr>
+  </tbody></table></div>
+  <p class="note">What this page does not settle: how a turret, the shields and a hit look on the new hulls; the enemies (a later round); the cost of drawing it for every frame in the game (the fighter is about 30 shapes, the cruiser about 45). Every drawing was made for this page; none copies a ship of another game, film or show.</p></section>
+</div>
+<script>
+(function () {
+'use strict';
+// ---------- colours (the Campaign's table) ----------
+var C = { metal: '#aebfd3', metalDk: '#7f90a6', deck: '#5c6b80', glass: '#132235', glow: '#6fd6ff', mine: '#cfe6ff', stripe: '#6fd6ff', dark: '#0b1220' };
+function hex(h) { return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+function mix(a, b, t) { var A = hex(a), B = hex(b); return 'rgb(' + A.map(function (v, i) { return Math.round(v + (B[i] - v) * t); }).join(',') + ')'; }
+function rnd(seed) { var a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+// ---------- the designs: units of the hull's length, nose at +x; a part is one side (y >= 0) and is mirrored unless one: 1 ----------
+// part: { p: points, c: colour, h: height 0..1 (how far it shifts when the ship rolls), s: 1 smooth, one: +1 | -1 only that side, flat: 1 no light band (a deck) }
+var FIGHTERS = {
+  A: { name: 'Lance', line: 'Twin engine pods set out on the wing roots, a needle nose with two small canards, short swept wings, one stripe on the right wing.', seed: 11, w: 0.3,
+    parts: [
+      { p: [[.02, .07], [-.16, .3], [-.27, .3], [-.25, .075]], c: C.metalDk, h: .2 },
+      { p: [[.25, .04], [.16, .14], [.11, .14], [.13, .05]], c: C.metalDk, h: .25 },
+      { p: [[-.06, .085], [-.1, .152], [-.43, .152], [-.47, .118], [-.43, .082]], c: C.metal, h: .45 },
+      { p: [[.5, 0], [.34, .032], [.1, .058], [-.1, .074], [-.3, .068], [-.37, .04], [-.37, 0]], c: C.metal, h: .55 },
+      { p: [[-.08, .19], [-.105, .226], [-.235, .226], [-.215, .19]], c: C.stripe, h: .22, one: 1, flat: 1 }
+    ],
+    canopy: [.13, 0, .075, .027], engines: [[-.47, .118, .034]], flaps: [[-.255, .1, -.27, .285]],
+    lines: [[.3, .02, .1, .04], [-.1, .0, -.1, .07], [-.2, .09, -.2, .15], [-.3, .09, -.3, .15], [-.1, .12, -.2, .26]] },
+  B: { name: 'Trident', line: 'Three engines in a row under a broad tail, forward-swept wings, two small fins, a chevron across the nose.', seed: 23, w: 0.36,
+    parts: [
+      { p: [[-.12, .12], [.05, .34], [-.03, .36], [-.3, .13]], c: C.metalDk, h: .2 },
+      { p: [[.5, 0], [.36, .03], [.15, .05], [-.05, .09], [-.2, .13], [-.42, .13], [-.42, 0]], c: C.metal, h: .5 },
+      { p: [[.02, .058], [-.03, .1], [-.18, .112], [-.18, .068]], c: C.metalDk, h: .6 },
+      { p: [[-.3, .1], [-.44, .2], [-.485, .2], [-.42, .1]], c: C.metal, h: .8 },
+      { p: [[.26, 0], [.2, .044], [.14, .05], [.2, 0]], c: C.stripe, h: .52, flat: 1 }
+    ],
+    canopy: [.1, 0, .07, .026], engines: [[-.42, 0, .038], [-.42, .086, .038]], flaps: [[-.2, .15, -.06, .33]],
+    lines: [[.3, .02, .05, .06], [-.2, 0, -.2, .12], [-.32, 0, -.32, .12], [-.05, .15, -.1, .3]] },
+  C: { name: 'Shrike', line: 'Twin booms: a slim nose pod, swept wings, and two long booms that carry the engines and a tailplane between them; a slanted stripe on the left boom.', seed: 37, w: 0.36,
+    parts: [
+      { p: [[.08, .05], [-.06, .36], [-.16, .36], [-.14, .2], [-.12, .05]], c: C.metalDk, h: .2 },
+      { p: [[-.33, 0], [-.33, .112], [-.42, .112], [-.42, 0]], c: C.metalDk, h: .3 },
+      { p: [[.02, .115], [-.02, .172], [-.45, .162], [-.485, .137], [-.45, .11]], c: C.metal, h: .45 },
+      { p: [[.5, 0], [.38, .028], [.2, .05], [0, .056], [-.18, .04], [-.23, 0]], c: C.metal, h: .6 },
+      { p: [[-.12, .118], [-.16, .166], [-.22, .165], [-.18, .117]], c: C.stripe, h: .46, one: -1, flat: 1 }
+    ],
+    canopy: [.16, 0, .08, .026], engines: [[-.485, .137, .03]], flaps: [[-.15, .21, -.16, .35]],
+    lines: [[.3, .02, .1, .045], [0, 0, 0, .055], [-.25, .115, -.25, .165], [-.35, .115, -.35, .165], [-.06, .1, -.12, .3]] }
+};
+var CRUISERS = {
+  A: { name: 'Sloop', line: 'One slim hull that tapers to a fine bow, the flight deck down the middle with three berths in a row and a clear run off the bow, the raised bridge aft, where a yacht has her helm, two small swept fins.', seed: 5, w: 0.15, big: 1,
+    parts: [
+      { p: [[-.3, .066], [-.4, .112], [-.455, .112], [-.42, .06]], c: C.metalDk, h: .15 },
+      { p: [[.5, 0], [.44, .012], [.3, .036], [.05, .062], [-.25, .07], [-.42, .058], [-.5, .036], [-.5, 0]], c: C.metal, h: .4, s: 1 },
+      { p: [[.3, 0], [.3, .03], [-.27, .036], [-.27, 0]], c: C.deck, h: .45, flat: 1 },
+      { p: [[-.29, 0], [-.3, .034], [-.43, .03], [-.455, 0]], c: C.mine, h: 1 }
+    ],
+    deck: { x0: -.25, x1: .28, y: 0, spots: [[-.19, 0], [-.04, 0], [.11, 0]], rot: 0 }, bridge: [-.37, 0, .045, .014], engines: [[-.5, .022, .016]], flaps: [],
+    lines: [[.36, .0, .36, .024], [.05, .034, .05, .062], [-.2, .038, -.2, .07], [.47, .0, .3, .0]] },
+  B: { name: 'Outrigger', line: 'Three slender hulls: a knife of a centre hull and two outriggers, a wide deck slung between them with the three berths in a triangle, the bridge on the starboard outrigger.', seed: 9, w: 0.17, big: 1,
+    parts: [
+      { p: [[.12, .1], [.05, .125], [-.4, .125], [-.47, .104], [-.4, .085], [.05, .085]], c: C.metal, h: .3 },
+      { p: [[.15, 0], [.1, .09], [-.3, .09], [-.3, 0]], c: C.deck, h: .35, flat: 1 },
+      { p: [[.5, 0], [.3, .028], [-.1, .04], [-.45, .036], [-.5, .02], [-.5, 0]], c: C.metal, h: .45 },
+      { p: [[-.04, .088], [-.06, .122], [-.2, .122], [-.2, .088]], c: C.mine, h: 1, one: 1 }
+    ],
+    deck: { x0: -.28, x1: .12, y: 0, spots: [[-.2, 0], [-.07, .05], [-.07, -.05]], rot: 0 }, bridge: [-.125, .105, .04, .011], engines: [[-.5, 0, .018], [-.47, .104, .018]], flaps: [],
+    lines: [[.3, 0, .3, .028], [0, .09, 0, .125], [-.2, .09, -.2, .125], [.1, .0, -.28, .0]] },
+  C: { name: 'Clipper', line: 'A curved hull with an angled deck that runs from the stern out over the port bow, and a slim bridge tower amidships on the starboard side.', seed: 14, w: 0.17, big: 1,
+    parts: [
+      { p: [[.5, 0], [.4, .034], [.16, .074], [-.15, .09], [-.4, .066], [-.5, .032], [-.5, 0]], c: C.metal, h: .4, s: 1 },
+      { p: [[-.44, -.02], [-.44, .034], [.2, -.03], [.2, -.078]], c: C.deck, h: .45, flat: 1, one: 1, raw: 1 },
+      { p: [[.04, .046], [.03, .078], [-.1, .082], [-.1, .046]], c: C.mine, h: 1, one: 1 }
+    ],
+    deck: { x0: -.42, x1: .18, y: .007, spots: [[-.32, -.002], [-.17, -.015], [-.02, -.03]], rot: -.085 }, bridge: [-.03, .062, .045, .012], engines: [[-.5, 0, .017], [-.49, .03, .017]], flaps: [],
+    lines: [[.3, .0, .3, .05], [.1, .0, .1, .08], [-.3, .04, -.3, .075], [.45, 0, .2, 0]] }
+};
+// today's flat-cut ships (the Campaign's own outlines), for the size check
+var TODAY = { fighter: [[.5, 0], [-.1, .28], [-.5, .44], [-.32, .1], [-.42, 0], [-.32, -.1], [-.5, -.44], [-.1, -.28]], carrier: [[.5, 0], [.38, .09], [.1, .11], [.05, .24], [-.3, .24], [-.34, .12], [-.5, .1], [-.5, -.1], [-.34, -.12], [-.3, -.24], [.05, -.24], [.1, -.11], [.38, -.09]] };
+
+// ---------- the painter ----------
+function path(ctx, P, side, smooth) { // one side of a mirrored part: y times side
+  var n = P.length, i; ctx.beginPath();
+  if (!smooth) { for (i = 0; i < n; i++) ctx[i ? 'lineTo' : 'moveTo'](P[i][0], P[i][1] * side); ctx.closePath(); return; }
+  ctx.moveTo(P[0][0], P[0][1] * side);
+  for (i = 1; i < n - 1; i++) { var mx = (P[i][0] + P[i + 1][0]) / 2, my = (P[i][1] + P[i + 1][1]) / 2; ctx.quadraticCurveTo(P[i][0], P[i][1] * side, mx, my * side); }
+  ctx.lineTo(P[n - 1][0], P[n - 1][1] * side); ctx.closePath();
+}
+function sides(part) { return part.raw ? [1] : part.one ? [part.one] : [1, -1]; }
+function band(ctx, base, w, roll, flat) { // the light across the hull's width: the highlight slides to the raised side as she rolls
+  if (flat) return mix(base, '#000000', 0.08 + 0.18 * Math.max(0, -Math.sin(roll)) * 0);
+  var g = ctx.createLinearGradient(0, -w, 0, w), hl = Math.max(0.12, Math.min(0.88, 0.4 - 0.34 * Math.sin(roll)));
+  g.addColorStop(0, mix(base, '#000000', 0.5 + 0.25 * Math.max(0, -Math.sin(roll))));
+  g.addColorStop(Math.max(0.02, hl - 0.22), mix(base, '#000000', 0.1));
+  g.addColorStop(hl, mix(base, '#ffffff', 0.55));
+  g.addColorStop(Math.min(0.98, hl + 0.22), mix(base, '#000000', 0.12));
+  g.addColorStop(1, mix(base, '#000000', 0.5 + 0.25 * Math.max(0, Math.sin(roll))));
+  return g;
+}
+function silhouette(ctx, S, roll) { S.parts.forEach(function (q) { sides(q).forEach(function (sd) { ctx.save(); ctx.translate(0, q.h * Math.sin(roll) * 0.1); path(ctx, q.p, sd, q.s); ctx.fill(); ctx.restore(); }); }); }
+// o: { x, y, rot, L (px), roll (rad, minus is left wing down), thrust 0..1, turn -1..1, t (ms), alt 0..1, shadow: false to leave it out, parked: [fighter design] }
+function ship(ctx, S, o) {
+  var L = o.L, roll = o.roll || 0, th = o.thrust || 0, turn = o.turn || 0, t = o.t || 0, alt = o.alt == null ? 1 : o.alt, k = Math.cos(roll);
+  // the soft shadow: the outline drawn far off the canvas, its blurred shadow thrown back to where it belongs
+  if (o.shadow !== false) {
+    var off = (S.big ? 5 : 3) + (S.big ? 10 : 16) * alt * (L / 120 + 0.6);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,' + (0.55 - 0.2 * alt) + ')'; ctx.shadowBlur = Math.max(2, L * (0.03 + 0.05 * alt)); ctx.shadowOffsetX = 20000 + off * 0.7; ctx.shadowOffsetY = off;
+    ctx.translate(o.x - 20000, o.y); ctx.rotate(o.rot); ctx.scale(L, L * k); ctx.fillStyle = '#000'; silhouette(ctx, S, roll); ctx.restore();
+  }
+  ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.rot);
+  // exhaust: a trail that bends away from the turn, then the flare at each nozzle
+  S.engines.forEach(function (e) { (e[1] === 0 ? [1] : [1, -1]).forEach(function (sd) {
+    var ex = e[0] * L, ey = e[1] * sd * L * k, r = e[2] * L, fl = 0.85 + 0.15 * Math.sin(t / 37 + sd * 2 + e[0] * 9), len = (0.1 + 0.75 * th) * L * (S.big ? 0.5 : 1) * fl, bend = -turn * len * 0.45;
+    if (th > 0.05) for (var i = 0; i < 9; i++) { var a = i / 9, b = (i + 1) / 9; ctx.beginPath(); ctx.moveTo(ex - len * 1.6 * a, ey + bend * a * a * 2.2); ctx.lineTo(ex - len * 1.6 * b, ey + bend * b * b * 2.2); ctx.strokeStyle = 'rgba(111,214,255,' + (0.3 * th * (1 - a)) + ')'; ctx.lineWidth = r * 1.5 * (1 - a * 0.7); ctx.lineCap = 'round'; ctx.stroke(); }
+    var g = ctx.createLinearGradient(ex, 0, ex - len, 0); g.addColorStop(0, 'rgba(255,255,255,' + (0.5 + 0.5 * th) + ')'); g.addColorStop(0.25, 'rgba(111,214,255,' + (0.45 + 0.4 * th) + ')'); g.addColorStop(1, 'rgba(111,214,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(ex, ey - r * 0.9); ctx.quadraticCurveTo(ex - len * 0.5, ey + bend * 0.3 - r * 0.7, ex - len, ey + bend * 0.6); ctx.quadraticCurveTo(ex - len * 0.5, ey + bend * 0.3 + r * 0.7, ex, ey + r * 0.9); ctx.fill();
+    var gg = ctx.createRadialGradient(ex, ey, 0, ex, ey, r * (2.2 + 2 * th)); gg.addColorStop(0, 'rgba(160,230,255,' + (0.25 + 0.4 * th) + ')'); gg.addColorStop(1, 'rgba(111,214,255,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(ex, ey, r * (2.2 + 2 * th), 0, 7); ctx.fill();
+  }); });
+  ctx.scale(L, L * k);
+  // flaps: the trailing edge of each wing; the one on the inside of the turn goes up (short and light), the other down (long and dark)
+  (S.flaps || []).forEach(function (f) { [1, -1].forEach(function (sd) {
+    var d = turn * sd, len = 0.03 * (1 + 0.7 * d); ctx.save(); ctx.translate(0, 0.2 * Math.sin(roll) * 0.1);
+    ctx.beginPath(); ctx.moveTo(f[0], f[1] * sd); ctx.lineTo(f[2], f[3] * sd); ctx.lineTo(f[2] - len, f[3] * sd); ctx.lineTo(f[0] - len, f[1] * sd); ctx.closePath();
+    ctx.fillStyle = mix(C.metalDk, d > 0 ? '#000000' : '#ffffff', Math.min(0.6, Math.abs(d) * 0.6)); ctx.fill(); ctx.restore();
+  }); });
+  var rr = rnd(S.seed);
+  S.parts.forEach(function (q) { sides(q).forEach(function (sd) {
+    ctx.save(); ctx.translate(0, q.h * Math.sin(roll) * 0.1); path(ctx, q.p, sd, q.s);
+    ctx.fillStyle = band(ctx, q.c, S.w, roll, q.flat); ctx.fill(); ctx.lineWidth = Math.max(0.006, 0.9 / L); ctx.strokeStyle = 'rgba(5,8,14,.85)'; ctx.stroke();
+    if (!q.flat) { // worn metal: a few scuffs, kept inside the part
+      ctx.clip(); for (var i = 0; i < 3; i++) { var x = (rr() - 0.5) * 0.8, y = rr() * S.w * sd, l = 0.02 + rr() * 0.04; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - l, y + (rr() - 0.5) * 0.01); ctx.strokeStyle = rr() > 0.5 ? 'rgba(255,255,255,.22)' : 'rgba(10,16,28,.3)'; ctx.lineWidth = 0.004 + rr() * 0.004; ctx.stroke(); }
+    }
+    ctx.restore();
+  }); });
+  // panel lines
+  ctx.save(); ctx.translate(0, 0.5 * Math.sin(roll) * 0.1); ctx.strokeStyle = 'rgba(10,16,28,.42)'; ctx.lineWidth = Math.max(0.004, 0.6 / L);
+  (S.lines || []).forEach(function (l) { (l[1] === 0 && l[3] === 0 ? [1] : [1, -1]).forEach(function (sd) { ctx.beginPath(); ctx.moveTo(l[0], l[1] * sd); ctx.lineTo(l[2], l[3] * sd); ctx.stroke(); }); });
+  ctx.restore();
+  // nozzles
+  S.engines.forEach(function (e) { (e[1] === 0 ? [1] : [1, -1]).forEach(function (sd) { ctx.fillStyle = '#0b1220'; ctx.beginPath(); ctx.ellipse(e[0] + e[2] * 0.3, e[1] * sd, e[2] * 0.7, e[2], 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(190,235,255,' + (0.35 + 0.6 * th) + ')'; ctx.beginPath(); ctx.ellipse(e[0], e[1] * sd, e[2] * 0.4, e[2] * 0.72, 0, 0, 7); ctx.fill(); }); });
+  // the deck: its centre line, three berths, two lights that blink in turn; the fighters at home on it
+  if (S.deck) {
+    var D = S.deck; ctx.save(); ctx.translate(0, 0.45 * Math.sin(roll) * 0.1); ctx.rotate(D.rot || 0);
+    ctx.strokeStyle = 'rgba(207,230,255,.55)'; ctx.lineWidth = 0.004; ctx.setLineDash([0.02, 0.016]); ctx.beginPath(); ctx.moveTo(D.x0, D.y); ctx.lineTo(D.x1, D.y); ctx.stroke(); ctx.setLineDash([]);
+    [0, 1].forEach(function (i) { var on = Math.floor(t / 500) % 2 === i; ctx.fillStyle = on ? 'rgba(207,230,255,.95)' : 'rgba(207,230,255,.25)'; ctx.beginPath(); ctx.arc(i ? D.x1 : D.x0, D.y, 0.006, 0, 7); ctx.fill(); });
+    ctx.restore();
+    D.spots.forEach(function (sp, i) { ctx.save(); ctx.translate(sp[0], sp[1] + 0.45 * Math.sin(roll) * 0.1); ctx.strokeStyle = 'rgba(207,230,255,.3)'; ctx.lineWidth = 0.003; ctx.beginPath(); ctx.arc(0, 0, 0.03, 0, 7); ctx.stroke(); ctx.restore(); });
+  }
+  // glass: the canopy or the bridge windows, with a glint that slides as she rolls
+  var G = S.canopy || S.bridge; if (G) { ctx.save(); ctx.translate(0, (S.canopy ? 0.7 : 1) * Math.sin(roll) * 0.1); ctx.fillStyle = C.glass; ctx.beginPath(); ctx.ellipse(G[0], G[1], G[2], G[3], 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(190,230,255,.75)'; ctx.beginPath(); ctx.ellipse(G[0] + G[2] * 0.25, G[1] - G[3] * (0.25 + 0.5 * Math.sin(roll)), G[2] * 0.45, G[3] * 0.28, 0, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.restore();
+  // the fighters parked on the deck (drawn after the hull, in the hull's frame)
+  if (S.deck && o.parked) { var D2 = S.deck; D2.spots.forEach(function (sp, i) { if (o.parked[i]) { var c = Math.cos(o.rot), s = Math.sin(o.rot), px = sp[0] * L, py = (sp[1] + 0.45 * Math.sin(roll) * 0.1) * L * k; ship(ctx, o.parked[i], { x: o.x + px * c - py * s, y: o.y + px * s + py * c, rot: o.rot + (D2.rot || 0), L: L * 0.085, roll: roll, thrust: 0, t: t, alt: 0 }); } }); }
+}
+function flat(ctx, P, x, y, L, rot) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0); ctx.beginPath(); P.forEach(function (q, i) { ctx[i ? 'lineTo' : 'moveTo'](q[0] * L, q[1] * L); }); ctx.closePath(); ctx.fillStyle = C.mine; ctx.fill(); ctx.strokeStyle = 'rgba(5,8,14,.9)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
+function label(ctx, s, x, y, c, al, f) { ctx.fillStyle = c || '#8794ab'; ctx.font = f || '12px system-ui,-apple-system,"Segoe UI",sans-serif'; ctx.textAlign = al || 'center'; ctx.fillText(s, x, y); }
+function stars(ctx, w, h, seed) { var r = rnd(seed); ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, w, h); var cg = ctx.createRadialGradient(w * 0.32, h * 0.55, 0, w * 0.32, h * 0.55, w * 0.5); cg.addColorStop(0, 'rgba(62,84,120,.5)'); cg.addColorStop(1, 'rgba(62,84,120,0)'); ctx.fillStyle = cg; ctx.fillRect(0, 0, w, h); for (var i = 0; i < w * h / 5200; i++) { ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + r() * 0.5) + ')'; var s = r() > 0.9 ? 2 : 1; ctx.fillRect(r() * w, r() * h, s, s); } }
+
+// ---------- the pages' canvases ----------
+var jobs = [], DPR = Math.min(2, window.devicePixelRatio || 1);
+function canvas(parent, w, h) { var c = document.createElement('canvas'); c.width = w * DPR; c.height = h * DPR; var d = document.createElement('div'); d.className = 'scroll'; d.appendChild(c); parent.appendChild(d); var x = c.getContext('2d'); x.scale(DPR, DPR); return x; }
+function card(parentId, letter, S, kind) { var p = document.getElementById(parentId), d = document.createElement('div'); d.className = 'card'; d.innerHTML = '<h3><span class="tag">' + kind + ' ' + letter + '</span>' + S.name + '</h3><p>' + S.line + '</p>'; p.appendChild(d); return d; }
+var W = 1200;
+Object.keys(FIGHTERS).forEach(function (k, n) {
+  var S = FIGHTERS[k], x = canvas(card('fighters', k, S, 'FIGHTER'), W, 300);
+  jobs.push(function (t) {
+    stars(x, W, 300, 3 + n);
+    ship(x, S, { x: 150, y: 140, rot: -Math.PI / 2, L: 190, roll: 0, thrust: 0.15, t: t }); label(x, 'at rest', 150, 284);
+    var sway = -0.62 + 0.1 * Math.sin(t / 900);
+    ship(x, S, { x: 420, y: 140, rot: -Math.PI / 2 - 0.25, L: 190, roll: sway, thrust: 0.45, turn: -0.9, t: t }); label(x, 'banking left', 420, 284);
+    ship(x, S, { x: 690, y: 120, rot: -Math.PI / 2, L: 190, roll: 0, thrust: 1, t: t }); label(x, 'full thrust', 690, 284);
+    x.fillStyle = 'rgba(140,170,210,.16)'; x.fillRect(850, 20, 1, 250);
+    label(x, 'today', 930, 44); label(x, 'new', 1080, 44);
+    flat(x, TODAY.fighter, 930, 100, 19, -Math.PI / 2); ship(x, S, { x: 1080, y: 100, rot: -Math.PI / 2, L: 19, thrust: 0.6, t: t }); label(x, '19 px: the commander\'s view', 1005, 140);
+    flat(x, TODAY.fighter, 930, 205, 57, -Math.PI / 2); ship(x, S, { x: 1080, y: 205, rot: -Math.PI / 2, L: 57, thrust: 0.6, t: t }); label(x, '57 px: when you fly it', 1005, 268);
+  });
+});
+Object.keys(CRUISERS).forEach(function (k, n) {
+  var S = CRUISERS[k], F = FIGHTERS[k], x = canvas(card('cruisers', k, S, 'CRUISER'), W, 520), park = [F, F, F];
+  jobs.push(function (t) {
+    stars(x, W, 520, 13 + n);
+    ship(x, S, { x: 340, y: 80, rot: 0, L: 500, roll: 0, thrust: 0.15, t: t, parked: park }); label(x, 'at rest', 340, 150);
+    ship(x, S, { x: 340, y: 250, rot: -0.12, L: 500, roll: -0.38 + 0.05 * Math.sin(t / 1200), thrust: 0.45, turn: -0.8, t: t, parked: park }); label(x, 'banking left', 340, 330);
+    ship(x, S, { x: 360, y: 420, rot: 0, L: 500, roll: 0, thrust: 1, t: t, parked: park }); label(x, 'full thrust', 340, 498);
+    x.fillStyle = 'rgba(140,170,210,.16)'; x.fillRect(640, 20, 1, 480);
+    label(x, 'today', 780, 44); label(x, 'new', 1010, 44);
+    flat(x, TODAY.carrier, 780, 110, 58, 0); ship(x, S, { x: 1010, y: 110, rot: 0, L: 58, thrust: 0.5, t: t, parked: park }); label(x, '58 px: the commander\'s view', 895, 160);
+    flat(x, TODAY.carrier, 780, 320, 174, 0); ship(x, S, { x: 1010, y: 320, rot: 0, L: 174, thrust: 0.5, t: t, parked: park }); label(x, '174 px: when you fly a fighter', 895, 400);
+  });
+});
+Object.keys(CRUISERS).forEach(function (k, n) {
+  var S = CRUISERS[k], F = FIGHTERS[k], p = document.getElementById('strips'), d = document.createElement('div'); d.className = 'card'; d.innerHTML = '<h3><span class="tag">STRIP ' + k + '</span>' + S.name + ' and ' + F.name + '</h3>'; p.appendChild(d);
+  var x = canvas(d, W, 330), cx = 560, cy = 230, L = 560, D = S.deck, drot = D.rot || 0;
+  jobs.push(function (t) {
+    stars(x, W, 330, 31 + n);
+    var u = (t / 9000) % 1, e = u * u * (3 - 2 * u), th = e * Math.PI * 2, home = D.spots[2];
+    // a closed loop that touches the deck at its lowest point: along the deck by the bow, up and round, back in from astern
+    var hx = cx + home[0] * L, hy = cy + home[1] * L, rx = 420, ry = 88;
+    var lx = rx * Math.sin(th), ly = -ry + ry * Math.cos(th), c = Math.cos(drot), s = Math.sin(drot), fx = hx + lx * c - ly * s, fy = hy + lx * s + ly * c;
+    var dx = rx * Math.cos(th), dy = -ry * Math.sin(th), rot = Math.atan2(dx * s + dy * c, dx * c - dy * s);
+    var wrap = Math.min(th, Math.PI * 2 - th), alt = Math.max(0, Math.min(1, (wrap - 0.12) / 0.5)), sp = Math.sin(Math.PI * u), curve = Math.pow(Math.abs(Math.sin(th)), 1.5);
+    ship(x, S, { x: cx, y: cy, rot: 0, L: L, roll: 0, thrust: 0.2, t: t, parked: [F, F, null] });
+    ship(x, F, { x: fx, y: fy, rot: rot, L: L * 0.085 * (1 + 0.35 * alt), roll: -0.7 * curve * alt, thrust: u < 0.5 ? 0.25 + 0.75 * Math.min(1, u * 8) : 0.2 + 0.5 * sp, turn: -0.9 * curve * alt, t: t, alt: alt });
+    label(x, u < 0.12 ? 'launch' : u > 0.82 ? 'landing' : 'coming round', 60, 36, '#cfe6ff', 'left', '600 13px system-ui,-apple-system,"Segoe UI",sans-serif');
+  });
+});
+var still = false; try { still = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { still = false; }
+function frame(t) { jobs.forEach(function (j) { j(still ? 2500 : t); }); if (!still) requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
