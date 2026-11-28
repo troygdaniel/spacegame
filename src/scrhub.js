@@ -39,11 +39,11 @@ function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text,
 function scrHubRefitModel(P, H, o) {
   o = o || {}; const r = campHubRefit(P), it = r.items[0], B = CAMP.refit, wing = r.wing.fighters, bought = r.extra.fighters, full = bought >= B.most, funds = typeof campWealth === 'function' ? campWealth(P) : r.ore + r.credits;
   const status = it.ok ? uiText('scr.hub.can') : full ? uiText('scr.hub.most') : uiText('scr.hub.need', { n: Math.max(0, it.cost - funds) });
-  const techs = r.techs.map(t => scrTileN([scrTextN('t3', t.name)].concat(scrTechNodes(t.id, P)), { flat: true, grow: 1 })), chips = scrRowN([scrKeyWordN('pick', uiText('scr.hub.buy')), scrKeyWordN('giveback', uiText('scr.hub.undo')), scrKeyWordN('close', uiText('scr.hub.back'))]);
+  const techs = r.techs.map(t => scrTileN([scrTextN('t3', t.name)].concat(scrTechNodes(t.id, P)), { flat: true, grow: 1 })), chips = scrRowN([].concat(it.ok ? [scrKeyWordN('pick', uiText('scr.hub.buy'))] : [], bought > 0 ? [scrKeyWordN('giveback', uiText('scr.hub.undo'))] : [], [scrKeyWordN('close', uiText('scr.hub.back'))])); // A6 (card space-game-b13-a4-a6-grid-refit; Troy, 27 Nov 2026, BRIEF 13): a cap is offered only for what the key can do now: Buy when a fighter can be bought, Undo when one was, Back always; with nothing to spend only Esc Back is there
   return scrScreenN('refit', [scrCardN('refit', { w: 34, top: 22, gap: 1 }, [
     scrRowN([scrTextN('t2', uiText('scr.hub.refit')), scrRowN([scrPillN(uiText('scr.card.credits'), null, { lead: scrNum(r.credits), leadTone: 'gold' }), scrPillN(uiText('scr.card.ore'), null, { lead: scrNum(r.ore), leadTone: 'gold' }), bought > 0 ? scrPillN(uiText('scr.card.bought', { n: bought }), null) : null])], { just: 'sp' }),
     scrTileN([scrRowN([scrColN([scrTextN('t3', uiText('scr.hub.fighter')), scrRowN([scrTextN('lab', uiText('scr.hub.wing', { n: wing })), scrMeterN(Math.min(1, wing / Math.max(1, scrWingCap())), 'blue'), scrTextN('lab', wing + 1)], { width: 16 })], { gap: 0.3 }), scrRowN([scrTextN('t3', it.cost, 'gold'), scrTextN('sm', status)])], { just: 'sp' })], { on: true }),
-    scrHubMsg(o)].concat(techs.length ? [scrRowN(techs, { gap: 0.6 }), scrRowN([chips], { just: 'end' })] : [scrRowN([scrTextN('sm', uiText('scr.hub.notech'), 'dim'), chips], { just: 'sp' })]))]);
+    scrHubMsg(!it.ok && o.msg && o.msg.key === 'camp.hub.noore' ? {} : o)].concat(techs.length ? [scrRowN(techs, { gap: 0.6 }), scrRowN([chips], { just: 'end' })] : [scrRowN([scrTextN('sm', uiText('scr.hub.notech'), 'dim'), chips], { just: 'sp' })]))]);
 }
 
 // ---- the rank ----
