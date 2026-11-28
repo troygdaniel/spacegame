@@ -923,7 +923,7 @@ function hudTick(s) {
   const obj = hudObjective(s, key);
   if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) {
-    h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 + ((h.radarCy || 112) - 112) }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
+    h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); if (h.radarCy) h.zones.push({ x0: W - 230, y0: 250, x1: W, y1: 250 + (h.radarCy - 112) }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
     if (space && s.cruising && h.radarMode !== 'sys') { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, h.radarCy || 112, 88); } // cruise: nothing local matters, the radar dims
   }
   if (space) hudTargets(h, s, now);
