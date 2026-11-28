@@ -71,6 +71,26 @@ check('without the bridge the shot is today\'s: aimAngle, SHOT_SPEED, the part\'
 check('the bridge has no words of its own (R\'s toast is autotarget.js\'s)', !/toast\(/.test(src('src/lhbridge.js')));
 check('the Campaign\'s aim file is not changed by this piece (it has no word of Long Haul\'s bridge)', !/lhBridge|lhNewOn/.test(src('src/campcockpitaim.js')));
 check('the file asks the web for nothing', !/https?:\/\/|fetch\(|XMLHttpRequest|new Image/.test(src('src/lhbridge.js')));
+console.log('G  the autotarget part widens the cone (card space-game-lh-giant-and-aim-part, BRIEF 16 item 6)');
+// With the switch on the Campaign's 20 degree cone is on every ship, so the part, which used to switch the help on, would give nothing: it widens the cone instead, by 4, 7 and 10 degrees at tiers 1, 2 and 3.
+J('lhNewSet(true)');
+const tierAim = (tier, deg) => J(`(() => { activeShip().parts.aim = ${tier}; const a = ${deg} * Math.PI / 180, s = mkScene([[1000 + 600 * Math.cos(a), 1000 + 600 * Math.sin(a)]]); lhAimSync(s, s.ship, false, 16); const A = s.lhB.C.cockpit.aim; activeShip().parts.aim = 0; return !!(A && A.steer); })()`);
+check('the cone is the Campaign\'s 20 degrees with no part and 24, 27 and 30 with tier 1, 2 and 3', J('[0, 1, 2, 3].map(lhAimCone)').join() === '20,24,27,30' && J('CAMP.cockpit.aimCone') === 20 && J('LHAIM.widen').join() === '0,4,7,10', J('[0, 1, 2, 3].map(lhAimCone)').join());
+check('with no part a pirate 22 degrees off the nose is not tracked (and none is at 18 degrees less than the cone: one at 15 is)', tierAim(0, 22) === false && tierAim(0, 15) === true);
+check('tier 1 takes 22 degrees and not 26', tierAim(1, 22) === true && tierAim(1, 26) === false);
+check('tier 2 takes 26 degrees and not 29', tierAim(2, 26) === true && tierAim(2, 29) === false);
+check('tier 3 takes 29 degrees and not 33', tierAim(3, 29) === true && tierAim(3, 33) === false);
+check('the same pirate is a shot the help steers only once the cone reaches it: at 26 degrees, no part: straight along the nose; tier 2: along the lead', J(`(() => { const run = tier => { activeShip().parts.aim = tier; const a = 26 * Math.PI / 180, s = mkScene([[1000 + 600 * Math.cos(a), 1000 + 600 * Math.sin(a)]]); lhAimSync(s, s.ship, false, 16); const f = lhFire(s, s.ship, 16); activeShip().parts.aim = 0; return f; }; const none = run(0), t2 = run(2); return [none.helped, none.rot, t2.helped, t2.rot > 0.4, t2.k]; })()`).join() === 'false,0,true,true,' + J('CAMP.cockpit.aimK'));
+check('the Campaign\'s table is put back after every call: 20 degrees, even when the Campaign\'s own function throws', J(`(() => { activeShip().parts.aim = 3; const o = campCockpitAim; campCockpitAim = () => { throw new Error('boom'); }; let threw = false; try { lhAimSync(mkScene([[1300, 1000]]), mkScene([]).ship, false, 16); } catch (e) { threw = true; } campCockpitAim = o; activeShip().parts.aim = 0; return [threw, CAMP.cockpit.aimCone]; })()`).join() === 'true,20');
+check('a Campaign cone of 0 (the tuning slider) stays 0 with any part: no help', J(`(() => { const k = CAMP.cockpit.aimCone; CAMP.cockpit.aimCone = 0; const r = [0, 1, 2, 3].map(lhAimCone); CAMP.cockpit.aimCone = k; return r; })()`).join() === '0,0,0,0');
+check('the part\'s words in the shop say the cone: 24, 27 and 30 degrees', J(`[0, 1, 2].map(i => lhPartWords('aim', i, 'today'))`).join('|') === 'aim cone 24 degrees, from 20|aim cone 27 degrees|aim cone 30 degrees, the widest', J(`[0, 1, 2].map(i => lhPartWords('aim', i, 'today'))`).join('|'));
+check('every other part and the switch off keep today\'s words', J(`['shields', 'weapons', 'engine', 'tank', 'cargo'].every(sl => lhPartWords(sl, 1, 'today') === 'today')`) === true && (J('lhNewSet(false)'), J(`lhPartWords('aim', 0, 'guns aim at the nearest raider in 450')`)) === 'guns aim at the nearest raider in 450');
+J('lhNewSet(true)');
+check('the numbers in the words are the table\'s: the cone is read, not written twice', /'aim cone ' \+ \(base \+ w\) \+ ' degrees'/.test(src('src/lhbridge.js')) && !/aim cone (24|27|30)/.test(src('src/lhbridge.js')));
+check('the shop card and the ship panel ask first (lhPartWords, behind a typeof), and the old words stay the text they pass', /typeof lhPartWords === 'function' \? lhPartWords\(slot, di, P\.descs\[di\]\) : P\.descs\[di\]/.test(src('src/shop.js')) && (src('src/shipmode.js').match(/typeof lhPartWords === 'function' \? lhPartWords\(p\.key, p\.tier - 1, p\.descs\[p\.tier - 1\]\)/g) || []).length === 2);
+check('the part itself is as it was (its price, tiers and old words in data_parts.js are not touched: today\'s Long Haul)', J(`PARTS.aim.descs.join('|')`) === 'guns aim at the nearest raider in 450|range 650, and it leads a moving target|range 850, leads, the surest aim' && J(`PARTS.aim.prices.join()`) === '500,800,1400');
+J('lhNewSet(null)');
+
 check('the game was quiet', g.errors.length === 0, g.errors.join(' | '));
 
 console.log(failed ? `\nLHBRIDGE FAIL: ${failed} of ${n} checks failed` : `\nLHBRIDGE PASS (${n} checks)`);

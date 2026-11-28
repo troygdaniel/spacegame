@@ -1,7 +1,7 @@
 // smoke: the new Long Haul's Earth, flat worlds and sky (plain Node, no Chrome): off draws nothing and answers null, on gives the Campaign's discs at the bodies' own sizes, Earth stands low on the left at the home dock, and the hooks ask the switch first
 // PROMPT 23 (the cloud session's brief 15), piece 2 of docs/longhaul-earth.html. src/lhearth.js: lhBackdrop, lhWorld, lhStar, lhEarthAt; the hooks are in src/space.js and src/cruise.js.
 //   A  off: lhBackdrop is false and makes nothing, lhWorld and lhStar are null
-//   B  on, at home: the Moon, Cruithne and Anchor Rock are flat discs in their tones at the body's radius; a body with no tone and another system's world are null; the star is the Campaign's flat star
+//   B  on, at home: the Moon and Cruithne are flat rock discs and Tern a banded gas giant, in their tones at the body's radius; a body with no tone and another system's world are null; the star is the Campaign's flat star
 //   C  Earth: a picture, not a body (the home system has no row for it); with the ship at the home dock its middle is low on the left of the screen; it is painted by the Campaign's painter at three times its size, behind the worlds
 //   D  the sky is the Campaign's backdrop function, called once; in deep space there is a sky and no Earth
 //   E  the hooks in space.js and cruise.js ask for the function before they call it, and the file asks the web for nothing
@@ -29,7 +29,10 @@ console.log('B  on, at home');
 J('lhNewSet(true)'); J('lhEarthApply()'); J(`G.system = 'halcyon'`);
 const moon = J(`(() => { const b = sysDef('halcyon').bodies.find(x => x.id === 'kepler-4b'), w = lhWorld(fakeScene(), b); return { w, r: b.r }; })()`);
 check('the Moon is the luna disc at its own radius', !!moon.w && /^cdisc-luna-rock-/.test(moon.w.key) && Math.abs(moon.w.scale - moon.r / J('CAMPDISC.R')) < 1e-9, JSON.stringify(moon));
-check('Cruithne and Anchor Rock are discs too', J(`['kepler-4c', 'tern'].every(id => { const w = lhWorld(fakeScene(), sysDef('halcyon').bodies.find(x => x.id === id)); return !!w && /^cdisc-/.test(w.key) && w.scale > 0; })`) === true);
+check('Cruithne is a rock disc', J(`(() => { const w = lhWorld(fakeScene(), sysDef('halcyon').bodies.find(x => x.id === 'kepler-4c')); return !!w && /^cdisc-eros-rock-/.test(w.key) && w.scale > 0; })()`) === true);
+const giant = J(`(() => { const b = sysDef('halcyon').bodies.find(x => x.id === 'tern'), w = lhWorld(fakeScene(), b); return { w, r: b.r, name: b.name, shapes: campDiscShapes('gas', b.seed | 0, 'jupiter') }; })()`);
+check('Tern, the far gas giant, is drawn as a flat banded gas giant (kind gas, the Jupiter tone) at its own radius, not as a rock (card space-game-lh-giant-and-aim-part)', !!giant.w && /^cdisc-jupiter-gas-/.test(giant.w.key) && !/rock/.test(giant.w.key) && Math.abs(giant.w.scale - giant.r / J('CAMPDISC.R')) < 1e-9 && giant.shapes.bands.length >= 2 && giant.shapes.patches.length >= 0, JSON.stringify(giant));
+check('and it is called Anchor Giant while the switch is on (it was Anchor Rock, which read wrong for a giant), and Tern with it off', giant.name === 'Anchor Giant' && (J('lhNewSet(false)'), J('lhEarthApply()'), J(`sysDef('halcyon').bodies.find(x => x.id === 'tern').name`)) === 'Tern' && (J('lhNewSet(true)'), J('lhEarthApply()'), J(`sysDef('halcyon').bodies.find(x => x.id === 'tern').name`)) === 'Anchor Giant');
 check('a body with no tone is null', J(`lhWorld(fakeScene(), sysDef('halcyon').bodies.find(x => x.id === 'kepler-belt'))`) === null);
 check('another system keeps its own worlds', J(`(() => { G.system = 'kestrel'; const r = lhWorld(fakeScene(), sysDef('kestrel').bodies.find(x => x.type === 'planet') || { id: 'kepler-4b', r: 300 }); G.system = 'halcyon'; return r; })()`) === null);
 const star = J(`(() => { const st = sysStar('halcyon'), w = lhStar(fakeScene(), st); return { w, r: st.r }; })()`);

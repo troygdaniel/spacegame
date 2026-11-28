@@ -190,7 +190,7 @@ function refreshShop(s, bought) {
     txt(L, T + 62, P.name + PART_TIER_NAME[done ? t : t + 1], 14, done ? '#6dff9c' : dim ? '#6b8296' : '#ffd37a', { fontStyle: 'bold' });
     txt(L, T + 86, 'TIER', 11, '#5b7a92');
     add(pips(s, L + 38, T + 82, t, 3, GREEN));
-    const desc = add(s.add.text(L, T + 104, done ? P.descs[Math.max(0, t - 1)] : P.descs[t], uiFont(13, dim ? '#6b8296' : '#cfefff', { wordWrap: { width: w - 28 }, lineSpacing: 2 })).setOrigin(0, 0));
+    const di = done ? Math.max(0, t - 1) : t, desc = add(s.add.text(L, T + 104, typeof lhPartWords === 'function' ? lhPartWords(slot, di, P.descs[di]) : P.descs[di], uiFont(13, dim ? '#6b8296' : '#cfefff', { wordWrap: { width: w - 28 }, lineSpacing: 2 })).setOrigin(0, 0));
     if (st.kind === 'maxed') txt(L, T + 188, 'MAXED', 24, '#6dff9c', { fontStyle: 'bold' });
     else if (st.kind === 'fit') { txt(L, T + 180, 'FULL FIT', 22, '#6dff9c', { fontStyle: 'bold' }); txt(L, T + 206, 'a ' + shipModel(ship.model).name + ' takes no more', 11, '#6dff9c'); }
     else if (st.kind === 'stock') { txt(L, T + 180, 'NOT SOLD HERE', 17, '#ffd37a', { fontStyle: 'bold' }); txt(L, T + 206, 'a bigger station sells it', 12, '#ffd37a'); }
