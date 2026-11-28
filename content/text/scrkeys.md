@@ -46,7 +46,7 @@ The words of the new keys page (card space-game-screens-e-keys-settings; Troy, 2
 | scr.keys.rb.launch | Launch |
 | scr.keys.rb.zoom | Zoom the map, reset |
 | scr.keys.rb.map | Map: area, system, route |
-| scr.keys.rb.back | Back to the missions |
+| scr.keys.rb.back | Back |
 | scr.keys.rf.choose | Choose |
 | scr.keys.rf.buy | Buy |
 | scr.keys.rf.undo | Give the last one back |

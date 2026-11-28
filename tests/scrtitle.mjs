@@ -103,9 +103,9 @@ check('Settings opens (the title pauses): the panels step aside', J(`T.scrHost.r
 g.run(`localStorage.setItem(CAMP.store, ${JSON.stringify(save(2, 1, ['1.1', '1.2', '1.3', '2.1']))}); T.events.h.resume.forEach(f => f());`);
 check('it closes: they are back, and the Campaign door says where the save is now (a reset, a mission flown)', J(`T.scrHost.root.style.visibility`) === '' && texts().indexOf('Mission 5 of 9') >= 0 && J(`T.scrDoors[0].meter.style.width`) === '44.4%');
 g.run(`T.ck = { open: true }; T.s1 = { tilePositionX: 0, tilePositionY: 0 }; T.s2 = { tilePositionX: 0, tilePositionY: 0 }; T.update(1000, 16);`);
-check('the keys page (drawn on the canvas) hides them while it is open', J(`T.scrHost.root.style.visibility`) === 'hidden');
+check('the keys page hides the doors, the name and the Settings chip while it is open, and not the root: the page is a panel of that same root, so a hidden root was a blank screen (docs/screens-flow.html step 1; re-pinned: this check asked for the hidden root)', J(`T.scrHost.root.style.visibility`) === '' && J(`T.scrParts.length`) === 3 && J(`T.scrParts.every(p => p.style.visibility === 'hidden')`) === true && J(`T.scrParts.every(p => p.parentNode === T.scrHost.root)`) === true);
 g.run(`T.ck = { open: false }; T.update(1016, 16);`);
-check('and they come back when it closes', J(`T.scrHost.root.style.visibility`) === '');
+check('and they come back when it closes', J(`T.scrHost.root.style.visibility`) === '' && J(`T.scrParts.every(p => p.style.visibility === '')`) === true);
 g.run(`T.events.h.shutdown.forEach(f => f());`);
 check('the scene ends: the panels are off the page and the title\'s listeners are taken back', J('document.body.children.length') === 0 && J(`(T.events.h.pause || []).length + (T.events.h.resume || []).length`) === 0);
 g.run(`localStorage.removeItem(CAMP.store);`);

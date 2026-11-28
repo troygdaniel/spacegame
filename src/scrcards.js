@@ -101,7 +101,7 @@ function scrLostModel(C, why, o) { // o: { mission: a mission of the list (else 
     scrColN([scrTextN('lab', ms ? uiText('scr.card.missionlost') : uiText('scr.card.levellost', { n: o.level != null ? o.level : (C && C.level) || 1 }), 'pink'), scrTextN('t2', cause)], { gap: 0.1 }),
     scrRowN([scrPillN(C ? scrClock(C.t / 1000) : '0:00', null), scrPillN(uiText(C && C.kills === 1 ? 'scr.card.kills.one' : 'scr.card.kills', { n: C ? C.kills | 0 : 0 }), null)]),
     segs.length ? scrTileN([scrTextN('lab', uiText('scr.card.nexttime'), 'gold'), scrRowN(segs.map((s, i) => s.chip ? (scrChipN('tip' + s.chip) || scrTextN('t3', (CAMP_KEYS[s.chip] || {}).k || s.chip)) : scrTextN(i === 0 ? 't3' : 'sm', s.text)))]) : null,
-    scrRowN([scrKeyWordN('pick', uiText('scr.card.again')), scrKeyWordN('title', uiText('scr.card.title'))], { just: 'end' })];
+    scrRowN([scrKeyWordN('pick', uiText('scr.card.again')), scrKeyWordN('close', uiText('scr.card.readyroom')), scrKeyWordN('title', uiText('scr.card.title'))], { just: 'end' })]; // Esc: back to the ready room (docs/screens-flow.html step 4)
   return scrCardN('lost', { w: 36, top: 26, gap: 0.9 }, kids);
 }
 

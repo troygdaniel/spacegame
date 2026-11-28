@@ -171,6 +171,7 @@ class Title extends Phaser.Scene {
       return o;
     });
     const st = el(R, 'div', 'sc-abs sc-r'); set(st, 'right', '1.4em'); set(st, 'top', '1.3em'); st.setAttribute('data-door', 'settings'); scrHostChip(R, st, M.settings.chip); set(el(R, 'span', 'sc-lab', st), 'text', M.settings.label);
+    this.scrParts = [head, row, st]; // the title's own pieces: hidden one by one while the keys page is up (update), never the root, which holds that page too (docs/screens-flow.html step 1)
     this.titleScrLit();
     const rr = R.root.getBoundingClientRect(), k = rr.width > 0 ? rr.width / W : 0; // a zone of the canvas under each thing a click may land on, in game px
     const zone = (node, pad, fn) => { if (!k) return; const b = node.getBoundingClientRect(), z = this.add.zone((b.left - rr.left + b.width / 2) / k, (b.top - rr.top + b.height / 2) / k, b.width / k + pad, b.height / k + pad).setInteractive({ useHandCursor: true }).setDepth(22); z.on('pointerdown', fn); };
@@ -194,7 +195,7 @@ class Title extends Phaser.Scene {
     if (typeof fillSync === 'function') fillSync(this); // the title takes the window's shape while Fill the window is on (src/fillwindow.js): its layout stays in the 1280 by 720 safe area, the sky (this.fillBack) covers the window
     if (this.scr === true && this.scrHost) { // the panels follow the canvas (a window that changed size) and step aside for the keys page, which is drawn on the canvas
       if (time - (this.scrFitAt || 0) > TITLE_SCR.refit) { this.scrFitAt = time; scrHostMount(this); }
-      scrHostSet(this.scrHost.root, 'visibility', typeof campKeysIsOpen === 'function' && campKeysIsOpen(this) ? 'hidden' : '');
+      const keys = typeof campKeysIsOpen === 'function' && campKeysIsOpen(this) ? 'hidden' : ''; (this.scrParts || []).forEach(p => scrHostSet(p, 'visibility', keys)); // H: the doors make way for the keys page, which is in the same root (so the root stays shown: hiding it showed a blank screen)
     }
     this.s1.tilePositionX += dt * 0.006; this.s1.tilePositionY += dt * 0.0015;
     this.s2.tilePositionX += dt * 0.014; this.s2.tilePositionY += dt * 0.0035;

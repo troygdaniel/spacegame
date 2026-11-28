@@ -56,6 +56,11 @@ const campTechLine = (id, P) => uiText('camp.tech.' + id + '.name') + '  -  ' + 
 // radio instead, in order, about four seconds apart and before anything else of the flight: each is offered to the radio's hold (src/campsayhold.js) as a kept line, so a line that is up is never overwritten and none is dropped; spaced like this
 // the voice (a queue of two, six seconds: src/voice.js) says each in full. Only a level started from the ready room (via 'hub'), and not a replay: the others keep the card.
 const CAMP_OPENERS = { first: 900, gap: 4500 }; // ms from the start of the flight to the first line, and between the lines
+// Esc goes back on the lost card too (docs/screens-flow.html step 4): to the ready room, with the mission still the next one (nothing is saved by a loss). Only on the new card, which shows the chip; the old card keeps Enter and T
+const campCardEsc = sc => !!sc && typeof scrOn === 'function' && scrOn();
+// Again (the lost card's Enter) and Restart (the pause card's Backspace) start the mission as 'retry': with the new screens it goes straight to the flight, with no story card and no mission card
+// (both are the old look, and both were read before the first try: docs/screens-flow.html step 2). With the screens switch off the cards show as before.
+const campRetryFlies = sc => !!sc && sc.via === 'retry' && typeof scrOn === 'function' && scrOn();
 function campOpeners(sc) { // the number of lines that will be said
   const lines = typeof campStory === 'function' ? campStory(sc.level, 'before', !!(sc.P && sc.P.revealed)) : []; if (!lines.length || !sc.time || typeof sc.time.delayedCall !== 'function') return 0;
   lines.forEach((l, i) => sc.time.delayedCall(CAMP_OPENERS.first + i * CAMP_OPENERS.gap, () => { if (!sc.leaving && sc.camp && !sc.camp.result && typeof sc.radioShow === 'function') sc.radioShow(campSayOffer(sc.sayR || (sc.sayR = campSayNew()), (sc.time && sc.time.now) || 0, { text: l, keep: true })); }));
@@ -258,9 +263,10 @@ class Campaign extends Phaser.Scene {
   }
   undock(hub) { campUndock(this.camp); this.docked = false; if (hub && hub.scene) hub.scene.stop(); this.scene.resume(); toast(this, uiText('camp.say.undock'), '#9fe9ff'); }
   nextMission() { go(this, 'CampHub', {}); } // after a debrief: the ready room (src/camphubscene.js), where the next mission's board, briefing and refit are and Launch flies it (no warp: only a level's first mission warps)
-  afterIntro() { if (this.via === 'hub') { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
+  afterIntro() { if (this.via === 'hub' || campRetryFlies(this)) { this.hideCard(); this.mode = 'play'; } else this.showBrief(); } // a mission launched from the ready room was briefed there: it goes straight to the flight
   showIntro() {
-    if (this.replay === true || this.mi > 0) { this.afterIntro(); return; } // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
+    if (this.replay === true || this.mi > 0) { this.afterIntro(); return; }
+    if (campRetryFlies(this)) { this.afterIntro(); return; } // Again and Restart: the story was told and the mission briefed before the first try (docs/screens-flow.html step 2) // a replay has no story told again; a later mission of the level: straight to its briefing (read in the ready room already, when it was launched from there)
     if (this.via === 'hub' && typeof scrOn === 'function' && scrOn() && campOpeners(this) > 0) { this.afterIntro(); return; } // the new look: no card, the lines are on the radio (campOpeners)
     this.mode = 'intro'; const lines = campStory(this.level, 'before', !!(this.P && this.P.revealed));
     this.showCard(uiText('camp.ui.level', { n: this.level, name: CAMP.levels[this.level].name }), lines, uiText('camp.ui.begin'));
@@ -363,12 +369,12 @@ class Campaign extends Phaser.Scene {
     if (this.mode === 'play' && typeof campCornerKey === 'function') campCornerKey(C, c); // a key of a corner panel opens its details (src/campcorner.js: Q W FLEET, and the keys of the corners other cards add)
     if (this.mode === 'intro') { if (c === 'Enter') { this.hideCard(); this.afterIntro(); } return; }
     if (this.mode === 'brief') { if (c === 'Enter') { this.hideCard(); this.mode = 'play'; } return; }
-    if (this.mode === 'debrief') { if (c === 'Enter') { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
+    if (this.mode === 'debrief') { if (c === 'Enter' || (c === 'Escape' && campCardEsc(this))) { this.hideCard(); if (this.mdone) this.showWon(); else this.nextMission(); } return; }
     if (this.mode === 'won') { if (c === 'Enter') { if (CAMP.levels[this.level].refit) this.showRefit(); else if (campTechChoices(this.level).length) this.showPick(); else this.next(); } return; }
     if (this.mode === 'refit') { this.refitKey(c); return; }
     if (this.mode === 'end') { if (c === 'Enter' || c === 'KeyT') go(this, 'Title'); return; }
     if (this.mode === 'pick') { this.pickKey(c); return; }
-    if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); else if (c === 'KeyT') go(this, 'Title'); return; } // a lost mission is flown again; the level is not lost
+    if (this.mode === 'lost') { if (c === 'Enter') go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); else if (c === 'KeyT') go(this, 'Title'); else if (c === 'Escape' && campCardEsc(this)) this.nextMission(); return; } // a lost mission is flown again; the level is not lost
     if (this.mode === 'pause') { if (c === 'Escape') { this.hideCard(); this.mode = 'play'; } else if (c === 'KeyT') go(this, 'Title'); else if (c === 'KeyH') this.openKeys(); else if (campKeyIs('settings', c) && typeof settingsOpen === 'function') settingsOpen(this, 'sound'); else if (campKeyIs('restart', c) && (this.camp && this.camp.L && this.camp.L.objectives)) go(this, 'Campaign', { level: this.level, mission: this.mi, techs: this.P.techs, via: 'retry', replay: this.replay === true }); return; } // Backspace (CAMP_KEYS restart; it was R, which is the missile rack in play): restart the mission (the level is kept; a replay is flown again as a replay); H: every key
     if (campKeyCodes('help').indexOf(c) >= 0) { this.openKeys(); return; } // H: every key, on one page
     if (campKeyIs('tune', c)) { if (typeof campTuneLiveIsOpen === 'function' && campTuneLiveIsOpen(this)) { campTuneLiveClose(this); return; } if (typeof this.openTune === 'function') this.openTune(); return; } // N: closes the live sliders when they are up (card space-game-cruiser-feel-sliders), else the tuning panel (src/camptunedraw.js), over the battle, which waits
