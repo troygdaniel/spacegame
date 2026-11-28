@@ -104,6 +104,8 @@ console.log('F. the cruiser is E1 where no ship is on the row');
   check('the corner and the rings list her like a ship: a line "Cruiser" and a ring numbered 1 with her hull', J('__rows.length') === 3 && J('__rows[0].name') === 'Cruiser' && J('__rows[0].ok') === true && J('__ring.length') === 3, JSON.stringify(J('__rows.map(r => r.name + ":" + r.num)')));
   g.run(`C.carrier.hp = 0; window.__lost = campFriNumbered(C)[0]; C.fsel = 'cruiser';`);
   check('a lost cruiser is dark (the mission is over anyway): her number stays, and the held pick is let go', J('__lost.alive') === false && J('__lost.number') === 1 && J('campFriNow(C)') === null && J('C.fsel') === '', JSON.stringify(J('[__lost.alive, C.fsel]')));
+  g.run(`__mk(3, 2, 2); campSelPick(C, 'pilot:red', 'key'); campFriJump(C, 1); window.__tc = JSON.stringify(campTeachLights(C));`);
+  check('the one-time chip "Enter twice: the other" stays dark for the cruiser (no secondary there), and lights for a field', !/twice|other/i.test(J('__tc')) && (g.run(`campFriJump(C, 2); window.__tf = JSON.stringify(campTeachLights(C));`), /twice|other/i.test(J('__tf'))), J('__tc') + ' / ' + J('__tf'));
   g.run(`__mk(1, 1, 2);`);
   check('1.2 (ore) has no cruiser on the row: its fields are first', !J('__nums()').some(x => /Cruiser/.test(x)));
   g.run(`__mk(1, 0, 2);`);
