@@ -66,7 +66,7 @@ function scrPauseModel(C, o) { // o: { mission: a mission has a restart, debug: 
   o = o || {};
   const g = C && typeof campPageHudGoal === 'function' ? campPageHudGoal(C) : null, kids = [scrTextN('t1', uiText('scr.card.paused'))];
   if (g) kids.push(scrRowN(g.frac == null ? [scrTextN('lab', g.label, 'gold'), scrTextN('t3', g.value)] : [scrTextN('lab', g.label, 'gold'), scrMeterN(g.frac, 'gold'), scrTextN('t3', g.value)], { full: true }));
-  kids.push(scrRowN([scrKeyWordN('close', uiText('scr.card.resume')), o.mission ? scrKeyWordN('restart', uiText('scr.card.restart')) : null, scrKeyWordN('help', uiText('scr.card.keys')), scrKeyWordN('settings', uiText('scr.card.settings')), scrKeyWordN('title', uiText('scr.card.title'))], { wrap: true, just: 'ctr', gap: 0.9 }));
+  kids.push(scrRowN([scrKeyWordN('close', uiText('scr.card.resume')), o.mission ? scrKeyWordN('restart', uiText('scr.card.restart')) : null, scrKeyWordN('help', uiText('scr.card.keys')), scrKeyWordN('settings', uiText('scr.card.settings')), scrKeyWordN('hub', uiText('scr.card.readyroom')), scrKeyWordN('title', uiText('scr.card.title'))], { wrap: true, just: 'ctr', gap: 0.9 })); // K: the ready room (card space-game-b13-a3-a9-pause-settings), the word the lost card already has
   if (o.debug) kids.push(scrTextN('sm', o.debug, 'amber'));
   return scrCardN('pause', { w: 30, top: 30, gap: 1, ctr: true }, kids);
 }

@@ -13,10 +13,12 @@ g.run(`window.__mk = (m, seed) => { const C = window.C = campNew(3, ['shield', '
 
 console.log('A. 3.1: a scan and its wave');
 g.run('__mk(0)');
-check('three waves, one for each scan, none of them on a clock: each waits for its scan to begin (on.scanning 0, 1, 2)', J('C.L.waves.slice(0, 3).map(w => w.on && w.on.scanning).join()') === '0,1,2' && J('C.L.waves.every(w => w.at == null)'));
-check('nothing comes while no ship of ours is in a ring', (g.run('__run(40)'), J('__started().join()') === 'false,false,false' && J('__alive()') === 0));
+// card space-game-b14-c20-31-first-minute (the cloud's BRIEF 14 chunk 20; Troy, 27 Nov 2026): the FIRST ring's answer comes on ARRIVAL, so the first minute has something in it; the other two still wait for their scan
+check('three waves: the first on ARRIVAL (on.arrived 0), the second and third each waiting for its scan to begin (on.scanning 1, 2); none on a clock', J('C.L.waves.slice(0, 3).map(w => w.on && (w.on.arrived != null ? "a" + w.on.arrived : w.on.scanning)).join()') === 'a0,1,2' && J('C.L.waves.every(w => w.at == null)'));
+check('on.arrived: false before the cruiser has come to the place, true the moment it has (0), and s seconds after it for s', J('(() => { const f = (arrivedAt, t, s) => campWaveOn({ arrivedAt, t }, { arrived: s }); return [f(null, 99999, 0), f(5000, 5000, 0), f(5000, 7999, 3), f(5000, 8000, 3)].join(); })()') === 'false,true,false,true');
+check('no ship of ours in a ring for 40 s: only the first wave has come (on arrival: 2 raiders), no ring has begun, the second and third wait', (g.run('__run(40)'), J('__started().join()') === 'true,false,false' && J('C.scan.every(p => !p.began)')));
 g.run('{ const p = C.scan[0]; C.carrier.x = p.x; C.carrier.y = p.y; C.carrier.vx = C.carrier.vy = 0; } __run(1);');
-check('the first scan begins the moment the cruiser is in its ring: its wave starts then (not when the scan is done), the others do not', J('__started().join()') === 'true,false,false' && J('C.scan[0].began') === true && J('C.scan[0].t') > 0 && J('C.scan[1].began') === false, J('__started().join()') + ' ' + J('C.scan[0].t'));
+check('the first scan begins the moment the cruiser is in its ring and calls no wave of its own (the first answer came on arrival): the scan moves, the others do not begin', J('__started().join()') === 'true,false,false' && J('C.scan[0].began') === true && J('C.scan[0].t') > 0 && J('C.scan[1].began') === false, J('__started().join()') + ' ' + J('C.scan[0].t'));
 g.run('{ const p = C.scan[1]; C.carrier.x = p.x; C.carrier.y = p.y; } __run(1);');
 check('the second scan\'s wave comes when the second begins', J('__started().join()') === 'true,true,false');
 g.run('{ const p = C.scan[2]; C.carrier.x = p.x; C.carrier.y = p.y; } __run(1);');

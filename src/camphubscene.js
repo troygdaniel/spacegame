@@ -50,7 +50,7 @@ function campHubWarm(sc, level) {
 function campHubNewLook(sc) {
   const on = typeof scrOn === 'function' && scrOn() && !(sc.d && sc.d.dock) && typeof scrHubPaint === 'function';
   if (!on) { if (sc.scrHubOn === true) campHubOldLook(sc); return false; }
-  const msg = sc.msg && sc.time && sc.msg.until > sc.time.now && sc.msg.over === (sc.hub.open || '') ? { text: sc.msg.text, ok: sc.msg.ok } : null;
+  const msg = sc.msg && sc.time && sc.msg.until > sc.time.now && sc.msg.over === (sc.hub.open || '') ? { text: sc.msg.text, ok: sc.msg.ok, key: sc.msg.key || '' } : null;
   if (!scrHubPaint(sc, scrHubModel(sc.P, sc.hub, { station: String(sc.look && sc.look.name || ''), msg, oldNote: !!sc.oldNote && campHubOldSave(sc.P) }))) { if (sc.scrHubOn === true) campHubOldLook(sc); return false; }
   if (sc.scrHubOn !== true) {
     sc.scrHubOn = true;
@@ -303,7 +303,7 @@ class CampHub extends Phaser.Scene {
     H.row = k; H.open = ''; this.apply({ used: true, moved: true, action: '', changed: false, ok: true, say: null });
   }
   apply(r) {
-    if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), ok: r.ok, until: this.time.now + CAMP_HUBS.msg, over: this.hub.open || '' }; sfx(r.ok ? 'chime' : 'empty'); }
+    if (r.say) { this.msg = { text: r.say.text != null ? String(r.say.text) : uiText(r.say.key, r.say.vars), key: r.say.key || '', ok: r.ok, until: this.time.now + CAMP_HUBS.msg, over: this.hub.open || '' }; sfx(r.ok ? 'chime' : 'empty'); }
     if (r.changed) campProgressSave(this.P); // a purchase is kept at once
     if (r.moved) { sfx('tick'); this.stand(false); }
     this.paint();
