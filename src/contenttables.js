@@ -1562,7 +1562,7 @@ const UI_TEXT = {
   'camp.bf.2.3.w4': 'Aliens come from the north-east after 3 seconds.',
   'camp.bf.3.1.w1': 'Fly to each of the 3 marked rings on the map.',
   'camp.bf.3.1.w2': 'Any ship of yours inside a ring scans it: 7 seconds.',
-  'camp.bf.3.1.w3': 'Aliens answer each scan. Keep the wing close.',
+  'camp.bf.3.1.w3': 'Aliens meet you, then answer each scan. Keep the wing close.',
   'camp.bf.3.1.w4': 'Finish by destroying every alien that comes.',
   'camp.bf.3.2.w1': 'Destroy all 4 defence towers around the target.',
   'camp.bf.3.2.w2': 'Approach with the wing ahead of the cruiser.',
