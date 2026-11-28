@@ -260,10 +260,9 @@ function hudEnergy(h, s, now) {
 }
 
 // ---- credits and gear strip, top centre ----
-function hudStrip(h, now) {
-  const g = h.g;
-  // credits: a coin, the label CR and the figure in gold. The figure counts to the real value; a gain or a loss lights the strip
-  // (gold or red, also set at once by enemies.js bountyPay in h.pulse) and floats +N or -N beside the figure
+// the credits' state, once a frame: the figure counts to the real value; a gain or a loss lights the strip (gold or red, also set at once by enemies.js bountyPay in h.pulse) and floats +N or -N beside the figure.
+// Its own function so that the new Long Haul's page panel (src/lhpagehud.js) runs the same state when the canvas strip is left out (card space-game-lh-hud-one-style)
+function hudCredits(h, now) {
   if (G.credits !== h.cr) {
     const d = G.credits - h.cr;
     h.flash = now + 700; h.gain = { v: d, t: now }; h.cr = G.credits;
@@ -271,6 +270,11 @@ function hudStrip(h, now) {
   }
   if (h.crShow == null) h.crShow = G.credits;
   h.crShow += (G.credits - h.crShow) * 0.14; if (Math.abs(G.credits - h.crShow) < 1) h.crShow = G.credits;
+}
+function hudStrip(h, now) {
+  const g = h.g;
+  // credits: a coin, the label CR and the figure in gold (the state: hudCredits above)
+  hudCredits(h, now);
   const CRW = 408; // the money strip: 400 wide until the sixth part (the autotarget) needed 8 more; the ORE panel starts at 856
   hudPanel(g, 440, 10, CRW, 30, 8, 0.78, GOLD); // a gold edge: this is the one strip that is money
   const pulse = h.pulse > now ? (h.pulse - now) / 650 : 0, pc = h.pulseCol || GOLD;
@@ -309,7 +313,10 @@ function hudFuel(h, now) {
   hudPanel(g, 296, 10, 134, 30, 8, 0.78, col);
   hudPut(h, 'fuell', 312, 25, 'FUEL', { size: HT.label, color: crit ? '#ff4d6d' : low ? '#ffd37a' : HUD_DIM, spacing: 2 });
   hudBar(g, 346, 19, 74, 12, f, col, 10, crit ? 0.55 + 0.45 * Math.sin(now / 120) : null);
-  // the warning (SFX.fuelLow): once when the tank falls into amber or red, and again every 20 s while it stays red; only in flight
+  hudFuelWarn(h, now, crit, low);
+}
+// the warning (SFX.fuelLow): once when the tank falls into amber or red, and again every 20 s while it stays red; only in flight. Its own function so the new Long Haul's page panel can keep the sound when the canvas strip is left out
+function hudFuelWarn(h, now, crit, low) {
   if (h.s && h.s.scene.key === 'Space') {
     const rank = crit ? 2 : low ? 1 : 0;
     if (rank > (h.fuelRank || 0) || (crit && now - (h.fuelAt || 0) > 20000)) { h.fuelAt = now; sfx('fuelLow'); }
@@ -543,7 +550,7 @@ function hudMapDist(px) { const km = px / 10; return km >= 10000 ? Math.round(km
 
 // ---- radar: rings, sweep, landmarks and what is near; it sits top right ----
 function hudRadar(h, s, key, obj, now) {
-  const g = h.g, R = 84, cx = W - 110, cy = 112, range = HUD_RANGE[key], sc = R / range;
+  const g = h.g, R = 84, cx = W - 110, cy = h.radarCy || 112, range = HUD_RANGE[key], sc = R / range; // h.radarCy: the new Long Haul's supplies panel stands above it (src/lhpagehud.js), so it sits lower
   const me = key === 'Space' ? s.ship : s.player, ox = me.x, oy = me.y;
   // what is hostile and how close: the rim and the line under the radar turn red once something is near enough to attack
   const foes = key === 'Space' ? s.enemies.getChildren() : s.crawlers.getChildren(), engage = key === 'Space' ? 900 : 380, unit = key === 'Space' ? 'km' : 'm';
@@ -890,7 +897,7 @@ function hudTick(s) {
     const f = s.col.hp / 60;
     hudGauge(h, 'g2', 186, 80, 40, f, f > 0.3 ? AMBER : RED, String(Math.max(0, Math.round(s.col.hp))), 'COLONIST');
   }
-  hudStrip(h, now);
+  if (lhh) { hudCredits(h, now); const fst = fuelState(); hudFuelWarn(h, now, fst === 'crit', fst !== 'ok'); } else hudStrip(h, now); // ?longhaul=new: the credits, fuel, parts and ore are a page panel (src/lhpagehud.js); the state and the fuel sound stay here
 
   const m = hudMission(s, key);
   if (key === 'Station') {
@@ -905,16 +912,19 @@ function hudTick(s) {
     if (!h.keyT) h.keyT = s.input.keyboard.addKey('T');
     h.open = HUDUI.mode === 'open' || (HUDUI.mode === 'auto' && now < HUDUI.until);
     if (Phaser.Input.Keyboard.JustDown(h.keyT)) { hudToggle(h, s, false); h.open = HUDUI.mode === 'open'; }
-    const ht = hudTracker(h, m, s._hm || null, now, h.open);
-    hudHit(h, s, HUD_FRAME.x, HUD_FRAME.y, HUD_FRAME.w, ht);
-    h.zones.push({ x0: 0, y0: 0, x1: HUD_FRAME.x + HUD_FRAME.w + 20, y1: HUD_FRAME.y + ht + 12 });
+    if (lhh) { h.lhMission = { m, meter: s._hm || null, open: h.open }; lhPageHudSide(s, h, now); } // ?longhaul=new: the mission box, the supplies, the tips and the talk cap are page panels (src/lhpagehud.js), which say where they stand (h.zones)
+    else {
+      const ht = hudTracker(h, m, s._hm || null, now, h.open);
+      hudHit(h, s, HUD_FRAME.x, HUD_FRAME.y, HUD_FRAME.w, ht);
+      h.zones.push({ x0: 0, y0: 0, x1: HUD_FRAME.x + HUD_FRAME.w + 20, y1: HUD_FRAME.y + ht + 12 });
+    }
   }
 
   const obj = hudObjective(s, key);
   if (space) hudLock(h, s, now); // before the radar, which brackets the target's blip too
   if (space || surf) {
-    h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
-    if (space && s.cruising && h.radarMode !== 'sys') { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, 112, 88); } // cruise: nothing local matters, the radar dims
+    h.zones.push({ x0: W - 230, y0: 0, x1: W, y1: 250 + ((h.radarCy || 112) - 112) }); hudRadar(h, s, key, space ? hudObjective(s, key, true) : obj, now);
+    if (space && s.cruising && h.radarMode !== 'sys') { g.fillStyle(HUD_BG, 0.72); hudDisc(g, W - 110, h.radarCy || 112, 88); } // cruise: nothing local matters, the radar dims
   }
   if (space) hudTargets(h, s, now);
   if (space) hudAssist(h, s);

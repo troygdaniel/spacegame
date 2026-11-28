@@ -1316,7 +1316,8 @@ const UI_TEXT = {
   'camp.corner.chip.reload': 'Reload',
   'camp.corner.chip.teachr': 'rack is empty',
   'camp.corner.chip.map': 'Map',
-  'lh.chip.dock': 'Dock', 'lh.chip.places': 'Places', 'lh.chip.keys': 'Keys', // the new Long Haul's key row (src/lhpagehud.js, content/text/longhaul.md; behind ?longhaul=new)
+  'lh.chip.dock': 'Dock', 'lh.chip.places': 'Places', 'lh.chip.keys': 'Keys', 'lh.hud.mission': 'Mission', 'lh.hud.hide': 'Hide', 'lh.hud.fuel': 'Fuel', 'lh.hud.ore': 'Ore', 'lh.hud.cr': 'Cr', 'lh.hud.tips': 'Hide tips', // the new Long Haul's supplies, mission and tips panels (src/lhpagehud.js; card space-game-lh-hud-one-style): the words the canvas HUD wrote, now in the Campaign's panel look
+   // the new Long Haul's key row (src/lhpagehud.js, content/text/longhaul.md; behind ?longhaul=new)
   'camp.corner.chip.teachtab': 'wave off screen',
   'camp.corner.cruiserauto': 'Cruiser (auto)',
   'camp.corner.comehere': 'Cruiser, come to me',

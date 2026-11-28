@@ -186,7 +186,8 @@ function guideTick(s) {
   else if (!s.leaving) text = travelHint(s) || hintLadder(s);
   if (text !== s._gtext) {
     s._gtext = text;
-    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(!!text && (!G.guideDone || text === TRAVEL.text || !!LADDER.id));
+    s._gkOn = !!text && (!G.guideDone || text === TRAVEL.text || !!LADDER.id); // (the H cap: the new Long Haul's page panel reads it, src/lhpagehud.js)
+    s._gh.setText(text).setVisible(!!text).setAlpha(0); s._gk.setVisible(s._gkOn);
     if (text) s.tweens.add({ targets: s._gh, alpha: 1, duration: 180 });
     guidePlace(s);
   }
@@ -195,6 +196,7 @@ function guideTick(s) {
     if (away) { s._gh.setVisible(false); s._gk.setVisible(false); } else if (s._gaway) s._gtext = null;
     s._gaway = away;
   }
+  if (typeof lhPageHudOwnsTips === 'function' && lhPageHudOwnsTips(s)) { s._gh.setVisible(false); s._gk.setVisible(false); } // ?longhaul=new: the page draws the tip and its H cap (src/lhpagehud.js), the canvas leaves its text out
 
   if (G.earned >= GOAL && !G.endingSeen) {
     if (key === 'Station') { if (!s.leaving && !s.panel && !s.talk) showEnding(s); }

@@ -238,6 +238,14 @@ function listenCapDom() {
   if (typeof document === 'undefined' || !document.body) return null;
   try {
     const mk = css => { const e = document.createElement('div'); e.style.cssText = css; return e; };
+    if (typeof lhNewOn === 'function' && lhNewOn()) { // ?longhaul=new: the Campaign's look (card space-game-lh-hud-one-style): a dark rounded pill, the key as the page HUD's pale cap, the word beside it, and the hold's ring as a bar along its foot
+      const root = mk('position:fixed;z-index:59;pointer-events:none;display:none;align-items:center;gap:8px;padding:7px 14px 7px 8px;border-radius:999px;overflow:hidden;background:rgba(14,22,36,0.62);border:1px solid rgba(140,170,210,0.16);'
+        + '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,0.35);font:600 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8794ab');
+      const key = mk('min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;background:#bfe9ff;color:#0a1420;font:600 12px/22px system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:0;text-align:center;text-transform:none');
+      const label = mk(''), bar = mk('position:absolute;left:0;bottom:0;height:3px;width:0;background:#6fd6ff');
+      key.textContent = LISTEN.cap; root.setAttribute('aria-hidden', 'true'); root.appendChild(key); root.appendChild(label); root.appendChild(bar); document.body.appendChild(root);
+      LISTEN.capEl = { root, key, label, bar, lh: true }; return LISTEN.capEl;
+    }
     const root = mk('position:fixed;z-index:59;pointer-events:none;display:none;width:58px;height:58px;border-radius:50%;background:rgba(56,225,255,0.2)');
     const face = mk('position:absolute;left:5px;top:5px;width:48px;height:48px;border-radius:50%;background:rgba(4,12,24,0.92)');
     const key = mk('position:absolute;left:12px;top:11px;width:24px;height:22px;border-radius:5px;background:#38e1ff;color:#02101c;font:700 14px ui-monospace,Menlo,Consolas,monospace;text-align:center;line-height:22px;box-shadow:0 3px 0 rgba(0,0,0,0.45)');
@@ -255,6 +263,11 @@ function listenCapPaint() {
     if (!busy && !listenCapShown(game)) { d.root.style.display = 'none'; return null; }
     if (busy && !listenCapShown(game) && S.state !== 'listening' && S.state !== 'opening') { d.root.style.display = 'none'; return null; } // the scene went away under the ring
     const v = listenCapView(), canvas = typeof window !== 'undefined' && window.game && window.game.canvas, r = canvas && canvas.getBoundingClientRect ? (typeof fillSafeRect === 'function' ? fillSafeRect(canvas) : canvas.getBoundingClientRect()) : null;
+    if (d.lh) { // the new Long Haul's pill: same place, same states (the colour and the word are the state's, the bar is the hold's ring)
+      Object.assign(d.root.style, { display: 'flex', left: (r ? r.left + 14 : 14) + 'px', top: (r ? r.top + r.height / 2 - 15 : 300) + 'px', opacity: v.idle ? '0.7' : '1', boxShadow: v.glow !== undefined ? '0 0 ' + Math.round(8 + v.glow * 30) + 'px ' + v.color : '0 6px 20px rgba(0,0,0,0.35)', borderColor: v.idle ? 'rgba(140,170,210,0.16)' : v.color });
+      d.bar.style.width = Math.round(Math.max(0, Math.min(1, v.fill)) * 100) + '%'; d.bar.style.background = v.color; d.label.textContent = v.label; d.label.style.color = v.idle ? '#8794ab' : v.color;
+      return null;
+    }
     Object.assign(d.root.style, { display: 'block', left: (r ? r.left + 14 : 14) + 'px', top: (r ? r.top + r.height / 2 - 29 : 300) + 'px', opacity: v.idle ? '0.55' : '1',
       background: v.fill >= 1 ? v.color : 'conic-gradient(' + v.color + ' ' + Math.round(v.fill * 360) + 'deg, rgba(56,225,255,0.2) 0)', boxShadow: v.glow !== undefined ? '0 0 ' + Math.round(8 + v.glow * 30) + 'px ' + v.color : 'none' });
     d.label.textContent = v.label; d.label.style.color = v.idle ? '#8fb4c9' : v.color;
