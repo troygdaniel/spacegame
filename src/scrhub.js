@@ -27,7 +27,7 @@ function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text,
   const lines = [scrGoalLine(t.level, t.i)];
   const bar = scrCardN('ready.bar', { bare: true, at: { left: '1.4em', right: '1.4em', top: '1.2em' }, gap: 0 }, [scrRowN([scrRowN([scrTextN('lab', o.station || ''), scrTextN('dim', '·'), scrTextN('lab', uiText('scr.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }))]), scrKeyWordN('close', uiText('scr.card.title'))], { just: 'sp', full: true })]);
   const card = scrCardN('ready', { w: 40, top: 20, gap: 1 }, [
-    scrRowN([scrColN([scrTextN('lab', tag, 'gold'), scrTextN('t1', b ? b.title : ''), lines[0] ? scrTextN('sm', lines[0]) : null], { gap: 0.2 }), scrColN([scrKeyWordN('launch', uiText('scr.hub.briefing')), id === 'launch' ? scrKeyWordN('pick', uiText('scr.hub.launch')) : null], { gap: 0.3, ctr: true })], { just: 'sp' }),
+    scrRowN([scrColN([scrTextN('lab', tag, 'gold'), scrTextN('t1', b ? b.title : ''), lines[0] ? scrTextN('sm', lines[0]) : null], { gap: 0.2 }), scrColN([id === 'launch' ? scrKeyWordN('pick', uiText('scr.hub.briefing')) : scrKeyWordN('launch', uiText('scr.hub.briefing'))], { gap: 0.3, ctr: true })], { just: 'sp' }), // lit on the card: Enter opens its briefing (BRIEF 13 A1), so the one chip is Enter; with the light on a row below, L still does it
     scrRuleN(),
     scrRowN(items, { gap: 0.6, wrap: true }),
     o.oldNote ? scrTextN('sm', uiText('scr.hub.oldsave'), 'amber') : null, scrHubMsg(o)]);

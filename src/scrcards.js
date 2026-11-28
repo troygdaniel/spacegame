@@ -89,7 +89,7 @@ function scrWonModel(C, P, o) { // o: { sc: the score, title: the mission's name
     R ? scrRowN([scrPillN(uiText('scr.card.best', { best: scrNum(R.best | 0) }), null), R.improved || R.first ? scrPillN(uiText('scr.card.newbest'), true) : null], { gap: 0.5 }) : null,
     scrRowN((sc.bonuses || []).map(b => scrPillN(scrBonusText(b), !!b.ok)), { wrap: true, gap: 0.5 }),
     scrRowN(stats, { gap: 1.6 }),
-    scrRowN([scrKeyWordN('pick', uiText(o.mdone ? 'scr.card.continue' : 'scr.card.readyroom'))], { just: 'end' })];
+    scrRowN(o.mdone ? [scrKeyWordN('pick', uiText('scr.card.continue'))] : [scrKeyWordN('pick', uiText('scr.hub.briefing')), scrKeyWordN('close', uiText('scr.card.readyroom'))], { just: 'end' })]; // Enter: the next mission's briefing, Esc: the ready room (BRIEF 13 A2); the level's last mission goes on to the level card as ever
   return scrCardN('won', { w: 36, top: 14, gap: 1 }, kids);
 }
 

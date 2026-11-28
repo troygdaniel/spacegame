@@ -79,7 +79,7 @@ class CampHub extends Phaser.Scene {
   create() {
     if (typeof campTuneLoadOnce === 'function') campTuneLoadOnce(); // the tuning panel's overrides (src/camptune.js): read once per page, before anything here reads the CAMP table
     this.P = this.d.P || campProgressLoad(); if (typeof campReveal === 'function') campReveal(!!this.P.revealed); // after the ending has been seen, level 3 is the outpost on the board too (the Campaign scene did this only when it began: a page loaded after the ending showed the old name)
-    this.hub = campHubNew(this.P, { rows: this.d.rows, at: this.d.at }); this.oldNote = !this.d.dock && campHubOldNote(this.P); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
+    this.hub = campHubNew(this.P, { rows: this.d.rows, at: campHubOpenRow(this.d) }); this.openBrief = this.d.brief === true; this.oldNote = !this.d.dock && campHubOldNote(this.P); this.msg = null; this.walls = []; // a dock hands in the Campaign scene's own progress, so what is bought there is not overwritten at the debrief
     const nx = campHubNext(this.P), st = Object.assign({}, campHubStation(nx.level, nx.i), this.d.station && typeof this.d.station === 'object' ? this.d.station : {}), css = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : campHubStation(nx.level).accent;
     this.look = { id: 'camp-hub', name: String(st.name), art: st.art, home: false, accent: parseInt(css.slice(1), 16), accentCss: css, pirate: false, // what src/stationlook.js answers for a dock: the hall's colour, and the desks in it (a mission desk and a repair bay, no bar, shop or pump)
       terminals: { missions: true, repair: true, shop: false, pump: false, bar: false }, barName: '', barLines: [], welcome: '' };
@@ -324,6 +324,7 @@ class CampHub extends Phaser.Scene {
     if (this.scrHubOn === true) campHubHideNames(this); // (the YOU tag is made at the first tick)
     if (this.scrHubOn === true && typeof scrBriefSync === 'function') scrBriefSync(this);
     if (this.scrHubOn === true && typeof scrHubSync === 'function') scrHubSync(this, (typeof campKeysIsOpen === 'function' && campKeysIsOpen(this)) || (typeof campTuneIsOpen === 'function' && campTuneIsOpen(this)), typeof campBriefIsOpen === 'function' && campBriefIsOpen(this)); // the new look's panels follow the canvas and wait while a page of the room's own is in front (the briefing's one page lives in the same host: only the room's screen waits for it)
+    if (this.openBrief === true && this.scrHubOn === true && !this.leaving) { this.openBrief = false; if (typeof campBriefOpen === 'function') campBriefOpen(this); } // the won card's Enter (card space-game-b13-a1-a2-enter-flow, BRIEF 13 A2): the room is up, and the next mission's briefing opens at once; a mission with no briefing leaves you in the room
     if (this.msg && this.msg.until <= time && !this.msg.gone) { this.msg.gone = true; this.paint(); } // the answer fades from the page
   }
 }
