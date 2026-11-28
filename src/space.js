@@ -56,7 +56,7 @@ class Space extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WS, WS);
     if (!this.seamless) this.cameras.main.fadeIn(300, 0, 0, 0);
     this.cameras.main.setBounds(0, 0, WS, WS);
-    spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
+    if (!(typeof lhBackdrop === 'function' && lhBackdrop(this, !!G.deep))) spaceBackdrop(this, !!G.deep); // (with ?longhaul=new the Campaign's sky and, at home, Earth: src/lhearth.js) src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
     const land = G.deep ? null : missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable; deep space keeps G.system on the books but has no planet (the call's body is looked up by that id and would put Kepler-4b in the empty world)
@@ -71,8 +71,9 @@ class Space extends Phaser.Scene {
     // you can land only where there is a surface to land on: the Surface scene is the rescue call's (a world of the Hollow gets its own later), so only that call's planet is landable
     this.canLand = !!land;
     if (plDef) {
-      this.planet = this.add.image(plDef.x, plDef.y, plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
-      if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
+      const lw = typeof lhWorld === 'function' ? lhWorld(this, plDef) : null; // with ?longhaul=new the home system's world is the Campaign's flat disc (src/lhearth.js); null: today's
+      this.planet = this.add.image(plDef.x, plDef.y, lw ? lw.key : plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
+      if (lw) this.planet.setScale(lw.scale); else if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
       label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
     } else { this.planet = spaceNowhere(); this.planetR = 0; }
 
@@ -159,7 +160,8 @@ class Space extends Phaser.Scene {
   killDrone(e) { // one place for bullets and ramming to finish an enemy
     const wanted = e.wanted, x = e.x, y = e.y, def = e.def;
     dropSalvage(this, e); // src/enemies.js
-    this.boom.explode(28, x, y); e.destroy(); G.stats.drones++; sfx('boom');
+    if (!(typeof lhKill === 'function' && lhKill(this, x, y, false))) this.boom.explode(28, x, y); // (with ?longhaul=new the Campaign's kill effect: a white ring, a pink ring, a core and five shards, src/lhfx.js)
+    e.destroy(); G.stats.drones++; sfx('boom');
     bountyPay(this, x, y, def); // src/enemies.js: the credits, the gold BOUNTY +N, coins, HUD glow, chime
     if (wanted || e.boss) missionKill(this, e);
   }
@@ -171,7 +173,8 @@ class Space extends Phaser.Scene {
     if (!b) return null;
     b.enableBody(true, x, y, true, true);
     b.setRotation(rot).setDepth(4);
-    b.born = now; b.dmg = 0;
+    b.born = now; b.dmg = 0; b.life = 0;
+    if (typeof lhShotLook === 'function') lhShotLook(this, b, group === this.pb); // with ?longhaul=new the Campaign's bolts: yours mint, a pirate's pink (src/lhbridge.js)
     this.physics.velocityFromRotation(rot, speed, b.body.velocity);
     return b;
   }
@@ -197,7 +200,7 @@ class Space extends Phaser.Scene {
 
   die() {
     this.dead = true;
-    this.boom.explode(70, this.ship.x, this.ship.y);
+    if (!(typeof lhKill === 'function' && lhKill(this, this.ship.x, this.ship.y, true))) this.boom.explode(70, this.ship.x, this.ship.y);
     this.ship.setVisible(false); this.ship.body.enable = false;
     // insurance fee: 20% of your credits, never less than 50; too poor to cover it and the ship is rebuilt at half hull
     const owed = Math.max(50, Math.floor(G.credits * 0.2)), fee = Math.min(owed, G.credits);
@@ -211,9 +214,10 @@ class Space extends Phaser.Scene {
 
   update(time, dt) {
     guideTick(this);
-    if (this.keyLine) this.keyLine.setVisible(G.guideDone || !(this._gh && this._gh.visible)); // not under a first-run tip, which says the keys itself; the later travel tip does not, so the line stays
+    if (this.keyLine) this.keyLine.setVisible((G.guideDone || !(this._gh && this._gh.visible)) && !(typeof lhNewOn === 'function' && lhNewOn())); // not under a first-run tip, which says the keys itself; the later travel tip does not, so the line stays
     const k = this.k, ship = this.ship, JD = Phaser.Input.Keyboard.JustDown;
     spaceBackdropTick(this); // parallax layers follow the camera
+    if (typeof lhCamFrame === 'function') lhCamFrame(this, dt); // with ?longhaul=new the view leads a boosting ship and pulls back a little, as the Campaign's does (src/lhcam.js); nothing without it
     if (this.dead) return;
     if (this.leaving) { feelFrame(this, time, dt); return; } // docking or landing move is playing (feel.js)
     deepFrame(this); // src/pullout.js: the last pirate of a pull-out gone starts the way back into the tunnel
@@ -250,15 +254,16 @@ class Space extends Phaser.Scene {
     if (ap === 'auto') autopilotDrive(this, dt); // the autopilot sets the heading and the speed over the thrust code above
     if (ast === 'assist') assistDrive(this, dt); // the flight assist does the same, with its own flight model
     if (JD(k.R)) aimToggle(this); // src/autotarget.js: the sixth part, on or off (R is free in flight; X belongs to the nav list, which reads it every frame)
-    aimUpdate(this, ship, locked || still); // the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
+    if (!(typeof lhAimSync === 'function' && lhAimSync(this, ship, locked || still, time))) aimUpdate(this, ship, locked || still); // (with ?longhaul=new the Campaign fighter's aim help and its mint ring: src/lhbridge.js) the reticle on the raider the guns would turn to (none while it is off, unfitted, or you cannot fire)
     if (!locked && !still && (k.SPACE.isDown || this.input.activePointer.isDown) && time > this.nextFire) {
       this.nextFire = time + fireDelay();
-      const rot = aimAngle(this, ship); // the ship's heading, or toward the nearest raider in reach when the autotarget is fitted and on
-      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, rot, SHOT_SPEED, time);
-      if (shot) shot.dmg = shipStat('damage'); // the weapons part: 15, and 20 at tier 3
+      const lf = typeof lhFire === 'function' ? lhFire(this, ship, time) : null; // with ?longhaul=new the Campaign fighter's shot: its speed, its life, the lead the aim help found and the help's price (src/lhbridge.js); null: today's
+      const rot = lf ? lf.rot : aimAngle(this, ship); // the ship's heading, or toward the nearest raider in reach when the autotarget is fitted and on
+      const shot = this.shoot(this.pb, ship.x + Math.cos(ship.rotation) * 24, ship.y + Math.sin(ship.rotation) * 24, rot, lf ? lf.speed : SHOT_SPEED, time);
+      if (shot) { shot.dmg = lf ? Math.round(shipStat('damage') * lf.k * 10) / 10 : shipStat('damage'); if (lf) lhShot(this, shot, lf); } // the weapons part: 15, and 20 at tier 3
       sfx('laser'); feelShot(this, ship.x + Math.cos(ship.rotation) * 26, ship.y + Math.sin(ship.rotation) * 26, rot);
     }
-    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > SHOT_LIFE) b.disableBody(true, true); });
+    this.pb.getChildren().forEach(b => { if (b.active && time - b.born > (b.life || SHOT_LIFE)) b.disableBody(true, true); });
     this.eb.getChildren().forEach(b => { if (b.active && time - b.born > 1800) b.disableBody(true, true); });
 
     if (this.launchAt === null) { // the first frame of flight starts the launch grace (playtest 2: time.now was 0 in create, so the first launch of a session had no grace)

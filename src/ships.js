@@ -305,8 +305,9 @@ function shipsSpeed(o, dt, top) {
 
 // one ship this frame: its flames and ribbon from each nozzle, damage smoke and sparks, the end of a hit flash
 function shipsOne(s, g, o, key, th, frac, time, dt, color, boost) {
+  if (typeof lhLookOne === 'function') { lhLookOne(s, o, key); color = lhLookFlame(key, color); } // with ?longhaul=new the ship takes the Campaign's flat-cut picture and its side's engine glow (src/lhlook.js); nothing without it
   const r = o.rotation, sc = o.scaleX || 1, c = Math.cos(r), n = Math.sin(r);
-  const noz = SHIPS.nozzles[key] || SHIPS.nozzles.drone;
+  const noz = (typeof lhLookNozzles === 'function' && lhLookNozzles(key, o)) || SHIPS.nozzles[key] || SHIPS.nozzles.drone;
   if (o.flashUntil && time > o.flashUntil) { o.clearTint(); o.flashUntil = 0; }
   o.ribs = o.ribs || noz.map(() => []);
   th = th > 0 ? Math.min(th, 2) : 0; // thrust is 0 to 1; anything else (NaN, a runaway) is not drawn as a flame ten times the size

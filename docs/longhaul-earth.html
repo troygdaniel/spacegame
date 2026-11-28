@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The new Long Haul: the plan (cloud session, 28 Nov 2026, PROMPT 23 / BRIEF 15). Open this file in a browser. Not part of the game. Everything is inline: no web request. -->
+<title>Long Haul Around Earth</title>
+<style>
+:root{color-scheme:dark;--bg:#070b14;--ink:#e6edf7;--mute:#8794ab;--line:rgba(140,170,210,.16);--text:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:15px;line-height:1.5;padding:28px max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1{font-size:26px;font-weight:600;margin:0}h2{font-size:19px;font-weight:600;margin:0 0 6px}
+p{margin:0;max-width:74ch;color:#c3cde0}.note{color:var(--mute);font-size:13.5px}
+section{display:flex;flex-direction:column;gap:12px}.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1040px}th,td{text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:600}td b{color:var(--ink)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:#cfe6ff}
+.a,.d,.h{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.08em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.a{background:rgba(255,200,87,.14);color:#ffc857}.d{background:rgba(125,240,192,.14);color:#7df0c0}.h{background:rgba(159,179,200,.16);color:#9fb3c8}
+canvas{display:block;width:100%;min-width:900px;height:auto;border-radius:14px;border:1px solid var(--line)}
+ol,ul{margin:0;padding-left:1.3em;color:#c3cde0;display:flex;flex-direction:column;gap:7px;max-width:78ch}li b{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><h1>Long Haul around Earth</h1><p>The regular game with the Campaign's look and the Campaign fighter's feel, flown around Earth. It is behind one switch, the address <code>?longhaul=new</code>. Without the switch Long Haul is what it was: no file it reads is changed except where a line asks the switch first.</p></div>
+
+  <section><h2>Three screens, drawn</h2><p class="note">Mock-ups made for this page: the shapes and colours are the Campaign's own tables (the flat-cut ships, the flat discs, the page HUD). Nothing here is a screenshot.</p>
+  <div class="scroll"><canvas id="m1" width="1578" height="560"></canvas></div><p class="note">1. Leaving Keel Station: Earth fills the lower left behind everything, the Moon is a place you can fly to, the HUD is the Campaign's panels.</p>
+  <div class="scroll"><canvas id="m2" width="1578" height="560"></canvas></div><p class="note">2. A fight in Debris Field One: hostiles pink, your fire mint, the thin mint ring on the lead point, a pink pill at the edge for the ones off the screen.</p>
+  <div class="scroll"><canvas id="m3" width="1578" height="560"></canvas></div><p class="note">3. Coming up on the Moon with a call's freighter in tow: the ship you protect is amber, the goal is gold, the reach ring is blue.</p></section>
+
+  <section><h2>The design in one paragraph</h2><p>Long Haul keeps its own scene, physics, missions, money, upgrades and saves. A small bridge (<code>src/lhbridge.js</code>) shows the scene to the Campaign's code as if it were a mission with one flown fighter and some hostiles, so the Campaign's own functions do the work: the auto-target and its lead, the mint ring, the kill effect, the engine trails, the flat-cut pictures, the flat discs, and the page HUD's panels. Nothing of the Campaign is copied, and none of its files changes what it does.</p></section>
+
+  <section><h2>What changes, piece by piece</h2><p class="note">One commit a piece, in this order. Every piece is <span class="d">BUILT</span> in this pull request and has a one-line test in its commit message.</p>
+  <div class="scroll"><table><thead><tr><th>#</th><th>Piece</th><th>Long Haul today</th><th>Campaign source</th><th>New, with the switch on</th><th>State</th></tr></thead><tbody id="pieces"></tbody></table></div></section>
+
+  <section><h2>The feel, in numbers</h2>
+  <div class="scroll"><table><thead><tr><th>Thing</th><th>Long Haul today</th><th>Campaign fighter</th><th>New Long Haul</th></tr></thead><tbody>
+  <tr><td><b>Handling</b></td><td>Top speed 480, boost 800, thrust 720, turn 3.6 rad/s, drag 0.55 (the Wren), raised by the engine and booster parts</td><td>The same numbers: the Campaign took them from the Wren</td><td>Unchanged, so the parts you buy still matter</td></tr>
+  <tr><td><b>Your shot</b></td><td>950 px/s, lives 0.9 s (reach 855 px), flies straight</td><td>700 px/s, lives 1.4 s (reach 980 px), keeps 0.3 of your own speed</td><td>The Campaign's shot; the damage and the rate stay the weapons part's</td></tr>
+  <tr><td><b>Aim help</b></td><td>Only with the autotarget part: the guns turn to the nearest raider within 450 to 850 px, anywhere round you</td><td>A 20 degree cone off the nose, out to 0.85 of the shot's flight, each shot sent to the lead point, a helped shot does 0.32 of the damage</td><td>The Campaign's rule, for every ship; R still turns it off and on</td></tr>
+  <tr><td><b>The mark</b></td><td>Red corner brackets on the raider and an amber cross at the lead</td><td>One thin mint ring at the lead point, bright when the nose is on it</td><td>The mint ring</td></tr>
+  <tr><td><b>Enemy fire</b></td><td>Along its nose, at where you are</td><td>Hostile fighters lead their shots</td><td>A pirate's shot goes to where you will be, if that is within its own aim</td></tr>
+  <tr><td><b>Camera</b></td><td>Follows the ship, which sits ahead of the middle at speed; the wheel zooms</td><td>Leads a boosting ship by a fifth of the screen and zooms out to 0.9</td><td>The Campaign's lead and zoom-out on top of Long Haul's follow and wheel</td></tr>
+  </tbody></table></div></section>
+
+  <section><h2>Ask Troy</h2><ol id="ask"></ol></section>
+
+  <section><h2>What is not in this pull request</h2><ul id="held"></ul></section>
+  <p class="note">Costs and risks: every new line asks the switch before it does anything, and the Node suites that test Long Haul run with it off. The bridge reads Long Haul's sprites every frame and writes nothing back except where a piece says so (a shot's angle, a pirate's shot). Every drawing was made for this page; nothing is copied from another game, film or show.</p>
+</div>
+<script>
+(function(){
+var P=[
+["1","The switch and the names","The home system is Halcyon: Halcyon Station, Kepler-4b, Kepler Belt, Kestrel Outpost, Perseus gate, Kepler-4c, Slag Belt, Tern, Dead station.","None (new: <code>src/lhnew.js</code>).","The same bodies at the same places with the same ids, prices and missions, named for Earth orbit: Keel Station, The Moon, Debris Field One, Relay Outpost, Outbound Gate, Cruithne, Graveyard Belt, Anchor Rock, Dead Station. The system reads Earth Orbit.","d"],
+["2","Earth, the Moon and the sky","A tinted starfield in three layers; Kepler-4b is a shaded orange ball; the sun is a glowing star.","<code>campworldback.js</code> (near black, white stars, two slate clouds), <code>campworlddisc.js</code> (flat discs: the Earth and Luna tones).","The Campaign's sky. Earth is a very large flat disc behind everything, moving a little as you fly (you cannot fly to it). The Moon, Cruithne and Anchor Rock are flat discs in the Campaign's tones.","d"],
+["3","The ships","Neon-edged shaded hulls: your Wren in cyan, pirates in dark red, the freighter, the police and the traffic each in their own.","<code>shiplook.js</code>, <code>shiplookdraw.js</code> (the flat-cut outlines and the side colours).","Flat-cut pictures in the Campaign's colours: yours pale blue, pirates pink (raider as the skiff, drone as the cutter, gunship as the brute, the boss as the pirate leader), a freighter you escort amber, police and traffic grey-blue. Hit circles and speeds unchanged.","d"],
+["4","Your fire and the aim help","See the numbers above.","<code>campcockpitaim.js</code> (the pick, the lead, the ring), <code>shiplookfx.js</code> (the mint bolt).","The Campaign's auto-target through the bridge; mint bolts; the mint ring.","d"],
+["5","Enemy fire","Along the nose; amber and red bolts.","<code>campcockpitaim.js</code> (the lead's maths), <code>shiplookfx.js</code> (the pink bolt).","Pirates lead their shots; every hostile bolt is pink.","d"],
+["6","Kills and trails","A burst of sparks, smoke and a shockwave; flames and ribbons on every ship in its own colour.","<code>shiplookfx.js</code> (the kill: a white ring, a pink ring, a core, five shards; one tapering trail a ship).","The Campaign's kill effect. Long Haul's flames and ribbons stay (the Campaign's were modelled on them) and take the side's colour.","d"],
+["7","The camera","Follow with a soft lerp, wheel zoom.","<code>campfeel.js</code> (the look-ahead).","While you boost, the view leads the ship by about a fifth of the screen and pulls back a little; it eases back when you let go.","d"],
+["8","The HUD","Canvas gauges in cyan neon: two dials, a frame of corner brackets, fuel, credits, parts, ore, a radar, a mission box, a key line of 13 keys.","<code>camppagehud.js</code> and its stylesheet (the builder, the painter, the meters, the key row).","The Campaign's page panels, painted by its own painter from a Long Haul model: hull, shields, boost and speed at the top left; the hostiles panel under the radar and a pink pill at the edge while none is on screen; a key row of six chips. The fuel, credits, parts and ore strip, the mission box and the radar stay on the canvas: the Campaign has no panel for them.","d"],
+["9","Colour rules","Red ticks and brackets on a pirate, amber on a wanted one, an orange radar dot for a gunship, a red HOSTILE CONTACT banner; the approach ring green when slow enough and amber when too fast.","<code>shiplook.js</code> (the colour table: the hostile pink and your blue).","Every hostile mark is the Campaign's pink (ticks, lock, radar dots, rim and count, the two banners); every reach ring is the Campaign's blue. Amber is left for the freighter you escort and Long Haul's own stores.","d"],
+["10","Tests","Long Haul's suites.","The Campaign's suites.","Nine plain-Node suites, one a piece (<code>tests/lhnew.mjs</code>, <code>lhearth</code>, <code>lhlook</code>, <code>lhbridge</code>, <code>lhfoe</code>, <code>lhfx</code>, <code>lhcam</code>, <code>lhpagehud</code>, <code>lhtone</code>: 168 checks) and one Chrome boot (<code>tests/lhnew-boot.mjs</code>) that opens <code>?longhaul=new</code>, flies ten seconds with the guns held, and then opens the page without the switch.","d"],
+["11","Shown lines use the new names","The mission box, the prompts and the toasts name Kepler-4b, Halcyon Station and the Perseus gate.","None (new: <code>lhEarthSay</code> in <code>src/lhnew.js</code>).","A line the flight shows puts the old names into the new ones as it is drawn (display only; no content file changes, nothing spoken goes through it).","d"]];
+var S={p:'<span class="h">PLANNED</span>',d:'<span class="d">BUILT</span>',h:'<span class="h">HELD</span>',a:'<span class="a">ASK TROY</span>'};
+document.getElementById('pieces').innerHTML=P.map(function(r){return '<tr><td><b>'+r[0]+'</b></td><td><b>'+r[1]+'</b></td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td><td>'+S[r[5]]+'</td></tr>'}).join('');
+var A=[
+"<b>The names.</b> Earth Orbit, Keel Station, The Moon, Debris Field One, Relay Outpost, Outbound Gate, Cruithne, Graveyard Belt, Anchor Rock, Dead Station. Are these the names you want?",
+"<b>Words that still say Halcyon or Kepler.</b> No voiced or written line was rewritten. The lines the flight SHOWS (the mission box, the prompts, the toasts) put the old names into the new ones as they are drawn, so the rescue call reads \"the Moon\". What is SPOKEN and what the people in the bar say is as written: about 36 lines in the mission, station and people files still say Halcyon, Kepler-4b or the Perseus gate (the rescue call, the escort call, the patrol and bounty calls, Dex, Ida, Juno, Sable and Tamsin, the title's \"A trading run to Kepler-4b\"). Should new lines be written and voiced for the new mode?",
+"<b>One shape for every hull.</b> The Campaign has one fighter shape, so the Wren, the Kite, the Ox, the Talon, the Pathfinder and the Bastion are all drawn as it, larger or smaller, and the plating and barrels you buy no longer show in flight. Should each hull get a flat-cut shape of its own?",
+"<b>Earth is a backdrop.</b> You fly in front of it and cannot land on it or dock at it. Is that right, or should Earth be a place?",
+"<b>The far gas giant.</b> Tern cannot stand beside Earth, so it is drawn as a large rock called Anchor Rock. Is that acceptable?",
+"<b>The autotarget part.</b> The Campaign's aim help is given to every ship, so the part you buy no longer gives the help. Should the part do something else (a wider cone, a longer reach), or go?",
+"<b>Your shot.</b> It becomes the Campaign's (slower, longer-lived, reach 980 px against 855). Is the longer reach welcome in Long Haul's fights?",
+"<b>The window.</b> Long Haul stays 16:9 as the rules say. Do you want it to take the window's shape as the Campaign's flight does?",
+"<b>The radar.</b> The Campaign has no radar: its edge pills do that job. The new HUD keeps Long Haul's radar because traffic, police and salvage are on it. Keep it, or pills only?"];
+document.getElementById('ask').innerHTML=A.map(function(t){return '<li>'+t+'</li>'}).join('');
+var H=["The station hall, the ship bay, the surface and the galaxy map keep today's look: this pass is the flight.","Debris fields are today's rocks under a new name; a drawn debris look (panels, struts) is not made.","The other seven systems keep today's worlds and names."];
+document.getElementById('held').innerHTML=H.map(function(t){return '<li>'+t+'</li>'}).join('');
+// ---- the mock-ups ----
+var F='system-ui,-apple-system,"Segoe UI",sans-serif',C={mine:'#cfe6ff',hi:'#6fd6ff',prot:'#ffc857',foe:'#ff6fa8',neu:'#9fb3c8',own:'#7df0c0',gold:'#ffd37a',dark:'#0b1220'};
+var K={f:[[.5,0],[-.1,.28],[-.5,.44],[-.32,.1],[-.42,0],[-.32,-.1],[-.5,-.44],[-.1,-.28]],s:[[.5,0],[-.5,.38],[-.26,0],[-.5,-.38]],c:[[.5,.13],[.1,.1],[-.2,.42],[-.5,.42],[-.3,.1],[-.5,0],[-.3,-.1],[-.5,-.42],[-.2,-.42],[.1,-.1],[.5,-.13],[.28,0]],b:[[.5,.14],[.2,.36],[-.3,.44],[-.5,.26],[-.4,0],[-.5,-.26],[-.3,-.44],[.2,-.36],[.5,-.14],[.34,0]],h:[[.5,0],[.42,.14],[.3,.16],[.3,.2],[-.38,.2],[-.38,.12],[-.5,.1],[-.5,-.1],[-.38,-.12],[-.38,-.2],[.3,-.2],[.3,-.16],[.42,-.14]],p:[[.5,0],[.2,.14],[-.1,.16],[-.3,.36],[-.5,.36],[-.4,.1],[-.5,0],[-.4,-.1],[-.5,-.36],[-.3,-.36],[-.1,-.16],[.2,-.14]]};
+function mk(id){var x=document.getElementById(id).getContext('2d');
+ x.T=function(s,px,py,c,f,al){x.fillStyle=c;x.font=f;x.textAlign=al||'left';x.fillText(s,px,py)};
+ x.ship=function(k,px,py,rot,col,L){x.save();x.translate(px,py);x.rotate(rot);x.beginPath();K[k].forEach(function(q,i){x[i?'lineTo':'moveTo'](q[0]*L,q[1]*L)});x.closePath();x.fillStyle=col;x.fill();x.lineWidth=1;x.strokeStyle='rgba(5,8,14,.9)';x.stroke();x.restore()};
+ x.sky=function(){x.fillStyle='#05080f';x.fillRect(0,0,1578,560);var r=7;for(var i=0;i<170;i++){r=(r*16807)%2147483647;var a=r%1578;r=(r*16807)%2147483647;var b=r%560;x.fillStyle='rgba(255,255,255,'+(.25+(i%5)*.13)+')';x.fillRect(a,b,i%9?1:2,i%9?1:2)}};
+ x.disc=function(px,py,R,t){x.save();x.beginPath();x.arc(px,py,R,0,7);x.fillStyle=t[0];x.fill();x.clip();x.fillStyle=t[2];[[-.3,-.2,.3,.14,.4],[.1,.25,.24,.1,1.2],[-.45,.35,.2,.09,2]].forEach(function(q){x.beginPath();x.ellipse(px+q[0]*R,py+q[1]*R,q[2]*R,q[3]*R,q[4],0,7);x.fill()});x.fillStyle=t[1];x.beginPath();x.arc(px+R*.55,py+R*.25,R*1.05,0,7);x.rect(px+R*2,py-R*2,-R*4,R*4);x.fill('evenodd');x.restore();x.lineWidth=Math.max(1,R*.012);x.strokeStyle='rgba(5,8,14,.9)';x.beginPath();x.arc(px,py,R,0,7);x.stroke()};
+ x.panel=function(px,py,w,h,pink){x.beginPath();x.roundRect(px,py,w,h,14);x.fillStyle=pink?'rgba(52,18,36,.9)':'rgba(14,22,36,.88)';x.fill();x.strokeStyle=pink?'rgba(255,111,168,.45)':'rgba(140,170,210,.18)';x.lineWidth=1;x.stroke()};
+ x.bar=function(px,py,w,frac,col){x.fillStyle='rgba(255,255,255,.12)';x.fillRect(px,py,w,4);x.fillStyle=col;x.fillRect(px,py,w*frac,4)};
+ x.pill=function(px,py,s,col,line){x.font='600 13px '+F;var w=x.measureText(s).width+38;x.beginPath();x.roundRect(px,py,w,28,14);x.fillStyle='rgba(14,22,36,.92)';x.fill();x.strokeStyle=line;x.lineWidth=1.2;x.stroke();x.beginPath();x.moveTo(px+11,py+14);x.lineTo(px+21,py+8);x.lineTo(px+21,py+20);x.closePath();x.fillStyle=col;x.fill();x.T(s,px+29,py+19,'#e6edf7','600 13px '+F)};
+ x.hud=function(goal,val,foes){x.panel(22,22,280,120);x.T('HULL',44,48,'#8794ab','600 11px '+F);x.bar(44,56,110,.9,'#4fe0a6');x.T('SHIELD',170,48,'#8794ab','600 11px '+F);x.bar(170,56,110,1,'#6fd6ff');x.T('BOOST',44,86,'#8794ab','600 11px '+F);x.bar(100,80,180,.7,'#fff');x.T('SPEED',44,116,'#8794ab','600 11px '+F);x.T('480',280,116,'#e6edf7','600 12px '+F,'right');
+  x.panel(624,22,330,62);x.T(goal,644,48,'#8794ab','600 11px '+F);x.T(val,934,48,'#e6edf7','600 14px '+F,'right');x.bar(644,62,290,.4,C.gold);
+  x.panel(1250,22,306,84);x.T('CREDITS',1272,48,'#8794ab','600 11px '+F);x.T('1,240',1536,48,'#e6edf7','600 13px '+F,'right');x.T('FUEL',1272,72,'#8794ab','600 11px '+F);x.bar(1330,66,206,.8,'#cfe6ff');x.T('ORE',1272,94,'#8794ab','600 11px '+F);x.bar(1330,88,206,.3,'#e9b872');
+  if(foes){x.panel(1290,116,266,96,1);x.T('HOSTILES',1312,142,'#ffb3d1','600 11px '+F);x.T(foes[0],1312,170,'#fff','600 18px '+F);x.T(foes[1],1312,194,'#ffb3d1','13px '+F)}
+  var ks=[['Arrows','FLY'],['Space','FIRE'],['Shift','BOOST'],['L','DOCK'],['N','PLACES'],['H','KEYS']],kx=520;x.panel(500,516,580,34);ks.forEach(function(k){x.font='600 11px '+F;var w=x.measureText(k[0]).width+12;x.beginPath();x.roundRect(kx,523,w,20,5);x.fillStyle='#cfe6ff';x.fill();x.T(k[0],kx+6,537,'#0b1220','600 11px '+F);x.T(k[1],kx+w+7,537,'#8794ab','600 10px '+F);kx+=w+x.measureText(k[1]).width+26})};
+ return x}
+var E=['#3f5f86','#25384f','#6a86a8'],L=['#727a86','#434a55','#9aa2ad'];
+(function(){var x=mk('m1');x.sky();x.disc(250,820,620,E);x.disc(1240,150,58,L);x.T('THE MOON',1240,232,C.gold,'600 11px '+F,'center');
+ x.save();x.translate(560,330);x.strokeStyle='#8fa3bd';x.lineWidth=10;x.beginPath();x.arc(0,0,92,0,7);x.stroke();x.lineWidth=4;x.beginPath();x.arc(0,0,40,0,7);x.stroke();for(var i=0;i<4;i++){x.rotate(Math.PI/2);x.fillStyle='#8fa3bd';x.fillRect(40,-3,52,6)}x.restore();x.T('KEEL STATION',560,452,'#9fb3c8','600 11px '+F,'center');
+ x.strokeStyle='rgba(111,214,255,.5)';x.lineWidth=1.4;x.beginPath();x.arc(560,330,128,-.5,.5);x.stroke();
+ x.ship('f',760,330,0,C.mine,40);x.fillStyle='rgba(111,214,255,.5)';x.beginPath();x.moveTo(740,326);x.lineTo(690,330);x.lineTo(740,334);x.fill();
+ x.ship('p',980,220,2.6,C.neu,30);x.ship('h',1100,430,3.3,C.neu,46);
+ x.hud('NO CALL','Keel Station',null);x.pill(1404,300,'The Moon · 871 km',C.gold,'rgba(255,211,122,.5)')})();
+(function(){var x=mk('m2');x.sky();x.disc(1500,960,640,E);
+ [[300,150,26],[420,400,18],[980,120,22],[1180,430,30],[700,470,14],[150,360,20]].forEach(function(r){x.save();x.translate(r[0],r[1]);x.rotate(r[2]);x.fillStyle='#5b6470';x.beginPath();x.moveTo(r[2],0);x.lineTo(r[2]*.3,r[2]*.8);x.lineTo(-r[2]*.8,r[2]*.5);x.lineTo(-r[2],-r[2]*.3);x.lineTo(-r[2]*.1,-r[2]*.9);x.closePath();x.fill();x.restore()});
+ x.ship('f',600,300,-.25,C.mine,40);x.ship('s',900,200,2.7,C.foe,30);x.ship('c',1040,330,3.3,C.foe,32);x.ship('b',860,420,-2.6,C.foe,40);
+ [[690,277],[760,259],[830,241]].forEach(function(q){x.save();x.translate(q[0],q[1]);x.rotate(-.25);x.fillStyle=C.own;x.fillRect(-9,-1.2,18,2.4);x.restore()});
+ [[960,330],[900,345]].forEach(function(q){x.save();x.translate(q[0],q[1]);x.rotate(3.0);x.fillStyle=C.foe;x.fillRect(-9,-1.2,18,2.4);x.restore()});
+ x.strokeStyle=C.own;x.lineWidth=1.5;x.beginPath();x.arc(872,214,10,0,7);x.stroke();x.fillStyle=C.own;x.beginPath();x.arc(872,214,1.6,0,7);x.fill();
+ x.strokeStyle='#fff';x.lineWidth=3;x.beginPath();x.arc(1260,180,24,0,7);x.stroke();x.strokeStyle='rgba(255,111,168,.6)';x.lineWidth=2;x.beginPath();x.arc(1260,180,36,0,7);x.stroke();
+ x.hud('BOUNTY','2 of 5',['2 Raiders, 1 Gunship','east · 31 km']);x.pill(22,300,'3 · 142 km',C.foe,'rgba(255,111,168,.5)')})();
+(function(){var x=mk('m3');x.sky();x.disc(-120,760,560,E);x.disc(1120,290,190,L);x.T('THE MOON',1120,512,C.gold,'600 11px '+F,'center');
+ x.setLineDash([8,8]);x.strokeStyle='rgba(111,214,255,.6)';x.lineWidth=1.4;x.beginPath();x.arc(1120,290,230,0,7);x.stroke();x.setLineDash([]);
+ x.ship('f',640,330,-.12,C.mine,40);x.ship('h',470,370,-.1,C.prot,56);x.strokeStyle='#4fe0a6';x.lineWidth=2;x.beginPath();x.arc(470,370,40,-1.6,3.4);x.stroke();
+ x.ship('s',420,140,.9,C.foe,28);
+ x.hud('ESCORT TO THE MOON','212 km',['1 Raider','north-west · 24 km']);x.pill(22,250,'Keel Station · 871 km',C.neu,'rgba(159,179,200,.5)')})();
+})();
+</script>
+</body>
+</html>

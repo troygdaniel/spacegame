@@ -18,6 +18,24 @@ How the game is built, for someone (a person or an AI) who has never seen it. It
 - Long Haul scenes: `station.js`, `shipmode.js` (the ship bay), `space.js`, `surface.js`, `hyperspace.js`. The Campaign scenes: `campaignscene.js` (flight and battle), `camphubscene.js` (the ready room between missions), `campwarp.js` (the warp cinematic).
 - The Campaign reuses Long Haul's art code (the station hall is the ready room; the gauges copy Long Haul's dials) but never its game state or its save.
 
+## The new Long Haul (behind `?longhaul=new`)
+
+Long Haul's flight with the Campaign's look and the Campaign fighter's feel, around Earth (the plan: `docs/longhaul-earth.html`). One switch, `lhNewOn()` in `src/lhnew.js`, true only for the address `?longhaul=new` (a test sets it with `lhNewSet`). Every `src/lh*.js` function answers "off" first, and every line that calls one from a Long Haul file asks `typeof` first and keeps today's code as its other branch, so without the switch nothing changes.
+
+The rule of the design: **reuse the Campaign's code, never copy it, never change it.** The Campaign's functions read a game `C` and a scene that holds one. `src/lhbridge.js` builds a small `C` from Long Haul's sprites each frame (your ship as the flown fighter, the pirates as hostiles) and a view of the scene with the three fields those functions look for (`camp`, `hud`, `sp`), then calls them as they are: `campCockpitAim` and `campCockpitAimSync` (the aim help and its mint ring), `slookFxTextures`, `slookKill` and `slookFxFrame` (bolts and kills), `slookPaint` (the flat-cut pictures, `src/lhlook.js`), `campWorldBackdrop` and `campDiscTexture` (the sky and the worlds, `src/lhearth.js`), `campDogLead` (a pirate's lead, `src/lhfoe.js`), the `campFeel*` camera maths (`src/lhcam.js`), `campPageHudBuild` and `campPageHudPaint` (the page panels, `src/lhpagehud.js`), and the colour table `SLOOK.C` (`src/lhtone.js`).
+
+| Piece | File | Hook (asked first) |
+|---|---|---|
+| The switch and the names of the home system's places | `lhnew.js` | `boot.js` after `worldSync` |
+| Earth, the flat worlds, the sky | `lhearth.js` | `space.js` (backdrop, the landable world), `cruise.js` (the star, the far worlds) |
+| Flat-cut ships, flame colours, nozzles | `lhlook.js` | `ships.js` `shipsOne`, `traffic.js` (the tint) |
+| The bridge, the aim help, your shot, the bolts | `lhbridge.js` | `space.js` (`shoot`, the aim line, the fire block), `autotarget.js` (`aimFitted`) |
+| Pirates lead their shots | `lhfoe.js` | `enemies.js` `pirateAI` |
+| The kill effect | `lhfx.js` | `space.js` `killDrone`, `die` |
+| The camera's lead on a boost | `lhcam.js` | `space.js` `update` |
+| The page HUD | `lhpagehud.js` | `hud.js` `hudTick`, `space.js` (the key line) |
+| Hostile marks pink, reach rings blue | `lhtone.js` | `hud.js`, `feel.js` |
+
 ## The Campaign: simulation versus scene
 
 **The simulation** (`src/campaign.js`, no Phaser). `campNew(level, techs, opts)` makes one game `C`; `campStep(C, seconds)` advances it in fixed small steps; `campOrder(C, name, arg, how)` runs an order and `campCheck` says whether it could (so the lists, the command strip, voice and bots all ask the same question). `C.events` collects what the scene should show or play; the scene empties it every frame. A level is a row of `CAMP.levels`, a mission is a row of its `missions`, enemies come as `waves` or scripted `cues`. A seeded random stream (`opts.seed`) makes a battle repeat exactly, which is what lets tests pin a whole fight.

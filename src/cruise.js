@@ -111,12 +111,14 @@ function cruiseStop(t) { return t && t.type === 'star' ? (t.r || 0) + CRUISE.sto
 function cruiseFarBodies(s) {
   const star = sysBodies('star')[0]; // the star, where it really is (src/universe.js sysStar): the glow is 512 px wide with the disc in its middle third
   if (star && typeof starTexture === 'function') {
-    s.add.image(star.x, star.y, starTexture(s, star.star)).setDepth(0).setScale(star.r * 3 / 256);
+    const ls = typeof lhStar === 'function' ? lhStar(s, star) : null; // with ?longhaul=new the star is the Campaign's flat disc (src/lhearth.js)
+    if (ls) s.add.image(star.x, star.y, ls.key).setDepth(0).setScale(ls.scale); else s.add.image(star.x, star.y, starTexture(s, star.star)).setDepth(0).setScale(star.r * 3 / 256);
     label(s, star.x, star.y - star.r - 90, star.name.toUpperCase(), '#ffe08a', 18);
   }
   sysBodies('planet').slice(1).forEach(b => { // the first planet is Kepler-4b, which space.js draws itself
-    const key = b.kind ? planetTexture(s, b.kind, b.seed) : b.art;
-    s.add.image(b.x, b.y, key).setDepth(0).setScale(b.r / (b.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
+    const lw = typeof lhWorld === 'function' ? lhWorld(s, b) : null; // with ?longhaul=new a world of the home system is the Campaign's flat disc (src/lhearth.js)
+    const key = lw ? lw.key : b.kind ? planetTexture(s, b.kind, b.seed) : b.art;
+    s.add.image(b.x, b.y, key).setDepth(0).setScale(lw ? lw.scale : b.r / (b.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
     label(s, b.x, b.y - b.r - 64, b.name.toUpperCase(), '#ffb454', 18);
   });
   sysBodies('scenery').filter(b => b.look).forEach(b => {

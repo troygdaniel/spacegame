@@ -106,7 +106,7 @@ function feelRing(s, f, now, sx, sy, t, R, vmax, name) {
   const ship = s.ship, sp = ship.body.speed, d = Phaser.Math.Distance.Between(ship.x, ship.y, t.x, t.y);
   if (d > R * 2.4) return;
   const inside = d < R, slow = sp < vmax;
-  const col = inside ? (slow ? GREEN : AMBER) : CYAN, a = inside ? 0.9 : 0.3 + 0.15 * Math.sin(now / 300);
+  const col = typeof lhTone === 'function' ? lhTone(inside ? (slow ? GREEN : AMBER) : CYAN, 'ring') : inside ? (slow ? GREEN : AMBER) : CYAN, a = inside ? 0.9 : 0.3 + 0.15 * Math.sin(now / 300);
   f.low.lineStyle(inside ? 3 : 2, col, a);
   for (let i = 0; i < 36; i++) { // a slowly turning dashed ring
     const a0 = i / 36 * Math.PI * 2 + now / 5000;

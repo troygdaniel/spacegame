@@ -9,7 +9,7 @@
 
 const SHOT_SPEED = 950, SHOT_LIFE = 900;   // the player's shot, as src/space.js fires it: px a second, ms it lives
 
-const aimFitted = () => shipStat('aimRange') > 0;
+const aimFitted = () => shipStat('aimRange') > 0 || (typeof lhNewOn === 'function' && lhNewOn()); // (with ?longhaul=new every ship has the Campaign fighter's aim help, so R, which switches the help, works without the part: src/lhbridge.js)
 const aimActive = () => aimFitted() && !G.aimOff;
 
 // the raider the guns would turn to: the nearest live one within reach of the ship, or null
