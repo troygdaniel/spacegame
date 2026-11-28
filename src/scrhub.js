@@ -22,8 +22,9 @@ const scrHubGhost = (c, ghost) => c && ghost ? Object.assign(c, { ghost: true })
 function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text, ok }, oldNote: tell an older save once }
   o = o || {}; const t = campHubTarget(P, H), b = campHubBrief(P, t.level, t.i), nx = campHubNext(P), id = scrHubRowIds(H)[H.row] || '', all = campHubAll(), no = scrMissionNo(t.level, t.i);
   const tag = uiText(t.skipped ? 'scr.hub.skippedmission' : t.replay ? 'scr.hub.replay' : 'scr.hub.next', { n: no, all }), rk = campHubRank(P);
-  const note = { board: uiText('scr.hub.notemissions', { done: campHubFlown(P), all }), refit: uiText('scr.hub.notecredits', { credits: Math.max(0, Math.floor(P.credits || 0)) }), rank: rk.ranked ? rk.name : uiText('scr.hub.points', { n: rk.points }) };
-  const items = ['board', 'refit', 'rank'].filter(k => scrHubRowIds(H).indexOf(k) >= 0).map(k => scrTileN([scrRowN([scrChipN(scrHubDigit(H, k)), scrTextN('t3', uiText('scr.hub.' + { board: 'missions', refit: 'refit', rank: 'rank' }[k])), scrTextN('sm', note[k]), scrHubGhost(scrChipN('pick'), id !== k)])], { flat: true, fit: true, on: id === k, click: 'row:' + scrHubRowIds(H).indexOf(k) })); // fit: a chip is as wide as its words and never shrinks to run them over its border; the picked one carries its key (Enter) inside it, where it reads as what it opens (card space-game-screens-hub-polish: a lone Enter OPEN chip after Rank read as a fourth button)
+  const credits = Math.max(0, Math.floor(P.credits || 0)), first = campHubFlown(P) === 0; // first: the first visit, nothing flown yet (card space-game-b13-a5-a7-a8-trim, BRIEF 13 A7; Troy, 27 Nov 2026: yes): "0 of 9" and "0 credits" say nothing yet, and the pilots are on the briefing, so the room shows neither and no pilots strip
+  const note = { board: first ? '' : uiText('scr.hub.notemissions', { done: campHubFlown(P), all }), refit: first && !credits ? '' : uiText('scr.hub.notecredits', { credits }), rank: rk.ranked ? rk.name : uiText('scr.hub.points', { n: rk.points }) };
+  const items = ['board', 'refit', 'rank'].filter(k => scrHubRowIds(H).indexOf(k) >= 0).map(k => scrTileN([scrRowN([scrChipN(scrHubDigit(H, k)), scrTextN('t3', uiText('scr.hub.' + { board: 'missions', refit: 'refit', rank: 'rank' }[k])), note[k] ? scrTextN('sm', note[k]) : null, scrHubGhost(scrChipN('pick'), id !== k)])], { flat: true, fit: true, on: id === k, click: 'row:' + scrHubRowIds(H).indexOf(k) })); // fit: a chip is as wide as its words and never shrinks to run them over its border; the picked one carries its key (Enter) inside it, where it reads as what it opens (card space-game-screens-hub-polish: a lone Enter OPEN chip after Rank read as a fourth button)
   const lines = [scrGoalLine(t.level, t.i)];
   const bar = scrCardN('ready.bar', { bare: true, at: { left: '1.4em', right: '1.4em', top: '1.2em' }, gap: 0 }, [scrRowN([scrRowN([scrTextN('lab', o.station || ''), scrTextN('dim', '·'), scrTextN('lab', uiText('scr.hub.level', { n: nx.level, name: CAMP.levels[nx.level].name }))]), scrKeyWordN('close', uiText('scr.card.title'))], { just: 'sp', full: true })]);
   const card = scrCardN('ready', { w: 40, top: 20, gap: 1 }, [
@@ -32,7 +33,7 @@ function scrReadyModel(P, H, o) { // o: { station: the dock's name, msg: { text,
     scrRowN(items, { gap: 0.6, wrap: true }),
     o.oldNote ? scrTextN('sm', uiText('scr.hub.oldsave'), 'amber') : null, scrHubMsg(o)]);
   const pilots = scrCardN('ready.pilots', { row: true, at: { left: '50%', bottom: '8%', transform: 'translateX(-50%)' }, gap: 1 }, scrPilotNames().map((n, i) => scrRingN(1, 'good', i + 1)).concat([scrColN([scrTextN('lab', uiText('scr.hub.pilots')), scrTextN('sm', scrPilotNames().join(', '))], { gap: 0.15 })]));
-  return scrScreenN('ready', [bar, card, pilots]);
+  return scrScreenN('ready', [bar, card, first ? null : pilots]);
 }
 
 // ---- the refit ----
@@ -71,7 +72,7 @@ function scrHubPickModel(P, H, o) { // o: { msg }
   const count = !b ? null : cur.state === 'done' ? scrTextN('lab', uiText(n === 1 ? 'scr.hub.bonusesdone.one' : 'scr.hub.bonusesdone', { got: (cur.bonus | 0), n })) : scrTextN('lab', uiText(n === 1 ? 'scr.hub.bonuses.one' : 'scr.hub.bonuses', { n }));
   const top = scrCardN('pick.top', { bare: true, at: { left: '6%', right: '6%', top: '5%' }, gap: 0 }, [scrRowN([scrTextN('t2', uiText('scr.hub.missions')), scrRowN([scrChipN('up'), scrChipN('down'), scrChipN('left'), scrChipN('right'), scrTextN('lab', uiText('scr.hub.choose')), scrKeyWordN('pick', uiText('scr.hub.briefing')), scrKeyWordN('close', uiText('scr.hub.back'))])], { just: 'sp', full: true })]);
   const grid = scrCardN('pick.grid', { deep: true, at: { left: '6%', right: '6%', top: '15%' }, gap: 0.9 }, levels); // a panel of its own, dark: the nine tiles are words over the busy hangar otherwise (card space-game-screens-hub-polish)
-  const bar = scrCardN('pick.bar', { row: true, at: { left: '6%', right: '6%', bottom: '6%' }, gap: 1 }, [scrRowN([scrColN([scrTextN('t3', b ? b.title : ''), cur && scrGoalLine(cur.level, cur.i) ? scrTextN('sm', scrGoalLine(cur.level, cur.i)) : null, scrHubMsg(o)], { gap: 0.25 }), scrRowN([count, scrPillN(uiText('scr.hub.each', { pts }), null), scrTextN('lab', uiText('scr.hub.par', { time: scrClock(b ? b.par : 0) }))])], { just: 'sp', full: true })]);
+  const bar = scrCardN('pick.bar', { row: true, at: { left: '6%', right: '6%', bottom: '6%' }, gap: 1 }, [scrRowN([scrColN([cur && scrGoalLine(cur.level, cur.i) ? scrTextN('sm', scrGoalLine(cur.level, cur.i)) : null, scrHubMsg(o)], { gap: 0.25 }), /* no title here: the lit box above says it (card space-game-b13-a5-a7-a8-trim, BRIEF 13 A8; Troy, 27 Nov 2026: yes) */ scrRowN([count, scrPillN(uiText('scr.hub.each', { pts }), null), scrTextN('lab', uiText('scr.hub.par', { time: scrClock(b ? b.par : 0) }))])], { just: 'sp', full: true })]);
   return scrScreenN('pick', [top, grid, bar]);
 }
 
