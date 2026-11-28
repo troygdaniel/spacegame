@@ -126,9 +126,9 @@ function pirateAI(s, d, ship, time) {
   s.physics.velocityFromRotation(m.ang, def.speed, d.body.acceleration);
   if (m.fire && dist < def.range && time > d.nextShot && Math.abs(Phaser.Math.Angle.Wrap(target - d.rotation)) < def.aim) {
     d.nextShot = time + Phaser.Math.Between(def.shot[0], def.shot[1]);
-    const n = def.spread || 1;
+    const n = def.spread || 1, rot0 = typeof lhFoeAim === 'function' ? lhFoeAim(s, d, tgt, def) : d.rotation; // with ?longhaul=new a shot at your ship leaves along the Campaign's lead, inside the pirate's own aim (src/lhfoe.js); else along the nose
     for (let i = 0; i < n; i++) {
-      const b = s.shoot(s.eb, d.x, d.y, d.rotation + (i - (n - 1) / 2) * 0.17, def.bullet, time);
+      const b = s.shoot(s.eb, d.x, d.y, rot0 + (i - (n - 1) / 2) * 0.17, def.bullet, time);
       if (b) b.dmg = def.dmg;
     }
   }
