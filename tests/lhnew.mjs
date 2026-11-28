@@ -33,6 +33,7 @@ const rows = J('Object.keys(LHNEW.earth.bodies)');
 check('on: the system and every row are named', named.length === rows.length + 1 && named[0] === 'halcyon', JSON.stringify(named));
 check('the system is Earth Orbit', J('SYSTEMS.halcyon.name') === 'Earth Orbit');
 check('the landable world is The Moon and the home dock Keel Station', J(`sysDef('halcyon').bodies.find(b => b.id === 'kepler-4b').name`) === 'The Moon' && J(`sysDef('halcyon').bodies.find(b => b.id === 'halcyon-station').name`) === 'Keel Station');
+check('the star is The Sun', J(`sysStar('halcyon').name`) === 'The Sun');
 check('lhEarthName answers while on', J(`lhEarthName('slag-belt')`) === 'Graveyard Belt' && J(`lhEarthName('wreck-nw')`) === '');
 const strip = s => { const o = JSON.parse(s); Object.keys(o).forEach(id => { delete o[id].name; (o[id].bodies || []).forEach(b => { delete b.name; }); }); return JSON.stringify(o); };
 check('ids, places, docks and every number are as they were', strip(J('JSON.stringify(SYSTEMS)')) === strip(before));
@@ -45,6 +46,7 @@ check('the home dock is still found by its id', J(`dockSystem('halcyon-station')
 console.log('D  off again');
 J('lhNewSet(false)'); J('lhEarthApply()');
 check('every name is back', J('JSON.stringify(SYSTEMS)') === before);
+check('the star has its old name', J(`sysStar('halcyon').name`) === 'Halcyon Sun');
 J('lhNewSet(null)');
 check('given back to the address: off', J('lhNewOn()') === false);
 

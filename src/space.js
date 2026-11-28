@@ -56,7 +56,7 @@ class Space extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WS, WS);
     if (!this.seamless) this.cameras.main.fadeIn(300, 0, 0, 0);
     this.cameras.main.setBounds(0, 0, WS, WS);
-    spaceBackdrop(this, !!G.deep); // src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
+    if (!(typeof lhBackdrop === 'function' && lhBackdrop(this, !!G.deep))) spaceBackdrop(this, !!G.deep); // (with ?longhaul=new the Campaign's sky and, at home, Earth: src/lhearth.js) src/art_world.js: nebula, parallax star layers, distant sun, giant and moon (deep space has only stars)
     this.events.once('shutdown', () => { G.deep = null; }); // a pull-out lives only as long as this scene shows it
 
     const land = G.deep ? null : missionLandBody(); // src/missions.js: the planet of a rescue call played in this system (its file names the body), when it is landable; deep space keeps G.system on the books but has no planet (the call's body is looked up by that id and would put Kepler-4b in the empty world)
@@ -71,8 +71,9 @@ class Space extends Phaser.Scene {
     // you can land only where there is a surface to land on: the Surface scene is the rescue call's (a world of the Hollow gets its own later), so only that call's planet is landable
     this.canLand = !!land;
     if (plDef) {
-      this.planet = this.add.image(plDef.x, plDef.y, plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
-      if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
+      const lw = typeof lhWorld === 'function' ? lhWorld(this, plDef) : null; // with ?longhaul=new the home system's world is the Campaign's flat disc (src/lhearth.js); null: today's
+      this.planet = this.add.image(plDef.x, plDef.y, lw ? lw.key : plDef.kind ? planetTexture(this, plDef.kind, plDef.seed) : plDef.art); this.planetR = plDef.r; // a planet of a kind and seed is made on first use (src/art_world.js)
+      if (lw) this.planet.setScale(lw.scale); else if (plDef.kind) this.planet.setScale(plDef.r / (plDef.kind === 'ringed' ? 206 : 300)); // the globe is 300 px (ringed: 206) in its 800 px canvas
       label(this, plDef.x, plDef.y - plDef.r - 64, plDef.name.toUpperCase(), '#ffb454', 18);
     } else { this.planet = spaceNowhere(); this.planetR = 0; }
 

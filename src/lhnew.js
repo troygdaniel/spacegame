@@ -19,6 +19,7 @@ const LHNEW = {
   earth: {
     system: 'halcyon',                     // the system that is given the names (Long Haul's home: its file is not changed)
     name: 'Earth Orbit',                   // the system's name while the switch is on
+    star: 'The Sun',                       // and its star's (src/universe.js sysStar makes the star's body, named after the system, once: its name is set there too)
     bodies: {                              // id: { name, tone (a world: the key of its three tones in CAMPDISC.tones, src/campworlddisc.js), kind (a world drawn as this kind in place of its own) }
       'halcyon-station': { name: 'Keel Station' },                       // the home dock: the ring station you launch from
       'kepler-4b': { name: 'The Moon', tone: 'luna', kind: 'rock' },       // the landable world of the rescue call
@@ -57,5 +58,6 @@ function lhEarthApply(systems) {
   };
   if (put(def, E.name)) done.push(E.system);
   def.bodies.forEach(b => { const r = E.bodies[b.id]; if (r && put(b, r.name)) done.push(b.id); });
+  const st = typeof sysStar === 'function' ? sysStar(E.system) : null; if (st) put(st, E.star);
   return done;
 }
